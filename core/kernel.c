@@ -99,28 +99,35 @@ int main(int argc, char **argv)
 			int fd, y, h;
 			u8 created_dev = 0;
 			u8 fadein = 0;
-			
+		
+			h = mount("proc", "/proc", "proc", 0, NULL);
 			fd = open("/proc/cmdline", O_RDONLY);
-			if (read(fd, buf, 512) > 0) {
+			if (fd != -1 && read(fd, buf, 512) > 0) {
 			
 				t = strstr(buf, "splash=");
 				if (!t)
 					goto next;
 
 				t += 7;
-				while (t != ' ' && t != 0) {
+				while (*t != ' ' && *t != 0) {
 					if (!strncmp(t, "tty:", 4)) {
 						stty = strtol(t+4, NULL, 0);
-						break;
+						t += 4;
 					} else if (!strncmp(t, "fadein", 6)) {
-						fadein = 0;
+						fadein = 1;
+						t += 6;
 					}
-				
 					t++;
 				}
 			}
 			
-next:			if (stty < 0 || stty > MAX_NR_CONSOLES)
+next:			if (fd != -1)
+				close(fd);
+
+			if (h == 0)
+				umount("/proc");
+			
+			if (stty < 0 || stty > MAX_NR_CONSOLES)
 				stty = TTY_SILENT;
 
 			sprintf(fbfn,"/dev/fb%d", arg_fb);

@@ -160,39 +160,41 @@ for (( i=0 ; i < index ; i++ )) ; do
 	# check if the user specified which resolutions are accepted
 	# (default: all res)
 	if [ -z "$res" ]; then 
-		cp -pRH "${themedir}/${theme}" "${imgdir}/${themedir}"
-	else
-		for j in $res ; do
-			if [ ! -e "${themedir}/${theme}/${j}.cfg" ]; then
-				echo "Warning: config file for theme '${theme}', resolution ${j} does not exist!" 1>&2
-				continue
-			fi
-
-			cp -pRH --parents "${themedir}/${theme}/${j}.cfg" "${imgdir}"
-
-			# config file parsing
-			pics=`cat "${themedir}/${theme}/${j}.cfg" | \
-			      sed -r -e '/(^(silent)?jpeg=)|(^(silent)?pic[0-9]*=)/! d' \
-			             -e 's/[a-z0-9]+=(.*)/\1/'`
-			for pic in $pics ; do
-				if [ "${pic:0:1}" == "/" ]; then
-					cp -pRH --parents "${pic}" "${imgdir}"
-				else
-					cp -pRH --parents "${themedir}/${theme}/${pic}" "${imgdir}"
-				fi
-			done
-
-			icons=`cat "${themedir}/${theme}/${j}.cfg" | \
-			       egrep -v '^#' | grep icon | awk '{print $2}'`
-			for icon in $icons ; do
-				if [ "${icon:0:1}" == "/" ]; then
-					cp -pRH --parents "${icon}" "${imgdir}"
-				else
-					cp -pRH --parents "${themedir}/${theme}/${icon}" "${imgdir}"
-				fi
-			done
-		done
+		res=$(cd ${themedir}/${theme} ; ls *cfg | sed -e 's/.cfg//g')
 	fi
+	
+	for j in $res ; do
+		if [ ! -e "${themedir}/${theme}/${j}.cfg" ]; then
+			echo "Warning: config file for theme '${theme}', resolution ${j} does not exist!" 1>&2
+			continue
+		fi
+
+		cp -pRH --parents "${themedir}/${theme}/${j}.cfg" "${imgdir}"
+
+		# config file parsing
+		pics=`cat "${themedir}/${theme}/${j}.cfg" | \
+		      sed -r -e '/(^(silent)?jpeg=)|(^(silent)?pic[0-9]*=)/! d' \
+			     -e 's/[a-z0-9]+=(.*)/\1/'`
+		for pic in $pics ; do
+			if [ "${pic:0:1}" == "/" ]; then
+				cp -pRH --parents "${pic}" "${imgdir}"
+			else
+				cp -pRH --parents "${themedir}/${theme}/${pic}" "${imgdir}"
+			fi
+		done
+
+		icons=`cat "${themedir}/${theme}/${j}.cfg" | \
+		       egrep -v '^#' | grep icon | awk '{print $2}'`
+		for icon in $icons ; do
+			if [ "${icon:0:1}" == "/" ]; then
+				cp -pRH --parents "${icon}" "${imgdir}"
+			else
+				cp -pRH --parents "${themedir}/${theme}/${icon}" "${imgdir}"
+			fi
+		done
+
+		#FIXME: process fonts
+	done
 done
 
 printv "o Creating initramfs image.."
