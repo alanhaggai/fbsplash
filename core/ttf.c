@@ -15,7 +15,9 @@
  *
  */
 
+#ifndef TARGET_KERNEL
 #include <math.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -118,6 +120,17 @@ static unsigned short *ASCII_to_UNICODE(unsigned short *unicode, const char *tex
 	return unicode;
 }
 */
+
+#ifdef TARGET_KERNEL
+int ceil(float a)
+{
+	int h = (int)a;
+	if (a - h >= 0.5)
+		return h+1;
+	else
+		return h;
+}
+#endif
 
 static unsigned short *UTF8_to_UNICODE(unsigned short *unicode, const char *utf8, int len)
 {

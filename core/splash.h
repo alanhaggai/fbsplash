@@ -94,7 +94,6 @@ typedef struct {
 #define F_TXT_VERBOSE	2
 #define F_TXT_EXEC 	4
 
-#ifndef TARGET_KERNEL 
 #include "ttf.h"
 
 typedef struct {
@@ -110,7 +109,6 @@ typedef struct {
 	char *val;
 	font_e *font;
 } text;
-#endif 
 
 typedef struct {
 	int x1, x2, y1, y2;

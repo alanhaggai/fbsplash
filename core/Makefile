@@ -7,7 +7,7 @@
 # more details.
 #
 
-PKG_VERSION = 0.9.2
+PKG_VERSION = 1.1.0
 DEBUG 	 = false		# set to true to prevent stripping
 K_SHARED = false		# set to true if you want to link to a shared klibc
 QUIET    = true
@@ -15,6 +15,7 @@ QUIET    = true
 JPEGSRC	= libs/jpeg-6b
 LPNGSRC = libs/libpng-1.2.8
 ZLIBSRC = libs/zlib-1.2.1
+FT2SRC  = libs/freetype-2.1.9
 LIBCSRC	= libs/klibc-0.199/klibc
 
 prefix     =
@@ -54,14 +55,15 @@ K_CFLAGS = -w $(OPTFLAGS) $(ARCHREQFLAGS) -nostdinc -iwithprefix include -I${ROO
 	   -I${ROOT}/$(LIBCSRC)/../include/arch/$(ARCH) \
 	   -I${ROOT}/$(LIBCSRC)/../include/bits$(BITSIZE) \
 	   -D__KLIBC__ -DBITSIZE=$(BITSIZE) -I${ROOT}/$(LIBCSRC)/../include -I${ROOT}/linux/include $(MISCINCS) \
-	   -DWITH_ERRLIST -I${ROOT}/$(ZLIBSRC) -I/usr/include -ffunction-sections -fdata-sections -DTARGET_KERNEL
+	   -DWITH_ERRLIST -I${ROOT}/$(ZLIBSRC) -I${ROOT}/$(FT2SRC)/include -I/usr/include -ffunction-sections \
+	   -fdata-sections -DTARGET_KERNEL -DTT_CONFIG_OPTION_BYTECODE_INTERPRETER
 
 PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_SUPPORTED -DPNG_NO_READ_iTXt \
 	  -DPNG_LEGACY_SUPPORTED -DPNG_NO_PROGRESSIVE_READ -DPNG_NO_MNG_FEATURES -DPNG_NO_CONSOLE_IO \
 	  -DPNG_NO_ERROR_NUMBERS -DPNG_READ_GRAY_TO_RGB_SUPPORTED -DPNG_READ_16_TO_8_SUPPORTED \
 	  -DPNG_READ_STRIP_ALPHA_SUPPORTED -DPNG_NO_INFO_IMAGE -DPNG_NO_READ_TRANSFORMS -DPNG_NO_READ_ANCILLARY_CHUNKS
 	  
-K_LDLIBS = $(JPEGSRC)/libjpeg.a $(LPNGSRC)/libpng.a $(ZLIBSRC)/libz.a
+K_LDLIBS = $(JPEGSRC)/libjpeg.a $(LPNGSRC)/libpng.a $(ZLIBSRC)/libz.a $(FT2SRC)/objs/.libs/libfreetype.a
 
 # flags for the user utills
 CFLAGS = -Wall -g -I${ROOT}/linux/include -I/usr/include/freetype2
@@ -151,10 +153,19 @@ jpeglib:
 	if ! make -q libjpeg.a; then $(call info,MAKE,libjpeg) ; fi ; \
 	make libjpeg.a > $(OUTPUT)
 
-splash_kern: klibc jpeglib libpng $(SP_HELPER) $(LIBC) config.h $(K_LDLIBS)
+ft2:
+	@cd $(FT2SRC) ; \
+	if [ ! -e ./config.mk ]; then \
+		$(call info,CONF,freetype2) ; \
+		./configure > /dev/null ; \
+	fi ; \
+	if ! make -q library; then $(call info,MAKE,freetype2) ; fi ; \
+	make CFLAGS="-c $(K_CFLAGS)" library > $(OUTPUT)
+
+splash_kern: klibc jpeglib libpng ft2 $(SP_HELPER) $(LIBC) config.h $(K_LDLIBS)
 
 $(SP_HELPER): $(KOUT)/kernel.o $(KOUT)/dev.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
-	      $(KOUT)/cmd.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o
+	      $(KOUT)/cmd.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o $(KOUT)/ttf.o
 	@$(call info,LD,$@)
 ifeq ($(strip $(K_SHARED)),true)
 	@ld $(K_LDFLAGS) -o $@ -e main $(CRT0) $+ $(K_LDLIBS) -R $(LIBC) $(LIBGCC)

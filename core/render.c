@@ -270,9 +270,7 @@ void render_objs(char mode, u8* target)
 			}
 
 			render_icon(c, target);
-		} 
-#ifndef TARGET_KERNEL
-		else if (o->type == o_text) {
+		} else if (o->type == o_text) {
 
 			text *ct = (text*)o->p;
 			char *txt;
@@ -291,17 +289,12 @@ void render_objs(char mode, u8* target)
 			} else {
 				txt = ct->val;
 			}
-	
-			printf("%s\n", txt);
 			
 			if (txt)
 				TTF_Render(target, txt, ct->font->font, TTF_STYLE_NORMAL, ct->x, ct->y, ct->col);
 		}
-#endif			
 	}
 
-#ifndef TARGET_KERNEL
 	TTF_Render(target, boot_message, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color);
-#endif
 }
 
