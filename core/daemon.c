@@ -23,6 +23,7 @@
 #include <sys/vt.h>
 #include <linux/kd.h>
 #include <linux/fb.h>
+#include <linux/tty.h>
 #include <linux/input.h>
 #include <sys/mman.h>
 #include <errno.h>
@@ -525,6 +526,9 @@ int cmd_set_mode(void **args)
 
 int cmd_set_tty(void **args)
 {
+	if (*(int*)args[1] < 0 || *(int*)args[1] > MAX_NR_CONSOLES)
+		return -1;
+	
 	if (!strcmp(args[0], "silent")) {
 		if (tty_s == *(int*)args[1])
 			return 0;

@@ -1,8 +1,8 @@
 
  splashutils -- userspace utilities for the framebuffer splash
 
- Prerequisities:
-  - you have to be running a 2.6 kernel built CONFIG_FB_SPLASH enabled  
+ Prerequisities (when building splashutils with fbsplash support):
+  - you have to be running a 2.6 kernel built with CONFIG_FB_SPLASH enabled  
   - you have to have this kernel's sources available
   
  Installation:
@@ -12,6 +12,7 @@
   2) Choose configuration options. This step is optional, the defaults should be
      OK as long as you're not making a special config. You can:
      - disable PNG support (config.h)
+     - disable TTF support (config.h)
      - change the themes directory (config.h)
      - dynamically link to klibc (Makefile, K_SHARED) 
        This is not recommended, the space gain will be minimal and you may
@@ -22,6 +23,7 @@
        package, you'll have to link it in ./libs and change LIBCSRC in the
        Makefile to point to these sources
      - enable debugging support (Makefile, DEBUG)
+     - enable verbose output (Makefile, QUIET)
   3) make
   4) make install
 
@@ -40,10 +42,10 @@
 
  Usage:
 
-  First you will have to get some fbsplash themes and place them in /etc/splash.
-  Once you have done that, you can use splash_util to enable fbsplash on some of
-  your virtual consoles. For example, to enable fbsplash on the first console
-  and make it use the theme 'tux', you should use:
+ First you will have to get some fbsplash themes and place them in /etc/splash.
+ Once you have done that, you can use splash_util to enable fbsplash on some of
+ your virtual consoles. For example, to enable fbsplash on the first console
+ and make it use the theme 'tux', you should use:
 
   # splash_util --vc=1 --theme=tux --cmd=setcfg
   # splash_util --vc=1 --theme=tux --cmd=setpic
@@ -59,3 +61,4 @@
 
 Michal Januszewski
 <spock@gentoo.org>
+
