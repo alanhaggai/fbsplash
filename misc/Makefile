@@ -1,4 +1,4 @@
-SUBDIRS = fbtruetype
+SUBDIRS = fbtruetype kbd
 
 all:	fbres
 
