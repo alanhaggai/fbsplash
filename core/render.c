@@ -143,7 +143,7 @@ void render_box(box *box, u8 *target)
 				      << (8 - blen)) * (255 - a) + b * a) / 255;
 			}
 		
-			/* we only need to do dithering is depth is <24bpp */
+			/* we only need to do dithering if depth is <24bpp */
 			if (fb_var.bits_per_pixel < 24) {
 				r = CLAMP(r + add*2 + 1);
 				g = CLAMP(g + add);
@@ -267,7 +267,7 @@ char *eval_text(char *txt)
 		p = t+1;
 	}
 
-	ret = malloc(len);
+	ret = malloc(len+1);
 
 	if (i == len) {
 		strcpy(ret, txt);

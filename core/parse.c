@@ -618,8 +618,12 @@ char *parse_quoted_string(char *t, u8 keepvar)
 	p = t;
 
 	while ((*p != '"' || *(p-1) == '\\') && *p != 0) {
-		if (*p == '\\')
+		if (*p == '\\') {
 			cnt++;
+			p++;
+			if (*p == 0)
+				break;
+		}
 		p++;
 	}
 
