@@ -139,9 +139,9 @@ int do_getpic(unsigned char origin, unsigned char do_cmds, char mode)
 #endif
 	
 	if (mode == 'v') {
-		render_objs(mode, (u8*)verbose_img.data, origin);
+		render_objs((u8*)verbose_img.data, NULL, mode, origin);
 	} else {
-		render_objs(mode, (u8*)silent_img.data, origin);
+		render_objs((u8*)silent_img.data, NULL, mode, origin);
 	}
 
 #ifdef CONFIG_FBSPLASH

@@ -641,9 +641,12 @@ int cmd_paint(void **args)
 		write(fd_bg, &i, 1);
 	}
 	
-	memcpy(bg_buffer, silent_img.data, fb_var.xres * fb_var.yres * bytespp);
-	render_objs('s', (u8*)bg_buffer, FB_SPLASH_IO_ORIG_USER);
-
+/*	
+ 	memcpy(bg_buffer, silent_img.data, fb_var.xres * fb_var.yres * bytespp);
+	render_objs('s', (u8*)bg_buffer, FB_SPLASH_IO_ORIG_USER);		
+*/
+	render_objs((u8*)bg_buffer, (u8*)silent_img.data, 's', FB_SPLASH_IO_ORIG_USER);
+	
 	if (notify[NOTIFY_PAINT])
 		system(notify[NOTIFY_PAINT]);
 	
@@ -665,7 +668,7 @@ int cmd_repaint(void **args)
 	}
 
 	memcpy(bg_buffer, silent_img.data, fb_var.xres * fb_var.yres * bytespp);
-	render_objs('s', (u8*)bg_buffer, FB_SPLASH_IO_ORIG_USER);
+	render_objs((u8*)bg_buffer, NULL, 's', FB_SPLASH_IO_ORIG_USER);
 
 	if (notify[NOTIFY_REPAINT])
 		system(notify[NOTIFY_REPAINT]);

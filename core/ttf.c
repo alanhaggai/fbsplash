@@ -41,49 +41,6 @@ void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 	 		      TTF_Font* font, int x, int y, color fcol, u8 hotspot);
 
 
-/* Cached glyph information */
-typedef struct cached_glyph {
-	int stored;
-	FT_UInt index;
-	FT_Bitmap bitmap;
-	FT_Bitmap pixmap;
-	int minx;
-	int maxx;
-	int miny;
-	int maxy;
-	int yoffset;
-	int advance;
-	unsigned short cached;
-} c_glyph;
-
-struct _TTF_Font {
-	/* Freetype2 maintains all sorts of useful info itself */
-	FT_Face face;
-
-	/* We'll cache these ourselves */
-	int height;
-	int ascent;
-	int descent;
-	int lineskip;
-
-	/* The font style */
-	int style;
-
-	/* Extra width in glyph bounds for text styles */
-	int glyph_overhang;
-	float glyph_italics;
-
-	/* Information in the font for underlining */
-	int underline_offset;
-	int underline_height;
-
-	/* Cache for style-transformed glyphs */
-	c_glyph *current;
-	c_glyph cache[256];
-	c_glyph scratch;
-};
-
-
 static void Flush_Glyph(c_glyph* glyph);
 
 static void Flush_Cache(TTF_Font* font)
