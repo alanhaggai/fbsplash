@@ -61,11 +61,13 @@ if [ "$1" == "start" ]; then
 	# we don't allow silent splash to run on incorrectly configured systems.
 	if [[ -z "`grep 'CONSOLE=/dev/tty1' /proc/cmdline`" && 
 		  -z "`grep 'CONSOLE=/dev/vc/1' /proc/cmdline`" ]]; then
-		ewarn "You don't appear to have a correct CONSOLE= setting on your kernel"
-		ewarn "command line. Silent splash will not be enabled. Please add either"
-		ewarn "CONSOLE=/dev/tty1 or CONSOLE=/dev/vc/1 to your kernel command line"
-		ewarn "to avoid this message."
-		${SPLUTIL} -c on 2>/dev/null		
+		if [[ ${SPLASH_MODE_REQ} == "silent" ]]; then
+			ewarn "You don't appear to have a correct CONSOLE= setting on your kernel"
+			ewarn "command line. Silent splash will not be enabled. Please add either"
+			ewarn "CONSOLE=/dev/tty1 or CONSOLE=/dev/vc/1 to your kernel command line"
+			ewarn "to avoid this message."
+			${SPLUTIL} -c on 2>/dev/null
+		fi
 		exit 1
 	fi
 
