@@ -33,7 +33,6 @@ char *cf_silentpic256 	= NULL;		/* pictures for 8bpp modes */
 char *cf_pic256 	= NULL;
 
 struct splash_config cf;
-
 int line = 0;
 
 /* Note that pic256 and silentpic256 have to be located before pic and 
@@ -863,6 +862,9 @@ int parse_cfg(char *cfgfile)
 		}
 	}
 
+#ifndef TARGET_KERNEL
+	theme_loaded = 1;
+#endif	
 	fclose(cfg);
 	return 0;
 }

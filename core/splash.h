@@ -221,6 +221,7 @@ extern u16 arg_progress;
 
 #ifndef TARGET_KERNEL
 extern char *arg_export;
+extern u8 theme_loaded;
 #endif 
 
 extern char *config_file;

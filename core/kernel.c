@@ -201,7 +201,7 @@ int main(int argc, char **argv)
 		parse_cfg(config_file);
 	}
 
-#ifdef CONFIG_TTY_KERNEL
+#ifdef CONFIG_TTF_KERNEL
 	if (TTF_Init() < 0) {
 		fprintf(stderr, "Couldn't initialize TTF.\n");
 	}

@@ -2,15 +2,14 @@
 #
 # splash_geninitramfs -- an utility to create initramfs images for use with fbsplash 
 #
-# Copyright (C) 2004, Michal Januszewski <spock@gentoo.org>
+# Copyright (C) 2004-2005, Michael Januszewski <spock@gentoo.org>
 #
 # This file is part of the splashutils package.
 #
 # This file is subject to the terms and conditions of the GNU General Public
-# License.  See the file COPYING in the main directory of this archive for
+# License v2.  See the file COPYING in the main directory of this archive for
 # more details.
 #
-# $Header: /srv/cvs/splash/utils/scripts/splash_geninitramfs,v 1.6 2005/01/29 23:27:50 spock Exp $
 
 cleanup()
 {
@@ -45,6 +44,17 @@ printv()
 {
 	if [ $verbose -gt 0 ]; then
 		echo "$*"
+	fi
+}
+
+put_item()
+{
+	item="$1"
+	
+	if [ "${item:0:1}" == "/" ]; then
+		cp -pRH --parents "${item}" "${imgdir}"
+	else
+		cp -pRH --parents "${themedir}/${theme}/${item}" "${imgdir}"
 	fi
 }
 
@@ -152,7 +162,6 @@ res=${res//,/ }
 
 printv "o Copying themes.."
 for (( i=0 ; i < index ; i++ )) ; do
-
 	theme=${themes[$i]}
 	
 	printv "  - ${theme}"
@@ -176,24 +185,26 @@ for (( i=0 ; i < index ; i++ )) ; do
 		      sed -r -e '/(^(silent)?jpeg=)|(^(silent)?pic[0-9]*=)/! d' \
 			     -e 's/[a-z0-9]+=(.*)/\1/'`
 		for pic in $pics ; do
-			if [ "${pic:0:1}" == "/" ]; then
-				cp -pRH --parents "${pic}" "${imgdir}"
-			else
-				cp -pRH --parents "${themedir}/${theme}/${pic}" "${imgdir}"
-			fi
+			put_item "${pic}"
 		done
 
 		icons=`cat "${themedir}/${theme}/${j}.cfg" | \
 		       egrep -v '^#' | grep icon | awk '{print $2}'`
-		for icon in $icons ; do
-			if [ "${icon:0:1}" == "/" ]; then
-				cp -pRH --parents "${icon}" "${imgdir}"
-			else
-				cp -pRH --parents "${themedir}/${theme}/${icon}" "${imgdir}"
-			fi
+		for icon in ${icons} ; do
+			put_item "${icon}"
 		done
 
-		#FIXME: process fonts
+		fonts=`cat "${themedir}/${theme}/${j}.cfg" | \
+		       egrep -v '^#' | grep 'text ' | grep -o '[^ ]\+\.ttf'`
+		for font in ${fonts} ; do
+			put_item "${font}"
+		done
+
+		font=`cat "${themedir}/${theme}/${j}.cfg" | egrep -v '^#' | grep 'text_font='`
+		font=${font#*=}
+		if [[ -n "${font}" ]]; then
+			put_item "${font}"
+		fi
 	done
 done
 

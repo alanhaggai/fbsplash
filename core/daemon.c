@@ -57,6 +57,8 @@ typedef struct {
 
 list svcs = { NULL, NULL };
 
+u8 theme_loaded = 0;
+
 void start_tty_handlers() 
 {
 	char t[16];
@@ -149,8 +151,14 @@ void daemon_term_handler(int signum)
 
 void term_handler(int signum)
 {
+	struct vt_mode vt;
+	
+	vt.mode   = VT_AUTO;
+	vt.waitv  = 0;
+
 	tcsetattr(fd_curr, TCSANOW, &tios);
 	ioctl(fd_curr, KDSETMODE, KD_TEXT);
+	ioctl(fd_curr, VT_SETMODE, &vt);
 	exit(0);
 }
 
@@ -215,12 +223,10 @@ void daemon_switch(int tty, int fd, u8 silent)
 				ioctl(fd, VT_WAITACTIVE, tty);
 			}
 		}
-
-		sleep(1);
 	}
 }
 
-void free_images()
+void free_objs()
 {
 	item *i, *j;
 	
@@ -268,13 +274,7 @@ int cmd_exit(void **args)
 {
 	item *i, *j;
 		
-	if (pid_s)
-		kill(pid_s, SIGTERM);
-
-	if (pid_v)
-		kill(pid_v, SIGTERM);
-
-	free_images();
+	free_objs();
 
 	for (i = svcs.head; i != NULL; ) {
 		j = i->next;
@@ -350,41 +350,117 @@ cus_update:
 	return 0;
 }
 
-int cmd_set_theme(void **args)
+int reload_theme(void)
 {
 	item *i;
-		
-	if (arg_theme)
-		free(arg_theme);
+	theme_loaded = 0;
 	
 	if (config_file)
 		free(config_file);
 
-	arg_theme = strdup(args[0]);
 	config_file = get_cfg_file(arg_theme);
 	
 	if (!config_file)
 		return -1;
 
-	free_images();
-
+	free_objs();
 #ifdef CONFIG_TTF
 	free_fonts();
 #endif
+
 	parse_cfg(config_file);
 	load_images('a');
-	/* FIXME: free objs */
-
+	
 #ifdef CONFIG_TTF
 	load_fonts();
 #endif
-	
 	for (i = svcs.head ; i != NULL; i = i->next) {
 		svc_state *ss = (svc_state*)i->p;
 		update_icon_status(ss->svc, ss->state);
 	}
-		
+	
 	return 0;
+}
+
+int cmd_set_theme(void **args)
+{
+	if (arg_theme)
+		free(arg_theme);
+
+	arg_theme = strdup(args[0]);
+	reload_theme();
+			
+	return 0;
+}
+
+void alloc_bg_buffer()
+{
+	int i = 0;
+
+	/* Allocate the background buffer */
+	if (!arg_export) {
+		bg_buffer = malloc(fb_var.xres * fb_var.yres * bytespp);
+		if (!bg_buffer) {
+			printerr("Can't allocate background image buffer.\n");
+			exit(1);
+		}
+	} else {
+			
+		fd_bg = open(arg_export, O_CREAT | O_TRUNC | O_RDWR, 0660);
+		if (fd_bg == -1) {
+			printerr("Can't open file for the background buffer.\n");
+			exit(1);
+		}
+		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
+		write(fd_bg, &i, 1);
+		
+		bg_buffer = mmap(NULL, fb_var.xres * fb_var.yres * bytespp, PROT_WRITE | PROT_READ,
+				MAP_SHARED, fd_bg, 0);
+
+		if (bg_buffer == MAP_FAILED) {
+			printerr("Failed to mmap the background buffer.\n");
+			close(fd_bg);
+			exit(1);
+		}
+	}
+}
+
+void handle_silent_switch(int signum)
+{
+	struct fb_var_screeninfo old_var;
+	struct fb_fix_screeninfo old_fix;
+
+	old_fix = fb_fix;
+	old_var = fb_var;
+
+	/* FIXME: we should use the vc<->fb map here */		
+	get_fb_settings(arg_fb);
+			
+#ifdef CONFIG_SILENT_KD_GRAPHICS
+	ioctl(fd_tty_s, KDSETMODE, KD_GRAPHICS);
+#endif
+	if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR)
+		set_directcolor_cmap(fd_fb);
+
+	if (memcmp(&fb_fix, &old_fix, sizeof(struct fb_fix_screeninfo)) || 
+	    memcmp(&fb_var, &old_var, sizeof(struct fb_var_screeninfo))) {
+		reload_theme();
+
+		munmap(fb_mem, old_fix.line_length * old_var.yres);
+		fb_mem = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
+			      MAP_SHARED, fd_fb, 0); 
+	
+		if (fb_mem == MAP_FAILED) {
+			printerr("mmap() /dev/fb%d failed.\n", arg_fb);
+			exit(1);	
+		}
+
+		if (bg_buffer)
+			free(bg_buffer);
+		alloc_bg_buffer();
+	}
+	
+	cmd_repaint(NULL);
 }
 
 int cmd_set_mode(void **args)
@@ -402,14 +478,6 @@ int cmd_set_mode(void **args)
 	ioctl(fd_tty_s, VT_ACTIVATE, n);
 	ioctl(fd_tty_s, VT_WAITACTIVE, n);
 
-	if (n == tty_s) {
-#ifdef CONFIG_SILENT_KD_GRAPHICS
-		ioctl(fd_tty_s, KDSETMODE, KD_GRAPHICS);
-#endif
-		if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR)
-			set_directcolor_cmap(fd_fb);
-	}
-	
 	return 0;
 }
 
@@ -505,6 +573,9 @@ int cmd_paint(void **args)
 {
 	char i = 0;
 	
+	if (!theme_loaded)
+		return -1;
+	
 	if (fd_bg) {
 		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
 		write(fd_bg, &i, 1);
@@ -525,6 +596,9 @@ int cmd_repaint(void **args)
 {
 	char i = 0;
 
+	if (!theme_loaded)
+		return -1;
+	
 	if (fd_bg) {
 		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
 		write(fd_bg, &i, 1);
@@ -563,6 +637,9 @@ int cmd_paint_rect(void **args)
 	rect re;
 	int t;
 
+	if (!theme_loaded)
+		return -1;
+	
 	re.x1 = *(int*)args[0];
 	re.x2 = *(int*)args[2];
 	re.y1 = *(int*)args[1];
@@ -744,44 +821,18 @@ out:		fclose(fp_fifo);
 	}
 }
 
-
 void daemon_start()
 {
 	int i = 0;
 	struct stat mystat;
-
-	/* Allocate the background buffer */
-	if (!arg_export) {
-		bg_buffer = malloc(fb_var.xres * fb_var.yres * bytespp);
-		if (!bg_buffer) {
-			printerr("Can't allocate background image buffer.\n");
-			exit(1);
-		}
-	} else {
-			
-		fd_bg = open(arg_export, O_CREAT | O_TRUNC | O_RDWR, 0660);
-		if (fd_bg == -1) {
-			printerr("Can't open file for the background buffer.\n");
-			exit(1);
-		}
-		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
-		write(fd_bg, &i, 1);
-		
-		bg_buffer = mmap(NULL, fb_var.xres * fb_var.yres * bytespp, PROT_WRITE | PROT_READ,
-				MAP_SHARED, fd_bg, 0);
-
-		if (bg_buffer == MAP_FAILED) {
-			printerr("Failed to mmap the background buffer.\n");
-			close(fd_bg);
-			exit(1);
-		}
-	}
 		
 	/* Create a mmap of the framebuffer */
 	fd_fb = open_fb();
 	if (!fd_fb)
 		exit(1);
 
+	alloc_bg_buffer();
+	
 	fb_mem = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
 			MAP_SHARED, fd_fb, 0); 
 	
@@ -816,7 +867,7 @@ void daemon_start()
 	arg_theme = strdup(arg_theme);
 	
 	signal(SIGTERM,daemon_term_handler);
-	signal(SIGUSR1,(void(*)(int))cmd_repaint);
+	signal(SIGUSR1,handle_silent_switch);
 	signal(SIGUSR2,daemon_term_handler);
 	signal(SIGSEGV,daemon_term_handler);
 	signal(SIGINT,daemon_term_handler);
