@@ -1,3 +1,5 @@
+all: fgconsole
+
 fgconsole: fgconsole.o getfd.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $+ -o $@
 
