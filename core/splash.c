@@ -87,7 +87,10 @@ void usage(void)
 "      --fb=NUM        use NUMth framebuffer device\n"
 "  -m, --mode=(v|s)    use either silent (s) or verbsose (v) mode\n"
 "  -p, --progress=NUM  set progress to NUM/65535 * 100%%\n"
-"  -e, --export=FILE   export the silent background image to a file\n");
+"  -e, --export=FILE   export the silent background image to a file\n"
+"                      this option is only used when splash_util is\n"
+"                      running in daemon mode\n"
+);
 }
 
 int main(int argc, char **argv)
@@ -102,7 +105,7 @@ int main(int argc, char **argv)
 	
 	verbose_img.cmap.red = silent_img.cmap.red = NULL;
 	
-	while ((c = getopt_long(argc, argv, "c:t:m:p:hd", options, NULL)) != EOF) {
+	while ((c = getopt_long(argc, argv, "c:t:m:p:e:hd", options, NULL)) != EOF) {
 	
 		switch (c) {
 		
@@ -153,6 +156,11 @@ int main(int argc, char **argv)
 				arg_vc = 0;
 			break;
 
+		case 'e':
+		case 0x107:
+			arg_export = optarg;
+			break;
+			
 		case 'd':
 			arg_task = start_daemon;
 			break;

@@ -36,6 +36,10 @@ char arg_mode = 'v';
 char *arg_theme = NULL;
 u16 arg_progress = 0;
 
+#ifndef TARGET_KERNEL
+char *arg_export = NULL;
+#endif
+
 struct fb_image pic;
 char *pic_file = NULL;
 

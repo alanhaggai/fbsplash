@@ -213,6 +213,10 @@ extern char *arg_theme;
 extern char arg_mode;
 extern u16 arg_progress;
 
+#ifndef TARGET_KERNEL
+extern char *arg_export;
+#endif 
+
 extern char *config_file;
 
 extern list icons;

@@ -28,6 +28,11 @@
 
 pid_t pid_v = 0, pid_s = 0;
 
+#define NOTIFY_REPAINT 0
+#define NOTIFY_PAINT 1
+
+char *notify[2];
+
 int tty_s = TTY_SILENT;
 int tty_v = TTY_VERBOSE;
 
@@ -38,6 +43,7 @@ int fd_fb = 0;
 
 u8 *fb_mem = NULL;
 u8 *bg_buffer = NULL;
+int fd_bg = 0;
 
 struct termios tios;
 
@@ -209,6 +215,8 @@ void daemon_switch(int tty, int fd, u8 silent)
 				ioctl(fd, VT_WAITACTIVE, tty);
 			}
 		}
+
+		sleep(1);
 	}
 }
 
@@ -415,6 +423,21 @@ int cmd_set_tty(void **args)
 	return 0;
 }
 
+int cmd_set_notify(void **args)
+{
+	if (!strcmp(args[0], "repaint")) {
+		if (notify[NOTIFY_REPAINT])
+			free(notify[NOTIFY_REPAINT]);
+		notify[NOTIFY_REPAINT] = strdup(args[1]);
+	} else if (!strcmp(args[1], "paint")) {
+		if (notify[NOTIFY_PAINT])
+			free(notify[NOTIFY_PAINT]);
+		notify[NOTIFY_PAINT] = strdup(args[1]);
+	}
+	
+	return 0;
+}
+
 void do_paint_rect(u8 *dst, u8 *src, rect *re)
 {
 	u8 *to;
@@ -480,9 +503,19 @@ void do_repaint(u8 *dst, u8 *src)
 
 int cmd_paint(void **args)
 {
+	char i = 0;
+	
+	if (fd_bg) {
+		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
+		write(fd_bg, &i, 1);
+	}
+	
 	memcpy(bg_buffer, silent_img.data, fb_var.xres * fb_var.yres * bytespp);
 	render_objs('s', (u8*)bg_buffer);
 
+	if (notify[NOTIFY_PAINT])
+		system(notify[NOTIFY_PAINT]);
+	
 	do_paint(fb_mem, bg_buffer);	
 	
 	return 0;
@@ -490,9 +523,19 @@ int cmd_paint(void **args)
 
 int cmd_repaint(void **args)
 {
+	char i = 0;
+
+	if (fd_bg) {
+		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
+		write(fd_bg, &i, 1);
+	}
+
 	memcpy(bg_buffer, silent_img.data, fb_var.xres * fb_var.yres * bytespp);
 	render_objs('s', (u8*)bg_buffer);
 
+	if (notify[NOTIFY_REPAINT])
+		system(notify[NOTIFY_REPAINT]);
+	
 	do_repaint(fb_mem, bg_buffer);
 	
 	return 0;
@@ -595,7 +638,13 @@ struct {
 		.args = 1,
 		.specs = "s"
 	},
-
+	
+	{	.cmd = "set notify",
+		.handler = cmd_set_notify,
+		.args = 2,
+		.specs = "ss"
+	},
+		
 	{	.cmd = "paint rect",
 		.handler = cmd_paint_rect,
 		.args = 4,
@@ -702,12 +751,32 @@ void daemon_start()
 	struct stat mystat;
 
 	/* Allocate the background buffer */
-	bg_buffer = malloc(fb_var.xres * fb_var.yres * (fb_var.bits_per_pixel >> 3));
-	if (!bg_buffer) {
-		printerr("Can't allocate background image buffer\n.");
-		exit(1);
-	}
+	if (!arg_export) {
+		bg_buffer = malloc(fb_var.xres * fb_var.yres * bytespp);
+		if (!bg_buffer) {
+			printerr("Can't allocate background image buffer.\n");
+			exit(1);
+		}
+	} else {
+			
+		fd_bg = open(arg_export, O_CREAT | O_TRUNC | O_RDWR, 0660);
+		if (fd_bg == -1) {
+			printerr("Can't open file for the background buffer.\n");
+			exit(1);
+		}
+		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
+		write(fd_bg, &i, 1);
+		
+		bg_buffer = mmap(NULL, fb_var.xres * fb_var.yres * bytespp, PROT_WRITE | PROT_READ,
+				MAP_SHARED, fd_bg, 0);
 
+		if (bg_buffer == MAP_FAILED) {
+			printerr("Failed to mmap the background buffer.\n");
+			close(fd_bg);
+			exit(1);
+		}
+	}
+		
 	/* Create a mmap of the framebuffer */
 	fd_fb = open_fb();
 	if (!fd_fb)
@@ -722,8 +791,6 @@ void daemon_start()
 		exit(1);	
 	}
 
-	bytespp = (fb_var.bits_per_pixel + 7) >> 3;
-
 	/* Create the splash FIFO if it's not already in place */
 	stat(SPLASH_FIFO, &mystat);
 	if (!S_ISFIFO(mystat.st_mode)) {
@@ -731,6 +798,10 @@ void daemon_start()
 			exit(3);
 	}
 
+	for (i = 0; i < 2; i++) {
+		notify[i] = NULL;
+	}
+	
 	i = fork();
 	if (i)
 		exit(0);
