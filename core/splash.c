@@ -7,8 +7,6 @@
  * License.  See the file COPYING in the main directory of this archive for
  * more details.
  *
- * $Header: /srv/cvs/splash/utils/splash.c,v 1.18 2005/01/29 23:27:49 spock Exp $ 
- * 
  */
 
 #include <stdio.h>
@@ -269,7 +267,6 @@ setpic_out:	break;
 			ioctl(c, FBIOPUTCMAP, &pic.cmap);
 
 		if (arg_task == repaint) {
-		
 			i = fb_var.xres * ((fb_var.bits_per_pixel + 7) >> 3);
 
 			for (y = 0; y < fb_var.yres; y++) {
@@ -279,13 +276,12 @@ setpic_out:	break;
 
 				write(c, pic.data + i*y, i);
 			}
-	
 		} else {
 			int j;
 			int bytespp = ((fb_var.bits_per_pixel + 7) >> 3);
 			
 			for (i = 0; i < cf_rects_cnt; i++) {
-				j = (cf_rects[i].x2 - cf_rects[i].x1) * bytespp;
+				j = (cf_rects[i].x2 - cf_rects[i].x1 + 1) * bytespp;
 				
 				for (y = cf_rects[i].y1; y <= cf_rects[i].y2; y++) {
 					lseek(c, (fb_var.yoffset + y) * fb_fix.line_length + cf_rects[i].x1 * bytespp, SEEK_SET);

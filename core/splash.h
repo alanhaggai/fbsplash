@@ -1,5 +1,3 @@
-/* $Header: /srv/cvs/splash/utils/splash.h,v 1.13 2005/01/29 23:27:49 spock Exp $ */
-
 #include "config.h"
 
 //#ifdef TARGET_KERNEL

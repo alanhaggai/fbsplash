@@ -7,8 +7,6 @@
  * License.  See the file COPYING in the main directory of this archive for
  * more details.
  *
- * $Header: /srv/cvs/splash/utils/splash_kernel.c,v 1.8 2004/09/27 14:31:56 spock Exp $
- * 
  */
 
 #include <stdio.h>
@@ -24,8 +22,6 @@
 #include <linux/kd.h>
 
 #include "splash.h"
-
-/* $Header: /srv/cvs/splash/utils/splash_kernel.c,v 1.8 2004/09/27 14:31:56 spock Exp $ */
 
 int main(int argc, char **argv)
 {

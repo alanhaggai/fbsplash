@@ -8,8 +8,6 @@
  * License.  See the file COPYING in the main directory of this archive for
  * more details.
  *
- * $Header: /srv/cvs/splash/utils/splash_common.c,v 1.8 2005/01/29 23:27:49 spock Exp $
- * 
  */
 
 #include <stdio.h>
@@ -161,7 +159,6 @@ int do_getpic(unsigned char origin, unsigned char do_cmds, char mode)
 		}
 #endif
 	} else {
-
 		/* here we handle 15bpp+ modes, the pics can be either jpgs or
 		 * pngs, so we have to check it out first */
 
@@ -202,9 +199,8 @@ int do_config(unsigned char origin)
 		return -1;
 	}
 		
-	/* if the user specified invalid values for the text field - correct it.
-	 * also setup default values (text field coverting the whole screen) */
-
+	/* If the user specified invalid values for the text field - correct it.
+	 * Also setup default values (text field coverting the whole screen). */
 	if (cf.tx > fb_var.xres)
 		cf.tx = 0;
 

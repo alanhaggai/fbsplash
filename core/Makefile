@@ -6,8 +6,6 @@
 # License.  See the file COPYING in the main directory of this archive for
 # more details.
 #
-# $Header: /srv/cvs/splash/utils/Makefile,v 1.17 2005/01/29 23:27:49 spock Exp $
-#
 
 PKG_VERSION = 0.9.2
 DEBUG 	 = false		# set to true to prevent stripping

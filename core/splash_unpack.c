@@ -7,8 +7,6 @@
  * License.  See the file COPYING in the main directory of this archive for
  * more details.
  *
- * $Header: /srv/cvs/splash/utils/splash_unpack.c,v 1.11 2005/01/29 23:27:49 spock Exp $
- *
  */
 
 #include <stdio.h>

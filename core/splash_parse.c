@@ -1,14 +1,12 @@
 /*
  * splash_parse.c - Functions for parsing bootsplash config files
  * 
- * Copyright (C) 2004, Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2004-2005, Michal Januszewski <spock@gentoo.org>
  * 
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file COPYING in the main directory of this archive for
  * more details.
  *
- * $Header: /srv/cvs/splash/utils/splash_parse.c,v 1.9 2005/01/29 23:27:49 spock Exp $
- * 
  */
 
 #include <stdlib.h>
@@ -18,8 +16,6 @@
 //#include <ctype.h>
 #include <linux/fb.h>
 #include "splash.h"
-
-/* $Header: /srv/cvs/splash/utils/splash_parse.c,v 1.9 2005/01/29 23:27:49 spock Exp $ */
 
 struct config_opt {
 	char *name;
@@ -44,9 +40,8 @@ int cf_icons_cnt = 0;
 
 int line = 0;
 
-/* note that pic256 and silentpic256 have to be located before pic and 
+/* Note that pic256 and silentpic256 have to be located before pic and 
  * silentpic or we are gonna get a parse error @ pic256/silentpic256. */
-
 struct config_opt opts[] =
 {
 	{	.name = "jpeg",
@@ -106,16 +101,18 @@ struct config_opt opts[] =
 		.val = NULL		},
 };
 
-int isdigit(char c) {
+int isdigit(char c) 
+{
 	return (c >= '0' && c <= '9') ? 1 : 0;
 }
 
-int ishexdigit(char c) {
+int ishexdigit(char c) 
+{
 	return (isdigit(c) || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) ? 1 : 0;
 }
 
-void skip_whitespace(char **buf) {
-
+void skip_whitespace(char **buf) 
+{
 	while (**buf == ' ' || **buf == '\t')
 		(*buf)++;
 		
@@ -350,7 +347,7 @@ void parse_rect(char *t)
 		crect.x2 = fb_var.xres-1;
 	if (crect.y1 >= fb_var.yres)
 		crect.y1 = fb_var.yres-1;
-	if (crect.y2 >= fb_var.yres);
+	if (crect.y2 >= fb_var.yres)
 		crect.y2 = fb_var.yres-1;
 	
 	if (cf_boxes_cnt >= MAX_RECTS)
@@ -412,7 +409,7 @@ void parse_box(char *t)
 		cbox.x2 = fb_var.xres-1;
 	if (cbox.y1 >= fb_var.yres)
 		cbox.y1 = fb_var.yres-1;
-	if (cbox.y2 >= fb_var.yres);
+	if (cbox.y2 >= fb_var.yres)
 		cbox.y2 = fb_var.yres-1;
 	
 #define zero_color(cl) *(u32*)(&cl) = 0;

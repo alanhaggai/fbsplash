@@ -7,8 +7,6 @@
  * License.  See the file COPYING in the main directory of this archive for
  * more details.
  *
- * $Header: /srv/cvs/splash/utils/splash_dev.c,v 1.4 2004/09/27 14:31:56 spock Exp $
- *
  */
 
 #include <sys/types.h>

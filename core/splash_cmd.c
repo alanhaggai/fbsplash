@@ -7,8 +7,6 @@
  * License.  See the file COPYING in the main directory of this archive for
  * more details.
  *
- * $Header: /srv/cvs/splash/utils/splash_cmd.c,v 1.5 2004/09/27 14:53:40 spock Exp $ 
- * 
  */
 
 #include <stdio.h>
