@@ -55,6 +55,6 @@ accessible (ie. mounted) at the time fbcon is initialized.
 It's theoretically possible to store the theme data in a classical initrd
 and still make use of it, though. You would have to create a wrapper 
 /sbin/splash_helper script/program that would mount initrd.image, copy 
-the theme data to the rootfs and then call the real splash_helper. It
+the theme data to the rootfs and then call the real splash_helper. I
 hasn't been tried so far, but it should work.
 

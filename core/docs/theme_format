@@ -1,21 +1,23 @@
-splashutils recognize the following directives in the config files in
+splashutils recognizes the following directives in the config files in
 /etc/splash:
 
+IMPORTANT NOTE: all coordinates are counted from 0 to xres/yres.
+
 o jpeg=<path>
-  Full path to the JPG background image for verbose mode 
+  Full path to the JPG background image for verbose mode.
 
 o pic=<path>
-  Full path to the JPG/PNG background image for verbose mode
+  Full path to the JPG/PNG background image for verbose mode.
 
 o silentjpeg=<path>
-  Full path to the JPG backgruond image for silent mode
+  Full path to the JPG background image for silent mode.
 
 o silentpic=<path>
-  Full path to the JPG/PNG background image for silent mode
+  Full path to the JPG/PNG background image for silent mode.
 
 o pic256=<path>
   Full path to the PNG background image for verbose splash mode and 8bpp
-  framebuffer modes. 
+  framebuffer modes.
 
   NOTES:
   - The image can have a maximum of 240 colors. 16 colors are taken by fbcon 
@@ -32,35 +34,101 @@ o bgcolor=<n>
   Background color that is to be treated as transparent by fbcon. Usually 0.
 
 o tx=<n>
-  The x coordinate of the upper left corner of the text window. 0 means 'the
-  left edge of the screen'.
-
+  The x coordinate of the upper left corner of the text window.
+  
 o ty=<n>
-  The y coordinate of the upper left corner of the text window. 0 means 'the
-  top edge of the screen'
-
+  The y coordinate of the upper left corner of the text window.
+ 
 o tw=<n>
-  The width of the text window. n cannot be greater than x resolution.
+  The width of the text window. n cannot be greater than horizontal resolution.
 
 o th=<n>
-  The height of the text windows. n cannot be greater than y resolution.
+  The height of the text window. n cannot be greater than vertical resolution.
+
+o text_x=<n>
+  The x coordinate of the main text message.
+
+o text_y=<n>
+  The y coordinate of the main text message.
+
+o text_size=<n>
+  The size of the font used to render the main text message.
+
+o text_color=<color>
+  The color of the main text message either in [0x|#]rrggbb or in 
+  [0x|#]rrggbbaa format.
+
+o text_font=<file>
+  A path to the TTF font with which the main text message will be rendered.
+  The path can be either:
+   - an absolute path, starting with '/'
+   - a path relative to THEME_DIR (eg. /etc/splash)
+   - a path relative to THEME_DIR/<theme_name> (eg. /etc/splash/default)
+   
+o text [flags] <font> <size> <x> [left|middle|right] <y> [top|middle|bottom]
+  <color> [exec|eval] "text"
+
+  Draws a text string somewhere on the screen.
+
+  Flags:
+  silent  - The text is rendered only in silent mode.
+  verbose - The text is rendered only in verbose mode.
+  
+  If no flags are specified, the text is rendered in both modes.
+  
+  The color can be specified either as #rrggbb or as #rrggbbaa.
+ 
+  The x and y coordinates specify the position of the hot spot of the text 
+  string. The position of the hot stop within the bounding rectangle of the
+  text string can be chosen with the 'left', 'middle' and 'right', 'top'
+  and 'bottom' flags.
+
+  The different positions of the hot spot are shown below:
+
+ (lt)-------------------------(mt)----------------------------(rt)
+  | TTTTTT EEEEE  SSSS TTTTTT      TTTTTT EEEEE XX  XX TTTTTT   | 
+  |   TT   EE    SS      TT          TT   EE     XXXX    TT     |
+ (lm) TT   EEEE   SSS    TT   (mm)   TT   EEEE    XX     TT   (rm)
+  |   TT   EE       SS   TT          TT   EE     XXXX    TT     |
+  |   TT   EEEEE SSSS    TT          TT   EEEEE XX  XX   TT     |
+ (lb)-------------------------(mb)----------------------------(rb)
+ 
+  lt = left/top
+  mt = middle/top
+  rt = right/top
+  lm = left/middle
+  ...
+ 
+  The default position of the hot spot is (lt) (left - top).
+  
+  Before the text is rendered/evaluated, all expressions of the form:
+  '\x', where 'x' is any character, are replaced by 'x'.
+  
+  If the 'exec' flag is set, sh -c 'text' is executed, and the value
+  read from stdout is rendered on the screen.
+  
+  If the 'eval' flag is set, evaluation is performed on the 'text'
+  argument. Variables of the form $variablename are replaced by their
+  values. Recognized variables:
+   - $progress - progress indicator (in percents)
 
 o box [flags] <x0> <y0> <x1> <y1> <color1> [color2 color3 color4]
   Draws a box on the image. 
 
   Flags:
-  silent - The box is drawn only in silent mode. If a box doesn't have this 
-           flag set, it's drawn only in verbose mode.
-  noover - This stands for no-overpaint. Boxes with this flag set are painted
-           only when progress == 0 or the repaint command is used.
-  inter  - The box will be interpolated with the following one, based on the
-           value of progress.
+  silent - The box is drawn only in silent mode. If a box doesn't have 
+           this flag set, it's drawn only in verbose mode.
+  noover - This stands for no-overpaint. Boxes with this flag set are 
+           painted only when progress == 0 or the repaint command is used.
+  inter  - The box will be interpolated with the following one, based 
+           on the value of progress.
 
   x0, y0 - coordinates of the upper left corner of the box
   x1, y1 - coordinates of the lower right corner of the box
 
-  Colors are specified one of the following formats:
-  #rrggbb or #rrggbbaa.
+  Colors are specified in one of the following formats:
+  - #rrggbb
+  - #rrggbbaa
   aa = alpha, 00 - translucent, 255 - solid
 
   If only color1 is specified, the box is filled with the color.
@@ -73,32 +141,36 @@ o box [flags] <x0> <y0> <x1> <y1> <color1> [color2 color3 color4]
 
   and the box is filled with a gradient formed by these colors.
 
-o icon <path> <x> <y> [event service]
-  Draws an icon (a PNG image) at coordinates x, y [if an event happens].
+o icon <path> <x> <y> [state service]
+  Draws an icon (a PNG image) at coordinates x, y based on the current
+  state of the service.
 
-  event can be one of the following:
+  'state' can be one of the following:
   svc_inactive_start, 	svc_inactive_stop,
   svc_started, 		svc_stopped,
   svc_start_failed, 	svc_stop_failed,
   svc_start, 		svc_stop,
 
-  service is (surprise, surprise!) the name of the service.
+  'service' is (surprise, surprise!) the name of the service.
 
   An icon will be rendered on the screen only if the service name
-  is found in a environment variable appropriate for the selected 
-  event. The list of variable names corresponding to the events
-  follows:
+  is found in a environment variable appropriate for the selected
+  state or if the state has been set though an appropriate splash
+  daemon command. The list of variable names corresponding to the 
+  recognized states follows:
   SPL_SVC_INACTIVE_START	SPL_SVC_INACTIVE_STOP
   SPL_SVC_STARTED		SPL_SVC_STOPPED
   SPL_SVC_START_FAILED		SPL_SVC_STOP_FAILED
   SPL_SVC_START			SPL_SVC_STOP
 
-  Each of this variables can contain a space-separated list of 
+  Each of these variables can contain a space-separated list of
   service names.
 
 o rect <attr> <x0> <y0> <x1> <y1>
   Describes a rectangular area on the screen with some special
-  attribute attr. Available attributes:
+  attribute 'attr'.
+  
+  Available attributes:
 
   repaint - causes the area to be repainted every time splash_util
             is called with the 'paint' command (with 'repaint', the
