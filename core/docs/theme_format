@@ -65,8 +65,8 @@ o text_font=<file>
    - a path relative to THEME_DIR (eg. /etc/splash)
    - a path relative to THEME_DIR/<theme_name> (eg. /etc/splash/default)
    
-o text [flags] <font> <size> <x> [left|middle|right] <y> [top|middle|bottom]
-  <color> [exec|eval] "text"
+o text [flags] <font> [style] <size> <x> [left|middle|right] 
+  <y> [top|middle|bottom] <color> [exec|eval] "text"
 
   Draws a text string somewhere on the screen.
 
@@ -75,6 +75,19 @@ o text [flags] <font> <size> <x> [left|middle|right] <y> [top|middle|bottom]
   verbose - The text is rendered only in verbose mode.
   
   If no flags are specified, the text is rendered in both modes.
+  
+  'font' is the name of the file with a TTF font. The path interpreted in 
+  the same way as in the case of the 'text_font' configuration directive.
+  
+  'style' can be used to select a bold/italic/underlined form. The style
+  selector is formed with the following characters:
+   
+   'b' - bold
+   'i' - italic
+   'u' - underlined
+
+  Example: 
+   A style selector for a bold italic font: bi
   
   The color can be specified either as #rrggbb or as #rrggbbaa.
  
