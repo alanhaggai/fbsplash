@@ -453,8 +453,6 @@ splash_update_svc() {
 splash_comm_send() {
 	if [[ "$(ps h --pid $(<${spl_pidfile}) -o comm 2>/dev/null)" == "splash_util.sta" ]]; then
 		echo $* > ${spl_fifo} &		
-	else	
-		echo "blah: $(ps h --pid $(<${spl_pidfile}) -o comm 2>/dev/null)" 
 	fi
 }
 
