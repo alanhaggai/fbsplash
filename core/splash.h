@@ -26,6 +26,7 @@
 #define printerr(args...)	fprintf(stderr, ## args);
 #define printwarn(args...)	fprintf(stderr, ## args);
 #define min(a,b)		((a) < (b) ? (a) : (b))
+#define max(a,b)		((a) > (b) ? (a) : (b))
 #define CLAMP(x) 		((x) > 255 ? 255 : (x))
 #define DEBUG(x...)
 						    
@@ -196,6 +197,10 @@ void do_repaint(u8 *dst, u8 *src);
 	
 /* list.c */
 void list_add(list *l, void *obj);
+
+/* effects.c */
+void put_img(u8 *dst, u8 *src);
+void fade_in(u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd);
 
 extern char *cf_pic;
 extern char *cf_silentpic;

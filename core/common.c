@@ -40,6 +40,8 @@ u16 arg_progress = 0;
 char *arg_export = NULL;
 #endif
 
+int bytespp = 4;
+
 struct fb_image pic;
 char *pic_file = NULL;
 
@@ -104,6 +106,8 @@ int get_fb_settings(int fb_num)
 	remove_dev(fn, 0x1);
 #endif
 
+	bytespp = (fb_var.bits_per_pixel + 7) >> 3;
+	
 	return 0;
 }
 

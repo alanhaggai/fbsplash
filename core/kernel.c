@@ -1,5 +1,5 @@
 /*
- * splash_kernel.c - the core of splash_helper
+ * kernel.c - the core of splash_helper
  *
  * Copyright (C) 2004-2005, Michael Januszewski <spock@gentoo.org>
  * 
@@ -56,7 +56,7 @@ int main(int argc, char **argv)
 
 	get_fb_settings(arg_fb);
 	config_file = get_cfg_file(arg_theme);
-
+	
 	if (!config_file)
 		goto out;
 
@@ -98,6 +98,7 @@ int main(int argc, char **argv)
 			char *t;
 			int fd, y, h;
 			u8 created_dev = 0;
+			u8 fadein = 0;
 			
 			fd = open("/proc/cmdline", O_RDONLY);
 			if (read(fd, buf, 512) > 0) {
@@ -111,7 +112,10 @@ int main(int argc, char **argv)
 					if (!strncmp(t, "tty:", 4)) {
 						stty = strtol(t+4, NULL, 0);
 						break;
+					} else if (!strncmp(t, "fadein", 6)) {
+						fadein = 0;
 					}
+				
 					t++;
 				}
 			}
@@ -145,12 +149,17 @@ next:			if (stty < 0 || stty > MAX_NR_CONSOLES)
 
 			if (silent_img.cmap.red)
 				ioctl(fb_fd, FBIOPUTCMAP, &silent_img.cmap);
-
-			h = fb_var.xres * ((fb_var.bits_per_pixel + 7) >> 3);
-			
-			for (y = 0; y < fb_var.yres; y++) {
-				memcpy(t + y * fb_fix.line_length, silent_img.data + y * h, h);
-			}
+	
+			if (fadein) {		
+				fade_in(t, silent_img.data, silent_img.cmap, 1, fb_fd);
+			} else {
+				put_img(t, silent_img.data);
+			}	
+				
+//			h = fb_var.xres * ((fb_var.bits_per_pixel + 7) >> 3);
+//			for (y = 0; y < fb_var.yres; y++) {
+//				memcpy(t + y * fb_fix.line_length, silent_img.data + y * h, h);
+//			}
 
 			munmap(t, fb_fix.line_length * fb_var.yres);
 			

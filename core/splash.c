@@ -57,8 +57,6 @@ struct cmd cmds[] = {
 	{ "getstate", 	getstate },
 };
 
-int bytespp = 4;
-
 void usage(void)
 {
 
@@ -173,7 +171,6 @@ int main(int argc, char **argv)
 	}
 	
 	get_fb_settings(arg_fb);
-	bytespp = (fb_var.bits_per_pixel + 7) >> 3;
 	
 	if (arg_theme)
 		config_file = get_cfg_file(arg_theme);
@@ -343,7 +340,7 @@ setpic_out:	break;
 			ioctl(c, FBIOPUTCMAP, &pic.cmap);
 
 		if (arg_task == repaint) {
-			do_repaint(out, (u8*)pic.data);
+			put_img(out, (u8*)pic.data);
 		} else {
 			do_paint(out, (u8*)pic.data);
 		}

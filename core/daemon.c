@@ -488,19 +488,6 @@ void do_paint(u8 *dst, u8 *src)
 	}
 }
 
-void do_repaint(u8 *dst, u8 *src)
-{
-	int y, i;
-	u8 *to = dst;
-	
-	i = fb_var.xres * bytespp;
-
-	for (y = 0; y < fb_var.yres; y++) {
-		memcpy(to, src + i*y, i);
-		to += fb_fix.line_length;
-	}
-}
-
 int cmd_paint(void **args)
 {
 	char i = 0;
@@ -536,7 +523,7 @@ int cmd_repaint(void **args)
 	if (notify[NOTIFY_REPAINT])
 		system(notify[NOTIFY_REPAINT]);
 	
-	do_repaint(fb_mem, bg_buffer);
+	put_img(fb_mem, bg_buffer);
 	
 	return 0;
 }
