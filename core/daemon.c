@@ -23,6 +23,7 @@
 #include <sys/vt.h>
 #include <linux/kd.h>
 #include <linux/fb.h>
+#include <linux/input.h>
 #include <sys/mman.h>
 #include "splash.h"
 
@@ -160,6 +161,42 @@ void term_handler(int signum)
 	ioctl(fd_curr, KDSETMODE, KD_TEXT);
 	ioctl(fd_curr, VT_SETMODE, &vt);
 	exit(0);
+}
+
+void daemon_switch2(char *evdev)
+{
+	int fd, i;
+	size_t rb; 
+	struct input_event ev[8];
+	
+	if (fork())
+		return;
+
+	fd = open(evdev, O_RDONLY);
+	
+	while ((rb=read(fd,ev,sizeof(struct input_event)*8)) > 0) {
+    		if (rb < (int) sizeof(struct input_event))
+			continue;
+   	
+		for (i = 0; i < (int) (rb / sizeof(struct input_event)); i++) {
+			struct vt_stat stat;
+			
+			if (ev[i].type != EV_KEY || ev[i].value != 0 || ev[i].code != KEY_F2)
+				continue;
+
+			if (ioctl(fd_tty_s, VT_GETSTATE, &stat) != -1) {
+				if (stat.v_active == tty_s) {
+					ioctl(fd_tty_s, VT_ACTIVATE, tty_v);
+					ioctl(fd_tty_s, VT_WAITACTIVE, tty_v);
+				} else {
+					ioctl(fd_tty_s, VT_ACTIVATE, tty_s);
+					ioctl(fd_tty_s, VT_WAITACTIVE, tty_s);
+				}	
+			}
+		}
+	}
+
+	close(fd);
 }
 
 void daemon_switch(int tty, int fd, u8 silent)
@@ -504,6 +541,12 @@ int cmd_set_tty(void **args)
 	return 0;
 }
 
+int cmd_set_event_dev(void **args)
+{
+	daemon_switch2(args[0]);
+	return 0;
+}
+
 int cmd_set_notify(void **args)
 {
 	if (!strcmp(args[0], "repaint")) {
@@ -710,6 +753,12 @@ struct {
 		.specs = "sd"
 	},
 
+	{	.cmd = "set event dev",
+		.handler = cmd_set_event_dev,
+		.args = 1,
+		.specs = "s"
+	},
+			
 	{	.cmd = "set message",
 		.handler = cmd_set_mesg,
 		.args = 1,
