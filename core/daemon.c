@@ -19,12 +19,14 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
+#include <sys/wait.h>
 #include <sys/vt.h>
 #include <linux/kd.h>
 #include <linux/fb.h>
+#include <sys/mman.h>
 #include "splash.h"
 
-pid_t pid_v, pid_s;
+pid_t pid_v = 0, pid_s = 0;
 
 int tty_s = TTY_SILENT;
 int tty_v = TTY_VERBOSE;
@@ -32,12 +34,21 @@ int tty_v = TTY_VERBOSE;
 int fd_tty_s = 0;
 int fd_tty_v = 0;
 int fd_curr = 0;
+int fd_fb = 0;
 
+u8 *fb_mem = NULL;
 u8 *bg_buffer = NULL;
 
 struct termios tios;
 
 void daemon_switch(int tty, int fd, u8 silent);
+
+typedef struct {
+	char *svc;
+	enum ESVC state;
+} svc_state;
+
+list svcs = { NULL, NULL };
 
 void start_tty_handlers() 
 {
@@ -71,11 +82,15 @@ void start_tty_handlers()
 		}
 	}
 	
-	if (pid_s)
+	if (pid_s) {
 		kill(pid_s, SIGTERM);
-
-	if (pid_v)
+		waitpid(pid_s, NULL, 1);
+	}
+		
+	if (pid_v) {
 		kill(pid_v, SIGTERM);
+		waitpid(pid_v, NULL, 1);
+	}
 		
 	pid_s = fork();
 	if (pid_s == 0) {
@@ -96,6 +111,22 @@ void tty_s_switch_handler(int signum)
 		ioctl(fd_tty_s, VT_RELDISP, 2);
 //		ioctl(fd_tty_s, KDSETMODE, KD_GRAPHICS);
 	}
+}
+
+void daemon_term_handler(int signum)
+{
+	if (pid_s) {
+		kill(pid_s, SIGTERM);
+		waitpid(pid_s, NULL, 1);
+	}
+		
+	if (pid_v) {
+		kill(pid_v, SIGTERM);
+		waitpid(pid_v, NULL, 1);
+	}
+
+	vt_cursor_enable(fd_tty_s);
+	exit(0);
 }
 
 void term_handler(int signum)
@@ -137,6 +168,7 @@ void daemon_switch(int tty, int fd, u8 silent)
 		vt.acqsig = SIGUSR2;
 	
 		ioctl(fd, VT_SETMODE, &vt);
+		vt_cursor_disable(fd);
 	}
 
 	memset(&sig, 0, sizeof(sig));
@@ -157,8 +189,9 @@ void daemon_switch(int tty, int fd, u8 silent)
 			fcntl(fd, F_SETFL, flags | O_NDELAY);
 			
 			/* FIXME: is <F2> always 1b5b5b42? */
-			/* FIXME: endianess! */
-			if (read(fd, &t, 3) == 3 && t == 0x425b5b) {
+			if (read(fd, &t, 3) == 3 && 
+			    ((endianess == little && t == 0x425b5b) || 
+			     (endianess == big && 0x5b5b4200))) {
 				ioctl(fd, VT_ACTIVATE, tty);
 				ioctl(fd, VT_WAITACTIVE, tty);
 			}
@@ -166,35 +199,21 @@ void daemon_switch(int tty, int fd, u8 silent)
 	}
 }
 
-int cmd_update_svc(void **args)
-{
-	return 0;
-}
-
-int cmd_set_theme(void **args)
+void free_images()
 {
 	item *i, *j;
-		
-	if (arg_theme)
-		free(arg_theme);
-
-	arg_theme = strdup(args[0]);
-	config_file = get_cfg_file(arg_theme);
 	
-	if (!config_file)
-		return -1;
-		
 	for (i = objs.head ; i != NULL; ) {
 		j = i->next;	
 		free(i->p);
 		free(i);
-		j = i;	
-	}
+		i = j;	
+	}		
 	
 	for (i = rects.head; i != NULL ; ) {
 		j = i->next;
 		free(i);
-		j = i;
+		i = j;
 	}
 	
 	for (i = icons.head; i != NULL; ) {
@@ -206,15 +225,135 @@ int cmd_set_theme(void **args)
 			free(ii->picbuf);
 		free(ii);
 		free(i);
-		j = i;
+		i = j;
 	}
 
-	/* FIXME: free image buffers and stuff */
-
-	parse_cfg(config_file);
-
-	/* FIXME: reload pictures */
+	list_init(objs);
+	list_init(icons);
+	list_init(rects);
 	
+	if (verbose_img.data)
+		free((u8*)verbose_img.data);
+	if (verbose_img.cmap.red)
+		free(verbose_img.cmap.red);
+
+	if (silent_img.data)
+		free((u8*)silent_img.data);
+	if (silent_img.cmap.red)
+		free(silent_img.cmap.red);
+}
+
+int cmd_exit(void **args)
+{
+	item *i, *j;
+		
+	if (pid_s)
+		kill(pid_s, SIGTERM);
+
+	if (pid_v)
+		kill(pid_v, SIGTERM);
+
+	free_images();
+
+	for (i = svcs.head; i != NULL; ) {
+		j = i->next;
+		free(i->p);
+		free(i);
+		i = j;
+	}
+
+	if (pid_s) {
+		kill(pid_s, SIGTERM);
+		waitpid(pid_s, NULL, 1);
+	}
+		
+	if (pid_v) {
+		kill(pid_v, SIGTERM);
+		waitpid(pid_v, NULL, 1);
+	}
+
+	vt_cursor_enable(fd_tty_s);
+	
+	exit(0);
+
+	/* We never get here */
+	return 0;
+}
+
+void update_icon_status(char *svc, enum ESVC state)
+{
+	item *i;
+	
+	for (i = objs.head; i != NULL; i = i->next) { 
+		icon *ic;
+		obj *o = (obj*)i->p;
+	
+		if (o->type != o_icon)
+			continue;
+	
+		ic = (icon*)o->p;
+		
+		if (strcmp(ic->svc, svc))
+			continue;
+	
+		if (ic->type == state)
+			ic->status = 1;
+		else
+			ic->status = 0;
+	}
+}
+
+int cmd_update_svc(void **args)
+{
+	item *i;
+	svc_state *ss;
+	enum ESVC state;
+
+	if (!parse_svc_state(args[1], &state))
+		return -1;
+	
+	for (i = svcs.head ; i != NULL; i = i->next) {
+		ss = (svc_state*)i->p;
+		if (!strcmp(ss->svc, args[0]))
+			goto cus_update;
+	}
+
+	ss = malloc(sizeof(svc_state));
+	ss->svc = strdup(args[0]);
+	list_add(&svcs, ss);
+	
+cus_update:
+	ss->state = state;
+	update_icon_status(args[0], state);
+	
+	return 0;
+}
+
+int cmd_set_theme(void **args)
+{
+	item *i;
+		
+	if (arg_theme)
+		free(arg_theme);
+	
+	if (config_file)
+		free(config_file);
+
+	arg_theme = strdup(args[0]);
+	config_file = get_cfg_file(arg_theme);
+	
+	if (!config_file)
+		return -1;
+
+	free_images();
+	parse_cfg(config_file);
+	load_images('a');
+
+	for (i = svcs.head ; i != NULL; i = i->next) {
+		svc_state *ss = (svc_state*)i->p;
+		update_icon_status(ss->svc, ss->state);
+	}
+		
 	return 0;
 }
 
@@ -229,7 +368,7 @@ int cmd_set_mode(void **args)
 	} else {
 		return -1;
 	}
-	
+
 	ioctl(fd_tty_s, VT_ACTIVATE, n);
 	ioctl(fd_tty_s, VT_WAITACTIVE, n);
 	
@@ -239,26 +378,99 @@ int cmd_set_mode(void **args)
 int cmd_set_tty(void **args)
 {
 	if (!strcmp(args[0], "silent")) {
+		if (tty_s == *(int*)args[1])
+			return 0;
 		tty_s = *(int*)args[1];
 	} else if (!strcmp(args[0], "verbose")) {
+		if (tty_v == *(int*)args[1])
+			return 0;
 		tty_v = *(int*)args[1];
 	} else {
 		return -1;
 	}
 
 	/* FIXME: do we need to do anything to the previous terminal? */
+
+	vt_cursor_enable(fd_tty_s);
 	start_tty_handlers();	
+	vt_cursor_disable(fd_tty_s);
 	
 	return 0;
 }
 
+void do_paint(u8 *dst, u8 *src)
+{
+	u8 *to;
+	int j, y;
+	obj *o;
+	box *b;
+	item *ti;
+	rect *re;
+			
+	for (ti = rects.head ; ti != NULL; ti = ti->next) {
+		re = (rect*)ti->p;
+				
+		j = (re->x2 - re->x1 + 1) * bytespp;
+		for (y = re->y1; y <= re->y2; y++) {
+			to = dst + y * fb_fix.line_length + re->x1 * bytespp;
+			memcpy(to, src + (y * fb_var.xres + re->x1) * bytespp, j);
+		}			
+	}
+
+	for (ti = objs.head; ti != NULL; ti = ti->next) {
+		o = (obj*)ti->p;
+			
+		if (o->type != o_box)
+			continue;
+
+		b = (box*)o->p;
+	
+		if (!(b->attr & BOX_INTER) || ti->next == NULL)
+			continue;
+
+		if (((obj*)ti->next->p)->type != o_box) 
+			continue;
+
+		b = (box*)((obj*)ti->next->p)->p;
+
+		j = (b->x2 - b->x1 + 1) * bytespp;
+		for (y = b->y1; y <= b->y2; y++) {
+			to = dst + y * fb_fix.line_length + b->x1 * bytespp;
+			memcpy(to, src + (y * fb_var.xres + b->x1) * bytespp, j); 
+		}			
+	}
+}
+
+void do_repaint(u8 *dst, u8 *src)
+{
+	int y, i;
+	u8 *to = dst;
+	
+	i = fb_var.xres * bytespp;
+
+	for (y = 0; y < fb_var.yres; y++) {
+		memcpy(to, src + i*y, i);
+		to += fb_fix.line_length;
+	}
+}
+
 int cmd_paint(void **args)
 {
+	memcpy(bg_buffer, silent_img.data, fb_var.xres * fb_var.yres * bytespp);
+	render_objs('s', (u8*)bg_buffer);
+
+	do_paint(fb_mem, bg_buffer);	
+	
 	return 0;
 }
 
 int cmd_repaint(void **args)
 {
+	memcpy(bg_buffer, silent_img.data, fb_var.xres * fb_var.yres * bytespp);
+	render_objs('s', (u8*)bg_buffer);
+
+	do_repaint(fb_mem, bg_buffer);
+	
 	return 0;
 }
 
@@ -318,6 +530,12 @@ struct {
 		.handler = cmd_update_svc,
 		.args = 2,
 		.specs = "ss",
+	},
+
+	{	.cmd = "exit",
+		.handler = cmd_exit,
+		.args = 0,
+		.specs = NULL,
 	}
 };
 
@@ -328,6 +546,7 @@ int daemon_comm()
 	int i,j,k;
 
 	while (1) {
+
 		fp_fifo = fopen(SPLASH_FIFO, "r");
 		if (!fp_fifo) {
 			perror("Can't open the splash FIFO (" SPLASH_FIFO ") for reading");
@@ -349,17 +568,18 @@ int daemon_comm()
 				
 				if (strncmp(buf, known_cmds[i].cmd, k))
 					continue;
-						
+		
 				for (j = 0; j < known_cmds[i].args; j++) {
-			
+								
 					for (; buf[k] == ' '; buf[k] = 0, k++);
 					if (!buf[k])
 						goto out;
-				
+						
 					switch (known_cmds[i].specs[j]) {
 					
 					case 's':
 						args[j] = &(buf[k]);
+						for (; buf[k] != ' '; k++);
 						break;
 
 					case 'd':
@@ -386,7 +606,31 @@ void daemon_start()
 {
 	int i = 0;
 	struct stat mystat;
+
+	/* Allocate the background buffer */
+	bg_buffer = malloc(fb_var.xres * fb_var.yres * (fb_var.bits_per_pixel >> 3));
+	if (!bg_buffer) {
+		printerr("Can't allocate background image buffer\n.");
+		exit(1);
+	}
+
+	/* Create a mmap of the framebuffer */
+	fd_fb = open_fb();
+	if (!fd_fb)
+		exit(1);
+
+	fb_mem = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
+			MAP_SHARED, fd_fb, fb_var.yoffset * fb_fix.line_length); 
 	
+	if (fb_mem == MAP_FAILED) {
+		printerr("mmap() /dev/fb%d failed.\n", arg_fb);
+		close(fd_fb);
+		exit(1);	
+	}
+
+	bytespp = (fb_var.bits_per_pixel + 7) >> 3;
+
+	/* Create the splash FIFO if it's not already in place */
 	stat(SPLASH_FIFO, &mystat);
 	if (!S_ISFIFO(mystat.st_mode)) {
 		if (mkfifo(SPLASH_FIFO, 0700))
@@ -397,6 +641,18 @@ void daemon_start()
 	if (i)
 		exit(0);
 
+	/* arg_theme is a reference to argv[x] of the original splash_util
+	 * process. We're freeing arg_theme in cmd_set_theme(), so the strdup()
+	 * call is necessary to make sure things don't break there. */
+	arg_theme = strdup(arg_theme);
+	
+	signal(SIGTERM,daemon_term_handler);
+	signal(SIGUSR1,daemon_term_handler);
+	signal(SIGUSR2,daemon_term_handler);
+	signal(SIGSEGV,daemon_term_handler);
+	signal(SIGINT,daemon_term_handler);
+	signal(SIGABRT,daemon_term_handler);
+	
 	start_tty_handlers();
 	daemon_comm();	
 }

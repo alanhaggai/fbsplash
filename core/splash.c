@@ -56,6 +56,7 @@ struct cmd cmds[] = {
 	{ "getstate", 	getstate },
 };
 
+int bytespp = 4;
 
 void usage(void)
 {
@@ -90,11 +91,13 @@ void usage(void)
 int main(int argc, char **argv)
 {
 	char dev[16];
-	unsigned int c, i, y;
+	unsigned int c, i;
 	int fp, err = 0;
 
 	detect_endianess();
 	arg_task = none;
+
+	verbose_img.cmap.red = silent_img.cmap.red = NULL;
 	
 	while ((c = getopt_long(argc, argv, "c:t:m:p:hd", options, NULL)) != EOF) {
 	
@@ -157,6 +160,7 @@ int main(int argc, char **argv)
 	}
 	
 	get_fb_settings(arg_fb);
+	bytespp = (fb_var.bits_per_pixel + 7) >> 3;
 	
 	if (arg_theme)
 		config_file = get_cfg_file(arg_theme);
@@ -165,7 +169,7 @@ int main(int argc, char **argv)
 		parse_cfg(config_file);
 
 	if (arg_task == start_daemon) {
-		load_images('s');
+		load_images('a');
 		daemon_start();
 		/* we never get here */
 	}
@@ -273,8 +277,7 @@ setpic_out:	break;
 	{
 		struct fb_image pic;
 		u8 *out;
-		u8 *to;
-		
+			
 		sprintf(dev, "/dev/fb%d", arg_fb);
 		if ((c = open(dev, O_RDWR)) == -1) {
 			sprintf(dev, "/dev/fb/%d", arg_fb);
@@ -309,54 +312,9 @@ setpic_out:	break;
 			ioctl(c, FBIOPUTCMAP, &pic.cmap);
 
 		if (arg_task == repaint) {
-			i = fb_var.xres * ((fb_var.bits_per_pixel + 7) >> 3);
-			to = out;
-			
-			for (y = 0; y < fb_var.yres; y++) {
-				memcpy(to, pic.data + i*y, i);
-				to += fb_fix.line_length;
-			}
+			do_repaint(out, (u8*)pic.data);
 		} else {
-			int j;
-			obj *o;
-			box *b;
-			item *ti;
-			rect *re;
-			int bytespp = ((fb_var.bits_per_pixel + 7) >> 3);
-			
-			for (ti = rects.head ; ti != NULL; ti = ti->next) {
-				re = (rect*)ti->p;
-				
-				j = (re->x2 - re->x1 + 1) * bytespp;
-				
-				for (y = re->y1; y <= re->y2; y++) {
-					to = out + y * fb_fix.line_length + re->x1 * bytespp;
-					memcpy(to, pic.data + (y * fb_var.xres + re->x1) * bytespp, j);
-				}			
-			}
-
-			for (ti = objs.head; ti != NULL; ti = ti->next) {
-				o = (obj*)ti->p;
-			
-				if (o->type != o_box)
-					continue;
-
-				b = (box*)o->p;
-				
-				if (!(b->attr & BOX_INTER) || ti->next == NULL)
-					continue;
-
-				if (((obj*)ti->next->p)->type != o_box) 
-					continue;
-
-				b = (box*)((obj*)ti->next->p)->p;
-
-				j = (b->x2 - b->x1 + 1) * bytespp;
-				for (y = b->y1; y <= b->y2; y++) {
-					to = out + y * fb_fix.line_length + b->x1 * bytespp;
-					memcpy(to, pic.data + (y * fb_var.xres + b->x1) * bytespp, j); 
-				}			
-			}
+			do_paint(out, (u8*)pic.data);
 		}
 		
 		munmap(out, fb_fix.line_length * fb_var.yres);

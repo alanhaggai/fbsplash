@@ -166,13 +166,30 @@ int do_config(unsigned char origin)
 	return 0;
 }
 
-void vt_cursor_disable(FILE* fd)
+void vt_cursor_disable(int fd)
 {
-	fprintf(fd, "\e[?25l\e?1c");
+	write(fd, "\e[?25l\e[?1c",11);
 }
 
-void vt_cursor_enable(FILE* fd)
+void vt_cursor_enable(int fd)
 {
-	fprintf(fd, "\e[?25h\e?0c");
+	write(fd, "\e[?25h\e[?0c",11);
+}
+
+int open_fb()
+{
+	char dev[16];
+	int c;
+	
+	sprintf(dev, "/dev/fb%d", arg_fb);
+	if ((c = open(dev, O_RDWR)) == -1) {
+		sprintf(dev, "/dev/fb/%d", arg_fb);
+		if ((c = open(dev, O_RDWR)) == -1) {
+			printerr("Failed to open /dev/fb%d or /dev/fb/%d.\n", arg_fb, arg_fb);
+			return 0;
+		}
+	}
+
+	return c;
 }
 

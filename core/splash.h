@@ -38,6 +38,19 @@ typedef struct {
 	item *head, *tail; 
 } list;
 
+#define list_init(list)		{ list.head = list.tail = NULL; }
+
+/* ************************************************************************
+ * 				Enums 
+ * ************************************************************************ */
+
+enum ENDIANESS { little, big };
+enum TASK { setpic, init, on, off, setcfg, getcfg, getstate, none, paint, 
+	    setmode, getmode, repaint, start_daemon };
+enum ESVC { e_display, e_svc_inact_start, e_svc_inact_stop, e_svc_start, 
+	    e_svc_started, e_svc_stop, e_svc_stopped, e_svc_stop_failed, 
+	    e_svc_start_failed };
+
 /* ************************************************************************
  * 				Structures 
  * ************************************************************************ */
@@ -52,10 +65,7 @@ typedef struct {
 	int x, y;
 	icon_img *img;
 	char *svc;
-	enum { e_display, e_svc_inact_start, e_svc_inact_stop, e_svc_start, 
-		e_svc_started, e_svc_stop, e_svc_stopped, e_svc_stop_failed, 
-		e_svc_start_failed 
-	     } type;
+	enum ESVC type;
 	u8 status;
 } icon;
 
@@ -99,10 +109,6 @@ struct splash_config {
 	u16 th;
 } __attribute__ ((packed));
 
-enum ENDIANESS { little, big };
-enum TASK { setpic, init, on, off, setcfg, getcfg, getstate, none, paint, 
-	    setmode, getmode, repaint, start_daemon };
-
 /* ************************************************************************
  * 				Functions 
  * ************************************************************************ */
@@ -114,11 +120,13 @@ char *get_cfg_file(char *theme);
 int do_getpic(unsigned char, unsigned char, char);
 int do_config(unsigned char);
 char *get_filepath(char *path);
-void vt_cursor_enable(FILE* fd);
-void vt_cursor_disable(FILE* fd);
+void vt_cursor_enable(int fd);
+void vt_cursor_disable(int fd);
+int open_fb();
 
 /* parse.c */
 int parse_cfg(char *cfgfile);
+int parse_svc_state(char *t, enum ESVC *state);
 
 /* dev.c */
 int create_dev(char *fn, char *sys, int flag);
@@ -151,7 +159,9 @@ void cmd_getcfg();
 
 /* daemon.c */
 void daemon_start();
-
+void do_paint(u8 *dst, u8 *src);
+void do_repaint(u8 *dst, u8 *src);
+	
 /* list.c */
 void list_add(list *l, void *obj);
 
@@ -178,6 +188,7 @@ extern list objs;
 extern list rects;
 
 extern u8 *bg_buffer;
+extern int bytespp;
 
 extern struct fb_image verbose_img;
 extern struct fb_image silent_img;

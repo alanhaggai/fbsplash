@@ -196,6 +196,29 @@ int is_in_svclist(char *svc, char *list)
 	return 0;
 }
 
+int parse_svc_state(char *t, enum ESVC *state)
+{
+	if (!strncmp(t, "svc_inactive_start", 18)) {
+		*state = e_svc_inact_start; return 18;
+	} else if (!strncmp(t, "svc_inactive_stop", 17)) {
+		*state = e_svc_inact_stop; return 17;
+	} else if (!strncmp(t, "svc_started", 11)) {
+		*state = e_svc_started; return 11;
+	} else if (!strncmp(t, "svc_stopped", 11)) {
+		*state = e_svc_stopped; return 11;
+	} else if (!strncmp(t, "svc_start_failed", 17)) {
+		*state = e_svc_start_failed; return 17;
+	} else if (!strncmp(t, "svc_stop_failed",  16)) {
+		*state = e_svc_stop_failed; return 16;
+	} else if (!strncmp(t, "svc_stop", 8)) {
+		*state = e_svc_stop; return 8;
+	} else if (!strncmp(t, "svc_start", 9)) {
+		*state = e_svc_start; return 9;
+	}
+
+	return 0;
+}
+
 void parse_icon(char *t)
 {
 	char *filename = NULL;
@@ -229,27 +252,14 @@ void parse_icon(char *t)
 		goto pi_err;
 	
 	t = p; skip_whitespace(&t);
-	
-	if (!strncmp(t, "svc_inactive_start", 18)) {
-		cic->type = e_svc_inact_start; t += 18;
-	} else if (!strncmp(t, "svc_inactive_stop", 17)) {
-		cic->type = e_svc_inact_stop; t += 17;
-	} else if (!strncmp(t, "svc_started", 11)) {
-		cic->type = e_svc_started; t += 11;
-	} else if (!strncmp(t, "svc_stopped", 11)) {
-		cic->type = e_svc_stopped; t += 11;
-	} else if (!strncmp(t, "svc_start_failed", 17)) {
-		cic->type = e_svc_start_failed; t += 17;
-	} else if (!strncmp(t, "svc_stop_failed",  16)) {
-		cic->type = e_svc_stop_failed; t += 16;
-	} else if (!strncmp(t, "svc_stop", 8)) {
-		cic->type = e_svc_stop; t += 8;
-	} else if (!strncmp(t, "svc_start", 9)) {
-		cic->type = e_svc_start; t += 9;
-	} else {
-		cic->type = e_display; 
-	}
-	
+
+	i = parse_svc_state(t, &cic->type);
+
+	if (i)
+		t += i; 
+	else
+		cic->type = e_display;
+
 	skip_whitespace(&t);
 	for (i = 0; t[i] != ' ' && t[i] != '\t' && t[i] != '\0'; i++);
 	t[i] = 0;
