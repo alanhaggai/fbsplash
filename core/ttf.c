@@ -8,7 +8,7 @@
  *   (w) by stepan@suse.de
  *
  * Original code comes from SDL_ttf.
- *  
+ *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
  * more details.
@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-	
+
 #include <ft2build.h>
 #include <freetype/ftoutln.h>
 #include <freetype/ttnameid.h>
@@ -37,8 +37,8 @@ char *boot_message = NULL;
 
 static int alpha = 100;
 
-unsigned char* TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
-					TTF_Font* font, int x, int y, color fcol);
+void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
+	 		      TTF_Font* font, int x, int y, color fcol);
 
 
 /* Cached glyph information */
@@ -608,8 +608,8 @@ int TTF_SizeUNICODE(TTF_Font *font, const unsigned short *text, int *w, int *h)
 }
 
 
-unsigned char* TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
-					TTF_Font* font, int x, int y, color fcol)
+void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
+ 			      TTF_Font* font, int x, int y, color fcol)
 {
 	int rlen, glen, blen;
 	int xstart;
@@ -768,7 +768,8 @@ unsigned char* TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 			dst += width*bytespp;
 		}
 	}
-	return textbuf;
+	free(textuf);
+	return;
 }
 
 
