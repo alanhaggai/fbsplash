@@ -85,7 +85,7 @@ typedef struct color {
 } __attribute__ ((packed)) color;
 
 struct colorf {
-	double r, g, b, a;
+	float r, g, b, a;
 };
 
 typedef struct {

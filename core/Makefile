@@ -1,13 +1,13 @@
 # Makefile for splashutils
 #
-# Copyright (C) 2004=2005, Michael Januszewski <spock@gentoo.org>
+# Copyright (C) 2004-2005, Michal Januszewski <spock@gentoo.org>
 # 
 # This file is subject to the terms and conditions of the GNU General Public
 # License.  See the file COPYING in the main directory of this archive for
 # more details.
 #
 
-PKG_VERSION = 1.1.9.1
+PKG_VERSION = 1.1.9.2
 DEBUG 	 = false		# set to true to prevent stripping
 K_SHARED = false		# set to true if you want to link to a shared klibc
 QUIET    = true
@@ -16,7 +16,7 @@ JPEGSRC	= libs/jpeg-6b
 LPNGSRC = libs/libpng-1.2.8
 ZLIBSRC = libs/zlib-1.2.1
 FT2SRC  = libs/freetype-2.1.9
-LIBCSRC	= libs/klibc-0.199/klibc
+LIBCSRC	= libs/klibc-1.0/klibc
 
 prefix     =
 sbindir    = ${prefix}/sbin

@@ -1,7 +1,7 @@
 /*
  * render.c - Functions for rendering boxes and icons
  *
- * Copyright (C) 2004-2005, Michael Januszewski <spock@gentoo.org>
+ * Copyright (C) 2004-2005, Michal Januszewski <spock@gentoo.org>
  * 
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <string.h>
 #include <fcntl.h>
 #include "splash.h"
 
@@ -37,10 +38,10 @@ void render_box(box *box, u8 *target)
 	int rlen, glen, blen;
 	int x, y, a, r, g, b, i;
 	int add;
-	
 	u8 *pic;
 	struct colorf h_ap1, h_ap2, h_bp1, h_bp2;
 	
+	u8 solid = 0;
 	int bytespp = (fb_var.bits_per_pixel + 7) >> 3;
 	int b_width = box->x2 - box->x1 + 1;
 	int b_height = box->y2 - box->y1 + 1;
@@ -50,26 +51,32 @@ void render_box(box *box, u8 *target)
 		return;
 	}	
 
-	h_ap1.r = (double)box->c_ul.r / b_height;
-	h_ap1.g = (double)box->c_ul.g / b_height;
-	h_ap1.b = (double)box->c_ul.b / b_height;
-	h_ap1.a = (double)box->c_ul.a / b_height;
+	if (!memcmp(&box->c_ul, &box->c_ur, sizeof(color)) &&
+	    !memcmp(&box->c_ul, &box->c_ll, sizeof(color)) &&
+	    !memcmp(&box->c_ul, &box->c_lr, sizeof(color))) {
+		solid = 1;
+	} else {
+		h_ap1.r = (float)box->c_ul.r / b_height;
+		h_ap1.g = (float)box->c_ul.g / b_height;
+		h_ap1.b = (float)box->c_ul.b / b_height;
+		h_ap1.a = (float)box->c_ul.a / b_height;
 
-	h_ap2.r = (double)(box->c_ur.r - box->c_ul.r) / (b_width * b_height);
-	h_ap2.g = (double)(box->c_ur.g - box->c_ul.g) / (b_width * b_height);
-	h_ap2.b = (double)(box->c_ur.b - box->c_ul.b) / (b_width * b_height);
-	h_ap2.a = (double)(box->c_ur.a - box->c_ul.a) / (b_width * b_height);
+		h_ap2.r = (float)(box->c_ur.r - box->c_ul.r) / (b_width * b_height);
+		h_ap2.g = (float)(box->c_ur.g - box->c_ul.g) / (b_width * b_height);
+		h_ap2.b = (float)(box->c_ur.b - box->c_ul.b) / (b_width * b_height);
+		h_ap2.a = (float)(box->c_ur.a - box->c_ul.a) / (b_width * b_height);
 
-	h_bp1.r = (double)box->c_ll.r / b_height;
-	h_bp1.g = (double)box->c_ll.g / b_height;
-	h_bp1.b = (double)box->c_ll.b / b_height;
-	h_bp1.a = (double)box->c_ll.a / b_height;
+		h_bp1.r = (float)box->c_ll.r / b_height;
+		h_bp1.g = (float)box->c_ll.g / b_height;
+		h_bp1.b = (float)box->c_ll.b / b_height;
+		h_bp1.a = (float)box->c_ll.a / b_height;
 
-	h_bp2.r = (double)(box->c_lr.r - box->c_ll.r) / (b_width * b_height);
-	h_bp2.g = (double)(box->c_lr.g - box->c_ll.g) / (b_width * b_height);
-	h_bp2.b = (double)(box->c_lr.b - box->c_ll.b) / (b_width * b_height);
-	h_bp2.a = (double)(box->c_lr.a - box->c_ll.a) / (b_width * b_height);
-	
+		h_bp2.r = (float)(box->c_lr.r - box->c_ll.r) / (b_width * b_height);
+		h_bp2.g = (float)(box->c_lr.g - box->c_ll.g) / (b_width * b_height);
+		h_bp2.b = (float)(box->c_lr.b - box->c_ll.b) / (b_width * b_height);
+		h_bp2.a = (float)(box->c_lr.a - box->c_ll.a) / (b_width * b_height);
+	}
+		
 	if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR) {
 		blen = glen = rlen = min(min(fb_var.red.length,fb_var.green.length),fb_var.blue.length);
 	} else {
@@ -96,14 +103,20 @@ void render_box(box *box, u8 *target)
 			int t1 = b_height - (y-box->y1);
 			int t2 = y - box->y1;	
 			int t3 = x - box->x1;
-						
-			a = t1 * (h_ap1.a + t3*h_ap2.a) + t2 * (h_bp1.a + t3*h_bp2.a);
-			r = t1 * (h_ap1.r + t3*h_ap2.r) + t2 * (h_bp1.r + t3*h_bp2.r);
-			g = t1 * (h_ap1.g + t3*h_ap2.g) + t2 * (h_bp1.g + t3*h_bp2.g);
-			b = t1 * (h_ap1.b + t3*h_ap2.b) + t2 * (h_bp1.b + t3*h_bp2.b);
+
+			if (!solid) {
+				a = t1 * (h_ap1.a + t3*h_ap2.a) + t2 * (h_bp1.a + t3*h_bp2.a);
+				r = t1 * (h_ap1.r + t3*h_ap2.r) + t2 * (h_bp1.r + t3*h_bp2.r);
+				g = t1 * (h_ap1.g + t3*h_ap2.g) + t2 * (h_bp1.g + t3*h_bp2.g);
+				b = t1 * (h_ap1.b + t3*h_ap2.b) + t2 * (h_bp1.b + t3*h_bp2.b);
+			} else {
+				a = box->c_ul.a;
+				r = box->c_ul.r;
+				g = box->c_ul.g;
+				b = box->c_ul.b;
+			}
 	
 			if (a != 255) {
-			
 				if (fb_var.bits_per_pixel == 16) { 
 					i = *(u16*)pic;
 				} else if (fb_var.bits_per_pixel == 24) {
