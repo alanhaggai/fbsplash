@@ -192,11 +192,9 @@ void TTF_Quit(void)
 
 unsigned char*TTF_RenderText_Shaded(u8 *target, const char *text, TTF_Font *font, int x, int y, color col, u8 hotspot)
 {
-	unsigned short *unicode_text;
+	unsigned short *p, *t, *unicode_text;
 	int unicode_len;
-    
-	unsigned short *p, *t;
-	
+
 	/* Copy the Latin-1 text to a UNICODE text buffer */
 	unicode_len = strlen(text);
 	unicode_text = (unsigned short *)malloc((unicode_len+1)*(sizeof*unicode_text));
@@ -208,9 +206,8 @@ unsigned char*TTF_RenderText_Shaded(u8 *target, const char *text, TTF_Font *font
 
 	UTF8_to_UNICODE(unicode_text, text, unicode_len);
 //	ASCII_to_UNICODE(unicode_text, text, unicode_len);
-   
+
 	for (t = p = unicode_text; *p != 0; p++) {
-	
 		if (*p == '\n') {
 			*p = 0;
 			if (p > t)
