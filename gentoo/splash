@@ -7,7 +7,6 @@
 #
 # Author: Michal Januszewski <spock@gentoo.org>
 #
-# $Header: $
 
 # this is a little hack that we use to avoid a hell lot of error msgs 
 # when sourcing splash configuration files
@@ -15,17 +14,17 @@ function box() { true; }
 function icon() { true; }
 function rect() { true; }
 
-test -f /etc/conf.d/splash && . /etc/conf.d/splash
-test -f /etc/conf.d/rc && . /etc/conf.d/rc
-test -z "${SPLASH_THEME}" && SPLASH_THEME="default"
-test "$RUNLEVEL" == "6" -o "$RUNLEVEL" == "0" && SHUTDOWN="yes"
+[[ -f /etc/conf.d/splash ]] && . /etc/conf.d/splash
+[[ -f /etc/conf.d/rc ]] && . /etc/conf.d/rc
+[[ -z "${SPLASH_THEME}" ]] && SPLASH_THEME="default"
+[[ ${RUNLEVEL} == "6" || ${RUNLEVEL} == "0" ]] && SHUTDOWN="yes"
 
 SPLUTIL="/sbin/splash_util.static"
 
-[ ! -e /proc/fbsplash ] && exit 1
-[ ! -e /dev/fbsplash ] && exit 1
-[ ! -x /sbin/fbres ] && exit 1
-[ ! -x /sbin/splash_util.static ] && exit 1
+[[ ! -e /proc/fbsplash ]] && exit 1
+[[ ! -e /dev/fbsplash ]] && exit 1
+[[ ! -x /sbin/fbres ]] && exit 1
+[[ ! -x /sbin/splash_util.static ]] && exit 1
 
 # kernel command line override for the splash theme
 for param in `grep "theme:" /proc/cmdline`; do
@@ -37,7 +36,9 @@ done
 
 res=$(/sbin/fbres)
 themefile="/etc/splash/${SPLASH_THEME}/$res.cfg"
-test -f "${themefile}" && . "${themefile}"
+[[ -f "${themefile}" ]] && . "${themefile}"
+
+main=$1
 
 print_text() {
 	text="Booting the system... Press F2 for verbose mode"
@@ -69,9 +70,14 @@ print_text() {
 }
 
 paint_progress() {
-	progress=$(($spl_init + ($spl_count) * ($spl_rate - $spl_init) / $spl_scripts))
+	if [ "${spl_scripts}" -gt 0 ]; then
+		progress=$(($spl_init + ($spl_count) * ($spl_rate - $spl_init) / $spl_scripts))
+	else
+		progress=0
+	fi
 	${SPLUTIL} --vc=0 --progress=${progress} --theme=${SPLASH_THEME} --mode=s --cmd=paint
 }
+
 
 # Start silent splash on system shutdown/reboot
 if [ "$1" == "start" ]; then
