@@ -123,6 +123,9 @@ char *get_filepath(char *path);
 void vt_cursor_enable(int fd);
 void vt_cursor_disable(int fd);
 int open_fb();
+int open_tty(int);
+int tty_unset_silent(int fd);
+int tty_set_silent(int tty, int fd);
 
 /* parse.c */
 int parse_cfg(char *cfgfile);

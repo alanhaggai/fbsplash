@@ -96,7 +96,8 @@ int main(int argc, char **argv)
 
 	detect_endianess();
 	arg_task = none;
-
+	arg_vc = -1;
+	
 	verbose_img.cmap.red = silent_img.cmap.red = NULL;
 	
 	while ((c = getopt_long(argc, argv, "c:t:m:p:hd", options, NULL)) != EOF) {
@@ -146,6 +147,8 @@ int main(int argc, char **argv)
 		
 		case 0x106:
 			arg_vc = atoi(optarg)-1;
+			if (arg_vc == -1)
+				arg_vc = 0;
 			break;
 
 		case 'd':
@@ -231,26 +234,36 @@ setpic_out:	break;
 	}
 		
 	case setmode:
-		fp = open(SPLASH_DEV, O_WRONLY);
-		if (fp == -1) {
-			fprintf(stderr, "Can't open %s\n", SPLASH_DEV);
+	{
+		int t;
+		
+		if (arg_vc > -1) {
+			fp = open_tty(arg_vc+1);
+			t = arg_vc+1;
+		} else {
+			t = (arg_mode == 's') ? TTY_SILENT : TTY_VERBOSE;
+			fp = open_tty(t);
+		}
+
+		if (fp < 0)
 			break;
-		}
-		ioctl(fp, FBIOSPLASH_SETMODE, (arg_mode == 's') ? FB_SPLASH_MODE_SILENT : FB_SPLASH_MODE_VERBOSE);
-		close(fp);
-		
+
 		if (arg_mode == 's') {
-			fp = open("/dev/vc/0", O_WRONLY);
-			if (fp == -1) {
-				fprintf(stderr, "Can't open /dev/vc/0\n");
-				break;
-			}		
-			ioctl(fp, KDSETMODE, KD_GRAPHICS);
+			tty_set_silent(t, fp);
+		} else {
+			ioctl(fp, VT_ACTIVATE, t);
+			ioctl(fp, VT_WAITACTIVE, t);
 			close(fp);
+			fp = open_tty(TTY_SILENT);
+			if (fp < 0)
+				break;
+			tty_unset_silent(fp);
 		}
-		
+				
+		close(fp);
 		break;
-		
+	}
+	
 	case getmode:
 	{
 		struct vt_stat stat;

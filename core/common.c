@@ -19,6 +19,7 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <sys/vt.h>
 
 #include "splash.h"
 
@@ -193,3 +194,49 @@ int open_fb()
 	return c;
 }
 
+int open_tty(int tty)
+{
+	char dev[16];
+	int c;
+
+	sprintf(dev, "/dev/tty%d", tty);
+	if ((c = open(dev, O_RDWR)) == -1) {
+		sprintf(dev, "/dev/vc/%d", tty);
+		if ((c = open(dev, O_RDWR)) == -1) {
+			printerr("Failed to open /dev/tty%d or /dev/vc/%d\n", tty, tty);
+			return 0;
+		}
+	}
+
+	return c;
+}
+
+int tty_set_silent(int tty, int fd)
+{
+	struct termios w;
+	
+	tcgetattr(fd, &w);
+	w.c_lflag &= ~(ICANON|ECHO);
+	w.c_cc[VTIME] = 0;
+	w.c_cc[VMIN] = 1;
+	tcsetattr(fd, TCSANOW, &w);
+	vt_cursor_disable(fd);
+	ioctl(fd, VT_ACTIVATE, tty);
+	ioctl(fd, VT_WAITACTIVE, tty);
+
+	return 0;
+}
+
+int tty_unset_silent(int fd)
+{
+	struct termios w;
+	
+	tcgetattr(fd, &w);
+	w.c_lflag &= (ICANON|ECHO);
+	w.c_cc[VTIME] = 0;
+	w.c_cc[VMIN] = 1;
+	tcsetattr(fd, TCSANOW, &w);
+	vt_cursor_enable(fd);
+
+	return 0;
+}
