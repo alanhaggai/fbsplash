@@ -25,14 +25,16 @@
 #include <linux/fb.h>
 #include <linux/input.h>
 #include <sys/mman.h>
+#include <errno.h>
 #include "splash.h"
 
-pid_t pid_v = 0, pid_s = 0;
+pid_t pid_s = 0, pid_s_sw = 0, pid_ev = 0;
 
 #define NOTIFY_REPAINT 0
 #define NOTIFY_PAINT 1
 
 char *notify[2];
+char *evdev = NULL;
 
 int tty_s = TTY_SILENT;
 int tty_v = TTY_VERBOSE;
@@ -45,11 +47,16 @@ int fd_fb = 0;
 u8 *fb_mem = NULL;
 u8 *bg_buffer = NULL;
 int fd_bg = 0;
-
 struct termios tios;
 
+void daemon_switch2();
 void daemon_switch(int tty, int fd, u8 silent);
 int cmd_repaint(void **args);
+void handle_silent_switch();
+void daemon_term_handler(int signum);
+
+void deinit_term_silent(int signum);
+void init_term_silent(int, int);
 
 typedef struct {
 	char *svc;
@@ -78,8 +85,10 @@ void start_tty_handlers()
 		}
 	}
 
-	if (fd_tty_s)
+	if (fd_tty_s) { 
+		deinit_term_silent(fd_tty_s);
 		close(fd_tty_s);
+	}
 		
 	sprintf(t, "/dev/tty%d", tty_s);
 	fd_tty_s = open(t, O_RDWR);
@@ -91,30 +100,33 @@ void start_tty_handlers()
 			exit(2);
 		}
 	}
+
+	init_term_silent(tty_s, fd_tty_s);
 	
 	if (pid_s) {
 		kill(pid_s, SIGTERM);
 		waitpid(pid_s, NULL, 1);
-	}
-		
-	if (pid_v) {
-		kill(pid_v, SIGTERM);
-		waitpid(pid_v, NULL, 1);
-	}
-		
-	pid_s = fork();
-	if (pid_s == 0) {
-		daemon_switch(tty_v, fd_tty_s, 1);
+		pid_s = 0;
 	}
 
-/* Don't run the daemon for the verbose tty just yet. It will most likely
- * break user input in early services. */
-/*	
- 	pid_v = fork();
-	if (pid_v == 0) {
-		daemon_switch(tty_s, fd_tty_v, 0);
+	if (pid_ev) {
+		kill(pid_ev, SIGTERM);
+		waitpid(pid_ev, NULL, 1);
+		pid_ev = 0;
 	}
-*/
+	
+	if (!evdev) {
+		pid_s = fork();
+		if (pid_s == 0) {
+			signal(SIGTERM, SIG_DFL);
+			signal(SIGSEGV, SIG_DFL);
+			signal(SIGINT, SIG_DFL);
+			signal(SIGABRT, SIG_DFL);
+			daemon_switch(tty_v, fd_tty_s, 1);
+		}
+	} else {
+		daemon_switch2();
+	}
 }
 
 void tty_s_switch_handler(int signum)
@@ -123,15 +135,50 @@ void tty_s_switch_handler(int signum)
 		ioctl(fd_tty_s, VT_RELDISP, 1);
 	} else if (signum == SIGUSR2) {
 		ioctl(fd_tty_s, VT_RELDISP, 2);
-#ifdef CONFIG_SILENT_KD_GRAPHICS
-		ioctl(fd_tty_s, KDSETMODE, KD_GRAPHICS);
-#endif
-		if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR)
-			set_directcolor_cmap(fd_fb);
-	
-		/* Let the master daemon know that it has to redraw the picture */
-		kill(getppid(), SIGUSR1);
+		handle_silent_switch();
 	}
+}
+
+void set_term_silent(int fd)
+{
+
+	}
+
+void init_term_silent(int tty, int fd)
+{
+	struct vt_mode vt;
+	struct termios w;
+	
+	fd_curr = fd;
+	ioctl(fd, TIOCSCTTY, 0);
+
+	vt.mode   = VT_PROCESS;
+	vt.waitv  = 0;
+	vt.relsig = SIGUSR1;
+	vt.acqsig = SIGUSR2;
+	ioctl(fd, VT_SETMODE, &vt);
+
+	tcgetattr(fd_tty_s,&tios);
+	w = tios;
+	w.c_lflag &= ~(ICANON|ECHO);
+	w.c_cc[VTIME] = 0;
+	w.c_cc[VMIN] = 1;
+	tcsetattr(fd, TCSANOW, &w);
+
+	vt_cursor_disable(fd);
+	return;
+}
+
+void deinit_term_silent(int signum)
+{
+	struct vt_mode vt;
+	
+	vt.mode   = VT_AUTO;
+	vt.waitv  = 0;
+
+	tcsetattr(fd_tty_s, TCSANOW, &tios);
+	ioctl(fd_tty_s, KDSETMODE, KD_TEXT);
+	ioctl(fd_tty_s, VT_SETMODE, &vt);
 }
 
 void daemon_term_handler(int signum)
@@ -139,41 +186,49 @@ void daemon_term_handler(int signum)
 	if (pid_s) {
 		kill(pid_s, SIGTERM);
 		waitpid(pid_s, NULL, 1);
-	}
-		
-	if (pid_v) {
-		kill(pid_v, SIGTERM);
-		waitpid(pid_v, NULL, 1);
+		pid_s = 0;
 	}
 
+	if (pid_ev) { 
+		kill(pid_ev, SIGTERM);
+		waitpid(pid_ev, NULL, 1);
+		pid_ev = 0;
+	}
+
+	deinit_term_silent(SIGTERM);
 	vt_cursor_enable(fd_tty_s);
 	exit(0);
 }
 
-void term_handler(int signum)
-{
-	struct vt_mode vt;
-	
-	vt.mode   = VT_AUTO;
-	vt.waitv  = 0;
-
-	tcsetattr(fd_curr, TCSANOW, &tios);
-	ioctl(fd_curr, KDSETMODE, KD_TEXT);
-	ioctl(fd_curr, VT_SETMODE, &vt);
-	exit(0);
-}
-
-void daemon_switch2(char *evdev)
+void daemon_switch2()
 {
 	int fd, i;
 	size_t rb; 
 	struct input_event ev[8];
-	
-	if (fork())
-		return;
 
 	fd = open(evdev, O_RDONLY);
-	
+	if (fd == -1)
+		return;
+
+	i = fork();
+	if (i > 0) {
+		if (pid_s) {
+			kill(pid_s, SIGTERM);
+			waitpid(pid_s, NULL, 1);
+			pid_s = 0;
+		}
+
+		pid_ev = i;
+		close(fd);
+		return;
+	}
+
+	pid_s = 0;	
+	signal(SIGTERM, SIG_DFL);
+	signal(SIGSEGV, SIG_DFL);
+	signal(SIGINT, SIG_DFL);
+	signal(SIGABRT, SIG_DFL);
+
 	while ((rb=read(fd,ev,sizeof(struct input_event)*8)) > 0) {
     		if (rb < (int) sizeof(struct input_event))
 			continue;
@@ -188,10 +243,11 @@ void daemon_switch2(char *evdev)
 				if (stat.v_active == tty_s) {
 					ioctl(fd_tty_s, VT_ACTIVATE, tty_v);
 					ioctl(fd_tty_s, VT_WAITACTIVE, tty_v);
+//					write(fd_tty_v, "\x08", 1);
 				} else {
 					ioctl(fd_tty_s, VT_ACTIVATE, tty_s);
 					ioctl(fd_tty_s, VT_WAITACTIVE, tty_s);
-				}	
+				}
 			}
 		}
 	}
@@ -201,44 +257,12 @@ void daemon_switch2(char *evdev)
 
 void daemon_switch(int tty, int fd, u8 silent)
 {
-	struct termios w;
-	struct sigaction sig;
-	struct vt_mode vt;
 	int flags;
-	
-	fd_curr = fd;
-	if (silent)
-		setsid();
-	ioctl(fd, TIOCSCTTY, 0);
 
-	tcgetattr(fd,&tios);
-	w = tios;
-	w.c_lflag &= (~ICANON);
-	if (silent)
-		w.c_lflag &= (~ECHO);
-	w.c_cc[VTIME] = 0;
-	w.c_cc[VMIN] = 1;
-	tcsetattr(fd, TCSANOW, &w);
-
-	memset(&sig, 0, sizeof(sig));
-	sigemptyset(&sig.sa_mask);
-
-	if (silent) {
-		sig.sa_handler = tty_s_switch_handler;
-		sigaction(SIGUSR1, &sig, NULL);
-		sigaction(SIGUSR2, &sig, NULL);
-
-		vt.mode   = VT_PROCESS;
-		vt.waitv  = 0;
-		vt.relsig = SIGUSR1;
-		vt.acqsig = SIGUSR2;
-	
-		ioctl(fd, VT_SETMODE, &vt);
-		vt_cursor_disable(fd);
+	while(1)
+	{
+		sleep(5);
 	}
-
-	sig.sa_handler = term_handler;
-	sigaction(SIGTERM, &sig, NULL);
 	
 	flags = fcntl(fd, F_GETFL, 0);
 	
@@ -320,19 +344,7 @@ int cmd_exit(void **args)
 		i = j;
 	}
 
-	if (pid_s) {
-		kill(pid_s, SIGTERM);
-		waitpid(pid_s, NULL, 1);
-	}
-		
-	if (pid_v) {
-		kill(pid_v, SIGTERM);
-		waitpid(pid_v, NULL, 1);
-	}
-
-	vt_cursor_enable(fd_tty_s);
-	
-	exit(0);
+	daemon_term_handler(SIGTERM);
 
 	/* We never get here */
 	return 0;
@@ -462,17 +474,20 @@ void alloc_bg_buffer()
 	}
 }
 
-void handle_silent_switch(int signum)
+void handle_silent_switch()
 {
 	struct fb_var_screeninfo old_var;
 	struct fb_fix_screeninfo old_fix;
-
+		
 	old_fix = fb_fix;
 	old_var = fb_var;
 
 	/* FIXME: we should use the vc<->fb map here */		
 	get_fb_settings(arg_fb);
-			
+
+//	/* Clear the screen */
+//	write(fd_tty_s, "\e[2J", 4);
+	
 #ifdef CONFIG_SILENT_KD_GRAPHICS
 	ioctl(fd_tty_s, KDSETMODE, KD_GRAPHICS);
 #endif
@@ -543,7 +558,15 @@ int cmd_set_tty(void **args)
 
 int cmd_set_event_dev(void **args)
 {
-	daemon_switch2(args[0]);
+	if (evdev)
+		free(evdev);
+	evdev = strdup(args[0]);
+	if (pid_ev) {
+		kill(pid_ev, SIGTERM);
+		waitpid(pid_ev, NULL, 1);
+		pid_ev = 0;
+	}
+	daemon_switch2();
 	return 0;
 }
 
@@ -815,9 +838,12 @@ int daemon_comm()
 	int i,j,k;
 
 	while (1) {
-
 		fp_fifo = fopen(SPLASH_FIFO, "r");
 		if (!fp_fifo) {
+			if (errno == EINTR) {
+				continue;
+			}
+			
 			perror("Can't open the splash FIFO (" SPLASH_FIFO ") for reading");
 			return -1;
 		}
@@ -874,7 +900,8 @@ void daemon_start()
 {
 	int i = 0;
 	struct stat mystat;
-		
+	struct sigaction sig;
+	
 	/* Create a mmap of the framebuffer */
 	fd_fb = open_fb();
 	if (!fd_fb)
@@ -914,13 +941,21 @@ void daemon_start()
 	 * process. We're freeing arg_theme in cmd_set_theme(), so the strdup()
 	 * call is necessary to make sure things don't break there. */
 	arg_theme = strdup(arg_theme);
+
+	setsid();
 	
-	signal(SIGTERM,daemon_term_handler);
-	signal(SIGUSR1,handle_silent_switch);
-	signal(SIGUSR2,daemon_term_handler);
-	signal(SIGSEGV,daemon_term_handler);
-	signal(SIGINT,daemon_term_handler);
-	signal(SIGABRT,daemon_term_handler);
+	memset(&sig, 0, sizeof(sig));
+	sigemptyset(&sig.sa_mask);
+
+	sig.sa_handler = tty_s_switch_handler;
+	sigaction(SIGUSR1, &sig, NULL);
+	sigaction(SIGUSR2, &sig, NULL);
+
+	sig.sa_handler = daemon_term_handler;
+	sigaction(SIGTERM, &sig, NULL);
+	sigaction(SIGSEGV, &sig, NULL);
+	sigaction(SIGINT, &sig, NULL);
+	sigaction(SIGABRT, &sig, NULL);
 	
 	start_tty_handlers();
 	daemon_comm();	
