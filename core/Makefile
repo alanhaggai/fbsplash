@@ -1,6 +1,6 @@
 # Makefile for splashutils
 #
-# Copyright (C) 2004, Michal Januszewski <spock@gentoo.org>
+# Copyright (C) 2004=2005, Michael Januszewski <spock@gentoo.org>
 # 
 # This file is subject to the terms and conditions of the GNU General Public
 # License.  See the file COPYING in the main directory of this archive for
@@ -92,7 +92,7 @@ all:	splash_kern splash_user
 
 splash_user: $(SP_UTIL)
 
-$(SP_UTIL): splash.o parse.o render.o unpack.o cmd.o common.o daemon.o
+$(SP_UTIL): splash.o parse.o render.o image.o cmd.o common.o daemon.o list.o
 	@$(call info,LD,$@)
 	@$(CC) $+ $(LDLIBS) -o $@
 	@$(CC) $+ $(LDLIBS) -static -o $@.static
@@ -153,7 +153,7 @@ jpeglib:
 
 splash_kern: klibc jpeglib libpng $(SP_HELPER) $(LIBC) config.h $(K_LDLIBS)
 
-$(SP_HELPER): $(KOUT)/kernel.o $(KOUT)/dev.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/unpack.o $(KOUT)/cmd.o $(KOUT)/common.o
+$(SP_HELPER): $(KOUT)/kernel.o $(KOUT)/dev.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o $(KOUT)/cmd.o $(KOUT)/common.o $(KOUT)/list.o
 	@$(call info,LD,$@)
 ifeq ($(strip $(K_SHARED)),true)
 	@ld $(K_LDFLAGS) -o $@ -e main $(CRT0) $+ $(K_LDLIBS) -R $(LIBC) $(LIBGCC)

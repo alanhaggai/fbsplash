@@ -66,7 +66,7 @@ int main(int argc, char **argv)
 		
 	} else if (!strcmp(argv[2],"init") || !strcmp(argv[2],"modechange")) {
 
-		/* We have to act if we were responding to a user request. This is 
+		/* We have to act as if we were responding to a user request. This is 
 		 * because the kernel will not hold the console sem while calling
 		 * splash_helper init */
 		if (!strcmp(argv[2], "init"))
@@ -78,7 +78,14 @@ int main(int argc, char **argv)
 			err = -1;
 			goto out_init;
 		}
-	
+		
+		/* a list of things we should be doing on init:
+		 *  - parse /proc/cmdline to get the silent tty
+		 *  - switch to the silent tty
+		 *  - disable the cursor
+		 *  - disable echo and icanon
+		 *  - paint the silent image
+		 */
 		if (arg_mode == 's') {
 			
 			u8 created_dev = 0;
@@ -86,6 +93,8 @@ int main(int argc, char **argv)
 			char fbfn[16];
 			int y, t;
 	
+//			vt_cursor_disable(stdout);
+			
 			sprintf(fbfn,"/dev/fb%d", arg_fb);
 			sprintf(sys, "/sys/class/graphics/fb%d/dev", arg_fb);
 	
@@ -108,17 +117,17 @@ int main(int argc, char **argv)
 			for (y = 0; y < fb_var.yres; y++) {
 				if (t != fb_fix.line_length || fb_var.yoffset != 0)
 					lseek(fb_fd, (fb_var.yoffset + y) * fb_fix.line_length, SEEK_SET);
-				write(fb_fd, pic.data + t * y, t);
+				write(fb_fd, silent_img.data + t * y, t);
 			}
 
-			if (pic.cmap.red)
-				ioctl(fb_fd, FBIOPUTCMAP, &pic.cmap);
+			if (silent_img.cmap.red)
+				ioctl(fb_fd, FBIOPUTCMAP, &silent_img.cmap);
 
 //			close_del(fb_fd, fbfn, 0x4);
 		
-			free(pic.data);
-			if (pic.cmap.red)
-				free(pic.cmap.red);
+			free(silent_img.data);
+			if (silent_img.cmap.red)
+				free(silent_img.cmap.red);
 		} else {
 			cmd_setstate(1, orig);	
 		}

@@ -2,10 +2,10 @@
  * splash_common.c - Miscellaneous functions used by both the kernel helper and
  *                   user utilities.
  * 
- * Copyright (C) 2004, Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2004-2005, Michael Januszewski <spock@gentoo.org>
  * 
  * This file is subject to the terms and conditions of the GNU General Public
- * License.  See the file COPYING in the main directory of this archive for
+ * License v2.  See the file COPYING in the main directory of this archive for
  * more details.
  *
  */
@@ -14,7 +14,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <linux/fb.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -124,71 +123,21 @@ char *get_cfg_file(char *theme)
 
 int do_getpic(unsigned char origin, unsigned char do_cmds, char mode)
 {	
-	int res;
-	
-	if (!config_file) {
-		printerr("No config file.\n");
+	if (load_images(mode))
 		return -1;
-	}
 
-	pic.width = fb_var.xres;
-	pic.height = fb_var.yres;
-	pic.depth = fb_var.bits_per_pixel;
-
-	/* if we have a 8bpp pixel mode to deal with, we need to use pic256
-	 * and silentpic256, which can currently only be PNGs */
-	if (fb_var.bits_per_pixel == 8) {
-
-		if ((!cf_pic256 && mode == 'v') || (!cf_silentpic256 && mode == 's')) {
-			printerr("No 8bpp picture for the current splash mode (%c) specified in the theme config.\n", mode);
-			return -2;
-		}
-	
-		pic_file = (mode == 'v') ? cf_pic256 : cf_silentpic256;
-#ifdef CONFIG_PNG
-		if (load_png(pic_file, &pic, mode)) {
-			printerr("Failed to load PNG file %s.\n", pic_file);
-			return -2;
-		}
-		
-		if (do_cmds) {
-			cmd_setpic(&pic, origin);	
-			free((void*)pic.data);
-			if (pic.cmap.red)
-				free(pic.cmap.red);
-		}
-#endif
+	if (mode == 'v') {
+		render_objs(mode, (u8*)verbose_img.data);
 	} else {
-		/* here we handle 15bpp+ modes, the pics can be either jpgs or
-		 * pngs, so we have to check it out first */
-
-		pic_file = (mode == 'v') ? cf_pic : cf_silentpic;
-#ifdef CONFIG_PNG		
-		if (is_png(pic_file))
-			res = load_png(pic_file, &pic, mode);
-		else 
-#endif
-			res = decompress_jpeg(pic_file, &pic);
-	
-		if (res) {
-			printerr("Failed to load image %s.\n", pic_file);
-			return -2;
-		}
-		
-		draw_boxes((u8*)pic.data, mode, origin);
-
-		if (mode == 's') {
-			draw_icons((u8*)pic.data);
-		}
-			
-		if (do_cmds) {
-			cmd_setpic(&pic, origin);
-			free((void*)pic.data);
-			if (pic.cmap.red)
-				free(pic.cmap.red);
-		}
+		render_objs(mode, (u8*)silent_img.data);
 	}
 
+	if (do_cmds) {
+		cmd_setpic(&silent_img, origin);
+		free((u8*)silent_img.data);
+		if (silent_img.cmap.red);
+			free(silent_img.cmap.red);
+	}	
 	return 0;
 }
 
@@ -215,5 +164,15 @@ int do_config(unsigned char origin)
 
 	cmd_setcfg(origin);
 	return 0;
+}
+
+void vt_cursor_disable(FILE* fd)
+{
+	fprintf(fd, "\e[?25l\e?1c");
+}
+
+void vt_cursor_enable(FILE* fd)
+{
+	fprintf(fd, "\e[?25h\e?0c");
 }
 

@@ -1,10 +1,10 @@
 /*
- * daemon.c - Functions for parsing bootsplash config files
+ * daemon.c - The splash daemon 
  * 
- * Copyright (C) 2005, Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2005 Michael Januszewski <spock@gentoo.org>
  * 
  * This file is subject to the terms and conditions of the GNU General Public
- * License.  See the file COPYING in the main directory of this archive for
+ * License v2.  See the file COPYING in the main directory of this archive for
  * more details.
  *
  */
@@ -24,13 +24,7 @@
 #include <linux/fb.h>
 #include "splash.h"
 
-#define SPLASH_FIFO	"/var/cache/splash/.splash"
-#define TTY_SILENT 	8
-#define TTY_VERBOSE 	1
-
-#define u8 	__u8
-#define u16 	__u16
-#define u32 	__u32 
+pid_t pid_v, pid_s;
 
 int tty_s = TTY_SILENT;
 int tty_v = TTY_VERBOSE;
@@ -39,7 +33,60 @@ int fd_tty_s = 0;
 int fd_tty_v = 0;
 int fd_curr = 0;
 
+u8 *bg_buffer = NULL;
+
 struct termios tios;
+
+void daemon_switch(int tty, int fd, u8 silent);
+
+void start_tty_handlers() 
+{
+	char t[16];
+	
+	if (fd_tty_v)
+		close(fd_tty_v);
+		
+	sprintf(t, "/dev/tty%d", tty_v);
+	fd_tty_v = open(t, O_RDWR);
+	if (fd_tty_v == -1) {
+		sprintf(t, "/dev/vc/%d", tty_v);
+		fd_tty_v = open(t, O_RDWR);
+		if (fd_tty_v == -1) {
+			fprintf(stderr, "Can't open %s.\n", t);
+			exit(1);
+		}
+	}
+
+	if (fd_tty_s)
+		close(fd_tty_s);
+		
+	sprintf(t, "/dev/tty%d", tty_s);
+	fd_tty_s = open(t, O_RDWR);
+	if (fd_tty_s == -1) {
+		sprintf(t, "/dev/vc/%d", tty_s);
+		fd_tty_s = open(t, O_RDWR);
+		if (fd_tty_s == -1) {
+			fprintf(stderr, "Can't open %s.\n", t);
+			exit(2);
+		}
+	}
+	
+	if (pid_s)
+		kill(pid_s, SIGTERM);
+
+	if (pid_v)
+		kill(pid_v, SIGTERM);
+		
+	pid_s = fork();
+	if (pid_s == 0) {
+		daemon_switch(tty_v, fd_tty_s, 1);
+	}
+	
+	pid_v = fork();
+	if (pid_v == 0) {
+		daemon_switch(tty_s, fd_tty_v, 0);
+	}
+}
 
 void tty_s_switch_handler(int signum)
 {
@@ -47,7 +94,7 @@ void tty_s_switch_handler(int signum)
 		ioctl(fd_tty_s, VT_RELDISP, 1);
 	} else if (signum == SIGUSR2) {
 		ioctl(fd_tty_s, VT_RELDISP, 2);
-		ioctl(fd_tty_s, KDSETMODE, KD_GRAPHICS);
+//		ioctl(fd_tty_s, KDSETMODE, KD_GRAPHICS);
 	}
 }
 
@@ -71,6 +118,8 @@ void daemon_switch(int tty, int fd, u8 silent)
 	tcgetattr(fd,&tios);
 	w = tios;
 	w.c_lflag &= (~ICANON);
+	if (silent)
+		w.c_lflag &= (~ECHO);
 	w.c_cc[VTIME] = 0;
 	w.c_cc[VMIN] = 1;
 	tcsetattr(fd, TCSANOW, &w);
@@ -117,8 +166,55 @@ void daemon_switch(int tty, int fd, u8 silent)
 	}
 }
 
+int cmd_update_svc(void **args)
+{
+	return 0;
+}
+
 int cmd_set_theme(void **args)
 {
+	item *i, *j;
+		
+	if (arg_theme)
+		free(arg_theme);
+
+	arg_theme = strdup(args[0]);
+	config_file = get_cfg_file(arg_theme);
+	
+	if (!config_file)
+		return -1;
+		
+	for (i = objs.head ; i != NULL; ) {
+		j = i->next;	
+		free(i->p);
+		free(i);
+		j = i;	
+	}
+	
+	for (i = rects.head; i != NULL ; ) {
+		j = i->next;
+		free(i);
+		j = i;
+	}
+	
+	for (i = icons.head; i != NULL; ) {
+		icon_img *ii = (icon_img*) i->p;
+		j = i->next;
+		if (ii->filename)
+			free(ii->filename);
+		if (ii->picbuf)
+			free(ii->picbuf);
+		free(ii);
+		free(i);
+		j = i;
+	}
+
+	/* FIXME: free image buffers and stuff */
+
+	parse_cfg(config_file);
+
+	/* FIXME: reload pictures */
+	
 	return 0;
 }
 
@@ -142,6 +238,17 @@ int cmd_set_mode(void **args)
 
 int cmd_set_tty(void **args)
 {
+	if (!strcmp(args[0], "silent")) {
+		tty_s = *(int*)args[1];
+	} else if (!strcmp(args[0], "verbose")) {
+		tty_v = *(int*)args[1];
+	} else {
+		return -1;
+	}
+
+	/* FIXME: do we need to do anything to the previous terminal? */
+	start_tty_handlers();	
+	
 	return 0;
 }
 
@@ -157,6 +264,10 @@ int cmd_repaint(void **args)
 
 int cmd_progress(void **args)
 {
+	if (*(int*)args[0] < 0 || *(int*)args[0] > PROGRESS_MAX)
+		return -1;
+
+	arg_progress = *(int*)args[0];
 	return 0;
 }
 
@@ -201,6 +312,12 @@ struct {
 		.handler = cmd_progress,
 		.args = 1,
 		.specs = "d"
+	},
+
+	{	.cmd = "update_svc",
+		.handler = cmd_update_svc,
+		.args = 2,
+		.specs = "ss",
 	}
 };
 
@@ -264,35 +381,12 @@ out:		fclose(fp_fifo);
 	}
 }
 
+
 void daemon_start()
 {
-	char t[16];
 	int i = 0;
 	struct stat mystat;
 	
-	/* FIXME: move this after the forks? */
-	sprintf(t, "/dev/tty%d", tty_v);
-	fd_tty_v = open(t, O_RDWR);
-	if (fd_tty_v == -1) {
-		sprintf(t, "/dev/vc/%d", tty_v);
-		fd_tty_v = open(t, O_RDWR);
-		if (fd_tty_v == -1) {
-			fprintf(stderr, "Can't open %s.\n", t);
-			exit(1);
-		}
-	}
-
-	sprintf(t, "/dev/tty%d", tty_s);
-	fd_tty_s = open(t, O_RDWR);
-	if (fd_tty_s == -1) {
-		sprintf(t, "/dev/vc/%d", tty_s);
-		fd_tty_s = open(t, O_RDWR);
-		if (fd_tty_s == -1) {
-			fprintf(stderr, "Can't open %s.\n", t);
-			exit(2);
-		}
-	}
-
 	stat(SPLASH_FIFO, &mystat);
 	if (!S_ISFIFO(mystat.st_mode)) {
 		if (mkfifo(SPLASH_FIFO, 0700))
@@ -303,18 +397,7 @@ void daemon_start()
 	if (i)
 		exit(0);
 
-	i = fork();
-	if (i)
-		daemon_comm();	
-	
-	i = fork();
-	if (i) {
-		daemon_switch(tty_s, fd_tty_v, 0);
-	} else {
-		daemon_switch(tty_v, fd_tty_s, 1);
-	}
-
-
-
+	start_tty_handlers();
+	daemon_comm();	
 }
 

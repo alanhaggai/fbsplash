@@ -1,10 +1,10 @@
 /*
  * splash.c - The core of splash_util
  *
- * Copyright (C) 2004, Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2004-2005 Michael Januszewski <spock@gentoo.org>
  * 
  * This file is subject to the terms and conditions of the GNU General Public
- * License.  See the file COPYING in the main directory of this archive for
+ * License v2.  See the file COPYING in the main directory of this archive for
  * more details.
  *
  */
@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <getopt.h>
 #include <unistd.h>
 
@@ -164,16 +165,17 @@ int main(int argc, char **argv)
 		parse_cfg(config_file);
 
 	if (arg_task == start_daemon) {
+		load_images('s');
 		daemon_start();
 		/* we never get here */
 	}
-		
+	
 	/* we've got to repaint the whole screen if we have icons to draw */
 /*
 	if (arg_task == paint && cf_icons_cnt > 0)
 		arg_task = repaint;
 */
-	
+
 	switch (arg_task) {
 
 	case on:
@@ -246,38 +248,61 @@ setpic_out:	break;
 		break;
 		
 	case getmode:
-		fp = open(SPLASH_DEV, O_WRONLY);
-		if (fp == -1) {
-			fprintf(stderr, "Can't open %s\n", SPLASH_DEV);
-			break;
-		}
-		ioctl(fp, FBIOSPLASH_GETMODE, &i);
-		close(fp);
-
-		printf("Splash mode: %s\n", (i == FB_SPLASH_MODE_SILENT) ? "silent" : "verbose");
-		break;
+	{
+		struct vt_stat stat;
+		i = 0;
 		
+		if ((fp = open("/dev/tty", O_NOCTTY)) != -1) {
+			if (ioctl(fp, VT_GETSTATE, &stat) != -1) {
+				if (stat.v_active == TTY_SILENT)
+					i = 1;				
+			}	
+			close(fp);
+		}
+
+		printf("Splash mode: %s\n", (i) ? "silent" : "verbose");
+		break;
+	}
+	
 	case getcfg:
 		cmd_getcfg(FB_SPLASH_IO_ORIG_USER);
 		break;
 		
 	case paint:
 	case repaint:
+	{
+		struct fb_image pic;
+		u8 *out;
+		u8 *to;
+		
+		sprintf(dev, "/dev/fb%d", arg_fb);
+		if ((c = open(dev, O_RDWR)) == -1) {
+			sprintf(dev, "/dev/fb/%d", arg_fb);
+			if ((c = open(dev, O_RDWR)) == -1) {
+				printerr("Failed to open /dev/fb%d or /dev/fb/%d.\n", arg_fb, arg_fb);
+				break;
+			}
+		}
+	
+		out = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
+				MAP_SHARED, c, fb_var.yoffset * fb_fix.line_length); 
+	
+		if (out == MAP_FAILED) {
+			printerr("mmap() /dev/fb%d failed.\n", arg_fb);
+			close(c);
+			err = -1;
+			break;	
+		}
+		
 		if (do_getpic(FB_SPLASH_IO_ORIG_USER, 0, arg_mode)) {
 			err = -1;
 			break;
 		}
 
-		if (arg_progress > 0 && arg_task == paint && !cf_rects_cnt)
-			goto paint_out;
-
-		sprintf(dev, "/dev/fb%d", arg_fb);
-		if ((c = open(dev, O_WRONLY)) == -1) {
-			sprintf(dev, "/dev/fb/%d", arg_fb);
-			if ((c = open(dev, O_WRONLY)) == -1) {
-				printerr("Failed to open /dev/fb%d or /dev/fb/%d.\n", arg_fb, arg_fb);
-				break;
-			}
+		if (arg_mode == 's') {
+			pic = silent_img;
+		} else {
+			pic = verbose_img;
 		}
 		
 		if (pic.cmap.red)
@@ -285,34 +310,64 @@ setpic_out:	break;
 
 		if (arg_task == repaint) {
 			i = fb_var.xres * ((fb_var.bits_per_pixel + 7) >> 3);
-
+			to = out;
+			
 			for (y = 0; y < fb_var.yres; y++) {
-				if (i != fb_fix.line_length || fb_var.yoffset != 0) {
-					lseek(c, (fb_var.yoffset + y) * fb_fix.line_length, SEEK_SET);
-				}
-
-				write(c, pic.data + i*y, i);
+				memcpy(to, pic.data + i*y, i);
+				to += fb_fix.line_length;
 			}
 		} else {
 			int j;
+			obj *o;
+			box *b;
+			item *ti;
+			rect *re;
 			int bytespp = ((fb_var.bits_per_pixel + 7) >> 3);
 			
-			for (i = 0; i < cf_rects_cnt; i++) {
-				j = (cf_rects[i].x2 - cf_rects[i].x1 + 1) * bytespp;
+			for (ti = rects.head ; ti != NULL; ti = ti->next) {
+				re = (rect*)ti->p;
 				
-				for (y = cf_rects[i].y1; y <= cf_rects[i].y2; y++) {
-					lseek(c, (fb_var.yoffset + y) * fb_fix.line_length + cf_rects[i].x1 * bytespp, SEEK_SET);
-					write(c, pic.data + (y * fb_var.xres + cf_rects[i].x1) * bytespp, j); 
+				j = (re->x2 - re->x1 + 1) * bytespp;
+				
+				for (y = re->y1; y <= re->y2; y++) {
+					to = out + y * fb_fix.line_length + re->x1 * bytespp;
+					memcpy(to, pic.data + (y * fb_var.xres + re->x1) * bytespp, j);
+				}			
+			}
+
+			for (ti = objs.head; ti != NULL; ti = ti->next) {
+				o = (obj*)ti->p;
+			
+				if (o->type != o_box)
+					continue;
+
+				b = (box*)o->p;
+				
+				if (!(b->attr & BOX_INTER) || ti->next == NULL)
+					continue;
+
+				if (((obj*)ti->next->p)->type != o_box) 
+					continue;
+
+				b = (box*)((obj*)ti->next->p)->p;
+
+				j = (b->x2 - b->x1 + 1) * bytespp;
+				for (y = b->y1; y <= b->y2; y++) {
+					to = out + y * fb_fix.line_length + b->x1 * bytespp;
+					memcpy(to, pic.data + (y * fb_var.xres + b->x1) * bytespp, j); 
 				}			
 			}
 		}
-
+		
+		munmap(out, fb_fix.line_length * fb_var.yres);
 		close(c);
 
-paint_out:	free((u8*)pic.data);
+		free((u8*)pic.data);
 		if (pic.cmap.red)
 			free(pic.cmap.red);
+			
 		break;
+	}
 
 	default:
 		break;

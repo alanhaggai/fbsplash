@@ -1,19 +1,17 @@
 /*
- * splash_parse.c - Functions for parsing bootsplash config files
+ * parse.c - Functions for parsing splashutils config files
  * 
- * Copyright (C) 2004-2005, Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2004-2005, Michael Januszewski <spock@gentoo.org>
  * 
  * This file is subject to the terms and conditions of the GNU General Public
- * License.  See the file COPYING in the main directory of this archive for
+ * License v2.  See the file COPYING in the main directory of this archive for
  * more details.
  *
  */
 
 #include <stdlib.h>
 #include <string.h>
-//#include <linux/types.h>
 #include <stdio.h>
-//#include <ctype.h>
 #include <linux/fb.h>
 #include "splash.h"
 
@@ -23,20 +21,16 @@ struct config_opt {
 	void *val;
 };
 
-char *cf_silentpic = NULL;
-char *cf_pic = NULL;
-char *cf_silentpic256 = NULL;	/* these are pictures for 8bpp modes */
-char *cf_pic256 = NULL;
+list icons = { NULL, NULL };
+list objs = { NULL, NULL };
+list rects = { NULL, NULL };
 
-struct rect cf_rects[MAX_RECTS];
-int cf_rects_cnt = 0;
+char *cf_silentpic 	= NULL;
+char *cf_pic 		= NULL;
+char *cf_silentpic256 	= NULL;		/* pictures for 8bpp modes */
+char *cf_pic256 	= NULL;
 
-struct splash_box cf_boxes[MAX_BOXES];
-int cf_boxes_cnt = 0;
 struct splash_config cf;
-
-struct splash_icon cf_icons[MAX_ICONS];
-int cf_icons_cnt = 0;
 
 int line = 0;
 
@@ -204,155 +198,214 @@ int is_in_svclist(char *svc, char *list)
 
 void parse_icon(char *t)
 {
+	char *filename = NULL;
 	char *p;
-	struct splash_icon icon;
+	icon *cic = malloc(sizeof(icon));
+	icon_img *cim;
+	item *ti;
+	obj *cobj;
 	int i;
+
+	if (!cic)
+		return;
+	
+	cic->svc = NULL;
 	
 	skip_whitespace(&t);
 	for (i = 0; t[i] != ' ' && t[i] != '\t' && t[i] != '\0'; i++);
 	t[i] = 0;
 
-	icon.filename = get_filepath(t);
+	filename = get_filepath(t);
 	t += (i+1);
 	
 	skip_whitespace(&t);	
-	icon.x = strtol(t,&p,0);
+	cic->x = strtol(t,&p,0);
 	if (t == p)
-		return;
+		goto pi_err;
 
 	t = p; skip_whitespace(&t);
-	icon.y = strtol(t,&p,0);
+	cic->y = strtol(t,&p,0);
 	if (t == p)
-		return;
+		goto pi_err;
 	
 	t = p; skip_whitespace(&t);
 	
 	if (!strncmp(t, "svc_inactive_start", 18)) {
-		icon.type = e_svc_inact_start; t += 18;
+		cic->type = e_svc_inact_start; t += 18;
 	} else if (!strncmp(t, "svc_inactive_stop", 17)) {
-		icon.type = e_svc_inact_stop; t += 17;
+		cic->type = e_svc_inact_stop; t += 17;
 	} else if (!strncmp(t, "svc_started", 11)) {
-		icon.type = e_svc_started; t += 11;
+		cic->type = e_svc_started; t += 11;
 	} else if (!strncmp(t, "svc_stopped", 11)) {
-		icon.type = e_svc_stopped; t += 11;
+		cic->type = e_svc_stopped; t += 11;
 	} else if (!strncmp(t, "svc_start_failed", 17)) {
-		icon.type = e_svc_start_failed; t += 17;
+		cic->type = e_svc_start_failed; t += 17;
 	} else if (!strncmp(t, "svc_stop_failed",  16)) {
-		icon.type = e_svc_stop_failed; t += 16;
+		cic->type = e_svc_stop_failed; t += 16;
 	} else if (!strncmp(t, "svc_stop", 8)) {
-		icon.type = e_svc_stop; t += 8;
+		cic->type = e_svc_stop; t += 8;
 	} else if (!strncmp(t, "svc_start", 9)) {
-		icon.type = e_svc_start; t += 9;
+		cic->type = e_svc_start; t += 9;
 	} else {
-		icon.type = e_display; 
-		goto out;
+		cic->type = e_display; 
 	}
 	
 	skip_whitespace(&t);
 	for (i = 0; t[i] != ' ' && t[i] != '\t' && t[i] != '\0'; i++);
 	t[i] = 0;
-
 	i = 0;
+
+	if (arg_task != start_daemon) {
 	
-	switch (icon.type) {
+		switch (cic->type) {
 		
-	case e_svc_inact_start:
-		if (is_in_svclist(t, "SPL_SVC_INACTIVE_START"))
-			i = 1;
-		break;
+		case e_svc_inact_start:
+			if (is_in_svclist(t, "SPL_SVC_INACTIVE_START"))
+				i = 1;
+			break;
 	
-	case e_svc_inact_stop:
-		if (is_in_svclist(t, "SPL_SVC_INACTIVE_STOP"))
-			i = 1;
-		break;
+		case e_svc_inact_stop:
+			if (is_in_svclist(t, "SPL_SVC_INACTIVE_STOP"))
+				i = 1;
+			break;
 		
-	case e_svc_started:
-		if (is_in_svclist(t, "SPL_SVC_STARTED"))
-			i = 1;
-		break;
+		case e_svc_started:
+			if (is_in_svclist(t, "SPL_SVC_STARTED"))
+				i = 1;
+			break;	
 
-	case e_svc_stopped:
-		if (is_in_svclist(t, "SPL_SVC_STOPPED"))
-			i = 1;
-		break;
+		case e_svc_stopped:
+			if (is_in_svclist(t, "SPL_SVC_STOPPED"))
+				i = 1;
+			break;
 
-	case e_svc_start_failed:
-		if (is_in_svclist(t, "SPL_SVC_START_FAILED"))
-			i = 1;
-		break;
+		case e_svc_start_failed:
+			if (is_in_svclist(t, "SPL_SVC_START_FAILED"))
+				i = 1;
+			break;
 
-	case e_svc_stop_failed:
-		if (is_in_svclist(t, "SPL_SVC_STOP_FAILED"))
-			i = 1;
-		break;
+		case e_svc_stop_failed:
+			if (is_in_svclist(t, "SPL_SVC_STOP_FAILED"))
+				i = 1;
+			break;
 
-	case e_svc_stop:
-		if (is_in_svclist(t, "SPL_SVC_STOP"))
-			i = 1;
-		break;
+		case e_svc_stop:
+			if (is_in_svclist(t, "SPL_SVC_STOP"))
+				i = 1;
+			break;
 
-	case e_svc_start:
-		if (is_in_svclist(t, "SPL_SVC_START"))
+		case e_svc_start:
+			if (is_in_svclist(t, "SPL_SVC_START"))
+				i = 1;
+			break;
+
+		case e_display:
 			i = 1;
-		break;
-	case e_display:
-		/* we should never get here */
-		break;
+			break;
+		}
+
+		if (!i)
+			goto pi_out;
+
+		cic->status = 1;
+	} else {
+
+		if (cic->type == e_display) 
+			cic->status = 1;
+		else 
+			cic->status = 0;
 	}
 
-	if (!i)
-		return;
+	if (cic->type != e_display) {
+		cic->svc = strdup(t);
+	}
+		
+	for (ti = icons.head ; ti != NULL; ti = ti->next) {
+		icon_img *ii = (icon_img*) ti->p;
 	
-	icon.svc = strdup(t);
+		if (!strcmp(ii->filename, filename)) {
+			cic->img = ii;
+			goto pi_end;
+		}
+	}
 
-out:
-	if (cf_icons_cnt >= MAX_ICONS)
-		return;
-	cf_icons[cf_icons_cnt++] = icon;
+	/* Allocate a new entry in the icons list */
+	cim = malloc(sizeof(icon_img));	
+	if (!cim)
+		goto pi_outm;	
+	cim->filename = filename;
+	cim->w = cim->h	= 0;
+	cim->picbuf = NULL;
+	list_add(&icons, cim);
+	cic->img = cim;
+
+pi_end:
+	cobj = malloc(sizeof(obj));
+	if (!cobj) {
+pi_outm:	fprintf(stderr, "Cannot allocate memory (parse_icon)!");
+		goto pi_out;
+	}
+	cobj->type = o_icon;
+	cobj->p = cic;
+	
+	list_add(&objs, cobj);
+	return;
+
+pi_err:	fprintf(stderr, "parse error @ line %d\n", line);
+pi_out:	if (filename)
+		free(filename);
+	if (cic->svc)
+		free(cic->svc);
+	free(cic);
 	return;
 }
 
 void parse_rect(char *t)
 {
 	char *p;	
+	rect *crect = malloc(sizeof(rect));
 	
-	struct rect crect;
+	if (!crect)
+		return;
+	
 	skip_whitespace(&t);
 
 	while (!isdigit(*t)) {
 		t++;
 	}
 
-	crect.x1 = strtol(t,&p,0);
+	crect->x1 = strtol(t,&p,0);
 	if (t == p)
-		return;
+		goto pr_err;
 	t = p; skip_whitespace(&t);
-	crect.y1 = strtol(t,&p,0);
+	crect->y1 = strtol(t,&p,0);
 	if (t == p)
-		return;
+		goto pr_err;
 	t = p; skip_whitespace(&t);
-	crect.x2 = strtol(t,&p,0);
+	crect->x2 = strtol(t,&p,0);
 	if (t == p)
-		return;
+		goto pr_err;
 	t = p; skip_whitespace(&t);
-	crect.y2 = strtol(t,&p,0);
+	crect->y2 = strtol(t,&p,0);
 	if (t == p)
-		return;
+		goto pr_err;
 	t = p; skip_whitespace(&t);
 
 	/* sanity checks */
-	if (crect.x1 >= fb_var.xres)
-		crect.x1 = fb_var.xres-1;
-	if (crect.x2 >= fb_var.xres)
-		crect.x2 = fb_var.xres-1;
-	if (crect.y1 >= fb_var.yres)
-		crect.y1 = fb_var.yres-1;
-	if (crect.y2 >= fb_var.yres)
-		crect.y2 = fb_var.yres-1;
-	
-	if (cf_boxes_cnt >= MAX_RECTS)
-		return;
-	cf_rects[cf_rects_cnt++] = crect;
+	if (crect->x1 >= fb_var.xres)
+		crect->x1 = fb_var.xres-1;
+	if (crect->x2 >= fb_var.xres)
+		crect->x2 = fb_var.xres-1;
+	if (crect->y1 >= fb_var.yres)
+		crect->y1 = fb_var.yres-1;
+	if (crect->y2 >= fb_var.yres)
+		crect->y2 = fb_var.yres-1;
+
+	list_add(&rects, crect);
+	return;
+pr_err:
+	fprintf(stderr, "parse error @ line %d\n", line);
+	free(crect);
 	return;
 }
 
@@ -360,98 +413,109 @@ void parse_box(char *t)
 {
 	char *p;	
 	int ret;
-	
-	struct splash_box cbox;
+	box *cbox = malloc(sizeof(box));
+	obj *cobj = NULL;
+
+	if (!cbox)
+		return;
 	
 	skip_whitespace(&t);
-	cbox.attr = 0;
+	cbox->attr = 0;
 
 	while (!isdigit(*t)) {
 	
 		if (!strncmp(t,"noover",6)) {
-			cbox.attr |= BOX_NOOVER;
+			cbox->attr |= BOX_NOOVER;
 			t += 6;
 		} else if (!strncmp(t, "inter", 5)) {
-			cbox.attr |= BOX_INTER;
+			cbox->attr |= BOX_INTER;
 			t += 5;
 		} else if (!strncmp(t, "silent", 6)) {
-			cbox.attr |= BOX_SILENT;
+			cbox->attr |= BOX_SILENT;
 			t += 6;
 		} else {
-			fprintf(stderr, "parse error @ line %d\n", line);
-			return;
+			goto pb_err;
 		}
 
 		skip_whitespace(&t);
 	}	
-	
-	cbox.x1 = strtol(t,&p,0);
+
+	cbox->x1 = strtol(t,&p,0);
 	if (t == p)
-		return;
+		goto pb_err;
 	t = p; skip_whitespace(&t);
-	cbox.y1 = strtol(t,&p,0);
+	cbox->y1 = strtol(t,&p,0);
 	if (t == p)
-		return;
+		goto pb_err;
 	t = p; skip_whitespace(&t);
-	cbox.x2 = strtol(t,&p,0);
+	cbox->x2 = strtol(t,&p,0);
 	if (t == p)
-		return;
+		goto pb_err;
 	t = p; skip_whitespace(&t);
-	cbox.y2 = strtol(t,&p,0);
+	cbox->y2 = strtol(t,&p,0);
 	if (t == p)
-		return;
+		goto pb_err;
 	t = p; skip_whitespace(&t);
 
 	/* sanity checks */
-	if (cbox.x1 >= fb_var.xres)
-		cbox.x1 = fb_var.xres-1;
-	if (cbox.x2 >= fb_var.xres)
-		cbox.x2 = fb_var.xres-1;
-	if (cbox.y1 >= fb_var.yres)
-		cbox.y1 = fb_var.yres-1;
-	if (cbox.y2 >= fb_var.yres)
-		cbox.y2 = fb_var.yres-1;
-	
+	if (cbox->x1 >= fb_var.xres)
+		cbox->x1 = fb_var.xres-1;
+	if (cbox->x2 >= fb_var.xres)
+		cbox->x2 = fb_var.xres-1;
+	if (cbox->y1 >= fb_var.yres)
+		cbox->y1 = fb_var.yres-1;
+	if (cbox->y2 >= fb_var.yres)
+		cbox->y2 = fb_var.yres-1;
+
 #define zero_color(cl) *(u32*)(&cl) = 0;
 #define is_zero_color(cl) (*(u32*)(&cl) == 0)
 #define assign_color(c1, c2) *(u32*)(&c1) = *(u32*)(&c2);
 	
-	zero_color(cbox.c_ul);
-	zero_color(cbox.c_ur);
-	zero_color(cbox.c_ll);
-	zero_color(cbox.c_lr);
+	zero_color(cbox->c_ul);
+	zero_color(cbox->c_ur);
+	zero_color(cbox->c_ll);
+	zero_color(cbox->c_lr);
 	
-	if (parse_color(&t, &cbox.c_ul)) 
+	if (parse_color(&t, &cbox->c_ul)) 
 		goto pb_err;
 
 	skip_whitespace(&t);
 
-	ret = parse_color(&t, &cbox.c_ur);
+	ret = parse_color(&t, &cbox->c_ur);
 	
 	if (ret == -1) {
-		assign_color(cbox.c_ur, cbox.c_ul);
-		assign_color(cbox.c_lr, cbox.c_ul);
-		assign_color(cbox.c_ll, cbox.c_ul);
+		assign_color(cbox->c_ur, cbox->c_ul);
+		assign_color(cbox->c_lr, cbox->c_ul);
+		assign_color(cbox->c_ll, cbox->c_ul);
 		goto pb_end;
 	} else if (ret == -2)
 		goto pb_err;
 
 	skip_whitespace(&t);
 
-	if (parse_color(&t, &cbox.c_ll))
+	if (parse_color(&t, &cbox->c_ll))
 		goto pb_err;
 	
 	skip_whitespace(&t);
 
-	if (parse_color(&t, &cbox.c_lr))
+	if (parse_color(&t, &cbox->c_lr))
 		goto pb_err;
-pb_end:	
-	if (cf_boxes_cnt >= MAX_BOXES)
+pb_end:
+	cobj = malloc(sizeof(obj));
+	if (!cobj) {
+		free(cbox);
+		fprintf(stderr, "Cannot allocate memory (parse_box)!");
 		return;
-	cf_boxes[cf_boxes_cnt++] = cbox;
+	}
+	cobj->type = o_box;
+	cobj->p = cbox;
+	
+	list_add(&objs, cobj);
 	return;
+
 pb_err:
 	fprintf(stderr, "parse error @ line %d\n", line);
+	free(cbox);
 	return;
 }
 
