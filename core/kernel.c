@@ -160,7 +160,7 @@ out:	free(silent_img.data);
 
 int main(int argc, char **argv)
 {
-	int err = 0;
+	int err = 0, i = 5;
 	u8 mounts = 0;
 
 	detect_endianess();
@@ -168,9 +168,9 @@ int main(int argc, char **argv)
 	if (argc < 3)
 		goto out;
 
-	if (strcmp(argv[1],"2")) {
+	if (strcmp(argv[1],"2") && strcmp(argv[1], "1")) {
 		fprintf(stderr, "Splash protocol mismatch: %s\n", argv[1]);
-		fprintf(stderr, "This version of splashutils supports only splash protocol v2.\n");
+		fprintf(stderr, "This version of splashutils supports splash protocol v1 and v2.\n");
 		err = -1;
 		goto out;
 	}
@@ -182,10 +182,14 @@ int main(int argc, char **argv)
 	if (arg_vc < 0 || arg_fb < 0)
 		goto out;
 
+	if (!strcmp(argv[1],"1")) {
+		i = 6;
+	}
+	
 	/* On 'init' the theme isn't defined yet, and thus NULL is passed
 	 * instead of any meaningful value. */
-	if (argv[5]) 
-		arg_theme = strdup(argv[5]);
+	if (argv[i]) 
+		arg_theme = strdup(argv[i]);
 	else
 		arg_theme = NULL;
 	
