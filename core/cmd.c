@@ -20,9 +20,10 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <linux/fb.h>
-#include <linux/console_splash.h>
-
 #include "splash.h"
+
+#ifdef CONFIG_FBSPLASH
+#include <linux/console_splash.h>
 
 void cmd_setstate(unsigned int state, unsigned char origin)
 {
@@ -129,4 +130,6 @@ void cmd_getcfg()
 out:	free(vc_cfg.theme);
 	return;		
 }
+
+#endif /* CONFIG_FBSPLASH */
 

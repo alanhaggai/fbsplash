@@ -87,8 +87,9 @@ parse_failure:	if (h == 0)
 	if (arg_mode == ' ')
 		return -1;	
 
+#ifdef CONFIG_FBSPLASH
 	create_dev(SPLASH_DEV, "/sys/class/misc/fbsplash/dev", 0x1);
-
+#endif
 	if (!arg_theme) {
 		arg_theme = strdup(DEFAULT_THEME);
 	}
@@ -97,12 +98,13 @@ parse_failure:	if (h == 0)
 	if (!config_file)
 		return -1;
 	parse_cfg(config_file);
-	
+
+#ifdef CONFIG_FBSPLASH
 	if (do_config(FB_SPLASH_IO_ORIG_USER) || do_getpic(FB_SPLASH_IO_ORIG_USER, 1, 'v')) {
 		return -1;
 	}
 	cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
-
+#endif
 	if (arg_mode != 's')
 		return 0;
 	
@@ -211,15 +213,19 @@ int main(int argc, char **argv)
 	}
 #endif
 	
-	if (!strcmp(argv[2],"getpic")) {
+	if (!strcmp(argv[2],"init")) {
+		err = handle_init();
+	} 
+#ifdef CONFIG_FBSPLASH
+	else if (!strcmp(argv[2],"getpic")) {
 		err = do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, 'v');
 	} else if (!strcmp(argv[2],"modechange")) {
 		do_config(FB_SPLASH_IO_ORIG_KERNEL);
 		do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, 'v');
 		cmd_setstate(1, FB_SPLASH_IO_ORIG_KERNEL);
-	} else if (!strcmp(argv[2],"init")) {
-		err = handle_init();
-	} else {
+	} 
+#endif	
+	else {
 		fprintf(stderr, "Unrecognized splash command: %s.\n", argv[2]);
 	}
 

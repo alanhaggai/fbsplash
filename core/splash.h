@@ -9,7 +9,6 @@
 #define MAX_ICONS 	512
 #define SPLASH_DEV	"/dev/fbsplash"
 
-#define SPLASH_FIFO	"/lib/splash/cache/.splash"
 #define TTY_SILENT 	8
 #define TTY_VERBOSE 	1
 
@@ -31,6 +30,11 @@
 #define max(a,b)		((a) > (b) ? (a) : (b))
 #define CLAMP(x) 		((x) > 255 ? 255 : (x))
 #define DEBUG(x...)
+
+#ifndef CONFIG_FBSPLASH
+#define FB_SPLASH_IO_ORIG_USER 0
+#define FB_SPLASH_IO_ORIG_KERNEL 1
+#endif
 						    
 /* ************************************************************************
  * 				Lists 

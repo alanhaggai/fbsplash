@@ -144,15 +144,18 @@ int do_getpic(unsigned char origin, unsigned char do_cmds, char mode)
 		render_objs(mode, (u8*)silent_img.data, origin);
 	}
 
+#ifdef CONFIG_FBSPLASH
 	if (do_cmds) {
 		cmd_setpic(&verbose_img, origin);
 		free((u8*)verbose_img.data);
 		if (verbose_img.cmap.red);
 			free(verbose_img.cmap.red);
 	}	
+#endif
 	return 0;
 }
 
+#ifdef CONFIG_FBSPLASH
 int do_config(unsigned char origin)
 {
 	if (!config_file) {
@@ -177,6 +180,7 @@ int do_config(unsigned char origin)
 	cmd_setcfg(origin);
 	return 0;
 }
+#endif
 
 void vt_cursor_disable(int fd)
 {

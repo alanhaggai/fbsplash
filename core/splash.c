@@ -64,6 +64,7 @@ void usage(void)
 "splash_util/splashutils-" PKG_VERSION "\n"
 "Usage: splash_util [options] -c <cmd>\n\n"
 "Commands:\n"
+#ifdef CONFIG_FBSPLASH
 "  on       enable splash on a virtual console\n"
 "  off      disable splash on a virtual console\n"
 "  getstate get splash state on a virtual console\n"
@@ -72,6 +73,7 @@ void usage(void)
 "  setpic   set splash background picture for a virtual console;\n"
 "           note that this command will only have any effect if\n"
 "           it's called for the current console\n"
+#endif
 "  paint    paint background picture\n"
 "  setmode  set global splash mode\n"
 "  getmode  get global splash mode\n\n"
@@ -88,6 +90,9 @@ void usage(void)
 "  -e, --export=FILE   export the silent background image to a file\n"
 "                      this option is only used when splash_util is\n"
 "                      running in daemon mode\n"
+#ifndef CONFIG_FBSPLASH
+"\nThis version of splashutils has been compiled without support for fbsplash.\n"
+#endif
 );
 }
 
@@ -200,6 +205,7 @@ int main(int argc, char **argv)
 	
 	switch (arg_task) {
 
+#ifdef CONFIG_FBSPLASH
 	case on:
 		cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
 		break;
@@ -224,6 +230,10 @@ int main(int argc, char **argv)
 setpic_out:	break;
 	}
 
+	case getcfg:
+		cmd_getcfg(FB_SPLASH_IO_ORIG_USER);
+		break;
+	
 	case setcfg:
 		do_config(FB_SPLASH_IO_ORIG_USER);
 		break;
@@ -247,7 +257,8 @@ setpic_out:	break;
 		printf("Splash state on console %d: %s\n", arg_vc, (i != 0) ? "on" : "off");
 		break;
 	}
-		
+#endif /* CONFIG_FBSPLASH */	
+	
 	case setmode:
 	{
 		int t;
@@ -295,10 +306,6 @@ setpic_out:	break;
 		printf("Splash mode: %s\n", (i) ? "silent" : "verbose");
 		break;
 	}
-	
-	case getcfg:
-		cmd_getcfg(FB_SPLASH_IO_ORIG_USER);
-		break;
 		
 	case paint:
 	case repaint:
