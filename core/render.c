@@ -162,7 +162,6 @@ void render_box(box *box, u8 *target)
 				*(u16*)pic = i;
 				pic += 2;
 			} else if (fb_var.bits_per_pixel == 24) {
-				
 				if (endianess == little) { 
 					*(u16*)pic = i & 0xffff;
 					pic[2] = (i >> 16) & 0xff;
@@ -255,6 +254,49 @@ char *get_program_output(char *prg, unsigned char origin)
 	return buf;
 }
 
+char *eval_text(char *txt)
+{
+	char *p, *t, *ret, *d;
+	int len, i;
+
+	i = len = strlen(txt);
+	p = txt;
+	
+	while ((t = strstr(p, "$progress")) != NULL) { 
+		len += 3;
+		p = t+1;
+	}
+
+	ret = malloc(len);
+
+	if (i == len) {
+		strcpy(ret, txt);
+		return ret;
+	}
+	
+	p = txt;
+	d = ret;
+	
+	while ((t = strstr(p, "$progress")) != NULL) {
+		strncpy(d, p, t - p);
+		d += (t-p);
+		
+		if (t > txt && *(t-1) == '\\') {
+			*(d-1) = '$';
+			p = t+1;
+			continue;
+		}
+
+		d += sprintf(d, "%d", arg_progress * 100 / PROGRESS_MAX);
+		p = t;
+		p += 9;
+	}
+
+	strcpy(d, p);	
+	
+	return ret;	
+}
+
 void render_objs(char mode, u8* target, unsigned char origin)
 {
 	item *i;
@@ -324,13 +366,15 @@ void render_objs(char mode, u8* target, unsigned char origin)
 
 			if (ct->flags & F_TXT_EXEC) {
 				txt = get_program_output(ct->val, origin);
+			} else if (ct->flags & F_TXT_EVAL) {
+				txt = eval_text(ct->val);
 			} else {
 				txt = ct->val;
 			}
 			
 			if (txt) {
-				TTF_Render(target, txt, ct->font->font, TTF_STYLE_NORMAL, ct->x, ct->y, ct->col);
-				if (ct->flags & F_TXT_EXEC)
+				TTF_Render(target, txt, ct->font->font, ct->style, ct->x, ct->y, ct->col, ct->hotspot);
+				if ((ct->flags & F_TXT_EXEC) || (ct->flags & F_TXT_EVAL))
 					free(txt);
 			}
 		}
@@ -340,9 +384,9 @@ void render_objs(char mode, u8* target, unsigned char origin)
 #if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)
 	if (mode == 's') {
 		if (!boot_message)
-			TTF_Render(target, DEFAULT_MESSAGE, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color);
+			TTF_Render(target, DEFAULT_MESSAGE, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color, F_HS_LEFT | F_HS_TOP);
 		else
-			TTF_Render(target, boot_message, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color);
+			TTF_Render(target, boot_message, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color, F_HS_LEFT | F_HS_TOP);
 	}
 #endif
 }

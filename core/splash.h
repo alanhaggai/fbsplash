@@ -99,19 +99,33 @@ typedef struct {
 #define F_TXT_SILENT  	1
 #define F_TXT_VERBOSE	2
 #define F_TXT_EXEC 	4
+#define F_TXT_EVAL	8	
+
+#define F_HS_HORIZ_MASK	7
+#define F_HS_VERT_MASK	56
+
+#define F_HS_TOP	8
+#define F_HS_VMIDDLE	16
+#define F_HS_BOTTOM	32
+
+#define F_HS_LEFT	1
+#define F_HS_HMIDDLE	2
+#define F_HS_RIGHT	4
 
 #include "ttf.h"
 
 typedef struct {
 	char *file;
 	int size;
-	TTF_Font *font;	
+	TTF_Font *font;
 } font_e;
 
 typedef struct {
 	int x, y;
+	u8 hotspot;
 	color col;
 	u8 flags;
+	u8 style;
 	char *val;
 	font_e *font;
 } text;
