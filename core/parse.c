@@ -644,7 +644,6 @@ char *parse_quoted_string(char *t)
 	return out;
 }
 
-#ifndef TARGET_KERNEL
 void parse_text(char *t)
 {
 	char *p, *fontname = NULL, *fpath = NULL;
@@ -774,9 +773,6 @@ pt_out:	free(ct);
 		free(fpath);
 	return;
 }
-#else
-void parse_text(char *t) { }
-#endif
 
 int parse_cfg(char *cfgfile)
 {

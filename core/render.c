@@ -203,7 +203,12 @@ char *get_program_output(char *prg)
 	pid = fork();
 
 	if (pid == 0) {
+#ifndef TARGET_KERNEL
+		/* Only play with stdout if we are NOT the kernel helper.
+		 * Otherwise, things will break horribly and we'll end up
+		 * with a deadlock. */
 		close(1);
+#endif
 		dup(pfds[1]);
 	 	close(pfds[0]);
 		execlp("sh", "sh", "-c", prg, NULL);
@@ -295,6 +300,9 @@ void render_objs(char mode, u8* target)
 		}
 	}
 
-	TTF_Render(target, boot_message, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color);
+	if (!boot_message)
+		TTF_Render(target, DEFAULT_MESSAGE, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color);
+	else
+		TTF_Render(target, boot_message, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color);
 }
 

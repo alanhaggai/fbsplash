@@ -62,6 +62,10 @@ int main(int argc, char **argv)
 
 	parse_cfg(config_file);
 
+	if (TTF_Init() < 0) {
+		fprintf(stderr, "Couldn't initialize TTF.\n");
+	}
+	
 	if (!strcmp(argv[2],"getpic")) {
 
 		err = do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, arg_mode);

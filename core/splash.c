@@ -187,8 +187,6 @@ int main(int argc, char **argv)
 		daemon_start();
 		/* we never get here */
 	}
-
-	load_fonts();
 	
 	/* we've got to repaint the whole screen if we have icons to draw */
 /*

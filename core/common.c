@@ -135,6 +135,8 @@ int do_getpic(unsigned char origin, unsigned char do_cmds, char mode)
 	if (load_images(mode))
 		return -1;
 
+	load_fonts();
+	
 	if (mode == 'v') {
 		render_objs(mode, (u8*)verbose_img.data);
 	} else {

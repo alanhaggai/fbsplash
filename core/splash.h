@@ -13,6 +13,7 @@
 #define TTY_SILENT 	8
 #define TTY_VERBOSE 	1
 
+#define DEFAULT_MESSAGE "Initializing the kernel..."
 #define DEFAULT_FONT 	"luxisri.ttf"
 #define TTF_DEFAULT	THEME_DIR "/" DEFAULT_FONT
 
