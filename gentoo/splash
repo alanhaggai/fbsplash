@@ -12,9 +12,9 @@
 [[ ! -e /dev/fbsplash ]] 			&& exit 1
 [[ ! -x /sbin/splash_util.static ]] && exit 1
 
-[[ -z ${SPLASH_BOOT_MESSAGE} ]] 	&& SPLASH_BOOT_MESSAGE="Booting the system... Press F2 for verbose mode"
-[[ -z ${SPLASH_SHUTDOWN_MESSAGE} ]] && SPLASH_SHUTDOWN_MESSAGE="Shutting down the system... Press F2 for verbose mode"
-[[ -z ${SPLASH_REBOOT_MESSAGE} ]] 	&& SPLASH_REBOOT_MESSAGE="Rebooting the system... Press F2 for verbose mode"
+[[ -z ${SPLASH_BOOT_MESSAGE} ]] 	&& SPLASH_BOOT_MESSAGE="Booting the system (\$progress%)... Press F2 for verbose mode"
+[[ -z ${SPLASH_SHUTDOWN_MESSAGE} ]] && SPLASH_SHUTDOWN_MESSAGE="Shutting down the system (\$progress%)... Press F2 for verbose mode"
+[[ -z ${SPLASH_REBOOT_MESSAGE} ]] 	&& SPLASH_REBOOT_MESSAGE="Rebooting the system (\$progress%)... Press F2 for verbose mode"
 
 [[ RC_GOT_FUNCTIONS != "yes" ]] && . /sbin/functions.sh
 [[ -f /etc/conf.d/splash ]] 	&& . /etc/conf.d/splash
@@ -50,7 +50,13 @@ update_progress() {
 	splash_comm_send "progress ${progress}"
 	
 	if [[ "$(splash_get_mode)" == "silent" ]]; then
+		local t=$(get_boot_message)
 		splash_comm_send "paint"
+
+		if [[ -z "${t//*\$progress*/}" && -e ${spl_cachedir}/message ]]; then
+			source ${spl_cachedir}/message
+			splash_comm_send "paint rect ${text_x} ${text_y} ${xres} $(($text_y+5*$text_size))"
+		fi
 	fi
 }
 
@@ -94,6 +100,14 @@ if [ "$1" == "start" ]; then
 		splash_comm_send "repaint"
 		${SPLUTIL} -c on 2>/dev/null
 	fi
+
+	# Save some useful variables
+	res=$(/lib/splash/bin/fbres)
+	yres=${res#*x}
+	xres=${res%x*}
+
+	cat /etc/splash/${SPLASH_THEME}/${res}.cfg | grep "^text_[a-z]\+=" > ${spl_cachedir}/message
+	echo -e "yres=${yres}\nxres=${xres}" >> ${spl_cachedir}/message
 elif [ "$1" == "silent" ]; then
 	splash_comm_send "set mode silent"
 	${SPLUTIL} -c on 2>/dev/null
