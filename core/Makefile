@@ -92,7 +92,7 @@ all:	splash_kern splash_user
 
 splash_user: $(SP_UTIL)
 
-$(SP_UTIL): splash.o parse.o render.o unpack.o cmd.o common.o
+$(SP_UTIL): splash.o parse.o render.o unpack.o cmd.o common.o daemon.o
 	@$(call info,LD,$@)
 	@$(CC) $+ $(LDLIBS) -o $@
 	@$(CC) $+ $(LDLIBS) -static -o $@.static

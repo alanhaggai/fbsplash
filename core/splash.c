@@ -32,6 +32,8 @@ struct option options[] = {
 	{ "theme", 	required_argument, NULL, 0x103 },
 	{ "mode", 	required_argument, NULL, 0x104 },
 	{ "progress", 	required_argument, NULL, 0x105 },
+	{ "tty",	required_argument, NULL, 0x106 },
+	{ "daemon",	no_argument, NULL, 'd'},
 	{ "help",	no_argument, NULL, 'h'}	
 };
 
@@ -74,9 +76,11 @@ void usage(void)
 "  getmode  get global splash mode\n\n"
 "Options:\n"
 "  -c, --cmd=CMD       execute command CMD\n"
+"  -d, --daemon        start the splash daemon\n"
 "  -h, --help          show this help message\n"
 "  -t, --theme=THEME   use theme THEME\n"
-"      --vc=NUM        use NUMth virtual console\n"
+"      --vc=NUM        use NUMth virtual console [0..n]\n"
+"      --tty=NUM       use NUMth tty [1..n]\n"
 "      --fb=NUM        use NUMth framebuffer device\n"
 "  -m, --mode=(v|s)    use either silent (s) or verbsose (v) mode\n"
 "  -p, --progress=NUM  set progress to NUM/65535 * 100%%\n");
@@ -91,7 +95,7 @@ int main(int argc, char **argv)
 	detect_endianess();
 	arg_task = none;
 	
-	while ((c = getopt_long(argc, argv, "c:t:m:p:h", options, NULL)) != EOF) {
+	while ((c = getopt_long(argc, argv, "c:t:m:p:hd", options, NULL)) != EOF) {
 	
 		switch (c) {
 		
@@ -135,6 +139,14 @@ int main(int argc, char **argv)
 		case 0x105:
 			arg_progress = atoi(optarg);
 			break;
+		
+		case 0x106:
+			arg_vc = atoi(optarg)-1;
+			break;
+
+		case 'd':
+			arg_task = start_daemon;
+			break;
 		}
 	}
 
@@ -151,6 +163,11 @@ int main(int argc, char **argv)
 	if (config_file)
 		parse_cfg(config_file);
 
+	if (arg_task == start_daemon) {
+		daemon_start();
+		/* we never get here */
+	}
+		
 	/* we've got to repaint the whole screen if we have icons to draw */
 /*
 	if (arg_task == paint && cf_icons_cnt > 0)
