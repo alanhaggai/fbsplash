@@ -92,7 +92,7 @@ all:	splash_kern splash_user
 
 splash_user: $(SP_UTIL)
 
-$(SP_UTIL): splash.o splash_parse.o splash_render.o splash_unpack.o splash_cmd.o splash_common.o
+$(SP_UTIL): splash.o parse.o render.o unpack.o cmd.o common.o
 	@$(call info,LD,$@)
 	@$(CC) $+ $(LDLIBS) -o $@
 	@$(CC) $+ $(LDLIBS) -static -o $@.static
@@ -153,7 +153,7 @@ jpeglib:
 
 splash_kern: klibc jpeglib libpng $(SP_HELPER) $(LIBC) config.h $(K_LDLIBS)
 
-$(SP_HELPER): $(KOUT)/splash_kernel.o $(KOUT)/splash_dev.o $(KOUT)/splash_parse.o $(KOUT)/splash_render.o $(KOUT)/splash_unpack.o $(KOUT)/splash_cmd.o $(KOUT)/splash_common.o
+$(SP_HELPER): $(KOUT)/kernel.o $(KOUT)/dev.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/unpack.o $(KOUT)/cmd.o $(KOUT)/common.o
 	@$(call info,LD,$@)
 ifeq ($(strip $(K_SHARED)),true)
 	@ld $(K_LDFLAGS) -o $@ -e main $(CRT0) $+ $(K_LDLIBS) -R $(LIBC) $(LIBGCC)
