@@ -1,4 +1,3 @@
-/* define if you want PNG support */
 #define CONFIG_PNG 			1
 #define CONFIG_TTF 			1
 #define CONFIG_TTF_KERNEL		1

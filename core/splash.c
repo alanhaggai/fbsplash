@@ -178,9 +178,11 @@ int main(int argc, char **argv)
 	if (config_file)
 		parse_cfg(config_file);
 
+#ifdef CONFIG_TTF
 	if (TTF_Init() < 0) {
 		fprintf(stderr, "Couldn't initialize TTF.\n");
 	}
+#endif
 	
 	if (arg_task == start_daemon) {
 		load_images('a');

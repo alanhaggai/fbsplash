@@ -96,6 +96,7 @@ struct config_opt opts[] =
 		.type = t_rect,
 		.val = NULL		},
 
+#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)
 	{	.name = "text_x",
 		.type = t_int,
 		.val = &cf.text_x	},
@@ -119,6 +120,7 @@ struct config_opt opts[] =
 	{	.name = "text",
 		.type = t_text,
 		.val = NULL		},
+#endif /* TTF */
 };
 
 int isdigit(char c) 
@@ -508,7 +510,6 @@ void parse_box(char *t)
 	cbox->attr = 0;
 
 	while (!isdigit(*t)) {
-	
 		if (!strncmp(t,"noover",6)) {
 			cbox->attr |= BOX_NOOVER;
 			t += 6;
@@ -644,6 +645,7 @@ char *parse_quoted_string(char *t)
 	return out;
 }
 
+#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)
 void parse_text(char *t)
 {
 	char *p, *fontname = NULL, *fpath = NULL;
@@ -773,6 +775,7 @@ pt_out:	free(ct);
 		free(fpath);
 	return;
 }
+#endif	/* TTF */
 
 int parse_cfg(char *cfgfile)
 {
@@ -849,10 +852,12 @@ int parse_cfg(char *cfgfile)
 				case t_rect:
 					parse_rect(t);
 					break;
-				
+
+#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)
 				case t_text:
 					parse_text(t);
 					break;
+#endif
 				}
 			}
 		}

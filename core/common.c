@@ -1,6 +1,6 @@
 /*
- * splash_common.c - Miscellaneous functions used by both the kernel helper and
- *                   user utilities.
+ * common.c - miscellaneous functions used by both the kernel helper and
+ *            user utilities.
  * 
  * Copyright (C) 2004-2005, Michael Januszewski <spock@gentoo.org>
  * 
@@ -75,7 +75,6 @@ int get_fb_settings(int fb_num)
 	}
 	
 	if (fb == -1) {
-	
 #ifdef TARGET_KERNEL
 		sprintf(sys, "/sys/class/graphics/fb%d/dev", fb_num);
 		create_dev(fn, sys, 0x1);
@@ -135,7 +134,9 @@ int do_getpic(unsigned char origin, unsigned char do_cmds, char mode)
 	if (load_images(mode))
 		return -1;
 
+#ifdef CONFIG_TTF
 	load_fonts();
+#endif
 	
 	if (mode == 'v') {
 		render_objs(mode, (u8*)verbose_img.data, origin);

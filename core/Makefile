@@ -117,7 +117,6 @@ klibc: linux
 	make > $(OUTPUT)
 
 zlib:	
-#	@$(call info,BUILD,zlib)
 	@cd $(ZLIBSRC) ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,zlib) ; \
@@ -128,7 +127,6 @@ zlib:
 	make libz.a > $(OUTPUT)
 
 libpng:	zlib
-#	@$(call info,BUILD,libpng)
 	@cd $(LPNGSRC) ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,libpng) ; \
@@ -141,7 +139,6 @@ libpng:	zlib
 	make libpng.a > $(OUTPUT) 
 
 jpeglib:
-#	@$(call info,BUILD,libjpeg)
 	@cd $(JPEGSRC) ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,libjpeg) ; \

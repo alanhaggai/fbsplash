@@ -155,7 +155,7 @@ out:	free(silent_img.data);
 	if (silent_img.cmap.red)
 		free(silent_img.cmap.red);
 
-	//remove_dev(SPLASH_DEV, 0x1);
+//	remove_dev(SPLASH_DEV, 0x1);
 }
 
 int main(int argc, char **argv)
@@ -200,10 +200,12 @@ int main(int argc, char **argv)
 			goto out;
 		parse_cfg(config_file);
 	}
-		
+
+#ifdef CONFIG_TTY_KERNEL
 	if (TTF_Init() < 0) {
 		fprintf(stderr, "Couldn't initialize TTF.\n");
 	}
+#endif
 	
 	if (!strcmp(argv[2],"getpic")) {
 		err = do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, 'v');

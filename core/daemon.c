@@ -103,11 +103,15 @@ void start_tty_handlers()
 	if (pid_s == 0) {
 		daemon_switch(tty_v, fd_tty_s, 1);
 	}
-	
-	pid_v = fork();
+
+/* Don't run the daemon for the verbose tty just yet. It will most likely
+ * break user input in early services. */
+/*	
+ 	pid_v = fork();
 	if (pid_v == 0) {
 		daemon_switch(tty_s, fd_tty_v, 0);
 	}
+*/
 }
 
 void tty_s_switch_handler(int signum)
@@ -363,11 +367,17 @@ int cmd_set_theme(void **args)
 		return -1;
 
 	free_images();
+
+#ifdef CONFIG_TTF
 	free_fonts();
+#endif
 	parse_cfg(config_file);
 	load_images('a');
 	/* FIXME: free objs */
+
+#ifdef CONFIG_TTF
 	load_fonts();
+#endif
 	
 	for (i = svcs.head ; i != NULL; i = i->next) {
 		svc_state *ss = (svc_state*)i->p;
@@ -796,7 +806,9 @@ void daemon_start()
 	if (i)
 		exit(0);
 
+#ifdef CONFIG_TTF
 	load_fonts();
+#endif
 	
 	/* arg_theme is a reference to argv[x] of the original splash_util
 	 * process. We're freeing arg_theme in cmd_set_theme(), so the strdup()
