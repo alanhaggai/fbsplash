@@ -1,17 +1,16 @@
 /*
- * splash_unpack.c - Functions to load & unpack PNGs and JPEGs
+ * image.c - Functions to load & unpack PNGs and JPEGs
  *
- * Copyright (C) 2004, Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2004-2005, Michael Januszewski <spock@gentoo.org>
  * 
  * This file is subject to the terms and conditions of the GNU General Public
- * License.  See the file COPYING in the main directory of this archive for
+ * License v2.  See the file COPYING in the main directory of this archive for
  * more details.
  *
  */
 
 #include <stdio.h>
 #include <stdlib.h>
-//#include <linux/types.h>
 #include <linux/fb.h>
 
 #include "config.h"
@@ -32,14 +31,15 @@
 
 #include "splash.h"
 
-typedef struct truecolor {
-	u8 r, g, b, a;
-} __attribute__ ((packed)) truecolor;
+struct fb_image verbose_img;
+struct fb_image silent_img;
 
 typedef struct {
 	u8 r, g, b;
 } __attribute__ ((packed)) rgbcolor;
 
+/* This function converts a truecolor image to whatever format the 
+ * framebuffer uses */
 void truecolor2fb (truecolor* data, u8* out, int len, int y, u8 alpha)
 {
 	int i, add = 0, r, g, b, a;
@@ -71,7 +71,6 @@ void truecolor2fb (truecolor* data, u8* out, int len, int y, u8 alpha)
 		}
 			
 		if (alpha) {
-	
 			switch (fb_var.bits_per_pixel) {
 			
 			case 32:
@@ -92,7 +91,6 @@ void truecolor2fb (truecolor* data, u8* out, int len, int y, u8 alpha)
 			    	<< (8 - glen)) * (255 - a) + g * a) / 255;
 			b = (( (t >> fb_var.blue.offset & ((1 << blen)-1)) 
 				<< (8 - blen)) * (255 - a) + b * a) / 255;
-
 		} 
 
 		if (fb_var.bits_per_pixel < 24) {
@@ -135,97 +133,20 @@ void truecolor2fb (truecolor* data, u8* out, int len, int y, u8 alpha)
 
 #ifdef CONFIG_PNG
 #define PALETTE_COLORS 240
-
-int draw_icon(struct splash_icon ic, u8 *data)
-{
-	png_structp 	png_ptr;
-	png_infop 	info_ptr;
-	png_bytep 	row_pointer;
-	int 		rowbytes;
-	int 		i, bytespp = fb_var.bits_per_pixel >> 3;
-	u8 *buf = NULL;
-	FILE *fp;
-	
-	fp = fopen(ic.filename,"r");
-	if (!fp)
-		return -1;
-
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-	info_ptr = png_create_info_struct(png_ptr);
-
-	if (setjmp(png_jmpbuf(png_ptr))) {
-		return -1;
-	}
-
-	png_init_io(png_ptr, fp);
-	png_read_info(png_ptr, info_ptr);
-
-	if (fb_var.bits_per_pixel == 8)
-		return -2;
-
-	if (info_ptr->color_type == PNG_COLOR_TYPE_GRAY ||
-	    info_ptr->color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
-		png_set_gray_to_rgb(png_ptr);
-
-	if (info_ptr->bit_depth == 16)
-		png_set_strip_16(png_ptr);
-
-#ifndef TARGET_KERNEL	
-	if (!(info_ptr->color_type & PNG_COLOR_MASK_ALPHA)) {
-		png_set_add_alpha(png_ptr, 0xff, PNG_FILLER_AFTER);
-	}
-#endif
-	png_read_update_info(png_ptr, info_ptr);
-
-	if (info_ptr->color_type != PNG_COLOR_TYPE_RGB && info_ptr->color_type != PNG_COLOR_TYPE_RGBA)
-		return -3;
-
-	rowbytes = png_get_rowbytes(png_ptr, info_ptr);	
-	
-	if (info_ptr->width > fb_var.xres - ic.x || info_ptr->height > fb_var.yres - ic.y) {
-		fprintf(stderr, "Warning: icon %s does not fit on the screen!\n", ic.filename);
-		return -2;
-	}
-
-	buf = malloc(rowbytes);	
-	if (!buf) {
-		return -4;
-	}
-
-	for (i = 0; i < info_ptr->height && (i + ic.y) < fb_var.yres; i++) {
-
-		row_pointer = buf;
-	        png_read_row(png_ptr, row_pointer, NULL);
-
-		truecolor2fb((truecolor*)buf, (u8*)data + fb_var.xres * bytespp * (i + ic.y) + (ic.x * bytespp), 
-			     info_ptr->width, i + ic.y, 1);
-	}
-
-	free(buf);
-	fclose(fp);
-	
-	return 0;
-
-}
-
-int load_png(char *filename, struct fb_image *img, char mode)
+int load_png(char *filename, u8 **data, struct fb_cmap *cmap, int *width, int *height, u8 want_alpha)
 {
 	png_structp 	png_ptr;
 	png_infop 	info_ptr;
 	png_bytep 	row_pointer;
 	png_colorp 	palette;
-	int 		num_palette;
-	int 		rowbytes;
-	int 		i, j, bytespp = fb_var.bits_per_pixel >> 3;
+	int 		rowbytes, num_palette;
+	int 		i, j, bytespp = (fb_var.bits_per_pixel + 7) >> 3;
 	u8 *buf = NULL;
 	u8 *t;
-	int 		pal_len;
 
-	if (mode != 's')
-		pal_len = PALETTE_COLORS;
-	else
-		pal_len = 256;
-		
+	if (want_alpha)
+		bytespp = 4;
+	
 	FILE *fp = fopen(filename,"r");
 	if (!fp)
 		return -1;
@@ -236,101 +157,97 @@ int load_png(char *filename, struct fb_image *img, char mode)
 	if (setjmp(png_jmpbuf(png_ptr))) {
 		return -1;
 	}
-
+	
 	png_init_io(png_ptr, fp);
 	png_read_info(png_ptr, info_ptr);
 
-	if (fb_var.bits_per_pixel == 8 && info_ptr->color_type != PNG_COLOR_TYPE_PALETTE)
+	if (cmap && info_ptr->color_type != PNG_COLOR_TYPE_PALETTE)
 		return -2;
-
-	if (info_ptr->bit_depth == 16)
-		png_set_strip_16(png_ptr);
-
-	if (info_ptr->color_type & PNG_COLOR_MASK_ALPHA)
-		png_set_strip_alpha(png_ptr);
 
 	if (info_ptr->color_type == PNG_COLOR_TYPE_GRAY ||
 	    info_ptr->color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
 		png_set_gray_to_rgb(png_ptr);
 
+	if (info_ptr->bit_depth == 16)
+		png_set_strip_16(png_ptr);
+
+	if (!want_alpha && info_ptr->color_type & PNG_COLOR_MASK_ALPHA)
+		png_set_strip_alpha(png_ptr);
+
+#ifndef TARGET_KERNEL	
+	if (!(info_ptr->color_type & PNG_COLOR_MASK_ALPHA) & want_alpha) {
+		png_set_add_alpha(png_ptr, 0xff, PNG_FILLER_AFTER);
+	}
+#endif
 	png_read_update_info(png_ptr, info_ptr);
-	
-	if (fb_var.bits_per_pixel == 8) {
+
+	if (info_ptr->color_type != PNG_COLOR_TYPE_RGB && info_ptr->color_type != PNG_COLOR_TYPE_RGBA)
+		return -3;
+
+	if (cmap) {
 		png_get_PLTE(png_ptr, info_ptr, &palette, &num_palette);
 	
-		/* we have a palette of 256 colors, but fbcon takes 16 of these for 
-		 * font colors, so we have 240 left for the picture */
-		if (num_palette > pal_len)
+		if (num_palette > cmap->len)
 			return -3;
 	}
 
 	rowbytes = png_get_rowbytes(png_ptr, info_ptr);	
-	
-	if (info_ptr->width > fb_var.xres || info_ptr->height > fb_var.yres)
-		return -2;
 
-	img->data = malloc(fb_var.xres * fb_var.yres * bytespp);
-	if (!img->data)
-		return -4;
-	
-	img->cmap.transp = NULL;
-	if (fb_var.bits_per_pixel == 8) {
-		img->cmap.red = malloc(pal_len * 3 * 2);
-	
-		if (!img->cmap.red) {
-			free((void*)img->data);
-			return -4;
-		}
-		
-		img->cmap.green = img->cmap.red + pal_len;
-		img->cmap.blue = img->cmap.green + pal_len;
-		img->cmap.len = pal_len;
-		
-		if (mode == 'v')
-			img->cmap.start = 16;
-		else
-			img->cmap.start = 0;
+	if ((width && *width && info_ptr->width != *width) || (height && *height && info_ptr->height != *height)) {
+		printerr("Image size mismatch: %s.\n", filename);
+		return -2;
 	} else {
-		img->cmap.len = 0;
-		img->cmap.red = NULL;
+		*width = info_ptr->width;
+		*height = info_ptr->height;
+	}
+	
+	*data = malloc(fb_var.xres * fb_var.yres * bytespp);
+	if (!*data) {
+		printerr("Failed to allocate memory for image: %s.\n", filename);
+		return -4;
 	}
 	
 	buf = malloc(rowbytes);	
 	if (!buf) {
-		free((void*)img->data);
-		if (img->cmap.red)
-			free((void*)img->cmap.red);
+		printerr("Failed to allocate memory for image line buffer.\n");
+		free(*data);
 		return -4;
 	}
 	
 	for (i = 0; i < info_ptr->height; i++) {
-		if (fb_var.bits_per_pixel > 8) {
-			row_pointer = buf;
+		if (cmap) {
+			row_pointer = *data + info_ptr->width * i;
+		} else if (want_alpha) {
+			row_pointer = *data + info_ptr->width * i * 4;
 		} else {
-			row_pointer = (u8*)img->data + fb_var.xres * i;
+			row_pointer = buf;
 		}
 		
 	        png_read_row(png_ptr, row_pointer, NULL);
 		
-		if (fb_var.bits_per_pixel > 8) {
-			truecolor2fb((truecolor*)buf, (u8*)img->data + fb_var.xres * bytespp * i, info_ptr->width, i, 0);
-		} else {
-			t = (u8*)img->data + fb_var.xres * i;
+		if (cmap) {
+			int h = 256 - cmap->len;
+			t = *data + info_ptr->width * i;
 
-			/* first 16 colors are taken by fbcon */
-			if (mode == 'v') {
+			if (h) {
+				/* Move the colors up by 'h' offset. This is used because fbcon
+				 * takes the first 16 colors. */
 				for (j = 0; j < rowbytes; j++) {
-					t[j] += 16;
+					t[j] += h;
 				}
 			}
+		
+		/* We only need to convert the image if we the alpha channel is not required */	
+		} else if (!want_alpha) {
+			truecolor2fb((truecolor*)buf, *data + info_ptr->width * bytespp * i, info_ptr->width, i, 0);
 		}
 	}
 
-	if (fb_var.bits_per_pixel == 8) {
-		for (i = 0; i < num_palette; i++) {
-			img->cmap.red[i] = palette[i].red * 257;
-			img->cmap.green[i] = palette[i].green * 257;
-			img->cmap.blue[i] = palette[i].blue * 257;
+	if (cmap) {
+		for (i = 0; i < cmap->len; i++) {
+			cmap->red[i] = palette[i].red * 257;
+			cmap->green[i] = palette[i].green * 257;
+			cmap->blue[i] = palette[i].blue * 257;
 		}	
 	}
 
@@ -339,48 +256,7 @@ int load_png(char *filename, struct fb_image *img, char mode)
 	
 	return 0;
 }
-#endif /* PNG */
 
-int decompress_jpeg(char *filename, struct fb_image *img)
-{
-	struct jpeg_decompress_struct cinfo;
-	struct jpeg_error_mgr jerr;
-	FILE* injpeg;
-
-	u8 *buf = NULL;
-	int i, bytespp = fb_var.bits_per_pixel >> 3;
-	
-	cinfo.err = jpeg_std_error(&jerr);
-	jpeg_create_decompress(&cinfo);
-	
-	if ((injpeg = fopen(filename,"r")) == NULL) {
-		fprintf(stderr, "Can't open file %s!\n", filename);
-		return -1;	
-	}
-
-	jpeg_stdio_src(&cinfo, injpeg);
-	jpeg_read_header(&cinfo, TRUE);
-	jpeg_start_decompress(&cinfo);
-
-	buf = malloc(cinfo.output_width * cinfo.output_components * sizeof(char));
-	img->data = malloc(cinfo.output_width * cinfo.output_height * bytespp);
-	img->cmap.red = NULL;
-	img->cmap.len = 0;
-	
-	for (i = 0; i < cinfo.output_height; i++) {
-		jpeg_read_scanlines(&cinfo, (JSAMPARRAY) &buf, 1);
-		truecolor2fb((truecolor*)buf, (u8*)img->data + cinfo.output_width * bytespp * i, cinfo.output_width, i, 0);
-	}
-
-	jpeg_finish_decompress(&cinfo);
-	jpeg_destroy_decompress(&cinfo);
-	fclose(injpeg);
-
-	free(buf);
-	return 0;
-}
-
-#ifdef CONFIG_PNG
 int is_png(char *filename)
 {
 	char header[8];
@@ -394,5 +270,175 @@ int is_png(char *filename)
 	
 	return !png_sig_cmp(header, 0, 8);
 }
+#endif /* PNG */
+
+int load_jpeg(char *filename, u8 **data, int *width, int *height)
+{
+	struct jpeg_decompress_struct cinfo;
+	struct jpeg_error_mgr jerr;
+	FILE* injpeg;
+
+	u8 *buf = NULL;
+	int i, bytespp = (fb_var.bits_per_pixel+7) >> 3;
+	
+	cinfo.err = jpeg_std_error(&jerr);
+	jpeg_create_decompress(&cinfo);
+	
+	if ((injpeg = fopen(filename,"r")) == NULL) {
+		printerr("Can't open file %s!\n", filename);
+		return -1;	
+	}
+
+	jpeg_stdio_src(&cinfo, injpeg);
+	jpeg_read_header(&cinfo, TRUE);
+	jpeg_start_decompress(&cinfo);
+
+	if ((width && cinfo.output_width != *width) || (height && cinfo.output_height != *height)) {
+		printerr("Image size mismatch: %s.\n", filename);
+		return -2;
+	} else {
+		*width = cinfo.output_width;
+		*height = cinfo.output_height;
+	}
+	
+	buf = malloc(cinfo.output_width * cinfo.output_components * sizeof(char));
+	if (!buf) {
+		printerr("Failed to allocate JPEG decompression buffer.\n");
+		return -1;
+	}
+
+	*data = malloc(cinfo.output_width * cinfo.output_height * bytespp);
+	if (!*data) {
+		printerr("Failed to allocate memory for image: %s.\n", filename);
+		return -4;
+	}
+	
+	for (i = 0; i < cinfo.output_height; i++) {
+		jpeg_read_scanlines(&cinfo, (JSAMPARRAY) &buf, 1);
+		truecolor2fb((truecolor*)buf, *data + cinfo.output_width * bytespp * i, cinfo.output_width, i, 0);
+	}
+
+	jpeg_finish_decompress(&cinfo);
+	jpeg_destroy_decompress(&cinfo);
+	fclose(injpeg);
+
+	free(buf);
+	return 0;
+}
+
+int load_bg_images(char mode)
+{
+	struct fb_image *img = (mode == 'v') ? &verbose_img : &silent_img;
+	char *pic;
+	int i;
+	
+	img->width = fb_var.xres;
+	img->height = fb_var.yres;
+	img->depth = fb_var.bits_per_pixel;
+
+	/* Deal with 8bpp modes. Only PNGs can be loaded, and pic256
+	 * option has to be used to specify the filename of the image */
+	if (fb_var.bits_per_pixel == 8) {
+		pic = (mode == 'v') ? cf_pic256 : cf_silentpic256;
+		
+		if (!pic) {
+			printerr("No 8bpp %s picture specified in the theme config.\n", (mode == 'v') ? "verbose" : "silent" );
+			return -1;
+		}
+
+#ifdef CONFIG_PNG
+		if (!is_png(pic)) {
+			printerr("Unrecognized format of the verbose 8bpp background image.\n");
+			return -1;	
+		}
+
+		/* We have a palette of 256 colors, but fbcon takes 16 of these for 
+		 * font colors in verbose mode, so we have 240 left for the picture */
+		if (mode != 's') {
+			i = PALETTE_COLORS;
+			img->cmap.start = 16;
+		} else {
+			i = 256;
+			img->cmap.start = 0;
+		}
+		
+		img->cmap.transp = NULL;
+		img->cmap.red = malloc(i * 3 * 2);
+	
+		if (!img->cmap.red) {
+			printerr("Failed to allocate memory for the image palette.\n");
+			return -4;
+		}
+					
+		img->cmap.green = img->cmap.red + i;
+		img->cmap.blue = img->cmap.green + i;
+		img->cmap.len = i;
+		
+		if (load_png(pic, (u8**)&img->data, &img->cmap, &img->width, &img->height, 0)) {
+			printerr("Failed to load PNG file %s.\n", pic);
+			return -1;
+		}	
+#else
+		printerr("This version of splashutils has been compiled without support for 8bpp modes.\n");
+		return -1;
 #endif
+	/* Deal with 15, 16, 24 and 32bpp modes */
+	} else {
+		pic = (mode == 'v') ? cf_pic : cf_silentpic;
+		
+#ifdef CONFIG_PNG
+		if (is_png(cf_pic)) {
+			i = load_png(pic, (u8**)&img->data, NULL, &img->width, &img->height, 0);
+		} else
+#endif
+		{
+			i = load_jpeg(pic, (u8**)&img->data, &img->width, &img->height);
+		}
+		
+		if (i) {
+			printerr("Failed to load image %s.\n", pic);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+
+int load_images(char mode)
+{
+	item *i;
+	
+	if (!config_file) {
+		printerr("No config file specified.\n");
+		return -1;
+	}
+	
+	if (mode == 'v' || mode == 'a')
+		load_bg_images('v');
+
+	if (mode == 's' || mode == 'a') {
+		load_bg_images('s');
+	
+		for (i = icons.head; i != NULL; i = i->next) {
+			icon_img *ii = (icon_img*) i->p;
+			ii->w = ii->h = 0;
+			
+			if (!is_png(ii->filename)) {
+				printerr("Icon %s is not a PNG file.\n", ii->filename);
+				continue;
+			}
+			
+			if (load_png(ii->filename, &ii->picbuf, NULL, &ii->w, &ii->h, 1)) {
+				printerr("Failed to load icon %s.\n", ii->filename);
+				ii->picbuf = NULL;
+				ii->w = ii->h = 0;
+				continue;
+			}
+		}
+	}
+
+	return 0;
+}
+
 

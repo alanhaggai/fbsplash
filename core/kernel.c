@@ -19,7 +19,9 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <linux/kd.h>
+#include <linux/tty.h>
 
 #include "splash.h"
 
@@ -88,13 +90,35 @@ int main(int argc, char **argv)
 		 */
 		if (arg_mode == 's') {
 			
-			u8 created_dev = 0;
+			int stty = TTY_SILENT;
 			char sys[128]; 
 			char fbfn[16];
-			int y, t;
-	
-//			vt_cursor_disable(stdout);
+			char vcfn[16];
+			char buf[512];
+			char *t;
+			int fd, y, h;
+			u8 created_dev = 0;
 			
+			fd = open("/proc/cmdline", O_RDONLY);
+			if (read(fd, buf, 512) > 0) {
+			
+				t = strstr(buf, "splash=");
+				if (!t)
+					goto next;
+
+				t += 7;
+				while (t != ' ' && t != 0) {
+					if (!strncmp(t, "tty:", 4)) {
+						stty = strtol(t+4, NULL, 0);
+						break;
+					}
+					t++;
+				}
+			}
+			
+next:			if (stty < 0 || stty > MAX_NR_CONSOLES)
+				stty = TTY_SILENT;
+
 			sprintf(fbfn,"/dev/fb%d", arg_fb);
 			sprintf(sys, "/sys/class/graphics/fb%d/dev", arg_fb);
 	
@@ -102,27 +126,35 @@ int main(int argc, char **argv)
 				err = -1;
 				goto out_init;
 			}
-			
+					
 			open_cr(fb_fd, fbfn, sys, out, 0x4);
 			cmd_setstate(1, orig);
 
-			if (!strcmp(argv[2], "init")) {
-				open_cr(vc_fd, "/dev/vc/0", "/sys/class/tty/tty0/dev", out, 0x2);
-				ioctl(vc_fd, KDSETMODE, KD_GRAPHICS);
-				close_del(vc_fd, "/dev/vc/0", 0x2);
-			}
-		
-			t = fb_var.xres * ((fb_var.bits_per_pixel + 7) >> 3);
+			sprintf(vcfn,"/dev/tty%d", stty);
+			sprintf(sys, "/sys/class/tty/tty%d/dev", stty);
 
-			for (y = 0; y < fb_var.yres; y++) {
-				if (t != fb_fix.line_length || fb_var.yoffset != 0)
-					lseek(fb_fd, (fb_var.yoffset + y) * fb_fix.line_length, SEEK_SET);
-				write(fb_fd, silent_img.data + t * y, t);
+			open_cr(vc_fd, vcfn, sys, out, 0x02);
+			tty_set_silent(stty, vc_fd);
+	
+			t = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
+				MAP_SHARED, fb_fd, fb_var.yoffset * fb_fix.line_length); 
+			
+			if (t == MAP_FAILED) {
+				goto init_cleanup;
 			}
 
 			if (silent_img.cmap.red)
 				ioctl(fb_fd, FBIOPUTCMAP, &silent_img.cmap);
 
+			h = fb_var.xres * ((fb_var.bits_per_pixel + 7) >> 3);
+			
+			for (y = 0; y < fb_var.yres; y++) {
+				memcpy(t + y * fb_fix.line_length, silent_img.data + y * h, h);
+			}
+
+			munmap(t, fb_fix.line_length * fb_var.yres);
+			
+init_cleanup:		close_del(vc_fd, vcfn, 0x2);
 //			close_del(fb_fd, fbfn, 0x4);
 		
 			free(silent_img.data);
