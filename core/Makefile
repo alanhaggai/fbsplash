@@ -16,7 +16,7 @@ K_SHARED = false		# set to true if you want to link to a shared klibc
 JPEGSRC	= libs/jpeg-6b
 LPNGSRC = libs/libpng-1.2.8
 ZLIBSRC = libs/zlib-1.2.1
-LIBCSRC	= libs/klibc-0.179/klibc
+LIBCSRC	= libs/klibc-0.199/klibc
 
 prefix     =
 sbindir    = ${prefix}/sbin
