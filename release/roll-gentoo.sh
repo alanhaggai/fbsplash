@@ -1,8 +1,7 @@
 #!/bin/bash
 
-. /sbin/functions.sh
+source /devel/common/functions.sh
 . ver-gentoo
-. config
 
 if [[ "$1" == "minor" ]]; then
 	major=$(($major+1))
@@ -40,5 +39,5 @@ scp splashutils-gentoo-${ver}.tar.bz2 spock@dev.gentoo.org:/home/spock
 eend $?
 
 ebegin Copying the tarball to the SDS
-cp splashutils-gentoo-${ver}.tar.bz2 ${SDSROOT}/projects/gensplash/archive
+cp splashutils-gentoo-${ver}.tar.bz2 ${SDSROOT}/htdocs/projects/gensplash/archive
 eend $?

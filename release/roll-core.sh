@@ -1,7 +1,6 @@
 #!/bin/bash
 
-. /sbin/functions.sh
-. config
+source /devel/common/functions.sh
 
 ebegin Exporting data from repository
 svn export file:///devel/repos/splashutils/core >/dev/null
@@ -25,6 +24,6 @@ scp splashutils-${ver}.tar.bz2 spock@dev.gentoo.org:/home/spock
 eend $?
 
 ebegin Copying the tarball to the SDS
-cp splashutils-${ver}.tar.bz2 ${SDSROOT}/projects/gensplash/archive
+cp splashutils-${ver}.tar.bz2 ${SDS_ROOT}/htdocs/projects/gensplash/archive
 eend $?
 
