@@ -34,6 +34,7 @@ struct option options[] = {
 	{ "mode", 	required_argument, NULL, 0x104 },
 	{ "progress", 	required_argument, NULL, 0x105 },
 	{ "tty",	required_argument, NULL, 0x106 },
+	{ "export",	required_argument, NULL, 0x107 },
 	{ "daemon",	no_argument, NULL, 'd'},
 	{ "help",	no_argument, NULL, 'h'}	
 };
@@ -85,7 +86,8 @@ void usage(void)
 "      --tty=NUM       use NUMth tty [1..n]\n"
 "      --fb=NUM        use NUMth framebuffer device\n"
 "  -m, --mode=(v|s)    use either silent (s) or verbsose (v) mode\n"
-"  -p, --progress=NUM  set progress to NUM/65535 * 100%%\n");
+"  -p, --progress=NUM  set progress to NUM/65535 * 100%%\n"
+"  -e, --export=FILE   export the silent background image to a file\n");
 }
 
 int main(int argc, char **argv)
@@ -171,18 +173,26 @@ int main(int argc, char **argv)
 	if (config_file)
 		parse_cfg(config_file);
 
+	if (TTF_Init() < 0) {
+		fprintf(stderr, "Couldn't initialize TTF.\n");
+	}
+	
 	if (arg_task == start_daemon) {
 		load_images('a');
 		daemon_start();
 		/* we never get here */
 	}
+
+	load_fonts();
 	
 	/* we've got to repaint the whole screen if we have icons to draw */
 /*
 	if (arg_task == paint && cf_icons_cnt > 0)
 		arg_task = repaint;
 */
-
+	if (arg_task != setmode && arg_vc == -1)
+		arg_vc = 0;
+	
 	switch (arg_task) {
 
 	case on:

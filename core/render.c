@@ -11,6 +11,7 @@
 
 #include <linux/fb.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -188,6 +189,36 @@ void interpolate_box(box *a, box *b)
 	inter_color(a->c_lr, b->c_lr);
 }
 
+char *get_program_output(char *prg)
+{
+	char *buf = malloc(1024);
+	int pfds[2];
+	pid_t pid;
+	int i;
+	
+	if (!buf)
+		return NULL;
+
+        pipe(pfds);
+	pid = fork();
+
+	if (pid == 0) {
+		close(1);
+		dup(pfds[1]);
+	 	close(pfds[0]);
+		execlp("sh", "sh", "-c", prg, NULL);
+	} else {
+		i = read(pfds[0], buf, 1024);
+		if (i > 0) 
+			buf[i] = 0;
+		
+		close(pfds[0]);
+		close(pfds[1]);
+	}
+
+	return buf;
+}
+
 void render_objs(char mode, u8* target)
 {
 	item *i;
@@ -239,7 +270,38 @@ void render_objs(char mode, u8* target)
 			}
 
 			render_icon(c, target);
+		} 
+#ifndef TARGET_KERNEL
+		else if (o->type == o_text) {
+
+			text *ct = (text*)o->p;
+			char *txt;
+					
+			if (mode == 's' && !(ct->flags & F_TXT_SILENT))
+				continue;
+
+			if (mode == 'v' && !(ct->flags & F_TXT_VERBOSE))
+				continue;
+		
+			if (!ct->font || !ct->font->font)
+				continue;
+
+			if (ct->flags & F_TXT_EXEC) {
+				txt = get_program_output(ct->val);
+			} else {
+				txt = ct->val;
+			}
+	
+			printf("%s\n", txt);
+			
+			if (txt)
+				TTF_Render(target, txt, ct->font->font, TTF_STYLE_NORMAL, ct->x, ct->y, ct->col);
 		}
+#endif			
 	}
+
+#ifndef TARGET_KERNEL
+	TTF_Render(target, boot_message, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color);
+#endif
 }
 

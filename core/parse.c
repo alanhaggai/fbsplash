@@ -13,14 +13,16 @@
 #include <string.h>
 #include <stdio.h>
 #include <linux/fb.h>
+#include <sys/stat.h>
 #include "splash.h"
 
 struct config_opt {
 	char *name;
-	enum { t_int, t_path, t_box, t_icon, t_rect } type;
+	enum { t_int, t_path, t_box, t_icon, t_rect, t_color, t_fontpath, t_text } type;
 	void *val;
 };
 
+list fonts = { NULL, NULL };
 list icons = { NULL, NULL };
 list objs = { NULL, NULL };
 list rects = { NULL, NULL };
@@ -93,6 +95,30 @@ struct config_opt opts[] =
 	{	.name = "rect",
 		.type = t_rect,
 		.val = NULL		},
+
+	{	.name = "text_x",
+		.type = t_int,
+		.val = &cf.text_x	},
+
+	{	.name = "text_y",
+		.type = t_int,
+		.val = &cf.text_y	},
+
+	{	.name = "text_size",
+		.type = t_int,
+		.val = &cf.text_size	},
+
+	{	.name = "text_color",
+		.type = t_color,
+		.val = &cf.text_color	},
+
+	{	.name = "text_font",
+		.type = t_fontpath,
+		.val = &cf.text_font	},
+
+	{	.name = "text",
+		.type = t_text,
+		.val = NULL		},
 };
 
 int isdigit(char c) 
@@ -110,6 +136,14 @@ void skip_whitespace(char **buf)
 	while (**buf == ' ' || **buf == '\t')
 		(*buf)++;
 		
+	return;
+}
+
+void skip_nonwhitespace(char **buf)
+{
+	while (**buf != ' ' && **buf != '\t')
+		(*buf)++;
+	
 	return;
 }
 
@@ -135,16 +169,57 @@ void parse_path(char *t, struct config_opt opt)
 	*(char**)opt.val = get_filepath(t);
 }
 
+char *get_fontpath(char *t)
+{
+	char buf[512];
+	char buf2[512];
+	struct stat st1, st2;
+
+	if (t[0] == '/') {
+		return strdup(t);
+	}
+		
+	snprintf(buf, 512, "%s/%s/%s", THEME_DIR, arg_theme, t);
+	snprintf(buf2, 512, "%s/%s", THEME_DIR, t);
+	
+	stat(buf, &st1);
+	stat(buf2, &st2);
+	
+	if (S_ISREG(st1.st_mode) || S_ISLNK(st1.st_mode)) {
+		return strdup(buf);
+	} else if (S_ISREG(st2.st_mode) || S_ISLNK(st2.st_mode)) {
+		return strdup(buf2);
+	} else {
+		return strdup(buf);
+	}
+
+	return NULL;
+}
+
+void parse_fontpath(char *t, struct config_opt opt)
+{
+	if (*t != '=') {
+		fprintf(stderr, "parse error @ line %d\n", line);
+		return;
+	}
+
+	t++; skip_whitespace(&t);
+	*(char**)opt.val = get_fontpath(t);
+}
+
 int parse_color(char **t, struct color *cl) 
 {
 	u32 h, len = 0;
 	char *p;
 	
 	if (**t != '#') {
-		return -1;
+		if (strncmp(*t, "0x", 2))
+			return -1;
+		else
+			(*t) += 2;
+	} else  {
+		(*t)++;
 	}
-
-	(*t)++;
 
 	for (p = *t; ishexdigit(*p); p++, len++);
 
@@ -529,6 +604,180 @@ pb_err:
 	return;
 }
 
+char *parse_quoted_string(char *t)
+{
+	char *p, *out;
+	int cnt = 0;
+	int len = 0;
+	int i;
+
+	if (*t != '"')
+		return NULL;
+
+	t++;
+	p = t;
+
+	while ((*p != '"' || *(p-1) == '\\') && *p != 0) {
+		if (*p == '\\')
+			cnt++;
+		p++;
+	}
+
+	if (*p != '"')
+		return NULL;
+
+	len = p-t;
+	out = malloc(len - cnt + 1);
+	if (!out) {
+		printerr("Failed to allocate memory for a quoted string.");
+		return NULL;
+	}
+	
+	for (i = 0; i < len; i++, t++) {
+
+		if (*t == '\\')
+			t++;
+		out[i] = t[0];	
+	}
+
+	out[len-cnt+1] = 0;
+	return out;
+}
+
+#ifndef TARGET_KERNEL
+void parse_text(char *t)
+{
+	char *p, *fontname = NULL, *fpath = NULL;
+	int ret, fontsize;
+	text *ct = malloc(sizeof(text));
+	obj *cobj = NULL;
+	item *ti;
+	font_e *fe;
+	
+	if (!ct)
+		return;
+	
+	skip_whitespace(&t);
+	ct->flags = 0;
+	ret = 1;
+	
+	while (!isdigit(*t) && ret) {
+	
+		if (!strncmp(t, "silent", 6)) {
+			ct->flags |= F_TXT_SILENT;
+			t += 6;
+			ret = 1;
+		} else if (!strncmp(t, "verbose", 7)) {
+			ct->flags |= F_TXT_VERBOSE;
+			t += 7;
+			ret = 1;
+		} else {
+			ret = 0;
+		}
+
+		skip_whitespace(&t);
+	}	
+
+	if (ct->flags == 0)
+		ct->flags = F_TXT_VERBOSE | F_TXT_SILENT;
+
+	if (!isdigit(*t)) {
+		p = t;
+		skip_nonwhitespace(&p);
+		fontname = t;
+		*p = 0;
+		t = p+1;
+	}
+	skip_whitespace(&t);		
+
+	fontsize = strtol(t,&p,0);
+	if (t == p)
+		goto pt_err;
+	
+	t = p; skip_whitespace(&t);
+	ct->x = strtol(t,&p,0);
+	if (t == p)
+		goto pt_err;
+	t = p; skip_whitespace(&t);
+	ct->y = strtol(t,&p,0);
+	if (t == p)
+		goto pt_err;
+	t = p; skip_whitespace(&t);
+	
+	/* Sanity checks */
+	if (ct->x >= fb_var.xres)
+		goto pt_err;
+
+	if (ct->x < 0)
+		ct->x = 0;
+
+	if (ct->y >= fb_var.yres)
+		goto pt_err;
+
+	if (ct->y < 0)
+		ct->y = 0;
+	
+	zero_color(ct->col);
+
+	if (parse_color(&t, &ct->col)) 
+		goto pt_err;
+
+	skip_whitespace(&t);
+	if (!strncmp(t, "exec", 4)) {
+		ct->flags |= F_TXT_EXEC;
+		t += 4;
+	}
+	skip_whitespace(&t);
+	ct->val = parse_quoted_string(t);	
+	if (!ct->val)
+		goto pt_err;
+
+	if (!fontname)
+		fontname = DEFAULT_FONT;
+	
+	fpath = get_fontpath(fontname);
+	
+	for (ti = fonts.head ; ti != NULL; ti = ti->next) {
+		fe = (font_e*) ti->p;
+
+		if (!strcmp(fe->file, fpath) && fe->size == fontsize) {
+			ct->font = fe;
+			goto pt_end;
+		}
+	}
+
+	/* Allocate a new entry in the fonts list */
+	fe = malloc(sizeof(font_e));	
+	if (!fe)
+		goto pt_outm;	
+	fe->file = fpath;
+	fe->size = fontsize;
+	fe->font = NULL;
+	
+	list_add(&fonts, fe);
+	ct->font = fe;
+
+pt_end:	cobj = malloc(sizeof(obj));
+	if (!cobj) {
+pt_outm:	printerr("Cannot allocate memory (parse_text)!");
+		goto pt_out;
+	}
+	cobj->type = o_text;
+	cobj->p = ct;
+	list_add(&objs, cobj);
+	return;
+
+pt_err:
+	printerr("parse error @ line %d\n", line);
+pt_out:	free(ct);
+	if (fpath)
+		free(fpath);
+	return;
+}
+#else
+void parse_text(char *t) { }
+#endif
+
 int parse_cfg(char *cfgfile)
 {
 	FILE* cfg;
@@ -572,6 +821,23 @@ int parse_cfg(char *cfgfile)
 					parse_path(t, opts[i]);
 					break;
 
+				case t_fontpath:
+					parse_fontpath(t, opts[i]);
+					break;
+
+				case t_color:
+				{
+					if (*t != '=') {
+						fprintf(stderr, "parse error @ line %d\n", line);
+						break;	
+					}
+					
+					t++;
+					skip_whitespace(&t);
+					parse_color(&t, opts[i].val);
+					break;
+				}
+					
 				case t_int:
 					parse_int(t, opts[i]);
 					break;
@@ -586,6 +852,10 @@ int parse_cfg(char *cfgfile)
 				
 				case t_rect:
 					parse_rect(t);
+					break;
+				
+				case t_text:
+					parse_text(t);
 					break;
 				}
 			}

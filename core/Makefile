@@ -64,8 +64,8 @@ PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_S
 K_LDLIBS = $(JPEGSRC)/libjpeg.a $(LPNGSRC)/libpng.a $(ZLIBSRC)/libz.a
 
 # flags for the user utills
-CFLAGS = -Wall -g -I${ROOT}/linux/include
-LDLIBS = -ljpeg -lpng -lz -lm
+CFLAGS = -Wall -g -I${ROOT}/linux/include -I/usr/include/freetype2
+LDLIBS = -ljpeg -lpng -lz -lm -lfreetype
 LDFLAGS = 
 
 ifeq ($(strip $(DEBUG)),true)
@@ -92,7 +92,7 @@ all:	splash_kern splash_user
 
 splash_user: $(SP_UTIL)
 
-$(SP_UTIL): splash.o parse.o render.o image.o cmd.o common.o daemon.o list.o
+$(SP_UTIL): splash.o parse.o render.o image.o cmd.o common.o daemon.o list.o ttf.o
 	@$(call info,LD,$@)
 	@$(CC) $+ $(LDLIBS) -o $@
 	@$(CC) $+ $(LDLIBS) -static -o $@.static

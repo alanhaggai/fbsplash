@@ -13,6 +13,9 @@
 #define TTY_SILENT 	8
 #define TTY_VERBOSE 	1
 
+#define DEFAULT_FONT 	"luxisri.ttf"
+#define TTF_DEFAULT	THEME_DIR "/" DEFAULT_FONT
+
 /* Settings that shouldn't be changed */
 #define PROGRESS_MAX 	0xffff
 
@@ -25,7 +28,7 @@
 #define min(a,b)		((a) < (b) ? (a) : (b))
 #define CLAMP(x) 		((x) > 255 ? 255 : (x))
 #define DEBUG(x...)
-
+						    
 /* ************************************************************************
  * 				Lists 
  * ************************************************************************ */
@@ -70,13 +73,13 @@ typedef struct {
 } icon;
 
 typedef struct obj {
-	enum { o_box, o_icon } type;
+	enum { o_box, o_icon, o_text } type;
 	void *p;
 } obj;
 
-struct color {
+typedef struct color {
 	u8 r, g, b, a;
-} __attribute__ ((packed));
+} __attribute__ ((packed)) color;
 
 struct colorf {
 	double r, g, b, a;
@@ -85,6 +88,28 @@ struct colorf {
 typedef struct {
 	int x1, x2, y1, y2;
 } rect;
+
+#define F_TXT_SILENT  	1
+#define F_TXT_VERBOSE	2
+#define F_TXT_EXEC 	4
+
+#ifndef TARGET_KERNEL 
+#include "ttf.h"
+
+typedef struct {
+	char *file;
+	int size;
+	TTF_Font *font;	
+} font_e;
+
+typedef struct {
+	int x, y;
+	color col;
+	u8 flags;
+	char *val;
+	font_e *font;
+} text;
+#endif 
 
 typedef struct {
 	int x1, x2, y1, y2;
@@ -107,6 +132,10 @@ struct splash_config {
 	u16 ty;
 	u16 tw;
 	u16 th;
+	u16 text_x, text_y;
+	u16 text_size;
+	color text_color;
+	char *text_font;
 } __attribute__ ((packed));
 
 /* ************************************************************************
@@ -137,7 +166,7 @@ int remove_dev(char *fn, int flag);
 
 #define open_cr(fd, dev, sysfs, outlabel, flag)	\
 	create_dev(dev, sysfs, flag);		\
-	fd = open(dev, O_WRONLY);		\
+	fd = open(dev, O_RDWR);			\
 	if (fd == -1) {				\
 		remove_dev(dev, flag);		\
 		goto outlabel;			\
@@ -189,6 +218,7 @@ extern char *config_file;
 extern list icons;
 extern list objs;
 extern list rects;
+extern list fonts;
 
 extern u8 *bg_buffer;
 extern int bytespp;

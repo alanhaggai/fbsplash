@@ -42,6 +42,7 @@ u8 *bg_buffer = NULL;
 struct termios tios;
 
 void daemon_switch(int tty, int fd, u8 silent);
+int cmd_repaint(void **args);
 
 typedef struct {
 	char *svc;
@@ -103,13 +104,22 @@ void start_tty_handlers()
 	}
 }
 
+void tty_v_handler(int signum)
+{
+	if (signum != SIGUSR1)
+		return;
+
+	ioctl(fd_curr, TIOCSCTTY, 0);
+}
+
 void tty_s_switch_handler(int signum)
 {
 	if (signum == SIGUSR1) {
 		ioctl(fd_tty_s, VT_RELDISP, 1);
 	} else if (signum == SIGUSR2) {
 		ioctl(fd_tty_s, VT_RELDISP, 2);
-//		ioctl(fd_tty_s, KDSETMODE, KD_GRAPHICS);
+		/* Let the master daemon know that it has to redraw the picture */
+		kill(getppid(), SIGUSR1);
 	}
 }
 
@@ -143,7 +153,8 @@ void daemon_switch(int tty, int fd, u8 silent)
 	int flags;
 	
 	fd_curr = fd;
-	setsid();
+	if (silent)
+		setsid();
 	ioctl(fd, TIOCSCTTY, 0);
 
 	tcgetattr(fd,&tios);
@@ -155,10 +166,11 @@ void daemon_switch(int tty, int fd, u8 silent)
 	w.c_cc[VMIN] = 1;
 	tcsetattr(fd, TCSANOW, &w);
 
+	memset(&sig, 0, sizeof(sig));
+	sigemptyset(&sig.sa_mask);
+
 	if (silent) {
-		memset(&sig, 0, sizeof(sig));
 		sig.sa_handler = tty_s_switch_handler;
-		sigemptyset(&sig.sa_mask);
 		sigaction(SIGUSR1, &sig, NULL);
 		sigaction(SIGUSR2, &sig, NULL);
 
@@ -169,11 +181,12 @@ void daemon_switch(int tty, int fd, u8 silent)
 	
 		ioctl(fd, VT_SETMODE, &vt);
 		vt_cursor_disable(fd);
+	} else {
+		sig.sa_handler = tty_v_handler;
+		sigaction(SIGUSR1, &sig, NULL);
 	}
 
-	memset(&sig, 0, sizeof(sig));
 	sig.sa_handler = term_handler;
-	sigemptyset(&sig.sa_mask);
 	sigaction(SIGTERM, &sig, NULL);
 	
 	flags = fcntl(fd, F_GETFL, 0);
@@ -293,7 +306,7 @@ void update_icon_status(char *svc, enum ESVC state)
 	
 		ic = (icon*)o->p;
 		
-		if (strcmp(ic->svc, svc))
+		if (!ic->svc || strcmp(ic->svc, svc))
 			continue;
 	
 		if (ic->type == state)
@@ -346,9 +359,13 @@ int cmd_set_theme(void **args)
 		return -1;
 
 	free_images();
+	free_fonts();
 	parse_cfg(config_file);
 	load_images('a');
-
+	/* FIXME: free objs */
+	global_font = TTF_OpenFont(cf.text_font, cf.text_size);
+	load_fonts();
+	
 	for (i = svcs.head ; i != NULL; i = i->next) {
 		svc_state *ss = (svc_state*)i->p;
 		update_icon_status(ss->svc, ss->state);
@@ -398,6 +415,18 @@ int cmd_set_tty(void **args)
 	return 0;
 }
 
+void do_paint_rect(u8 *dst, u8 *src, rect *re)
+{
+	u8 *to;
+	int y, j;
+
+	j = (re->x2 - re->x1 + 1) * bytespp;
+	for (y = re->y1; y <= re->y2; y++) {
+		to = dst + y * fb_fix.line_length + re->x1 * bytespp;
+		memcpy(to, src + (y * fb_var.xres + re->x1) * bytespp, j);
+	}			
+}
+
 void do_paint(u8 *dst, u8 *src)
 {
 	u8 *to;
@@ -409,12 +438,7 @@ void do_paint(u8 *dst, u8 *src)
 			
 	for (ti = rects.head ; ti != NULL; ti = ti->next) {
 		re = (rect*)ti->p;
-				
-		j = (re->x2 - re->x1 + 1) * bytespp;
-		for (y = re->y1; y <= re->y2; y++) {
-			to = dst + y * fb_fix.line_length + re->x1 * bytespp;
-			memcpy(to, src + (y * fb_var.xres + re->x1) * bytespp, j);
-		}			
+		do_paint_rect(dst, src, re);
 	}
 
 	for (ti = objs.head; ti != NULL; ti = ti->next) {
@@ -483,6 +507,64 @@ int cmd_progress(void **args)
 	return 0;
 }
 
+int cmd_set_mesg(void **args)
+{
+	if (boot_message)
+		free(boot_message);
+	boot_message = strdup(args[0]);
+	return 0;
+}
+
+int cmd_paint_rect(void **args)
+{
+	rect re;
+	int t;
+
+	re.x1 = *(int*)args[0];
+	re.x2 = *(int*)args[2];
+	re.y1 = *(int*)args[1];
+	re.y2 = *(int*)args[3];
+
+	if (re.x1 > re.x2) {
+		t = re.x2;
+		re.x2 = re.x1;
+		re.x1 = t;
+	}
+
+	if (re.y1 > re.y2) {
+		t = re.y2;
+		re.y2 = re.y1;
+		re.y1 = t;
+	}
+
+	if (re.y1 < 0)
+		re.y1 = 0;
+
+	if (re.y2 < 0)
+		re.y2 = 0;
+
+	if (re.x1 < 0)
+		re.x1 = 0;
+
+	if (re.x2 < 0)
+		re.x2 = 0;
+
+	if (re.x1 >= fb_var.xres)
+		re.x1 = fb_var.xres-1;
+
+	if (re.x2 >= fb_var.xres)
+		re.x2 = fb_var.xres-1;
+
+	if (re.y1 >= fb_var.yres)
+		re.y1 = fb_var.yres-1;
+
+	if (re.y2 >= fb_var.yres)
+		re.y2 = fb_var.yres-1;
+		
+	do_paint_rect(fb_mem, bg_buffer, &re);
+	return 0;
+}
+
 struct {
 	const char *cmd;
 	int (*handler)(void**);
@@ -490,30 +572,42 @@ struct {
 	char *specs;
 } known_cmds[] = {
 
-	{	.cmd = "set_theme",
+	{	.cmd = "set theme",
 		.handler = cmd_set_theme,
 		.args = 1,
 		.specs = "s"
 	},
 
-	{	.cmd = "set_mode",
+	{	.cmd = "set mode",
 		.handler = cmd_set_mode,
 		.args = 1,
 		.specs = "s"
 	},
 
-	{	.cmd = "set_tty",
+	{	.cmd = "set tty",
 		.handler = cmd_set_tty,
 		.args = 2,
 		.specs = "sd"
 	},
 
+	{	.cmd = "set message",
+		.handler = cmd_set_mesg,
+		.args = 1,
+		.specs = "s"
+	},
+
+	{	.cmd = "paint rect",
+		.handler = cmd_paint_rect,
+		.args = 4,
+		.specs = "dddd"
+	},
+	
 	{	.cmd = "paint",
 		.handler = cmd_paint,
 		.args = 0,
 		.specs = NULL,
 	},
-
+	
 	{	.cmd = "repaint",
 		.handler = cmd_repaint,
 		.args = 0,
@@ -536,7 +630,7 @@ struct {
 		.handler = cmd_exit,
 		.args = 0,
 		.specs = NULL,
-	}
+	},
 };
 
 int daemon_comm()
@@ -620,7 +714,7 @@ void daemon_start()
 		exit(1);
 
 	fb_mem = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
-			MAP_SHARED, fd_fb, fb_var.yoffset * fb_fix.line_length); 
+			MAP_SHARED, fd_fb, 0); 
 	
 	if (fb_mem == MAP_FAILED) {
 		printerr("mmap() /dev/fb%d failed.\n", arg_fb);
@@ -641,13 +735,16 @@ void daemon_start()
 	if (i)
 		exit(0);
 
+	global_font = TTF_OpenFont(cf.text_font, cf.text_size);
+	load_fonts();
+	
 	/* arg_theme is a reference to argv[x] of the original splash_util
 	 * process. We're freeing arg_theme in cmd_set_theme(), so the strdup()
 	 * call is necessary to make sure things don't break there. */
 	arg_theme = strdup(arg_theme);
 	
 	signal(SIGTERM,daemon_term_handler);
-	signal(SIGUSR1,daemon_term_handler);
+	signal(SIGUSR1,(void(*)(int))cmd_repaint);
 	signal(SIGUSR2,daemon_term_handler);
 	signal(SIGSEGV,daemon_term_handler);
 	signal(SIGINT,daemon_term_handler);
