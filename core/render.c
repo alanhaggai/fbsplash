@@ -349,7 +349,7 @@ void render_objs(char mode, u8* target, unsigned char origin)
 
 			render_icon(c, target);
 		} 
-#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)
+#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || (defined(CONFIG_TTF) && !defined(TARGET_KERNEL))
 		else if (o->type == o_text) {
 
 			text *ct = (text*)o->p;
@@ -381,12 +381,16 @@ void render_objs(char mode, u8* target, unsigned char origin)
 #endif
 	}
 
-#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)
+#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || (!defined(TARGET_KERNEL) && defined(CONFIG_TTF))
 	if (mode == 's') {
 		if (!boot_message)
 			TTF_Render(target, DEFAULT_MESSAGE, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color, F_HS_LEFT | F_HS_TOP);
-		else
-			TTF_Render(target, boot_message, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color, F_HS_LEFT | F_HS_TOP);
+		else {
+			char *t;
+			t = eval_text(boot_message);
+			TTF_Render(target, t, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color, F_HS_LEFT | F_HS_TOP);
+			free(t);
+		}
 	}
 #endif
 }

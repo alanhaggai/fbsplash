@@ -419,7 +419,8 @@ int load_images(char mode)
 
 	if (mode == 's' || mode == 'a') {
 		load_bg_images('s');
-	
+
+#ifdef CONFIG_PNG
 		for (i = icons.head; i != NULL; i = i->next) {
 			icon_img *ii = (icon_img*) i->p;
 			ii->w = ii->h = 0;
@@ -436,6 +437,7 @@ int load_images(char mode)
 				continue;
 			}
 		}
+#endif
 	}
 
 	return 0;

@@ -139,11 +139,6 @@ void tty_s_switch_handler(int signum)
 	}
 }
 
-void set_term_silent(int fd)
-{
-
-	}
-
 void init_term_silent(int tty, int fd)
 {
 	struct vt_mode vt;
@@ -258,11 +253,6 @@ void daemon_switch2()
 void daemon_switch(int tty, int fd, u8 silent)
 {
 	int flags;
-
-	while(1)
-	{
-		sleep(5);
-	}
 	
 	flags = fcntl(fd, F_GETFL, 0);
 	
@@ -692,9 +682,11 @@ int cmd_progress(void **args)
 
 int cmd_set_mesg(void **args)
 {
+#ifdef CONFIG_TTF
 	if (boot_message)
 		free(boot_message);
 	boot_message = strdup(args[0]);
+#endif
 	return 0;
 }
 

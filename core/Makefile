@@ -63,12 +63,36 @@ PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_S
 	  -DPNG_NO_ERROR_NUMBERS -DPNG_READ_GRAY_TO_RGB_SUPPORTED -DPNG_READ_16_TO_8_SUPPORTED \
 	  -DPNG_READ_STRIP_ALPHA_SUPPORTED -DPNG_NO_INFO_IMAGE -DPNG_NO_READ_TRANSFORMS -DPNG_NO_READ_ANCILLARY_CHUNKS
 	  
-K_LDLIBS = $(JPEGSRC)/libjpeg.a $(LPNGSRC)/libpng.a $(ZLIBSRC)/libz.a $(FT2SRC)/objs/.libs/libfreetype.a
+K_LDLIBS = $(JPEGSRC)/libjpeg.a 
+K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/dev.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
+	   $(KOUT)/cmd.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o 
+K_DEPS   = 
 
 # flags for the user utills
-CFLAGS = -Wall -g -I${ROOT}/linux/include -I/usr/include/freetype2
-LDLIBS = -ljpeg -lpng -lz -lm -lfreetype
-LDFLAGS = 
+CFLAGS   = -Wall -g -I${ROOT}/linux/include -I/usr/include/freetype2
+LDLIBS   = -ljpeg -lm
+LDFLAGS  = 
+OBJS     = splash.o parse.o render.o image.o cmd.o common.o daemon.o list.o effects.o
+
+# checks whether an opton is set in config.h
+config_opt	= $(shell if [[ -n "`egrep '\#define[[:space:]]+$(1)([[:space:]]+|$$)' config.h`" ]]; then echo true ; fi)
+
+ifeq ($(call config_opt,CONFIG_TTF),true)
+	OBJS   += ttf.o
+	LDLIBS += -lfreetype -lz
+endif
+
+ifeq ($(call config_opt,CONFIG_TTF_KERNEL),true)
+	K_LDLIBS += $(FT2SRC)/objs/.libs/libfreetype.a 
+	K_OBJS 	 += $(KOUT)/ttf.o
+	K_DEPS	 += ft2
+endif
+
+ifeq ($(call config_opt,CONFIG_PNG),true)
+	K_LDLIBS += $(LPNGSRC)/libpng.a $(ZLIBSRC)/libz.a 
+	K_DEPS	 += libpng
+	LDLIBS	 += -lpng -lz -lm
+endif	
 
 ifeq ($(strip $(DEBUG)),true)
 	STRIP = true
@@ -94,7 +118,7 @@ all:	splash_kern splash_user
 
 splash_user: $(SP_UTIL)
 
-$(SP_UTIL): splash.o parse.o render.o image.o cmd.o common.o daemon.o list.o ttf.o effects.o
+$(SP_UTIL): $(OBJS)
 	@$(call info,LD,$@)
 	@$(CC) $+ $(LDLIBS) -o $@
 	@$(CC) $+ $(LDLIBS) -static -o $@.static
@@ -116,7 +140,7 @@ klibc: linux
 	if ! make -q; then $(call info,MAKE,klibc) ; fi ; \
 	make > $(OUTPUT)
 
-zlib:	
+zlib:	config.h
 	@cd $(ZLIBSRC) ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,zlib) ; \
@@ -126,7 +150,7 @@ zlib:
 	if ! make -q libz.a; then $(call info,MAKE,zlib) ; fi ; \
 	make libz.a > $(OUTPUT)
 
-libpng:	zlib
+libpng:	zlib config.h
 	@cd $(LPNGSRC) ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,libpng) ; \
@@ -150,7 +174,7 @@ jpeglib:
 	if ! make -q libjpeg.a; then $(call info,MAKE,libjpeg) ; fi ; \
 	make libjpeg.a > $(OUTPUT)
 
-ft2:
+ft2:	config.h
 	@cd $(FT2SRC) ; \
 	if [ ! -e ./config.mk ]; then \
 		$(call info,CONF,freetype2) ; \
@@ -158,11 +182,10 @@ ft2:
 	fi ; \
 	if ! make -q library; then $(call info,MAKE,freetype2) ; fi ; \
 	make CFLAGS="-c $(K_CFLAGS)" library > $(OUTPUT)
+	
+splash_kern: klibc jpeglib $(K_DEPS) $(SP_HELPER) $(LIBC) config.h $(K_LDLIBS)
 
-splash_kern: klibc jpeglib libpng ft2 $(SP_HELPER) $(LIBC) config.h $(K_LDLIBS)
-
-$(SP_HELPER): $(KOUT)/kernel.o $(KOUT)/dev.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
-	      $(KOUT)/cmd.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o $(KOUT)/ttf.o
+$(SP_HELPER): $(K_OBJS)
 	@$(call info,LD,$@)
 ifeq ($(strip $(K_SHARED)),true)
 	@ld $(K_LDFLAGS) -o $@ -e main $(CRT0) $+ $(K_LDLIBS) -R $(LIBC) $(LIBGCC)
@@ -171,11 +194,11 @@ else
 endif
 	@$(STRIP) $@
 
-$(KOUT)/%.o: %.c config.h
+$(KOUT)/%.o: %.c config.h splash.h
 	@$(call info,CC,$@)
 	@$(CC) $(K_CFLAGS) -c -o $@ $<
 
-%.o: %.c config.h
+%.o: %.c config.h splash.h
 	@$(call info,CC,$@)
 	@$(CC) $(CFLAGS) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
 

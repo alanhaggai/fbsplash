@@ -134,7 +134,7 @@ int do_getpic(unsigned char origin, unsigned char do_cmds, char mode)
 	if (load_images(mode))
 		return -1;
 
-#ifdef CONFIG_TTF
+#if (defined(CONFIG_TTF) && !defined(TARGET_KERNEL)) || (defined(CONFIG_TTF_KERNEL) && defined(TARGET_KERNEL))
 	load_fonts();
 #endif
 	
