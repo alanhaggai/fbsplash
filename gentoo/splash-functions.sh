@@ -451,6 +451,10 @@ splash_update_svc() {
 # Sends data to the splash FIFO after making sure there's someone
 # alive on other end to receive it.
 splash_comm_send() {
+	if [[ ! -e ${spl_pidfile} ]]; then
+		return 1
+	fi
+		
 	if [[ "$(ps h --pid $(<${spl_pidfile}) -o comm 2>/dev/null)" == "splash_util.sta" ]]; then
 		echo $* > ${spl_fifo} &		
 	fi
