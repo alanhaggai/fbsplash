@@ -110,20 +110,18 @@ void start_tty_handlers()
 	}
 }
 
-void tty_v_handler(int signum)
-{
-	if (signum != SIGUSR1)
-		return;
-
-	ioctl(fd_curr, TIOCSCTTY, 0);
-}
-
 void tty_s_switch_handler(int signum)
 {
 	if (signum == SIGUSR1) {
 		ioctl(fd_tty_s, VT_RELDISP, 1);
 	} else if (signum == SIGUSR2) {
 		ioctl(fd_tty_s, VT_RELDISP, 2);
+#ifdef CONFIG_SILENT_KD_GRAPHICS
+		ioctl(fd_tty_s, KDSETMODE, KD_GRAPHICS);
+#endif
+		if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR)
+			set_directcolor_cmap(fd_fb);
+	
 		/* Let the master daemon know that it has to redraw the picture */
 		kill(getppid(), SIGUSR1);
 	}
@@ -148,6 +146,7 @@ void daemon_term_handler(int signum)
 void term_handler(int signum)
 {
 	tcsetattr(fd_curr, TCSANOW, &tios);
+	ioctl(fd_curr, KDSETMODE, KD_TEXT);
 	exit(0);
 }
 
@@ -187,9 +186,6 @@ void daemon_switch(int tty, int fd, u8 silent)
 	
 		ioctl(fd, VT_SETMODE, &vt);
 		vt_cursor_disable(fd);
-	} else {
-		sig.sa_handler = tty_v_handler;
-		sigaction(SIGUSR1, &sig, NULL);
 	}
 
 	sig.sa_handler = term_handler;
@@ -371,7 +367,6 @@ int cmd_set_theme(void **args)
 	parse_cfg(config_file);
 	load_images('a');
 	/* FIXME: free objs */
-	global_font = TTF_OpenFont(cf.text_font, cf.text_size);
 	load_fonts();
 	
 	for (i = svcs.head ; i != NULL; i = i->next) {
@@ -396,6 +391,14 @@ int cmd_set_mode(void **args)
 
 	ioctl(fd_tty_s, VT_ACTIVATE, n);
 	ioctl(fd_tty_s, VT_WAITACTIVE, n);
+
+	if (n == tty_s) {
+#ifdef CONFIG_SILENT_KD_GRAPHICS
+		ioctl(fd_tty_s, KDSETMODE, KD_GRAPHICS);
+#endif
+		if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR)
+			set_directcolor_cmap(fd_fb);
+	}
 	
 	return 0;
 }
@@ -498,7 +501,7 @@ int cmd_paint(void **args)
 	}
 	
 	memcpy(bg_buffer, silent_img.data, fb_var.xres * fb_var.yres * bytespp);
-	render_objs('s', (u8*)bg_buffer);
+	render_objs('s', (u8*)bg_buffer, FB_SPLASH_IO_ORIG_USER);
 
 	if (notify[NOTIFY_PAINT])
 		system(notify[NOTIFY_PAINT]);
@@ -518,7 +521,7 @@ int cmd_repaint(void **args)
 	}
 
 	memcpy(bg_buffer, silent_img.data, fb_var.xres * fb_var.yres * bytespp);
-	render_objs('s', (u8*)bg_buffer);
+	render_objs('s', (u8*)bg_buffer, FB_SPLASH_IO_ORIG_USER);
 
 	if (notify[NOTIFY_REPAINT])
 		system(notify[NOTIFY_REPAINT]);
@@ -793,7 +796,6 @@ void daemon_start()
 	if (i)
 		exit(0);
 
-	global_font = TTF_OpenFont(cf.text_font, cf.text_size);
 	load_fonts();
 	
 	/* arg_theme is a reference to argv[x] of the original splash_util

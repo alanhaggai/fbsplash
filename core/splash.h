@@ -15,6 +15,7 @@
 
 #define DEFAULT_MESSAGE "Initializing the kernel..."
 #define DEFAULT_FONT 	"luxisri.ttf"
+#define DEFAULT_THEME	"default"
 #define TTF_DEFAULT	THEME_DIR "/" DEFAULT_FONT
 
 /* Settings that shouldn't be changed */
@@ -177,7 +178,7 @@ int remove_dev(char *fn, int flag);
 	remove_dev(dev, flag);
 
 /* render.c */
-void render_objs(char mode, u8* target);
+void render_objs(char mode, u8* target, unsigned char origin);
 
 /* image.c */
 int load_images(char mode);
@@ -200,6 +201,7 @@ void list_add(list *l, void *obj);
 /* effects.c */
 void put_img(u8 *dst, u8 *src);
 void fade_in(u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd);
+void set_directcolor_cmap(int fd);
 
 extern char *cf_pic;
 extern char *cf_silentpic;

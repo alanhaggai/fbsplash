@@ -787,9 +787,14 @@ int load_fonts(void)
 {
 	item *i;
 
+	if (!global_font)
+		global_font = TTF_OpenFont(cf.text_font, cf.text_size);
+	
 	for (i = fonts.head; i != NULL; i = i->next) {
 		font_e *fe = (font_e*) i->p;
-		fe->font = TTF_OpenFont(fe->file, fe->size);
+		if (!fe->font) {
+			fe->font = TTF_OpenFont(fe->file, fe->size);
+		}
 	}
 
 	return 0;
@@ -799,6 +804,11 @@ int free_fonts(void)
 {
 	item *i, *j;
 
+	if (global_font) {
+		TTF_CloseFont(global_font);
+		global_font = NULL;
+	}
+	
 	for (i = fonts.head; i != NULL;) {
 		font_e *fe = (font_e*) i->p;
 		j = i->next;

@@ -182,7 +182,7 @@ $(KOUT)/%.o: %.c config.h
 	@$(call info,CC,$@)
 	@$(CC) $(CFLAGS) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
 
-clean:	clean_klibc clean_jpg clean_png clean_zlib clean_splash
+clean:	clean_klibc clean_jpg clean_png clean_zlib clean_ft2 clean_splash
 
 clean_splash:
 	@$(call info,CLEAN,splash)
@@ -195,7 +195,7 @@ clean_jpg:
 	@cd $(JPEGSRC) ; \
 	if [ -e Makefile ]; then \
 		$(call info,CLEAN,libjpeg) ; \
-		make clean > /dev/null ; \
+		make clean > $(OUTPUT) ; \
 		rm Makefile ; \
 	fi
 
@@ -203,7 +203,7 @@ clean_png:
 	@cd $(LPNGSRC) ; \
 	if [ -e Makefile ]; then \
 		$(call info,CLEAN,libpng) ; \
-		make clean > /dev/null ; \
+		make clean > $(OUTPUT) ; \
 		rm Makefile ; \
 	fi
 
@@ -211,14 +211,22 @@ clean_zlib:
 	@cd $(ZLIBSRC) ; \
 	if [ -e Makefile ]; then \
 		$(call info,CLEAN,zlib) ; \
-		make clean > /dev/null ; \
+		make clean > $(OUTPUT) ; \
 		rm Makefile ; \
+	fi
+
+clean_ft2:
+	@cd $(FT2SRC) ; \
+	if [ -e ./config.mk ]; then \
+		$(call info,CLEAN,freetype2) ; \
+		make clean > $(OUTPUT) ; \
+		rm config.mk ; \
 	fi
 
 clean_klibc:
 	@cd $(LIBCSRC) ; \
 	$(call info,CLEAN,klibc) ; \
-	make clean > /dev/null 2> /dev/null
+	make clean > $(OUTPUT) 2>/dev/null
 
 install: all
 	@$(call info,INSTALL,$(SP_HELPER)) ; $(INSTALL_PROG) -D $(SP_HELPER) $(DESTDIR)$(sbindir)/$(SP_HELPER)

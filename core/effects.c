@@ -16,7 +16,8 @@
 #include <sys/ioctl.h>
 #include "splash.h"
 
-#define FADEIN_STEPS 32
+#define FADEIN_STEPS 	32
+#define FADEIN_STEPS_DC 256
 
 void put_img(u8 *dst, u8 *src)
 {
@@ -55,13 +56,13 @@ void fade_in_directcolor(u8 *dst, u8 *image, int fd)
 	ioctl(fd, FBIOPUTCMAP, &cmap);
 	put_img(dst, image);
 
-	for (step = 1; step < FADEIN_STEPS+1; step++) {
+	for (step = 1; step < FADEIN_STEPS_DC+1; step++) {
 		for (i = 0; i < cmap.len; i++) {
-			cmap.red[i] = cmap.green[i] = cmap.blue[i] = (0xffff * i * step)/((cmap.len-1)*FADEIN_STEPS);
+			cmap.red[i] = cmap.green[i] = cmap.blue[i] = (0xffff * i * step)/((cmap.len-1)*FADEIN_STEPS_DC);
 		}
 		ioctl(fd, FBIOPUTCMAP, &cmap);
+		usleep(7500);
 	}
-		
 }
 
 void fade_in_truecolor(u8 *dst, u8 *image)
@@ -188,4 +189,28 @@ void fade_in(u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd)
 	return;
 }
 
+void set_directcolor_cmap(int fd)
+{
+	int len, i;
+	struct fb_cmap cmap;
+
+	len = min(min(fb_var.red.length,fb_var.green.length),fb_var.blue.length);
+	
+	cmap.start = 0;
+	cmap.len = (1 << len);
+	cmap.transp = NULL;
+	cmap.red = malloc(2 * 256 * 3); 
+	if (!cmap.red)
+		return;
+
+	cmap.green = cmap.red + 256;
+	cmap.blue = cmap.green + 256;
+
+	for (i = 0; i < cmap.len; i++) {
+		cmap.red[i] = cmap.green[i] = cmap.blue[i] = (0xffff * i)/(cmap.len-1);
+	}
+	
+	ioctl(fd, FBIOPUTCMAP, &cmap);
+	free(cmap.red);
+}
 

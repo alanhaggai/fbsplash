@@ -189,9 +189,11 @@ void interpolate_box(box *a, box *b)
 	inter_color(a->c_lr, b->c_lr);
 }
 
-char *get_program_output(char *prg)
+char *get_program_output(char *prg, unsigned char origin)
 {
 	char *buf = malloc(1024);
+	fd_set rfds;
+	struct timeval tv;
 	int pfds[2];
 	pid_t pid;
 	int i;
@@ -201,21 +203,29 @@ char *get_program_output(char *prg)
 
         pipe(pfds);
 	pid = fork();
-
+	buf[0] = 0;
+	
 	if (pid == 0) {
-#ifndef TARGET_KERNEL
-		/* Only play with stdout if we are NOT the kernel helper.
-		 * Otherwise, things will break horribly and we'll end up
-		 * with a deadlock. */
-		close(1);
-#endif
+		if (origin != FB_SPLASH_IO_ORIG_KERNEL) {
+			/* Only play with stdout if we are NOT the kernel helper.
+			 * Otherwise, things will break horribly and we'll end up
+			 * with a deadlock. */
+			close(1);
+		}
 		dup(pfds[1]);
 	 	close(pfds[0]);
 		execlp("sh", "sh", "-c", prg, NULL);
 	} else {
-		i = read(pfds[0], buf, 1024);
-		if (i > 0) 
-			buf[i] = 0;
+		FD_ZERO(&rfds);
+		FD_SET(pfds[0], &rfds);
+		tv.tv_sec = 0;
+		tv.tv_usec = 250000;
+		i = select(pfds[0]+1, &rfds, NULL, NULL, &tv);
+		if (i != -1 && i != 0) {	
+			i = read(pfds[0], buf, 1024);
+			if (i > 0) 
+				buf[i] = 0;
+		}
 		
 		close(pfds[0]);
 		close(pfds[1]);
@@ -224,7 +234,7 @@ char *get_program_output(char *prg)
 	return buf;
 }
 
-void render_objs(char mode, u8* target)
+void render_objs(char mode, u8* target, unsigned char origin)
 {
 	item *i;
 	obj *o;
@@ -290,19 +300,24 @@ void render_objs(char mode, u8* target)
 				continue;
 
 			if (ct->flags & F_TXT_EXEC) {
-				txt = get_program_output(ct->val);
+				txt = get_program_output(ct->val, origin);
 			} else {
 				txt = ct->val;
 			}
 			
-			if (txt)
+			if (txt) {
 				TTF_Render(target, txt, ct->font->font, TTF_STYLE_NORMAL, ct->x, ct->y, ct->col);
+				if (ct->flags & F_TXT_EXEC)
+					free(txt);
+			}
 		}
 	}
 
-	if (!boot_message)
-		TTF_Render(target, DEFAULT_MESSAGE, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color);
-	else
-		TTF_Render(target, boot_message, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color);
+	if (mode == 's') {
+		if (!boot_message)
+			TTF_Render(target, DEFAULT_MESSAGE, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color);
+		else
+			TTF_Render(target, boot_message, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color);
+	}
 }
 

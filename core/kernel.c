@@ -25,19 +25,153 @@
 
 #include "splash.h"
 
+#define EFF_FADEIN 1
+
+int handle_init()
+{
+	int stty = TTY_SILENT;
+	char sys[128]; 
+	char fn_fb[16];
+	char fn_vc[16];
+	char buf[512];
+	char *t, *p;
+	int fd, fd_vc, fd_fb, h;
+	u8 created_dev = 0;
+	u8 effects = 0;
+
+	arg_mode = ' ';
+	
+	/* Mount the proc filesystem */
+	h = mount("proc", "/proc", "proc", 0, NULL);
+	fd = open("/proc/cmdline", O_RDONLY);
+	if (fd != -1 && read(fd, buf, 512) > 0) {
+		char *opt;
+		
+		t = strstr(buf, "splash=");
+		if (!t)
+			goto parse_failure;
+
+		t += 7; p = t;
+		for (p = t; *p != ' ' && *p != 0; p++);
+		*p = 0;
+				
+		while ((opt = strsep(&t, ",")) != NULL) {
+			if (!strncmp(opt, "tty:", 4)) {
+				stty = strtol(opt+4, NULL, 0);
+			} else if (!strncmp(opt, "fadein", 6)) {
+				effects |= EFF_FADEIN;
+			} else if (!strncmp(opt, "verbose", 7)) {
+				arg_mode = 'v';
+			} else if (!strncmp(opt, "silent", 6)) {
+				arg_mode = 's';
+			} else if (!strncmp(opt, "theme:", 6)) {
+				arg_theme = strdup(opt+6);
+			} 
+		}
+	} else {
+		/* If we can't parse the command line, we can't
+		 * make any assuptions as to in which mode splash
+		 * is to be started -- so we just quit. */
+parse_failure:	if (h == 0)
+			umount("/proc");
+
+		return -1;
+	}
+	
+	close(fd);
+	if (h == 0)
+		umount("/proc");
+
+	/* If no mode was specified, we can't make any decision
+	 * by ourselves. */
+	if (arg_mode == ' ')
+		return -1;	
+
+	create_dev(SPLASH_DEV, "/sys/class/misc/fbsplash/dev", 0x1);
+
+	if (!arg_theme) {
+		arg_theme = strdup(DEFAULT_THEME);
+	}
+	
+	config_file = get_cfg_file(arg_theme);
+	if (!config_file)
+		return -1;
+	parse_cfg(config_file);
+	
+	if (do_config(FB_SPLASH_IO_ORIG_USER) || do_getpic(FB_SPLASH_IO_ORIG_USER, 1, 'v')) {
+		return -1;
+	}
+	cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
+
+	if (arg_mode != 's')
+		return 0;
+	
+	/* If the user supplied a silent tty number, check whether
+	 * it is valid. */
+	if (stty < 0 || stty > MAX_NR_CONSOLES)
+		stty = TTY_SILENT;
+
+	sprintf(fn_fb,"/dev/fb%d", arg_fb);
+	sprintf(sys, "/sys/class/graphics/fb%d/dev", arg_fb);
+
+	if (do_getpic(FB_SPLASH_IO_ORIG_USER, 0, 's')) {
+		printerr("Failed to get silent splash image.\n");
+		return -1;
+	}
+				
+	open_cr(fd_fb, fn_fb, sys, out, 0x4);
+
+	sprintf(fn_vc,"/dev/tty%d", stty);
+	sprintf(sys, "/sys/class/tty/tty%d/dev", stty);
+
+	open_cr(fd_vc, fn_vc, sys, out, 0x2);
+	t = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
+		 MAP_SHARED, fd_fb, fb_var.yoffset * fb_fix.line_length); 
+		
+	if (t == MAP_FAILED) {
+		goto clean;
+	}
+
+	tty_set_silent(stty, fd_vc);
+	
+	if (silent_img.cmap.red)
+		ioctl(fd_fb, FBIOPUTCMAP, &silent_img.cmap);
+
+	if (effects & EFF_FADEIN) {		
+		fade_in(t, silent_img.data, silent_img.cmap, 1, fd_fb);
+	} else {
+		if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR)
+			set_directcolor_cmap(fd_fb);
+
+		put_img(t, silent_img.data);
+	}	
+			
+	munmap(t, fb_fix.line_length * fb_var.yres);
+		
+clean:	close_del(fd_vc, fn_vc, 0x2);
+//	close_del(fd_fb, fn_fb, 0x4);
+	
+out:	free(silent_img.data);
+	if (silent_img.cmap.red)
+		free(silent_img.cmap.red);
+
+	//remove_dev(SPLASH_DEV, 0x1);
+}
+
 int main(int argc, char **argv)
 {
-	int vc_fd, fb_fd, err = 0;
-	unsigned char orig = FB_SPLASH_IO_ORIG_KERNEL;
-	unsigned char mounts = 0;
+	int err = 0;
+	u8 mounts = 0;
 
 	detect_endianess();
 
 	if (argc < 3)
 		goto out;
 
-	if (strcmp(argv[1],"1")) {
+	if (strcmp(argv[1],"2")) {
 		fprintf(stderr, "Splash protocol mismatch: %s\n", argv[1]);
+		fprintf(stderr, "This version of splashutils supports only splash protocol v2.\n");
+		err = -1;
 		goto out;
 	}
 
@@ -48,150 +182,42 @@ int main(int argc, char **argv)
 	if (arg_vc < 0 || arg_fb < 0)
 		goto out;
 
-	arg_mode = argv[5][0];
-	arg_theme = strdup(argv[6]);
-
+	/* On 'init' the theme isn't defined yet, and thus NULL is passed
+	 * instead of any meaningful value. */
+	if (argv[5]) 
+		arg_theme = strdup(argv[5]);
+	else
+		arg_theme = NULL;
+	
 	if (!mount("sysfs", "/sys", "sysfs", 0, NULL))
 		mounts = 1;
 
 	get_fb_settings(arg_fb);
-	config_file = get_cfg_file(arg_theme);
-	
-	if (!config_file)
-		goto out;
 
-	parse_cfg(config_file);
-
+	if (arg_theme) {
+		config_file = get_cfg_file(arg_theme);
+		if (!config_file)
+			goto out;
+		parse_cfg(config_file);
+	}
+		
 	if (TTF_Init() < 0) {
 		fprintf(stderr, "Couldn't initialize TTF.\n");
 	}
 	
 	if (!strcmp(argv[2],"getpic")) {
-
-		err = do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, arg_mode);
-		
-	} else if (!strcmp(argv[2],"init") || !strcmp(argv[2],"modechange")) {
-
-		/* We have to act as if we were responding to a user request. This is 
-		 * because the kernel will not hold the console sem while calling
-		 * splash_helper init */
-		if (!strcmp(argv[2], "init"))
-			orig = FB_SPLASH_IO_ORIG_USER;
-
-		create_dev(SPLASH_DEV, "/sys/class/misc/fbsplash/dev", 0x1);
-
-		if (do_config(orig) || do_getpic(orig, 1, 'v')) {
-			err = -1;
-			goto out_init;
-		}
-		
-		/* a list of things we should be doing on init:
-		 *  - parse /proc/cmdline to get the silent tty
-		 *  - switch to the silent tty
-		 *  - disable the cursor
-		 *  - disable echo and icanon
-		 *  - paint the silent image
-		 */
-		if (arg_mode == 's') {
-			
-			int stty = TTY_SILENT;
-			char sys[128]; 
-			char fbfn[16];
-			char vcfn[16];
-			char buf[512];
-			char *t;
-			int fd, y, h;
-			u8 created_dev = 0;
-			u8 fadein = 0;
-		
-			h = mount("proc", "/proc", "proc", 0, NULL);
-			fd = open("/proc/cmdline", O_RDONLY);
-			if (fd != -1 && read(fd, buf, 512) > 0) {
-			
-				t = strstr(buf, "splash=");
-				if (!t)
-					goto next;
-
-				t += 7;
-				while (*t != ' ' && *t != 0) {
-					if (!strncmp(t, "tty:", 4)) {
-						stty = strtol(t+4, NULL, 0);
-						t += 4;
-					} else if (!strncmp(t, "fadein", 6)) {
-						fadein = 1;
-						t += 6;
-					}
-					t++;
-				}
-			}
-			
-next:			if (fd != -1)
-				close(fd);
-
-			if (h == 0)
-				umount("/proc");
-			
-			if (stty < 0 || stty > MAX_NR_CONSOLES)
-				stty = TTY_SILENT;
-
-			sprintf(fbfn,"/dev/fb%d", arg_fb);
-			sprintf(sys, "/sys/class/graphics/fb%d/dev", arg_fb);
-	
-			if (do_getpic(orig, 0, 's')) {
-				err = -1;
-				goto out_init;
-			}
-					
-			open_cr(fb_fd, fbfn, sys, out, 0x4);
-			cmd_setstate(1, orig);
-
-			sprintf(vcfn,"/dev/tty%d", stty);
-			sprintf(sys, "/sys/class/tty/tty%d/dev", stty);
-
-			open_cr(vc_fd, vcfn, sys, out, 0x02);
-			tty_set_silent(stty, vc_fd);
-	
-			t = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
-				MAP_SHARED, fb_fd, fb_var.yoffset * fb_fix.line_length); 
-			
-			if (t == MAP_FAILED) {
-				goto init_cleanup;
-			}
-
-			if (silent_img.cmap.red)
-				ioctl(fb_fd, FBIOPUTCMAP, &silent_img.cmap);
-	
-			if (fadein) {		
-				fade_in(t, silent_img.data, silent_img.cmap, 1, fb_fd);
-			} else {
-				put_img(t, silent_img.data);
-			}	
-				
-//			h = fb_var.xres * ((fb_var.bits_per_pixel + 7) >> 3);
-//			for (y = 0; y < fb_var.yres; y++) {
-//				memcpy(t + y * fb_fix.line_length, silent_img.data + y * h, h);
-//			}
-
-			munmap(t, fb_fix.line_length * fb_var.yres);
-			
-init_cleanup:		close_del(vc_fd, vcfn, 0x2);
-//			close_del(fb_fd, fbfn, 0x4);
-		
-			free(silent_img.data);
-			if (silent_img.cmap.red)
-				free(silent_img.cmap.red);
-		} else {
-			cmd_setstate(1, orig);	
-		}
-	
-out_init:	//remove_dev(SPLASH_DEV, 0x1);
-		;
+		err = do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, 'v');
+	} else if (!strcmp(argv[2],"modechange")) {
+		do_config(FB_SPLASH_IO_ORIG_KERNEL);
+		do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, 'v');
+		cmd_setstate(1, FB_SPLASH_IO_ORIG_KERNEL);
+	} else if (!strcmp(argv[2],"init")) {
+		err = handle_init();
 	} else {
 		fprintf(stderr, "Unrecognized splash command: %s.\n", argv[2]);
 	}
 
-out:	
-	if (mounts)
+out:	if (mounts)
 		umount2("/sys",0);
 
 	if (config_file)

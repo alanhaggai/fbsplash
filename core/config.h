@@ -1,5 +1,6 @@
 /* define if you want PNG support */
-#define CONFIG_PNG 1
-/* #undef CONFIG_PNG */
-
-#define THEME_DIR "/etc/splash"
+#define CONFIG_PNG 			1
+#define CONFIG_TTF 			1
+#define CONFIG_TTF_KERNEL		1
+#define THEME_DIR 			"/etc/splash"
+#undef  CONFIG_SILENT_KD_GRAPHICS	
