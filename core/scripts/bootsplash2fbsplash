@@ -1,18 +1,18 @@
 #!/usr/bin/perl
 #
 # bootsplash2fbsplash -- theme conversion utility 
-# (c) 2004 Michal Januszewski <spock@gentoo.org>
+# (c) 2004-2005 Michal Januszewski <spock@gentoo.org>
 #
 # Usage: bootsplash2fbsplash [--remove-comments] <theme_name>
 #
 
 $path_bp = "/etc/bootsplash/";
-$path_fbspl = "/etc/splash/";
+$path_fbspl = "/etc/splash";
 
 sub usage
 {
-	print "bootsplash2fbsplash theme converter / splashutils-%PKG_VERSION%\n";
-	print '(c) 2004 Michal Januszewski <spock@gentoo.org>'."\n\n";
+	print "bootsplash2fbsplash theme converter / splashutils-1.1.9.3\n";
+	print '(c) 2004-2005 Michal Januszewski <spock@gentoo.org>'."\n\n";
 	print "Usage: bootsplash2fbsplash [--remove-comments] <theme_name>\n";
 }
 
@@ -36,7 +36,6 @@ opendir(DIR, "$cfgroot") || die "Can't open $cfgroot: $!";
 closedir(DIR);
 
 foreach $cfg (@configs) {
-
 	$cfg =~ /(\d+)x(\d+)/;
 	$xres = $1;
 	$yres = $2;
@@ -95,6 +94,9 @@ ok:		if (!$comments) {
 
 	$a = `md5sum "$fbspl_images/silent-${xres}x${yres}.jpg" | cut -f1 -d' '`;
 	$b = `md5sum "$fbspl_images/verbose-${xres}x${yres}.jpg" | cut -f1 -d' '`;
+
+	chomp $a;
+	chomp $b;
 	
 	if ($a eq $b) {
 		`rm -f "$fbspl_images/silent-${xres}x${yres}.jpg"`;
