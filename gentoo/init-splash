@@ -3,17 +3,7 @@
 # Distributed under the terms of the GNU General Public License v2
 # $Header: /home/cvsroot/gentoo-src/bootsplash/core/misc/bootsplash,v 1.2 2004/05/29 21:40:30 spock Exp $
 
-source /etc/conf.d/splash
-
 # default settings
-test -z "${SPLASH_THEME}" && SPLASH_THEME="default"                                                                             
-if [ -z "${SPLASH_TTYS}" ]; then
-	if [ -n "${RC_TTY_NUMBER}" ]; then	
-		SPLASH_TTYS=$(seq 0 "${RC_TTY_NUMBER}")
-	else
-		SPLASH_TTYS="0 1 2 3 4 5 6"
-	fi
-fi
 
 # run after local so that the boot time splash image
 # is visible for as long as possible
@@ -21,53 +11,40 @@ depend() {
 	need local
 }
 
-# dummy function to handle sourcing of fbconfig file
-box () { return; }
-
-parse_cmdline ()
-{
-	line=`egrep -o 'splash=[^ ]+' /proc/cmdline`
-	line="${line#splash=}"
-	t="${IFS}"
-	IFS=","
-
-	for param in ${line}
-	do
-		if [ "${param%:*}" = "theme" ]; then
-			SPLASH_THEME="${param#*:}"
-		else
-			SPLASH_MODE="${param}"
-		fi
-	done
-
-	IFS="${t}"
-}
-
 start() {
+	source /etc/conf.d/splash
+	[[ -z "${SPLASH_THEME}" ]] && SPLASH_THEME="default"                                                                             
+	if [[ -z "${SPLASH_TTYS}" ]]; then
+		if [ -n "${RC_TTY_NUMBER}" ]; then	
+			SPLASH_TTYS=$(seq 0 "${RC_TTY_NUMBER}")
+		else
+			SPLASH_TTYS="0 1 2 3 4 5 6"
+		fi
+	fi
+
 	# only do this if the kernel supports fbsplash
-	if [ -e /dev/fbsplash ]
-	then
+	if [[ -e /dev/fbsplash ]]; then
 		ebegin "Setting framebuffer console images"
-		parse_cmdline
+		splash_setup
 		
 		for TTY in ${SPLASH_TTYS}
 		do
 			theme="${SPLASH_THEME}"
-			
-			if [ "${TTY}" -eq 0 -a -z "$(splash_util -c getstate --vc=0 | grep off)" ]; then
+
+			if [[ ${TTY} == "0" && -z "$(/sbin/splash_util -c getstate --vc=${TTY}| grep 'off')" ]]; then
 				continue
 			fi
 
-			if [ -n "${SPLASH_TTY_MAP}" ]; then
+			if [[ -n "${SPLASH_TTY_MAP}" ]]; then
 				for i in ${SPLASH_TTY_MAP}
 				do
-					if [ "${i%:*}" = "${TTY}" ]; then
+					if [[ "${i%:*}" == "${TTY}" ]]; then
 						theme="${i#*:}"
 					fi
 				done
 			fi
 
-			/sbin/splash_util --vc="${TTY}" -m v -t "${theme}" -c setcfg 2>/dev/null
+			/sbin/splash_util --vc="${TTY}" -m v -t "${theme}" -c setcfg 2>/dev/null 
 			/sbin/splash_util --vc="${TTY}" -m v -t "${theme}" -c setpic 2>/dev/null
 			/sbin/splash_util --vc="${TTY}" -c on 2>/dev/null
 		done

@@ -140,12 +140,11 @@ splash_init() {
 		spl_scripts=0
 		spl_rate=65535
 		spl_execed=""
-		spl_consfont_silent=""
  	else
 		splash_load_vars
 	fi
 
-	export spl_init spl_count spl_scripts spl_rate spl_execed spl_consfont_silent
+	export spl_init spl_count spl_scripts spl_rate spl_execed
 	
 	if [[ ${RUNLEVEL} == "S" && ${arg} == "sysinit" ]]; then
 		spl_scripts=$(splash_svclist_get start | tr ' ' '\n' | wc -l)
@@ -212,7 +211,7 @@ splash_cache_cleanup() {
 	echo "${BOOTLEVEL}/${DEFAULTLEVEL}" > "${spl_cachedir}/levels"
 	echo "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" \
 		 >> "${spl_cachedir}/levels"
-	umount "${spl_cachedir}-tmp"
+	umount -l "${spl_cachedir}-tmp" 2>/dev/null
 	rmdir "${spl_cachedir}-tmp" 2>/dev/null
 }
 
@@ -401,34 +400,21 @@ splash_svc() {
 		return 1
 	fi
 
-	if [[ ${srv} == "consolefont" ]]; then
-		#splash_is_silent
-		export spl_consfont_silent=$?
-	fi
-
 	for i in ${spl_execed} ; do
 		[[ ${i} == "${srv}" ]] && return
 	done	
 
 	if [[ ${act} == "start" ]]; then
-#		SPL_SVC_START="${SPL_SVC_START// $srv / }"
-		
 		if [[ ${err} -eq 0 ]]; then
 			splash_update_svc ${srv} "svc_started"
-#			SPL_SVC_STARTED="${SPL_SVC_STARTED}${srv} "
 		else
 			splash_update_svc ${srv} "svc_start_failed"
-#			SPL_SVC_START_FAIL="${SPL_SVC_START_FAIL}${srv} "
 		fi
 	else
-#		SPL_SVC_STOP="${SPL_SVC_STOP// $srv / }"
-		
 		if [[ ${err} -eq 0 ]]; then
 			splash_update_svc ${srv} "svc_stopped"
-#			SPL_SVC_STOPPED="${SPL_SVC_STOPPED}${srv} "
 		else
 			splash_update_svc ${srv} "svc_stop_failed"
-#			SPL_SVC_STOP_FAIL="${SPL_SVC_STOP_FAIL}${srv} "
 		fi
 	fi
 	
@@ -451,13 +437,7 @@ splash_exit() {
 
 	splash_comm_send "exit"
 
-# FIXME
-#	# We need to restart consolefont because fonts don't get set when the vc
-#	# is in KD_GRAPHICS mode
-#	if [[ -L "${svcdir}/started/consolefont" && ${spl_consfont_silent} == "0" ]]; then
-#		/etc/init.d/consolefont restart 2>/dev/null >/dev/null
-#	fi
-
+	killall -9 splash_util.static >/dev/null 2>/dev/null
 	splash_cache_cleanup
 }
 
@@ -510,7 +490,6 @@ splash_save_vars() {
 	t="${t}spl_scripts=${spl_scripts}\n"
 	t="${t}spl_rate=${spl_rate}\n"
 	t="${t}spl_init=${spl_init}\n"
-	t="${t}spl_consfont_silent=${spl_consfont_silent}\n"
 	t="${t}SPL_SVC_INACTIVE_START=\"${SPL_SVC_INACTIVE_START}\"\n"
 	t="${t}SPL_SVC_START=\"${SPL_SVC_START}\"\n"
 	t="${t}SPL_SVC_STARTED=\"${SPL_SVC_STARTED}\"\n"
@@ -545,12 +524,6 @@ splash_svc_start() {
 	local svc="$1"
 
 	splash_update_svc ${svc} "svc_start"
-	
-#	splash_load_vars
-#	SPL_SVC_START="${SPL_SVC_START}${svc} "
-#	SPL_SVC_INACTIVE_START="${SPL_SVC_INACTIVE_START// $svc / }"
-#	splash_save_vars
-
 	/sbin/splash "$svc"
 }
 
@@ -558,33 +531,12 @@ splash_svc_stop() {
 	local svc="$1"
 
 	splash_update_svc ${svc} "svc_stop"
-	
-#	splash_load_vars
-#	SPL_SVC_STOP="${SPL_SVC_STOP}${svc} "
-#	SPL_SVC_INACTIVE_STOP="${SPL_SVC_INACTIVE_STOP// $svc / }"
-#	splash_save_vars
-
 	/sbin/splash "$svc"
 }
 
 splash_init_svclist() {
 	arg="$1"
 	
-#	export SPL_SVC_INACTIVE_START SPL_SVC_START SPL_SVC_STARTED SPL_SVC_START_FAILED
-#	export SPL_SVC_INACTIVE_STOP SPL_SVC_STOP SPL_SVC_STOPPED SPL_SVC_STOP_FAILED
-
-	# we don't clear these variables if we have just switched to, for example, runlevel 3
-#	if [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" || ${RUNLEVEL} == "S" ]]; then
-#		SPL_SVC_INACTIVE_START=" "
-#		SPL_SVC_START=" "
-#		SPL_SVC_STARTED=" "
-#		SPL_SVC_START_FAILED=" "
-#		SPL_SVC_INACTIVE_STOP=" "
-#		SPL_SVC_STOP=" "
-#		SPL_SVC_STOPPED=" "
-#		SPL_SVC_STOP_FAILED=" "
-#	fi
-		
 	if [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
 
 		for i in `dolisting "${svcdir}/started/" | sed -e "s#${svcdir}/started/##g"`; do
@@ -600,13 +552,6 @@ splash_init_svclist() {
 			for i in ${CRITICAL_SERVICES} ${ts} ${tb} ${td}; do
 				splash_update_svc ${i} "svc_inactive_start"
 			done
-#		else
-#			SPL_SVC_STARTED=" `dolisting "${svcdir}/started/" | sed -e "s#${svcdir}/started/##g"` "
-#			SPL_SVC_INACTIVE_START=" ${ts} ${tb} ${td} "
-#		
-#			for i in $SPL_SVC_STARTED; do
-#				SPL_SVC_INACTIVE_START="${SPL_SVC_INACTIVE_START// $i / }"
-#			done
 		fi
 	fi
 }
