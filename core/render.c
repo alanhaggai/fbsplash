@@ -381,7 +381,7 @@ void render_objs(char mode, u8* target, unsigned char origin)
 #endif
 	}
 
-#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || (!defined(TARGET_KERNEL) && defined(CONFIG_TTF))
+#if (defined(CONFIG_TTF_KERNEL) && defined(TARGET_KERNEL)) || (!defined(TARGET_KERNEL) && defined(CONFIG_TTF))
 	if (mode == 's') {
 		if (!boot_message)
 			TTF_Render(target, DEFAULT_MESSAGE, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color, F_HS_LEFT | F_HS_TOP);
