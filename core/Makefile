@@ -9,9 +9,10 @@
 # $Header: /srv/cvs/splash/utils/Makefile,v 1.17 2005/01/29 23:27:49 spock Exp $
 #
 
-PKG_VERSION = 0.9.1
+PKG_VERSION = 0.9.2
 DEBUG 	 = false		# set to true to prevent stripping
 K_SHARED = false		# set to true if you want to link to a shared klibc
+QUIET    = true
 
 JPEGSRC	= libs/jpeg-6b
 LPNGSRC = libs/libpng-1.2.8
@@ -36,6 +37,12 @@ else
 	LIBC = $(LIBCSRC)/libc.a
 	CRT0 = $(LIBCSRC)/crt0.o
 	K_LDFLAGS = --gc-sections
+endif
+
+ifeq ($(strip $(QUIET)),true)
+	OUTPUT = /dev/null
+else
+	OUTPUT = /dev/stdout
 endif
 
 LIBGCC	= $(shell $(CC) --print-libgcc)
@@ -96,6 +103,9 @@ linux:
 	@if [ ! -e linux ]; then \
 		ln -s /lib/modules/`uname -r`/source/ linux; \
 	fi
+	@if [ ! -d $(KOUT) ]; then \
+		mkdir $(KOUT) ; \
+	fi
 
 klibc: linux
 	@if [ ! -e linux ]; then \
@@ -104,7 +114,7 @@ klibc: linux
 	fi
 	@cd $(LIBCSRC) ; \
 	if ! make -q; then $(call info,MAKE,klibc) ; fi ; \
-	make > /dev/null
+	make > $(OUTPUT)
 
 zlib:	
 #	@$(call info,BUILD,zlib)
@@ -115,7 +125,7 @@ zlib:
 		sed -i 's#^CFLAGS=\(.*\)#CFLAGS=\1 $(K_CFLAGS)#' Makefile ; \
 	fi ; \
 	if ! make -q libz.a; then $(call info,MAKE,zlib) ; fi ; \
-	make libz.a > /dev/null
+	make libz.a > $(OUTPUT)
 
 libpng:	zlib
 #	@$(call info,BUILD,libpng)
@@ -128,7 +138,7 @@ libpng:	zlib
 		       -e 's#^ZLIBLIB=.*#ZLIBLIB=$(ZLIBSRC)#' Makefile ; \
 	fi ; \
 	if ! make -q libpng.a; then $(call info,MAKE,libpng) ; fi ; \
-	make libpng.a > /dev/null
+	make libpng.a > $(OUTPUT) 
 
 jpeglib:
 #	@$(call info,BUILD,libjpeg)
@@ -141,7 +151,7 @@ jpeglib:
 		sed -i "s:#define JMESSAGE.*::" jerror.c ; \
 	fi ; \
 	if ! make -q libjpeg.a; then $(call info,MAKE,libjpeg) ; fi ; \
-	make libjpeg.a > /dev/null
+	make libjpeg.a > $(OUTPUT)
 
 splash_kern: klibc jpeglib libpng $(SP_HELPER) $(LIBC) config.h $(K_LDLIBS)
 
