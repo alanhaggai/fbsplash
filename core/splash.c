@@ -1,7 +1,7 @@
 /*
  * splash.c - The core of splash_util
  *
- * Copyright (C) 2004-2005 Michael Januszewski <spock@gentoo.org>
+ * Copyright (C) 2004-2005 Michal Januszewski <spock@gentoo.org>
  * 
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for

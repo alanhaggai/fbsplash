@@ -2,7 +2,7 @@
  * tty.c - support for True Type fonts
  *
  * Splashutils adaptations:
- *   Copyright (C) 2004-2005 Michael Januszewski <spock@gentoo.org>
+ *   Copyright (C) 2004-2005 Michal Januszewski <spock@gentoo.org>
  *
  * Fbtruetype code:
  *   (w) by stepan@suse.de
