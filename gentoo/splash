@@ -40,6 +40,14 @@ get_boot_message() {
 }
 
 update_progress() {
+
+	local srv=$1
+		
+	splash_load_vars	
+	[[ -n "${spl_execed}" && -z "${spl_execed//* $srv */}" ]] && return
+	spl_execed="${spl_execed} ${srv} "
+	spl_count=$((${spl_count} + 1))
+		
 	# spl_init and spl_rate are deprecated and will probably be removed soon
 	if [ "${spl_scripts}" -gt 0 ]; then
 		progress=$(($spl_init + ($spl_count) * ($spl_rate - $spl_init) / $spl_scripts))
@@ -48,6 +56,7 @@ update_progress() {
 	fi
 
 	splash_comm_send "progress ${progress}"
+	splash_save_vars
 	
 	if [[ "$(splash_get_mode)" == "silent" ]]; then
 		local t=$(get_boot_message)
@@ -62,6 +71,17 @@ update_progress() {
 
 # Start the splash daemon
 if [ "$1" == "start" ]; then
+
+	# Prepare the communications FIFO
+	rm -f ${spl_fifo} 2>/dev/null
+		
+	if [[ ${SPLASH_MODE_REQ} == "verbose" ]]; then
+		${SPLUTIL} -c on 2>/dev/null
+		exit 0
+	elif [[ ${SPLASH_MODE_REQ} != "silent" ]]; then
+		exit 0
+	fi
+		
 	# Display a warning if the system is not configured to display init messages
 	# to tty1. This can cause a lot of problems if it's not handled correctly, so
 	# we don't allow silent splash to run on incorrectly configured systems.
@@ -81,7 +101,6 @@ if [ "$1" == "start" ]; then
 	killall -9 ${SPLUTIL} 2>/dev/null
 	
 	# Prepare the communication FIFO
-	rm -f ${spl_fifo} 2>/dev/null
 	mkfifo ${spl_fifo}	
 	
 	# Start the splash daemon
@@ -121,7 +140,7 @@ elif [ "$1" == "verbose" ]; then
 		fi
 	fi
 else
-	update_progress
+	update_progress "$1"
 fi
 
 exit 0

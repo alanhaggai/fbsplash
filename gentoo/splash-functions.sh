@@ -58,6 +58,10 @@ splash() {
 	local event="$1"
 	splash_setup
 
+	if [[ ${SPLASH_MODE_REQ} == "off" ]]; then
+		return
+	fi
+
 	# Prepare the cache here - rc_init-pre might want to use it
 	if [[ ${event} == "rc_init" && ${RUNLEVEL} == "S" && "$2" == "sysinit" ]]; then
 		if ! splash_cache_prep; then
@@ -100,7 +104,12 @@ splash_setup() {
 	export SPLASH_MODE_REQ="off"
 	export SPLASH_THEME="default"
 	export SPLASH_TTY="8"
-	
+
+	# Choose a default tty which will allow to avoid conflicts with consolefont
+	if [[ -n ${RC_TTY_NUMBER} ]]; then
+		SPLASH_TTY=$((${RC_TTY_NUMBER}+1))
+	fi
+
 	if [[ -f /etc/conf.d/splash ]]; then 
 		. /etc/conf.d/splash
 	fi
@@ -399,20 +408,11 @@ splash_svc() {
 	local srv="$1"
 	local err="$2"
 	local act="$3"
-	
-	splash_load_vars
 
-	[[ -e /etc/conf.d/splash ]] && source /etc/conf.d/splash
-		
-	# We ignore consolefont errors because it fails when the console is in KD_GRAPHICS mode
-	if [[ ${err} -ne 0 && ${SPLASH_VERBOSE_ON_ERRORS} == "yes" && ${srv} != "consolefont" ]]; then
+	if [[ ${err} -ne 0 && ${SPLASH_VERBOSE_ON_ERRORS} == "yes" ]]; then
 		/sbin/splash "verbose"
 		return 1
 	fi
-
-	for i in ${spl_execed} ; do
-		[[ ${i} == "${srv}" ]] && return
-	done	
 
 	if [[ ${act} == "start" ]]; then
 		if [[ ${err} -eq 0 ]]; then
@@ -427,12 +427,7 @@ splash_svc() {
 			splash_update_svc ${srv} "svc_stop_failed"
 		fi
 	fi
-	
-	spl_execed="${spl_execed} ${srv}"
-	spl_count=$((${spl_count} + 1))
 
-	splash_save_vars
-	
 	/sbin/splash "$srv"
 }
 
@@ -464,8 +459,8 @@ splash_comm_send() {
 	if [[ ! -e ${spl_pidfile} ]]; then
 		return 1
 	fi
-		
-	if [[ "$(ps h --pid $(<${spl_pidfile}) -o comm 2>/dev/null)" == "splash_util.sta" ]]; then
+	
+	if [[ "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]]; then
 		echo $* > ${spl_fifo} &		
 	fi
 }
