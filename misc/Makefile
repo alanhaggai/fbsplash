@@ -15,6 +15,6 @@ clean:
 	rm -f fbres
 
 install:
-	install -D fbres $(DESTDIR)/sbin/fbres
+	install -D fbres $(DESTDIR)/lib/splash/bin/fbres
 	@set -e; for d in $(SUBDIRS); do $(MAKE) -C $$d $@; done
 

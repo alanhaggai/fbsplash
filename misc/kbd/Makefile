@@ -1,6 +1,6 @@
-splash_fgcon: fgconsole.o getfd.o
+fgconsole: fgconsole.o getfd.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $+ -o $@
 
 install:
-	install -D splash_fgcon $(DESTDIR)/sbin/splash_fgcon
+	install -D splash_fgcon $(DESTDIR)/lib/splash/bin/fgconsole
 

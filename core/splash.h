@@ -9,7 +9,7 @@
 #define MAX_ICONS 	512
 #define SPLASH_DEV	"/dev/fbsplash"
 
-#define SPLASH_FIFO	"/var/cache/splash/.splash"
+#define SPLASH_FIFO	"/lib/splash/cache/.splash"
 #define TTY_SILENT 	8
 #define TTY_VERBOSE 	1
 

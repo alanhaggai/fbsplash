@@ -19,11 +19,12 @@
 # values for spl_cachetype are 'tmpfs' and 'ramfs'. spl_cachesize
 # is a size limit in KB, and it should probably be left with the
 # default value.
-spl_cachedir="/var/cache/splash"
+spl_cachedir="/lib/splash/cache"
+spl_tmpdir="/lib/splash/tmp"
 spl_cachesize="4096"
 spl_cachetype="tmpfs"
-spl_fifo="/var/cache/splash/.splash"
-spl_pidfile="/var/cache/splash/daemon.pid"
+spl_fifo="${spl_cachedir}/.splash"
+spl_pidfile="${spl_cachedir}/daemon.pid"
 
 # This is a little tricky. We need depscan.sh to create an updated cache for
 # us, and we need it in our place ($spl_cachedir), and not in $svcdir, since the
@@ -164,7 +165,7 @@ splash_init() {
 }
 
 splash_cache_prep() {
-	mount -n -t "${spl_cachetype}" cachedir "${spl_cachedir}/tmp" \
+	mount -n -t "${spl_cachetype}" cachedir "${spl_tmpdir}" \
 		-o rw,mode=0644,size="${spl_cachesize}"k
 
 	retval=$?
@@ -175,14 +176,14 @@ splash_cache_prep() {
 		return "${retval}"
 	fi
 
-	h=$(stat -c '%y' ${spl_cachedir}/deptree)
+	h=$(stat -c '%y' ${spl_tmpdir}/deptree)
 	
 	# Copy the dependency cache and services lists to our new cache dir. 
 	# With some luck, we won't have to update it.
-	cp -a ${svcdir}/{depcache,deptree} "${spl_cachedir}/tmp" 2>/dev/null
-	cp -a ${spl_cachedir}/{svcs_start,svcs_stop,levels} "${spl_cachedir}/tmp" 2>/dev/null
+	cp -a ${svcdir}/{depcache,deptree} "${spl_tmpdir}" 2>/dev/null
+	cp -a ${spl_cachedir}/{svcs_start,svcs_stop,levels} "${spl_tmpdir}" 2>/dev/null
 
-	mount -n --move "${spl_cachedir}/tmp" "${spl_cachedir}"
+	mount -n --move "${spl_tmpdir}" "${spl_cachedir}"
 
 	# Point depscan.sh to our cachedir
 	spl_cache_depscan="yes" /sbin/depscan.sh -u
@@ -210,14 +211,13 @@ splash_cache_prep() {
 }
 
 splash_cache_cleanup() {
-	[[ ! -d "${spl_cachedir}-tmp" ]] && mkdir "${spl_cachedir}-tmp"
-	mount --move "${spl_cachedir}" "${spl_cachedir}-tmp"
-	cp -a "${spl_cachedir}-tmp"/{envcache,depcache,deptree,svcs_start,svcs_stop} "${spl_cachedir}" 2>/dev/null
+	[[ ! -d "${spl_tmpdir}" ]] && mkdir "${spl_tmpdir}"
+	mount --move "${spl_cachedir}" "${spl_tmpdir}"
+	cp -a "${spl_tmpdir}"/{envcache,depcache,deptree,svcs_start,svcs_stop} "${spl_cachedir}" 2>/dev/null
 	echo "${BOOTLEVEL}/${DEFAULTLEVEL}" > "${spl_cachedir}/levels"
 	echo "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" \
 		 >> "${spl_cachedir}/levels"
-	umount -l "${spl_cachedir}-tmp" 2>/dev/null
-	rmdir "${spl_cachedir}-tmp" 2>/dev/null
+	umount -l "${spl_tmpdir}" 2>/dev/null
 }
 
 splash_svclist_get() {
@@ -466,7 +466,7 @@ splash_comm_send() {
 }
 
 splash_get_mode() {
-	local ctty="$(splash_fgcon)"
+	local ctty="$(/lib/splash/bin/fgconsole)"
 
 	if [[ ${ctty} == "${SPLASH_TTY}" ]]; then
 		echo "silent"
