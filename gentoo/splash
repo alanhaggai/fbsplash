@@ -5,12 +5,12 @@
 # splash - a script to handle rc_scripts events and execute appropriate
 #          fbsplash actions; loosely based on bootsplash /sbin/splash
 #
-# Author: Michael Januszewski <spock@gentoo.org>
+# Author: Michal Januszewski <spock@gentoo.org>
 #
 
 # Make sure we're running in a sane environment
-[[ ! -e /dev/fbsplash ]] 								&& exit 1
-[[ ! -x /sbin/fbres || ! -x /sbin/splash_util.static ]] && exit 1
+[[ ! -e /dev/fbsplash ]] 			&& exit 1
+[[ ! -x /sbin/splash_util.static ]] && exit 1
 
 [[ -z ${SPLASH_BOOT_MESSAGE} ]] 	&& SPLASH_BOOT_MESSAGE="Booting the system... Press F2 for verbose mode"
 [[ -z ${SPLASH_SHUTDOWN_MESSAGE} ]] && SPLASH_SHUTDOWN_MESSAGE="Shutting down the system... Press F2 for verbose mode"
@@ -95,7 +95,11 @@ elif [ "$1" == "silent" ]; then
 	paint_progress
 elif [ "$1" == "verbose" ]; then
 	if [[ "$(splash_get_mode)" == "silent" ]]; then
-		/usr/bin/chvt 1	
+		if [[ -x /usr/bin/chvt ]]; then
+			/usr/bin/chvt 1
+		else
+			splash_comm_send "set mode verbose"
+		fi
 	fi
 else
 	if [[ "$(splash_get_mode)" == "silent" ]]; then

@@ -1,8 +1,8 @@
 # Copyright 1999-2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
-# Author: Michael Januszewski <spock@gentoo.org>
-# Maintainer: Michael Januszewski <spock@gentoo.org>
+# Author: Michal Januszewski <spock@gentoo.org>
+# Maintainer: Michal Januszewski <spock@gentoo.org>
 
 # This file is a part of splashutils.
 
@@ -194,11 +194,16 @@ splash_cache_prep() {
 	#  - we're booting with a different boot/default level than the last time
 	#  - one of the runlevel dirs has been modified since the last boot
 	if [[ ! -e ${spl_cachedir}/levels || \
-		  ! -e ${spl_cachedir}/svcs_start || \
-		 "$(head -n1 ${spl_cachedir}/levels)" != "${BOOTLEVEL}/${DEFAULTLEVEL}" || \
-		 "$(tail -n1 ${spl_cachedir}/levels)" != "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" || \
-		 "$(stat -c '%y' ${spl_cachedir}/deptree)" != "${h}" ]]; then
+		  ! -e ${spl_cachedir}/svcs_start ]]; then
 		echo $(splash_svclist_update "start") > ${spl_cachedir}/svcs_start
+	else
+		local lastlev, timestamp
+		{ read lastlev; read timestamp; } < ${spl_cachedir}/levels
+		if [[ "${lastlev}" != "${BOOTLEVEL}/${DEFAULTLEVEL}" || \
+			  "${timestamp}" != "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" || \
+			  "$(stat -c '%y' ${spl_cachedir}/deptree)" != "${h}" ]]; then
+			echo $(splash_svclist_update "start") > ${spl_cachedir}/svcs_start
+		fi
 	fi
 
 	return 0
@@ -355,7 +360,7 @@ splash_svclist_update() {
 	}
 	
 	as="$(autoconfig_svcs)"
-	ss="$(dolisting "/etc/runlevels/${SOFTLEVEL}/") "
+	[[ -n "${SOFTLEVEL}" ]] && ss="$(dolisting "/etc/runlevels/${SOFTLEVEL}/") "
 	sb="$(dolisting "/etc/runlevels/${BOOTLEVEL}/") "
 	sd="$(dolisting "/etc/runlevels/${DEFAULTLEVEL}/") "
 
@@ -461,7 +466,7 @@ splash_comm_send() {
 }
 
 splash_get_mode() {
-	local ctty="$(fgconsole)"
+	local ctty="$(splash_fgcon)"
 
 	if [[ ${ctty} == "${SPLASH_TTY}" ]]; then
 		echo "silent"
