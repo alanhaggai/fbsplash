@@ -1,5 +1,5 @@
 #!/sbin/runscript
-# Copyright 1999-2004 Gentoo Technologies, Inc.
+# Copyright 1999-2005 Gentoo Foundation 
 # Distributed under the terms of the GNU General Public License v2
 # $Header: /home/cvsroot/gentoo-src/bootsplash/core/misc/bootsplash,v 1.2 2004/05/29 21:40:30 spock Exp $
 
@@ -45,7 +45,7 @@ parse_cmdline ()
 
 start() {
 	# only do this if the kernel supports fbsplash
-	if [ -e /dev/fbsplash ] && [ -e /proc/fbsplash ]
+	if [ -e /dev/fbsplash ]
 	then
 		ebegin "Setting framebuffer console images"
 		parse_cmdline

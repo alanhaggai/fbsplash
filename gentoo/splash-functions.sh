@@ -1,12 +1,17 @@
 # Copyright 1999-2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
-# Author: Michal Januszewski <spock@gentoo.org>
-# Maintainer: Michal Januszewski <spock@gentoo.org>
+# Author: Michael Januszewski <spock@gentoo.org>
+# Maintainer: Michael Januszewski <spock@gentoo.org>
 
 # This file is a part of splashutils.
 
 # FIXME: handle services order on shutdown..
+
+# ####################################################################
+#    Change any settings ONLY when you are sure what you're doing.
+#    Don't try if it breaks afterwards.
+# ####################################################################
 
 # The splash scripts need a cache which can be guaranteed to be
 # both readable and writable at all times, even when the root fs
@@ -17,13 +22,15 @@
 spl_cachedir="/var/cache/splash"
 spl_cachesize="4096"
 spl_cachetype="tmpfs"
+spl_fifo="/var/cache/splash/.splash"
+spl_pidfile="/var/cache/splash/daemon.pid"
 
 # This is a little tricky. We need depscan.sh to create an updated cache for
 # us, and we need it in our place ($spl_cachedir), and not in $svcdir, since the
 # latter might not be writable at this moment. In order to get what we need, 
 # we trick depscan.sh into thinking $svcdir is $spl_cachedir. 
 #
-# Here is how it # works:
+# Here is how it works:
 # - $svcdir is defined in /sbin/functions.sh
 # - /sbin/splash-functions.sh is sourced from /sbin/function.sh, after $svcdir
 #   is defined
@@ -85,23 +92,29 @@ splash() {
 splash_setup() {
 	# If it's already set up, let's not waste time on parsing the config 
 	# files again
-	if [[ ${SPLASH_THEME} != "" ]]; then
+	if [[ ${SPLASH_THEME} != "" && ${SPLASH_TTY} != "" && "$1" != "force" ]]; then
 		return 0
 	fi
-		
+	
+	export SPLASH_MODE_REQ="off"
 	export SPLASH_THEME="default"
-
+	export SPLASH_TTY="8"
+	
 	if [[ -f /etc/conf.d/splash ]]; then 
 		. /etc/conf.d/splash
 	fi
 		
 	if [[ -f /proc/cmdline ]]; then
-		# Kernel command line override for the splash theme
-		for param in `grep "theme:" /proc/cmdline`; do
-			t=${param%:*}
-			if [[ "${t#*,}" == "theme" ]]; then
-				SPLASH_THEME="${param#*:}"
-			fi
+		options=$(grep 'splash=[^ ]*' -o /proc/cmdline)
+		options=${options#*=}
+	
+		for i in ${options//,/ } ; do
+			case ${i%:*} in
+				theme)		SPLASH_THEME=${i#*:} ;;
+				tty)		SPLASH_TTY=${i#*:} ;;
+				verbose) 	SPLASH_MODE_REQ="verbose" ;;
+				silent)		SPLASH_MODE_REQ="silent" ;;
+			esac
 		done
 	fi
 }
@@ -134,8 +147,6 @@ splash_init() {
 
 	export spl_init spl_count spl_scripts spl_rate spl_execed spl_consfont_silent
 	
-	splash_init_svclist "${arg}"
-	
 	if [[ ${RUNLEVEL} == "S" && ${arg} == "sysinit" ]]; then
 		spl_scripts=$(splash_svclist_get start | tr ' ' '\n' | wc -l)
 		spl_count=0
@@ -148,7 +159,8 @@ splash_init() {
 	   [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
 		/sbin/splash "start"
 	fi
-	
+
+	splash_init_svclist "${arg}"
 	splash_save_vars
 }
 
@@ -390,7 +402,7 @@ splash_svc() {
 	fi
 
 	if [[ ${srv} == "consolefont" ]]; then
-		splash_is_silent
+		#splash_is_silent
 		export spl_consfont_silent=$?
 	fi
 
@@ -399,20 +411,24 @@ splash_svc() {
 	done	
 
 	if [[ ${act} == "start" ]]; then
-		SPL_SVC_START="${SPL_SVC_START// $srv / }"
+#		SPL_SVC_START="${SPL_SVC_START// $srv / }"
 		
 		if [[ ${err} -eq 0 ]]; then
-			SPL_SVC_STARTED="${SPL_SVC_STARTED}${srv} "
+			splash_update_svc ${srv} "svc_started"
+#			SPL_SVC_STARTED="${SPL_SVC_STARTED}${srv} "
 		else
-			SPL_SVC_START_FAIL="${SPL_SVC_START_FAIL}${srv} "
+			splash_update_svc ${srv} "svc_start_failed"
+#			SPL_SVC_START_FAIL="${SPL_SVC_START_FAIL}${srv} "
 		fi
 	else
-		SPL_SVC_STOP="${SPL_SVC_STOP// $srv / }"
+#		SPL_SVC_STOP="${SPL_SVC_STOP// $srv / }"
 		
 		if [[ ${err} -eq 0 ]]; then
-			SPL_SVC_STOPPED="${SPL_SVC_STOPPED}${srv} "
+			splash_update_svc ${srv} "svc_stopped"
+#			SPL_SVC_STOPPED="${SPL_SVC_STOPPED}${srv} "
 		else
-			SPL_SVC_STOP_FAIL="${SPL_SVC_STOP_FAIL}${srv} "
+			splash_update_svc ${srv} "svc_stop_failed"
+#			SPL_SVC_STOP_FAIL="${SPL_SVC_STOP_FAIL}${srv} "
 		fi
 	fi
 	
@@ -425,30 +441,56 @@ splash_svc() {
 }
 
 splash_exit() {
-	if [[ ${RUNLEVEL} == "S" ]]; then
+	if [[ ${RUNLEVEL} == "S" || ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
 		return 0
 	fi
 
-	if splash_is_silent ; then
+	if [[ "$(splash_get_mode)" == "silent" ]] ; then
 		/sbin/splash "verbose"
 	fi
-	
-	# We need to restart consolefont because fonts don't get set when the vc
-	# is in KD_GRAPHICS mode
-	if [[ -L "${svcdir}/started/consolefont" && ${spl_consfont_silent} == "0" ]]; then
-		/etc/init.d/consolefont restart 2>/dev/null >/dev/null
-	fi
+
+	splash_comm_send "exit"
+
+# FIXME
+#	# We need to restart consolefont because fonts don't get set when the vc
+#	# is in KD_GRAPHICS mode
+#	if [[ -L "${svcdir}/started/consolefont" && ${spl_consfont_silent} == "0" ]]; then
+#		/etc/init.d/consolefont restart 2>/dev/null >/dev/null
+#	fi
 
 	splash_cache_cleanup
 }
 
-splash_is_silent() {
-	if [[ -n "`/sbin/splash_util -c getmode 2>/dev/null | grep silent`" ]]; then
-		return 0
-	else
-		return 1
+# <svc> <state>
+splash_update_svc() {
+	local svc=$1
+	local state=$2
+	splash_comm_send "update_svc ${svc} ${state}"
+}
+
+# Sends data to the splash FIFO after making sure there's someone
+# alive on other end to receive it.
+splash_comm_send() {
+	if [[ "$(ps h --pid $(<${spl_pidfile}) -o comm 2>/dev/null)" == "splash_util.sta" ]]; then
+		echo $* > ${spl_fifo} &		
+	else	
+		echo "blah: $(ps h --pid $(<${spl_pidfile}) -o comm 2>/dev/null)" 
 	fi
 }
+
+splash_get_mode() {
+	local ctty="$(fgconsole)"
+
+	if [[ ${ctty} == "${SPLASH_TTY}" ]]; then
+		echo "silent"
+	else
+		if [[ -z "$(/sbin/splash_util.static -c getstate --vc=$(($ctty-1)) 2>/dev/null | grep off)" ]]; then
+			echo "verbose"
+		else
+			echo "off"
+		fi	
+	fi
+}	
 
 splash_verbose() {
 	/sbin/splash "verbose"
@@ -484,7 +526,7 @@ splash_save_vars() {
 splash_input_begin() {
 	local svc="$1"
 
-	if splash_is_silent; then
+	if [[ "$(splash_get_mode)" == "silent" ]] ; then
 		/sbin/splash "verbose"
 		export SPL_SVC_INPUT_SILENT=${svc}
 	fi
@@ -502,10 +544,12 @@ splash_input_end() {
 splash_svc_start() {
 	local svc="$1"
 
-	splash_load_vars
-	SPL_SVC_START="${SPL_SVC_START}${svc} "
-	SPL_SVC_INACTIVE_START="${SPL_SVC_INACTIVE_START// $svc / }"
-	splash_save_vars
+	splash_update_svc ${svc} "svc_start"
+	
+#	splash_load_vars
+#	SPL_SVC_START="${SPL_SVC_START}${svc} "
+#	SPL_SVC_INACTIVE_START="${SPL_SVC_INACTIVE_START// $svc / }"
+#	splash_save_vars
 
 	/sbin/splash "$svc"
 }
@@ -513,10 +557,12 @@ splash_svc_start() {
 splash_svc_stop() {
 	local svc="$1"
 
-	splash_load_vars
-	SPL_SVC_STOP="${SPL_SVC_STOP}${svc} "
-	SPL_SVC_INACTIVE_STOP="${SPL_SVC_INACTIVE_STOP// $svc / }"
-	splash_save_vars
+	splash_update_svc ${svc} "svc_stop"
+	
+#	splash_load_vars
+#	SPL_SVC_STOP="${SPL_SVC_STOP}${svc} "
+#	SPL_SVC_INACTIVE_STOP="${SPL_SVC_INACTIVE_STOP// $svc / }"
+#	splash_save_vars
 
 	/sbin/splash "$svc"
 }
@@ -524,37 +570,43 @@ splash_svc_stop() {
 splash_init_svclist() {
 	arg="$1"
 	
-	export SPL_SVC_INACTIVE_START SPL_SVC_START SPL_SVC_STARTED SPL_SVC_START_FAILED
-	export SPL_SVC_INACTIVE_STOP SPL_SVC_STOP SPL_SVC_STOPPED SPL_SVC_STOP_FAILED
+#	export SPL_SVC_INACTIVE_START SPL_SVC_START SPL_SVC_STARTED SPL_SVC_START_FAILED
+#	export SPL_SVC_INACTIVE_STOP SPL_SVC_STOP SPL_SVC_STOPPED SPL_SVC_STOP_FAILED
 
 	# we don't clear these variables if we have just switched to, for example, runlevel 3
-	if [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" || ${RUNLEVEL} == "S" ]]; then
-		SPL_SVC_INACTIVE_START=" "
-		SPL_SVC_START=" "
-		SPL_SVC_STARTED=" "
-		SPL_SVC_START_FAILED=" "
-		SPL_SVC_INACTIVE_STOP=" "
-		SPL_SVC_STOP=" "
-		SPL_SVC_STOPPED=" "
-		SPL_SVC_STOP_FAILED=" "
-	fi
+#	if [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" || ${RUNLEVEL} == "S" ]]; then
+#		SPL_SVC_INACTIVE_START=" "
+#		SPL_SVC_START=" "
+#		SPL_SVC_STARTED=" "
+#		SPL_SVC_START_FAILED=" "
+#		SPL_SVC_INACTIVE_STOP=" "
+#		SPL_SVC_STOP=" "
+#		SPL_SVC_STOPPED=" "
+#		SPL_SVC_STOP_FAILED=" "
+#	fi
 		
 	if [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
-		SPL_SVC_INACTIVE_STOP=" `dolisting "${svcdir}/started/" | sed -e "s#${svcdir}/started/##g"` "
+
+		for i in `dolisting "${svcdir}/started/" | sed -e "s#${svcdir}/started/##g"`; do
+			splash_update_svc ${i} "svc_inactive_stop"
+		done
+			
 	elif [[ ${RUNLEVEL} == "S" ]]; then
 		ts="`dolisting "/etc/runlevels/${SOFTLEVEL}/" | sed -e "s#/etc/runlevels/${SOFTLEVEL}/##g"`"
 		tb="`dolisting "/etc/runlevels/${BOOTLEVEL}/" | sed -e "s#/etc/runlevels/${BOOTLEVEL}/##g"`"
 		td="`dolisting "/etc/runlevels/${DEFAULTLEVEL}/" | sed -e "s#/etc/runlevels/${DEFAULTLEVEL}/##g"`"
 		
 		if [[ ${arg} == "sysinit" ]]; then
-			SPL_SVC_INACTIVE_START=" ${CRITICAL_SERVICES} ${ts} ${tb} ${td} "	
-		else
-			SPL_SVC_STARTED=" `dolisting "${svcdir}/started/" | sed -e "s#${svcdir}/started/##g"` "
-			SPL_SVC_INACTIVE_START=" ${ts} ${tb} ${td} "
-		
-			for i in $SPL_SVC_STARTED; do
-				SPL_SVC_INACTIVE_START="${SPL_SVC_INACTIVE_START// $i / }"
+			for i in ${CRITICAL_SERVICES} ${ts} ${tb} ${td}; do
+				splash_update_svc ${i} "svc_inactive_start"
 			done
+#		else
+#			SPL_SVC_STARTED=" `dolisting "${svcdir}/started/" | sed -e "s#${svcdir}/started/##g"` "
+#			SPL_SVC_INACTIVE_START=" ${ts} ${tb} ${td} "
+#		
+#			for i in $SPL_SVC_STARTED; do
+#				SPL_SVC_INACTIVE_START="${SPL_SVC_INACTIVE_START// $i / }"
+#			done
 		fi
 	fi
 }
