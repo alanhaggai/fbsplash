@@ -158,8 +158,13 @@ splash_init() {
 	if [[ ${RUNLEVEL} == "S" && ${arg} == "sysinit" ]] || 
 	   [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
 		/sbin/splash "start"
+		# Set the input device if it exists
+		local t=$(grep -si keyboard /sys/class/input/event*/device/driver/description | grep -o 'event[0-9]\+') 
+		if [[ -n "${t}" ]]; then
+			splash_comm_send "set event dev /dev/input/${t}"
+		fi
 	fi
-
+	
 	splash_init_svclist "${arg}"
 	splash_save_vars
 }
@@ -175,8 +180,6 @@ splash_cache_prep() {
 		splash_verbose
 		return "${retval}"
 	fi
-
-	h=$(stat -c '%y' ${spl_tmpdir}/deptree)
 	
 	# Copy the dependency cache and services lists to our new cache dir. 
 	# With some luck, we won't have to update it.
@@ -185,9 +188,11 @@ splash_cache_prep() {
 
 	mount -n --move "${spl_tmpdir}" "${spl_cachedir}"
 
+	h=$(stat -c '%y' ${spl_cachedir}/deptree 2>/dev/null)
+
 	# Point depscan.sh to our cachedir
 	spl_cache_depscan="yes" /sbin/depscan.sh -u
-
+	
 	# Check whether the list of services that will be started during boot
 	# needs updating. This is generally the case if:
 	#  - one of the caches doesn't exist
@@ -198,7 +203,7 @@ splash_cache_prep() {
 		  ! -e ${spl_cachedir}/svcs_start ]]; then
 		echo $(splash_svclist_update "start") > ${spl_cachedir}/svcs_start
 	else
-		local lastlev, timestamp
+		local lastlev timestamp
 		{ read lastlev; read timestamp; } < ${spl_cachedir}/levels
 		if [[ "${lastlev}" != "${BOOTLEVEL}/${DEFAULTLEVEL}" || \
 			  "${timestamp}" != "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" || \
@@ -545,11 +550,9 @@ splash_init_svclist() {
 	arg="$1"
 	
 	if [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
-
 		for i in `dolisting "${svcdir}/started/" | sed -e "s#${svcdir}/started/##g"`; do
 			splash_update_svc ${i} "svc_inactive_stop"
 		done
-			
 	elif [[ ${RUNLEVEL} == "S" ]]; then
 		ts="`dolisting "/etc/runlevels/${SOFTLEVEL}/" | sed -e "s#/etc/runlevels/${SOFTLEVEL}/##g"`"
 		tb="`dolisting "/etc/runlevels/${BOOTLEVEL}/" | sed -e "s#/etc/runlevels/${BOOTLEVEL}/##g"`"
