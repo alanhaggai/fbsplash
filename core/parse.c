@@ -620,7 +620,8 @@ char *parse_quoted_string(char *t, u8 keepvar)
 
 	while ((*p != '"' || *(p-1) == '\\') && *p != 0) {
 		if (*p == '\\') {
-			cnt++;
+			if (!keepvar)
+				cnt++;
 			p++;
 			if (*p == 0)
 				break;
@@ -637,17 +638,17 @@ char *parse_quoted_string(char *t, u8 keepvar)
 		printerr("Failed to allocate memory for a quoted string.");
 		return NULL;
 	}
-	
-	for (i = 0; i < len; i++, t++) {
 
+	for (i = 0; i < len; i++, t++) {
 		if (*t == '\\' && i < len-1) {
-			if (!keepvar || (keepvar && *(t+1) != '$'))
+			if (!keepvar) {
 				t++;
+			} 
 		}
 		out[i] = t[0];	
 	}
 
-	out[len-cnt+1] = 0;
+	out[len-cnt] = 0;
 	return out;
 }
 

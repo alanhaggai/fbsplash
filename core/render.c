@@ -430,30 +430,31 @@ char *eval_text(char *txt)
 
 	ret = malloc(len+1);
 
-	if (i == len) {
-		strcpy(ret, txt);
-		return ret;
-	}
-	
 	p = txt;
 	d = ret;
-	
-	while ((t = strstr(p, "$progress")) != NULL) {
-		strncpy(d, p, t - p);
-		d += (t-p);
-		
-		if (t > txt && *(t-1) == '\\') {
-			*(d-1) = '$';
-			p = t+1;
+
+	while (*p != 0) {
+
+		if (*p == '\\') {
+			p++;
+			*d = *p;
+			p++;
+			d++;
 			continue;
 		}
-
-		d += sprintf(d, "%d", arg_progress * 100 / PROGRESS_MAX);
-		p = t;
-		p += 9;
+		
+		*d = *p;
+		
+		if (!strncmp(p, "$progress", 9)) {
+			d += sprintf(d, "%d", arg_progress * 100 / PROGRESS_MAX);
+			p += 9;
+		} else {
+			p++;
+			d++;
+		}
 	}
 
-	strcpy(d, p);	
+	*d = *p;
 	
 	return ret;	
 }
