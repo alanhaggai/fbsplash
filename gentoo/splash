@@ -1,0 +1,128 @@
+#!/bin/bash
+# Copyright 1999-2004 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+#
+# splash - a script to handle rc_scripts events and execute appropriate
+#          fbsplash actions; loosely based on bootsplash /sbin/splash
+#
+# Author: Michal Januszewski <spock@gentoo.org>
+#
+# $Header: $
+
+# this is a little hack that we use to avoid a hell lot of error msgs 
+# when sourcing splash configuration files
+function box() { true; }
+function icon() { true; }
+function rect() { true; }
+
+test -f /etc/conf.d/splash && . /etc/conf.d/splash
+test -f /etc/conf.d/rc && . /etc/conf.d/rc
+test -z "${SPLASH_THEME}" && SPLASH_THEME="default"
+test "$RUNLEVEL" == "6" -o "$RUNLEVEL" == "0" && SHUTDOWN="yes"
+
+SPLUTIL="/sbin/splash_util.static"
+
+[ ! -e /proc/fbsplash ] && exit 1
+[ ! -e /dev/fbsplash ] && exit 1
+[ ! -x /sbin/fbres ] && exit 1
+[ ! -x /sbin/splash_util.static ] && exit 1
+
+# kernel command line override for the splash theme
+for param in `grep "theme:" /proc/cmdline`; do
+	t=${param%:*}
+	if [ "${t#*,}" == "theme" ]; then
+		SPLASH_THEME="${param#*:}"
+	fi
+done
+
+res=$(/sbin/fbres)
+themefile="/etc/splash/${SPLASH_THEME}/$res.cfg"
+test -f "${themefile}" && . "${themefile}"
+
+print_text() {
+	text="Booting the system... Press F2 for verbose mode"
+	[ -n "${SPLASH_BOOT_MESSAGE}" ] && text="${SPLASH_BOOT_MESSAGE}"
+
+	if [ "${SHUTDOWN}" == "yes" ]; then
+		text="Shutting down the system... Press F2 for verbose mode"
+		[ -n "${SPLASH_SHUTDOWN_MESSAGE}" ] && text="${SPLASH_SHUTDOWN_MESSAGE}"
+
+		if [ "${RUNLEVEL}" == "6" ]; then
+			text="Rebooting the system... Press F2 for verbose mode"
+			[ -n "${SPLASH_REBOOT_MESSAGE}" ] && text="${SPLASH_REBOOT_MESSAGE}"
+		fi
+	fi
+
+	if [ -n "$text_x" -a -n "$text_y" -a -n "$text_color" -a -n "$text_size" ]
+	then
+		options="-x $text_x -y $text_y -t $text_color -s $text_size"
+		if [ -n "${SPLASH_FONT}" -a -f "/etc/splash/${SPLASH_FONT}" ]; then
+			options="$options -f \"/etc/splash/${SPLASH_FONT}\""
+		fi
+		
+		if [ -n "$text_font" -a -f "/etc/splash/${SPLASH_THEME}/$text_font" ]; then
+			options="$options -f \"/etc/splash/${SPLASH_THEME}/$text_font\""
+		fi
+			
+		eval "/sbin/fbtruetype.static $options \"$text\""
+	fi
+}
+
+paint_progress() {
+	progress=$(($spl_init + ($spl_count) * ($spl_rate - $spl_init) / $spl_scripts))
+	${SPLUTIL} --vc=0 --progress=${progress} --theme=${SPLASH_THEME} --mode=s --cmd=paint
+}
+
+# Start silent splash on system shutdown/reboot
+if [ "$1" == "start" ]; then
+
+	if [ -n "`${SPLUTIL} -c getmode 2>/dev/null | grep silent 2>/dev/null`" ] ||
+	   [ -n "`grep silent /proc/cmdline 2>/dev/null`" -a "${SHUTDOWN}" = "yes" ] ; then
+	
+		if [ -x /usr/bin/chvt ]; then
+			/usr/bin/chvt 1
+		fi
+
+		${SPLUTIL} -c setmode -m s
+		${SPLUTIL} -c repaint -m s --theme=${SPLASH_THEME}
+		
+		if [ "$?" != 0 ]; then
+			${SPLUTIL} -c setmode -m v
+			${SPLUTIL} -c off
+		else
+			${SPLUTIL} -c on 2>/dev/null
+			print_text
+		fi
+	fi
+
+elif [ "$1" == "silent" ]; then
+
+	${SPLUTIL} -c setmode -m s
+	${SPLUTIL} -c repaint -m s --theme=${SPLASH_THEME}
+	
+	if [ "$?" != 0 ]; then
+		${SPLUTIL} -c setmode -m v
+		${SPLUTIL} -c off
+	else
+		${SPLUTIL} -c on 2>/dev/null
+		paint_progress
+		print_text
+	fi
+	
+elif [ "$1" == "verbose" ]; then
+
+	if [ -n "`${SPLUTIL} -c getmode 2>/dev/null | grep silent 2>/dev/null`" ]; then
+		${SPLUTIL} -c setmode -m v
+	fi
+
+elif [ "$1" == "text" ]; then
+	if [ -n "`grep \"silent\" /proc/cmdline 2>/dev/null`" ]; then
+		print_text
+	fi
+else
+	if [ -n "`${SPLUTIL} -c getmode | grep silent`" ]; then
+		paint_progress
+	fi
+fi
+
+exit 0

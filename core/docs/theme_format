@@ -1,0 +1,106 @@
+splashutils recognize the following directives in the config files in
+/etc/splash:
+
+o jpeg=<path>
+  Full path to the JPG background image for verbose mode 
+
+o pic=<path>
+  Full path to the JPG/PNG background image for verbose mode
+
+o silentjpeg=<path>
+  Full path to the JPG backgruond image for silent mode
+
+o silentpic=<path>
+  Full path to the JPG/PNG background image for silent mode
+
+o pic256=<path>
+  Full path to the PNG background image for verbose splash mode and 8bpp
+  framebuffer modes. 
+
+  NOTES:
+  - The image can have a maximum of 240 colors. 16 colors are taken by fbcon 
+    and cannot be used in the picture.
+
+o silentpic256=<path>
+  Full path to the PNG background image for silent splash mode and 8bpp
+  framebuffer modes.
+
+  NOTES:
+  - The image can have a maximum of 256 colors.
+ 
+o bgcolor=<n>
+  Background color that is to be treated as transparent by fbcon. Usually 0.
+
+o tx=<n>
+  The x coordinate of the upper left corner of the text window. 0 means 'the
+  left edge of the screen'.
+
+o ty=<n>
+  The y coordinate of the upper left corner of the text window. 0 means 'the
+  top edge of the screen'
+
+o tw=<n>
+  The width of the text window. n cannot be greater than x resolution.
+
+o th=<n>
+  The height of the text windows. n cannot be greater than y resolution.
+
+o box [flags] <x0> <y0> <x1> <y1> <color1> [color2 color3 color4]
+  Draws a box on the image. 
+
+  Flags:
+  silent - The box is drawn only in silent mode. If a box doesn't have this 
+           flag set, it's drawn only in verbose mode.
+  noover - This stands for no-overpaint. Boxes with this flag set are painted
+           only when progress == 0 or the repaint command is used.
+  inter  - The box will be interpolated with the following one, based on the
+           value of progress.
+
+  x0, y0 - coordinates of the upper left corner of the box
+  x1, y1 - coordinates of the lower right corner of the box
+
+  Colors are specified one of the following formats:
+  #rrggbb or #rrggbbaa.
+  aa = alpha, 00 - translucent, 255 - solid
+
+  If only color1 is specified, the box is filled with the color.
+  If all four colors are specified, then:
+  
+  color1   is the color of the   upper left    corner of the box,
+  color2   is the color of the   upper right   corner of the box,
+  color3   is the color of the   lower left    corner of the box,
+  color4   is the color of the   lower right   corner of the box,
+
+  and the box is filled with a gradient formed by these colors.
+
+o icon <path> <x> <y> [event service]
+  Draws an icon (a PNG image) at coordinates x, y [if an event happens].
+
+  event can be one of the following:
+  svc_inactive_start, 	svc_inactive_stop,
+  svc_started, 		svc_stopped,
+  svc_start_failed, 	svc_stop_failed,
+  svc_start, 		svc_stop,
+
+  service is (surprise, surprise!) the name of the service.
+
+  An icon will be rendered on the screen only if the service name
+  is found in a environment variable appropriate for the selected 
+  event. The list of variable names corresponding to the events
+  follows:
+  SPL_SVC_INACTIVE_START	SPL_SVC_INACTIVE_STOP
+  SPL_SVC_STARTED		SPL_SVC_STOPPED
+  SPL_SVC_START_FAILED		SPL_SVC_STOP_FAILED
+  SPL_SVC_START			SPL_SVC_STOP
+
+  Each of this variables can contain a space-separated list of 
+  service names.
+
+o rect <attr> <x0> <y0> <x1> <y1>
+  Describes a rectangular area on the screen with some special
+  attribute attr. Available attributes:
+
+  repaint - causes the area to be repainted every time splash_util
+            is called with the 'paint' command (with 'repaint', the
+	    whole screen is repainted)
+ 

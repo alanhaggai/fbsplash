@@ -1,0 +1,61 @@
+
+ splashutils -- userspace utilities for the framebuffer splash
+
+ Prerequisities:
+  - you have to be running a 2.6 kernel built CONFIG_FB_SPLASH enabled  
+  - you have to have this kernel's sources available
+  
+ Installation:
+ 
+  1) Create a symlink 'linux' pointing to your kernel sources. In common
+     cases `ln -s /usr/src/linux linux` should be enough. 
+  2) Choose configuration options. This step is optional, the defaults should be
+     OK as long as you're not making a special config. You can:
+     - disable PNG support (config.h)
+     - change the themes directory (config.h)
+     - dynamically link to klibc (Makefile, K_SHARED) 
+       This is not recommended, the space gain will be minimal and you may
+       create yourself some problems this way. Note that with the current
+       versions of klibc, you have to put the exact same file you used during
+       compile time into the kernel initramfs image. This is means, that if
+       you're using another version of klibc than the one supplied within this
+       package, you'll have to link it in ./libs and change LIBCSRC in the
+       Makefile to point to these sources
+     - enable debugging support (Makefile, DEBUG)
+  3) make
+  4) make install
+
+ After a successful installation you'll have the following programs installed on
+ your system:
+
+ /sbin/splash_helper - the kernel helper, it's not meant to be used directly by 
+                       the user
+ /sbin/splash_util   - the fbsplash control utility, use this program to control
+                       the fbsplash behaviour; this program is meant to be used
+                       directly by the user and by the system scripts (which
+                       will be the case if your distro's initscripts have
+                       support for a boot-up progressbar, etc).
+ /usr/sbin/splash_geninitramfs - an utility to make the process of creating
+                                 initramfs images for fbsplash a little easier
+
+ Usage:
+
+  First you will have to get some fbsplash themes and place them in /etc/splash.
+  Once you have done that, you can use splash_util to enable fbsplash on some of
+  your virtual consoles. For example, to enable fbsplash on the first console
+  and make it use the theme 'tux', you should use:
+
+  # splash_util --vc=1 --theme=tux --cmd=setcfg
+  # splash_util --vc=1 --theme=tux --cmd=setpic
+  # splash_util --vc=1 --cmd=on
+
+ For information about themes, making fbsplash work in the early stages of
+ boot-up and other topics please refer to files in the docs/ subdirectory.
+
+ For technical documentation on the kernel<->userspace fbsplash interface
+ please refer to <kernel sources>/Documentation/fb/splash.txt.
+
+ Any comments, suggestions and bug-reports are appreciated.
+
+Michal Januszewski
+<spock@gentoo.org>

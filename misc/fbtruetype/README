@@ -1,0 +1,23 @@
+* fbmngplay *
+
+a simple fbcon based truetype text renderer
+
+This is a simple example program, using the kernel framebuffer device
+to display text, rendered with freetype2.
+
+On a unix-like system, the build instructions are simple:
+
+(install and/or build the freetype2 library)
+make
+make install
+
+To use the renderer:
+
+fbtruetype -f /path/to/times.ttf "Text to display"
+
+See the options with 
+fbtruetype -h
+
+---
+Stefan Reinauer, <stepan@suse.de>
+$Date: 2004/05/29 21:40:30 $

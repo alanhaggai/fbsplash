@@ -1,0 +1,205 @@
+#!/bin/bash
+#
+# splash_geninitramfs -- an utility to create initramfs images for use with fbsplash 
+#
+# Copyright (C) 2004, Michal Januszewski <spock@gentoo.org>
+#
+# This file is part of the splashutils package.
+#
+# This file is subject to the terms and conditions of the GNU General Public
+# License.  See the file COPYING in the main directory of this archive for
+# more details.
+#
+# $Header: /srv/cvs/splash/utils/scripts/splash_geninitramfs,v 1.6 2005/01/29 23:27:50 spock Exp $
+
+cleanup()
+{
+	rm -rf ${workdir}
+}
+
+usage()
+{
+	cat <<EOTB
+splash_geninitramfs/splashutils-%PKG_VERSION%
+Usage: splash_geninitramfs [options] [--all|theme ...]
+
+Main operation modes:
+  -g, --generate=IMG  generate an initramfs image with all necessary files
+  -a, --append=IMG    append a theme and helper files (if necessary)
+                      to an initramfs image
+  -c, --copy=DIR      copy all necessary files into the specified directory;
+                      DIR should point to the root directory of an initramfs
+  -h, --help          show this help message
+
+Options:
+  -r, --res=RES   copy data for specific resolutions only; RES is a 
+                  comma-separated list of the resolutions for which the images
+		  are to be copied
+  -v, --verbose   verbose output
+EOTB
+
+#   -d              use dynamically linked splash helper
+}
+
+printv()
+{
+	if [ $verbose -gt 0 ]; then
+		echo "$*"
+	fi
+}
+
+themedir="/etc/splash"
+declare -a themes
+mode="h"
+splash_hlp="/sbin/splash_helper"
+res=""
+verbose=0
+index=0
+
+args="$@"
+temp=`getopt -l all,generate:,append:,copy:,help,verbose,res: a:g:c:r:hv "$@"`
+
+if [ $? != 0 ]; then
+	usage; exit 2
+fi
+
+eval set -- "$temp"
+
+for i ; do
+	case "$i" in
+		-a|--append) 	mode='a'; img="$2"; shift; shift;;
+		-g|--generate)	mode='g'; img="$2"; shift; shift;;
+		-c|--copy)	mode='c'; destdir="$2"; shift; shift;;
+		-h|--help)	usage; exit 2;;
+#		-d)		splash_hlp="/sbin/splash_helper.dyn"; shift;;
+		-r|--res)	res=${2/,/ }; shift; shift;;
+		-v|--verbose)	verbose=$(($verbose + 1)); shift;;
+		--)		shift; break;;
+		--all)		
+				shift; 
+				for i in ${themedir}/* ; do
+					if [ ! -d "$i" ] ; then
+						continue
+					fi
+					themes[$index]="`basename "$i"`"
+					let "index++"
+				done;;
+	esac
+done
+
+if [ "$mode" == "h" ]; then
+	usage ; exit 2
+fi
+
+if [ $index -eq 0 ]; then
+	for i ; do
+		themes[$index]="$i"
+		let "index++"
+	done
+fi
+
+if [ $index -eq 0 ]; then
+	echo "No themes specified." 1>&2 ; exit 5
+fi
+
+if [ "$mode" == "c" ]; then
+	if [ ! -d $destdir ]; then
+		echo "Destination directory does not exist." 1>&2 ; exit 3
+	fi
+	imgdir=$destdir
+else
+	if [ "$mode" == "a" ] && [ ! -e $img ]; then
+		echo "Specified image file does not exist." 1>&2 ; exit 4
+	fi
+	
+	workdir=${TMPDIR-/tmp}/splash.$$.$RANDOM
+
+	if (umask 077 && mkdir $workdir); then
+		trap "cleanup" EXIT
+	else
+		echo "Could not create temporary directory! Exiting." 1>&2 ; exit 1
+	fi
+fi
+
+if [ "$mode" != "c" ]; then
+	imgdir="${workdir}/img"
+	mkdir "${imgdir}"
+fi
+
+if [ "$mode" == "a" ]; then
+	printv "o Unpacking $img.."
+	cp "$img" "${imgdir}"
+	(cd "${imgdir}" ; gunzip -c $(basename $img) | cpio -idm --quiet -H newc)
+	rm -f "${imgdir}/$(basename $img)"
+fi
+
+printv "o Creating directory structure.."
+mkdir -p ${imgdir}/{dev,dev/fb,dev/misc,dev/vc,$themedir,proc,root,sbin,sys}
+
+if [ $EUID == 0 ]; then
+	mknod "${imgdir}/dev/null" c 1 3
+	mknod "${imgdir}/dev/console" c 5 1
+fi
+
+if [ ! -e ${splash_hlp} ]; then
+	echo "${splash_hlp} does not exist." 1>&2 ; exit 4
+fi
+
+printv "o Copying ${splash_hlp}.."
+cp "${splash_hlp}" "${imgdir}/sbin"
+
+res=${res//,/ }
+
+printv "o Copying themes.."
+for (( i=0 ; i < index ; i++ )) ; do
+
+	theme=${themes[$i]}
+	
+	printv "  - ${theme}"
+	
+	# check if the user specified which resolutions are accepted
+	# (default: all res)
+	if [ -z "$res" ]; then 
+		cp -pRH "${themedir}/${theme}" "${imgdir}/${themedir}"
+	else
+		for j in $res ; do
+			if [ ! -e "${themedir}/${theme}/${j}.cfg" ]; then
+				echo "Warning: config file for theme '${theme}', resolution ${j} does not exist!" 1>&2
+				continue
+			fi
+
+			cp -pRH --parents "${themedir}/${theme}/${j}.cfg" "${imgdir}"
+
+			# config file parsing
+			pics=`cat "${themedir}/${theme}/${j}.cfg" | \
+			      sed -r -e '/(^(silent)?jpeg=)|(^(silent)?pic[0-9]*=)/! d' \
+			             -e 's/[a-z0-9]+=(.*)/\1/'`
+			for pic in $pics ; do
+				if [ "${pic:0:1}" == "/" ]; then
+					cp -pRH --parents "${pic}" "${imgdir}"
+				else
+					cp -pRH --parents "${themedir}/${theme}/${pic}" "${imgdir}"
+				fi
+			done
+
+			icons=`cat "${themedir}/${theme}/${j}.cfg" | \
+			       egrep -v '^#' | grep icon | awk '{print $2}'`
+			for icon in $icons ; do
+				if [ "${icon:0:1}" == "/" ]; then
+					cp -pRH --parents "${icon}" "${imgdir}"
+				else
+					cp -pRH --parents "${themedir}/${theme}/${icon}" "${imgdir}"
+				fi
+			done
+		done
+	fi
+done
+
+printv "o Creating initramfs image.."
+if [ "$mode" == "g" ] || [ "$mode" == "a" ]; then	
+	(cd "${imgdir}" ; find . | cpio --quiet --dereference -o -H newc | gzip -9 >../img.cpio.gz)
+	mv "${workdir}/img.cpio.gz" "${img}"
+fi
+
+exit 0
+

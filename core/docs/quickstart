@@ -1,0 +1,23 @@
+This is a short guide for those who don't have time/don't bother reading
+the other docs. 
+
+Assumptions:
+ o The sources for the kernel are in /usr/src/linux.
+ o You have the theme default in /etc/splash.
+
+What to do:
+
+ 1. Configure your kernel if you haven't already done so. Make sure fbsplash
+    is enabled. Then build it: 
+    cd /usr/src/linux ; make
+ 2. Build splashutils:   make
+ 3. Install splashutils: make install
+ 4. Generate an initramfs image:
+    splash_geninitramfs -g /usr/src/linux/usr/initramfs_data.cpio.gz -r 1024x768 default
+ 5. Update your kernel bzImage
+    cd /usr/src/linux ; make bzImage
+ 6. Install your kernel image and add splash=silent or splash=verbose to the
+    kernel command line. If you choose verbose mode, you can skip steps 4 and 5.
+
+That's about it. Reboot and enjoy ;)
+
