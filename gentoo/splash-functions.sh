@@ -409,7 +409,9 @@ splash_svc() {
 	local err="$2"
 	local act="$3"
 
-	if [[ ${err} -ne 0 && ${SPLASH_VERBOSE_ON_ERRORS} == "yes" ]]; then
+	# We ignore the serial initscript since it's known to return bogus error codes
+	# while not printing any error messages. This only confuses the users.
+	if [[ ${err} -ne 0 && ${SPLASH_VERBOSE_ON_ERRORS} == "yes" && "${srv}" != "serial" ]]; then
 		/sbin/splash "verbose"
 		return 1
 	fi

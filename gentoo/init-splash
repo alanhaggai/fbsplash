@@ -1,9 +1,6 @@
 #!/sbin/runscript
 # Copyright 1999-2005 Gentoo Foundation 
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /home/cvsroot/gentoo-src/bootsplash/core/misc/bootsplash,v 1.2 2004/05/29 21:40:30 spock Exp $
-
-# default settings
 
 # run after local so that the boot time splash image
 # is visible for as long as possible
