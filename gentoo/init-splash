@@ -27,8 +27,7 @@ start() {
 		ebegin "Setting framebuffer console images"
 		splash_setup
 		
-		for TTY in ${SPLASH_TTYS}
-		do
+		for TTY in ${SPLASH_TTYS} ; do
 			theme="${SPLASH_THEME}"
 
 			if [[ ${TTY} == "0" && -z "$(/sbin/splash_util -c getstate --vc=${TTY}| grep 'off')" ]]; then
@@ -36,8 +35,7 @@ start() {
 			fi
 
 			if [[ -n "${SPLASH_TTY_MAP}" ]]; then
-				for i in ${SPLASH_TTY_MAP}
-				do
+				for i in ${SPLASH_TTY_MAP} ; do
 					if [[ "${i%:*}" == "${TTY}" ]]; then
 						theme="${i#*:}"
 					fi
@@ -52,5 +50,3 @@ start() {
 		eend $? "Failed to set framebuffer console images"
 	fi
 }
-
-
