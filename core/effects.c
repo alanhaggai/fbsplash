@@ -16,7 +16,7 @@
 #include <sys/ioctl.h>
 #include "splash.h"
 
-#define FADEIN_STEPS 	32
+#define FADEIN_STEPS 	128
 #define FADEIN_STEPS_DC 256
 
 void put_img(u8 *dst, u8 *src)
@@ -68,14 +68,20 @@ void fade_in_directcolor(u8 *dst, u8 *image, int fd)
 void fade_in_truecolor(u8 *dst, u8 *image)
 {
 	int rlen, glen, blen;
-	int i, step, h;
-	u8 *t, *pic;
+	int i, step, h, x, y;
+	u8 *t, *p, *pic;
 	int r, g, b, rt, gt, bt;
-
+	int rl8, gl8, bl8;
+	int clut[256][FADEIN_STEPS];
+	
 	rlen = fb_var.red.length;
 	glen = fb_var.green.length;
 	blen = fb_var.blue.length;
 
+	rl8 = 8 - rlen;
+	gl8 = 8 - glen;
+	bl8 = 8 - blen;
+	
 	t = malloc(fb_var.xres * fb_var.yres * 3);
 	if (!t) {
 		put_img(dst, image);
@@ -83,7 +89,9 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 	}
 
 	pic = image;
-	
+
+	/* Decode the image into a table where each color component
+	 * takes exatly one byte */
 	for (i = 0; i < fb_var.xres * fb_var.yres; i++) {
 
 		if (bytespp == 2) { 
@@ -96,9 +104,9 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 
 		pic += bytespp;
 
-		r = ((h >> fb_var.red.offset & ((1 << rlen)-1)) << (8 - rlen));
-		g = ((h >> fb_var.green.offset & ((1 << glen)-1)) << (8 - glen));
-		b = ((h >> fb_var.blue.offset & ((1 << blen)-1)) << (8 - blen));
+		r = ((h >> fb_var.red.offset & ((1 << rlen)-1)) << rl8);
+		g = ((h >> fb_var.green.offset & ((1 << glen)-1)) << gl8);
+		b = ((h >> fb_var.blue.offset & ((1 << blen)-1)) << bl8);
 
 		if (bytespp == 2) {
 			h = (1 << rlen) - 1;	
@@ -115,49 +123,64 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 		t[i*3+1] = g;
 		t[i*3+2] = b;
 	}
-	
-	for (step = 0; step < FADEIN_STEPS+1; step++) {
 
-		pic = image;
-		
-		for (i = 0; i < fb_var.xres * fb_var.yres; i++) {
-	
-			r = t[i*3];
-			g = t[i*3+1];
-			b = t[i*3+2];
-
-			rt = step * r / FADEIN_STEPS;
-			gt = step * g / FADEIN_STEPS;
-			bt = step * b / FADEIN_STEPS;
-	
-			rt >>= (8 - rlen);
-			gt >>= (8 - glen);
-			bt >>= (8 - blen);
-
-			h = (rt << fb_var.red.offset) |
-		 	    (gt << fb_var.green.offset) |
-			    (bt << fb_var.blue.offset);
-
-			if (bytespp == 2) {
-				*(u16*)pic = h;
-				pic += 2;
-			} else if (bytespp == 3) {
-				
-				if (endianess == little) { 
-					*(u16*)pic = h & 0xffff;
-					pic[2] = (h >> 16) & 0xff;
-				} else {
-					*(u16*)pic = (h >> 8) & 0xffff;
-					pic[2] = h & 0xff;
-				}
-				pic += 3;
-			} else if (bytespp == 4) {
-				*(u32*)pic = h;
-				pic += 4;
-			}
+	/* Compute the color look-up table */
+	for (step = 0; step < FADEIN_STEPS; step++) {
+		for (i = 0; i < 256; i++) {
+			clut[i][step] = (step+1) * i / FADEIN_STEPS; 
 		}
+	}
 	
-		put_img(dst, image);
+	memset(dst, 0, fb_var.yres * fb_fix.line_length); 
+
+	for (step = 0; step < FADEIN_STEPS; step++) {
+
+		pic = dst;
+		p = t;
+	
+		for (y = 0; y < fb_var.yres; y++) {
+	
+			for (x = 0; x < fb_var.xres; x++) {
+			
+				r = *p; p++;
+				g = *p; p++;
+				b = *p; p++;
+
+				rt = clut[r][step];
+				gt = clut[g][step];
+				bt = clut[b][step];
+							
+				if (bytespp == 2) {
+					rt >>= rl8;
+					gt >>= gl8;
+					bt >>= bl8;
+				}
+					
+				h = (rt << fb_var.red.offset) |
+				    (gt << fb_var.green.offset) |
+				    (bt << fb_var.blue.offset);
+
+				if (bytespp == 2) {
+					*(u16*)pic = h;
+					pic += 2;
+				} else if (bytespp == 3) {
+					
+					if (endianess == little) { 
+						*(u16*)pic = h & 0xffff;
+						pic[2] = (h >> 16) & 0xff;
+					} else {
+						*(u16*)pic = (h >> 8) & 0xffff;
+						pic[2] = h & 0xff;
+					}
+					pic += 3;
+				} else if (bytespp == 4) {
+					*(u32*)pic = h;
+					pic += 4;
+				}
+			}
+
+			pic += fb_fix.line_length - fb_var.xres * bytespp;
+		}
 	}
 	
 	free(t);
