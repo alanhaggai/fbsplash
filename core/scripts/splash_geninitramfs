@@ -147,8 +147,8 @@ printv "o Creating directory structure.."
 mkdir -p ${imgdir}/{dev,dev/fb,dev/misc,dev/vc,$themedir,proc,root,sbin,sys}
 
 if [ $EUID == 0 ]; then
-	mknod "${imgdir}/dev/null" c 1 3
-	mknod "${imgdir}/dev/console" c 5 1
+	[[ ! -e "${imgdir}/dev/null" ]] 	&& mknod "${imgdir}/dev/null" c 1 3
+	[[ ! -e "${imgdir}/dev/console" ]] 	&& mknod "${imgdir}/dev/console" c 5 1
 fi
 
 if [ ! -e ${splash_hlp} ]; then
