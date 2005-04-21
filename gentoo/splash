@@ -40,11 +40,11 @@ get_boot_message() {
 }
 
 update_progress() {
-
 	local srv=$1
 		
 	splash_load_vars	
 	[[ -n "${spl_execed}" && -z "${spl_execed//* $srv */}" ]] && return
+	[[ -n "${spl_scripts}" ]] && return
 	spl_execed="${spl_execed} ${srv} "
 	spl_count=$((${spl_count} + 1))
 		
