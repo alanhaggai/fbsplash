@@ -24,6 +24,6 @@ scp splashutils-${ver}.tar.bz2 spock@dev.gentoo.org:/home/spock
 eend $?
 
 ebegin Copying the tarball to the SDS
-cp splashutils-${ver}.tar.bz2 ${SDS_ROOT}/htdocs/projects/gensplash/archive
+cp splashutils-${ver}.tar.bz2 ${SDSROOT}/htdocs/projects/gensplash/archive
 eend $?
 
