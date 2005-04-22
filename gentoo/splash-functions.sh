@@ -179,11 +179,11 @@ splash_init() {
 }
 
 splash_cache_prep() {
-	mount -n -t "${spl_cachetype}" cachedir "${spl_tmpdir}" \
+	mount -ns -t "${spl_cachetype}" cachedir "${spl_tmpdir}" \
 		-o rw,mode=0644,size="${spl_cachesize}"k
 
 	retval=$?
-		
+	
 	if [[ ${retval} -ne 0 ]]; then
 		eerror "Unable to create splash cache - switching to verbose."
 		splash_verbose
@@ -225,12 +225,15 @@ splash_cache_prep() {
 }
 
 splash_cache_cleanup() {
+	# Don't try to clean anything up if the cachedir is not mounted.
+	[[ -z "$(grep ${spl_cachedir} /proc/mounts)" ]] && return;
 	[[ ! -d "${spl_tmpdir}" ]] && mkdir "${spl_tmpdir}"
-	mount --move "${spl_cachedir}" "${spl_tmpdir}"
+	mount -n --move "${spl_cachedir}" "${spl_tmpdir}"
 	cp -a "${spl_tmpdir}"/{envcache,depcache,deptree,svcs_start,svcs_stop} "${spl_cachedir}" 2>/dev/null
 	echo "${BOOTLEVEL}/${DEFAULTLEVEL}" > "${spl_cachedir}/levels"
 	echo "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" \
 		 >> "${spl_cachedir}/levels"
+	killall -9 splash_util.static >/dev/null 2>/dev/null
 	umount -l "${spl_tmpdir}" 2>/dev/null
 }
 
@@ -443,8 +446,6 @@ splash_exit() {
 	fi
 
 	splash_comm_send "exit"
-
-	killall -9 splash_util.static >/dev/null 2>/dev/null
 	splash_cache_cleanup
 }
 
@@ -462,7 +463,8 @@ splash_comm_send() {
 		return 1
 	fi
 	
-	if [[ "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]]; then
+	if [[ -r /proc/$(<${spl_pidfile})/status && 
+		  "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]]; then
 		echo $* > ${spl_fifo} &		
 	fi
 }
