@@ -120,24 +120,16 @@ void render_box2(box *box, u8 *target)
 		a = a1; fa = (float)a1;
 				
 		for (x = box->x1; x <= box->x2; x++) {
-
 			if (!opt) { 
-				if (!solid) {
-					fa += ha;
-					fr += hr;
-					fg += hg;
-					fa += hb;
+				fa += ha;
+				fr += hr;
+				fg += hg;
+				fa += hb;
 		
-					a = (u8)fa;
-					b = (u8)fb;
-					g = (u8)fg;
-					r = (u8)fr;
-				} else {
-					a = box->c_ul.a;
-					r = box->c_ul.r;
-					g = box->c_ul.g;
-					b = box->c_ul.b;
-				}
+				a = (u8)fa;
+				b = (u8)fb;
+				g = (u8)fg;
+				r = (u8)fr;
 			}
 				
 			if (a != 255) {
@@ -151,28 +143,28 @@ void render_box2(box *box, u8 *target)
 					i = *(u32*)pic & ((2 << fb_var.bits_per_pixel)-1);
 				}
 
-				r = (( (i >> fb_var.red.offset & ((1 << rlen)-1)) 
+				r1 = (( (i >> fb_var.red.offset & ((1 << rlen)-1)) 
 				      << (8 - rlen)) * (255 - a) + r * a) / 255;
-				g = (( (i >> fb_var.green.offset & ((1 << glen)-1)) 
+				g1 = (( (i >> fb_var.green.offset & ((1 << glen)-1)) 
 				      << (8 - glen)) * (255 - a) + g * a) / 255;
-				b = (( (i >> fb_var.blue.offset & ((1 << blen)-1)) 
+				b1 = (( (i >> fb_var.blue.offset & ((1 << blen)-1)) 
 				      << (8 - blen)) * (255 - a) + b * a) / 255;
 			}
 		
 			/* we only need to do dithering is depth is <24bpp */
 			if (fb_var.bits_per_pixel < 24) {
-				r = CLAMP(r + add*2 + 1);
-				g = CLAMP(g + add);
-				b = CLAMP(b + add*2 + 1);
+				r1 = CLAMP(r1 + add*2 + 1);
+				g1 = CLAMP(g1 + add);
+				b1 = CLAMP(b1 + add*2 + 1);
 			}
 	
-			r >>= (8 - rlen);
-			g >>= (8 - glen);
-			b >>= (8 - blen);
+			r1 >>= (8 - rlen);
+			g1 >>= (8 - glen);
+			b1 >>= (8 - blen);
 
-			i = (r << fb_var.red.offset) |
-		 	    (g << fb_var.green.offset) |
-			    (b << fb_var.blue.offset);
+			i = (r1 << fb_var.red.offset) |
+		 	    (g1 << fb_var.green.offset) |
+			    (b1 << fb_var.blue.offset);
 
 			if (fb_var.bits_per_pixel == 16) {
 				*(u16*)pic = i;
@@ -565,7 +557,7 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 		if (o->type == o_box) {
 			b = (box*)o->p;
 				
-			if (b->attr & BOX_SILENT && mode != 's')
+			if ((b->attr & BOX_SILENT) && mode != 's')
 				continue;
 
 			if (!(b->attr & BOX_SILENT) && mode != 'v')
