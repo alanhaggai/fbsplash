@@ -2,6 +2,9 @@
 
 source /devel/common/functions.sh
 
+TESTING=no
+[[ -z "${*/*--testing*/}" ]] && TESTING=yes
+
 ebegin Exporting data from repository
 svn export file:///devel/repos/splashutils/core >/dev/null
 eend $?
@@ -19,11 +22,13 @@ ebegin Removing the working copy
 rm -rf "splashutils-${ver}"
 eend $?
 
-ebegin Copying the tarball to dev.gentoo.org
-scp splashutils-${ver}.tar.bz2 spock@dev.gentoo.org:/home/spock
-eend $?
+if [[ ${TESTING} == "no" ]]; then
+	ebegin Copying the tarball to dev.gentoo.org
+	scp splashutils-${ver}.tar.bz2 spock@dev.gentoo.org:/home/spock
+	eend $?
 
-ebegin Copying the tarball to the SDS
-cp splashutils-${ver}.tar.bz2 ${SDSROOT}/htdocs/projects/gensplash/archive
-eend $?
+	ebegin Copying the tarball to the SDS
+	cp splashutils-${ver}.tar.bz2 ${SDS_ROOT}/htdocs/projects/gensplash/archive
+	eend $?
+fi
 

@@ -3,6 +3,9 @@
 source /devel/common/functions.sh
 . ver-gentoo
 
+TESTING=no
+[[ -z "${*/*--testing*/}" ]] && TESTING=yes
+
 if [[ "$1" == "minor" ]]; then
 	major=$(($major+1))
 	minor=0
@@ -28,16 +31,18 @@ ebegin Removing the working copy
 rm -rf "splashutils-gentoo-${ver}"
 eend $?
 
-ebegin Updating version data
-echo "major=${major}" > ver-gentoo
-echo "minor=${minor}" >> ver-gentoo
-echo "sub=${sub}" >> ver-gentoo
-eend $?
+if [[ "${TESTING}" == "no" ]]; then
+	ebegin Updating version data
+	echo "major=${major}" > ver-gentoo
+	echo "minor=${minor}" >> ver-gentoo
+	echo "sub=${sub}" >> ver-gentoo
+	eend $?
 
-ebegin Copying the tarball to dev.gentoo.org
-scp splashutils-gentoo-${ver}.tar.bz2 spock@dev.gentoo.org:/home/spock
-eend $?
+	ebegin Copying the tarball to dev.gentoo.org
+	scp splashutils-gentoo-${ver}.tar.bz2 spock@dev.gentoo.org:/home/spock
+	eend $?
 
-ebegin Copying the tarball to the SDS
-cp splashutils-gentoo-${ver}.tar.bz2 ${SDSROOT}/htdocs/projects/gensplash/archive
-eend $?
+	ebegin Copying the tarball to the SDS
+	cp splashutils-gentoo-${ver}.tar.bz2 ${SDS_ROOT}/htdocs/projects/gensplash/archive
+	eend $?
+fi
