@@ -3,7 +3,7 @@
 source /devel/common/functions.sh
 
 TESTING=no
-[[ -z "${*/*--testing*/}" ]] && TESTING=yes
+[[ -z "${*/*--testing*/}" && -n "$*" ]] && TESTING=yes
 
 ebegin Exporting data from repository
 svn export file:///devel/repos/splashutils/core >/dev/null

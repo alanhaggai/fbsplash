@@ -4,7 +4,7 @@ source /devel/common/functions.sh
 . ver-gentoo
 
 TESTING=no
-[[ -z "${*/*--testing*/}" ]] && TESTING=yes
+[[ -z "${*/*--testing*/}" && -n "$*" ]] && TESTING=yes
 
 if [[ "$1" == "minor" ]]; then
 	major=$(($major+1))
