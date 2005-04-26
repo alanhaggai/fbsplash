@@ -13,9 +13,9 @@ start() {
 	[[ -z "${SPLASH_THEME}" ]] && SPLASH_THEME="default"                                                                             
 	if [[ -z "${SPLASH_TTYS}" ]]; then
 		if [ -n "${RC_TTY_NUMBER}" ]; then	
-			SPLASH_TTYS=$(seq 0 "${RC_TTY_NUMBER}")
+			SPLASH_TTYS=$(seq 1 "${RC_TTY_NUMBER}")
 		else
-			SPLASH_TTYS="0 1 2 3 4 5 6"
+			SPLASH_TTYS="1 2 3 4 5 6"
 		fi
 	fi
 
@@ -27,9 +27,8 @@ start() {
 		for TTY in ${SPLASH_TTYS} ; do
 			theme="${SPLASH_THEME}"
 
-			if [[ ${TTY} == "0" && -z "$(/sbin/splash_util -c getstate --vc=${TTY}| grep 'off')" ]]; then
-				continue
-			fi
+			[[ ${TTY} == "1" && -z "$(/sbin/splash_util -c getstate --tty=${TTY}| grep 'off')" ]] && continue
+			[[ ${TTY} == "0" ]] && continue
 
 			if [[ -n "${SPLASH_TTY_MAP}" ]]; then
 				for i in ${SPLASH_TTY_MAP} ; do
@@ -39,9 +38,13 @@ start() {
 				done
 			fi
 
-			/sbin/splash_util --vc="${TTY}" -m v -t "${theme}" -c setcfg 2>/dev/null 
-			/sbin/splash_util --vc="${TTY}" -m v -t "${theme}" -c setpic 2>/dev/null
-			/sbin/splash_util --vc="${TTY}" -c on 2>/dev/null
+			if [[ -x /usr/bin/openvt ]]; then
+				/usr/bin/openvt -fc ${TTY} 2>/dev/null
+			fi
+
+			/sbin/splash_util --tty="${TTY}" -m v -t "${theme}" -c setcfg 2>/dev/null 
+			/sbin/splash_util --tty="${TTY}" -m v -t "${theme}" -c setpic 2>/dev/null
+			/sbin/splash_util --tty="${TTY}" -c on 2>/dev/null
 		done
 
 		eend $? "Failed to set framebuffer console images"
