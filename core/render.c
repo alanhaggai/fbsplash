@@ -149,6 +149,10 @@ void render_box2(box *box, u8 *target)
 				      << (8 - glen)) * (255 - a) + g * a) / 255;
 				b1 = (( (i >> fb_var.blue.offset & ((1 << blen)-1)) 
 				      << (8 - blen)) * (255 - a) + b * a) / 255;
+			} else {
+				r1 = r;
+				g1 = g;
+				b1 = b;
 			}
 		
 			/* we only need to do dithering is depth is <24bpp */

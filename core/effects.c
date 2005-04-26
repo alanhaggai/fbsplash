@@ -108,17 +108,6 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 		g = ((h >> fb_var.green.offset & ((1 << glen)-1)) << gl8);
 		b = ((h >> fb_var.blue.offset & ((1 << blen)-1)) << bl8);
 
-		if (bytespp == 2) {
-			h = (1 << rlen) - 1;	
-			r *= 255.0 / h;
-
-			h = (1 << glen) - 1;	
-			g *= 255.0 / h;
-
-			h = (1 << blen) - 1;	
-			b *= 255.0 / h;
-		}
-		
 		t[i*3] = r;
 		t[i*3+1] = g;
 		t[i*3+2] = b;
