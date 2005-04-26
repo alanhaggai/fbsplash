@@ -157,7 +157,7 @@ void parse_int(char *t, struct config_opt opt)
 	}
 
 	t++; skip_whitespace(&t);
-	*(unsigned int*)opt.val = strtol(t,NULL,0);
+	*(u16*)opt.val = strtol(t,NULL,0);
 }
 
 void parse_path(char *t, struct config_opt opt)
