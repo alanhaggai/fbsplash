@@ -38,7 +38,9 @@ int handle_init()
 	int fd, fd_vc, fd_fb, h;
 	u8 created_dev = 0;
 	u8 effects = 0;
-
+#ifdef CONFIG_FBSPLASH
+	u8 fbsplash = 1;
+#endif
 	arg_mode = ' ';
 	
 	/* Mount the proc filesystem */
@@ -82,10 +84,10 @@ parse_failure:	if (h == 0)
 	if (h == 0)
 		umount("/proc");
 
-	/* If no mode was specified, we can't make any decision
+	/* If no mode was specified, we can't make any decisions
 	 * by ourselves. */
 	if (arg_mode == ' ')
-		return -1;	
+		return 0;	
 
 #ifdef CONFIG_FBSPLASH
 	create_dev(SPLASH_DEV, "/sys/class/misc/fbsplash/dev", 0x1);
@@ -100,13 +102,30 @@ parse_failure:	if (h == 0)
 	parse_cfg(config_file);
 
 #ifdef CONFIG_FBSPLASH
+	/* Load the configuartion and the verbose background picture
+	 * but don't activate fbsplash just yet. We'll enable it
+	 * after the silent screen is displayed. */
 	if (do_config(FB_SPLASH_IO_ORIG_USER) || do_getpic(FB_SPLASH_IO_ORIG_USER, 1, 'v')) {
-		return -1;
+		fbsplash = 0;
 	}
-	cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
 #endif
-	if (arg_mode != 's')
-		return 0;
+	if (arg_mode != 's') {
+#ifdef CONFIG_FBSPLASH
+		/* Activate fbsplash on the first tty is the picture and 
+		 * config file were successfully loaded. */
+		if (fbsplash) {
+			cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
+			return 0;
+		} else {
+			printerr("Failed to get verbose splash image.\n");
+			return -1;
+		}
+#else
+		printerr("This version of splashutils was compiled without support for fbsplash\n"
+			 "Verbose mode will not be activated\n");
+		return -1;
+#endif
+	}
 	
 	/* If the user supplied a silent tty number, check whether
 	 * it is valid. */
@@ -118,6 +137,10 @@ parse_failure:	if (h == 0)
 
 	if (do_getpic(FB_SPLASH_IO_ORIG_USER, 0, 's')) {
 		printerr("Failed to get silent splash image.\n");
+#ifdef CONFIG_FBSPLASH
+		if (fbsplash)
+			cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
+#endif
 		return -1;
 	}
 				
@@ -149,7 +172,12 @@ parse_failure:	if (h == 0)
 	}	
 			
 	munmap(t, fb_fix.line_length * fb_var.yres);
-		
+
+#ifdef CONFIG_FBSPLASH
+	if (fbsplash)
+		cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
+#endif
+	
 clean:	close_del(fd_vc, fn_vc, 0x2);
 //	close_del(fd_fb, fn_fb, 0x4);
 	
