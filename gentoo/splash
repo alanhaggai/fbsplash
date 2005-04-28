@@ -9,7 +9,6 @@
 #
 
 # Make sure we're running in a sane environment
-[[ ! -e /dev/fbsplash ]] 			&& exit 1
 [[ ! -x /sbin/splash_util.static ]] && exit 1
 
 [[ -z ${SPLASH_BOOT_MESSAGE} ]] 	&& SPLASH_BOOT_MESSAGE="Booting the system (\$progress%)... Press F2 for verbose mode"
@@ -71,7 +70,6 @@ update_progress() {
 
 # Start the splash daemon
 if [ "$1" == "start" ]; then
-
 	# Prepare the communications FIFO
 	rm -f ${spl_fifo} 2>/dev/null
 		
