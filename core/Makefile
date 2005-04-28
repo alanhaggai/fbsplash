@@ -7,7 +7,7 @@
 # more details.
 #
 
-PKG_VERSION = 1.1.9.4
+PKG_VERSION = 1.1.9.5
 DEBUG 	 = false		# set to true to prevent stripping
 K_SHARED = false		# set to true if you want to link to a shared klibc
 QUIET    = true
@@ -16,7 +16,7 @@ JPEGSRC	= libs/jpeg-6b
 LPNGSRC = libs/libpng-1.2.8
 ZLIBSRC = libs/zlib-1.2.1
 FT2SRC  = libs/freetype-2.1.9
-LIBCSRC	= libs/klibc-0.199/klibc
+LIBCSRC	= libs/klibc-1.0.8/klibc
 
 prefix     =
 sbindir    = ${prefix}/sbin
@@ -51,10 +51,14 @@ ARCH    = $(shell uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ -e s/arm.*/
 include $(LIBCSRC)/arch/$(ARCH)/MCONFIG
 
 # flags for the kernel utils
-K_CFLAGS = -w $(OPTFLAGS) $(ARCHREQFLAGS) -nostdinc -iwithprefix include -I${ROOT}/$(LIBCSRC)/../ \
+K_CFLAGS = -w $(shell grep REQFLAGS $(LIBCSRC)/../klibc.config | cut -d= -f2-) \
+	   $(shell grep OPTFLAGS $(LIBCSRC)/../klibc.config | cut -d= -f2-) \
 	   -I${ROOT}/$(LIBCSRC)/../include/arch/$(ARCH) \
 	   -I${ROOT}/$(LIBCSRC)/../include/bits$(BITSIZE) \
-	   -D__KLIBC__ -DBITSIZE=$(BITSIZE) -I${ROOT}/$(LIBCSRC)/../include -I${ROOT}/linux/include $(MISCINCS) \
+	   -I${ROOT}/$(LIBCSRC)/../include \
+	   -I${ROOT}/linux/include \
+	   -I${ROOT}/linux/include2 \
+	   $(MISCINCS) \
 	   -DWITH_ERRLIST -I${ROOT}/$(ZLIBSRC) -I${ROOT}/$(FT2SRC)/include -I/usr/include -ffunction-sections \
 	   -fdata-sections -DTARGET_KERNEL -DTT_CONFIG_OPTION_BYTECODE_INTERPRETER
 
