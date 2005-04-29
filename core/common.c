@@ -40,7 +40,10 @@ u16 arg_progress = 0;
 char *arg_export = NULL;
 #endif
 
-int bytespp = 4;
+int bytespp = 4;		/* bytes per pixel */
+u8 fb_opt = 0;			/* can we use optimized 24/32bpp routines? */
+u8 fb_ro, fb_go, fb_bo; 	/* red, green, blue offset */
+u8 fb_rlen, fb_glen, fb_blen;	/* red, green, blue length */
 
 struct fb_image pic;
 char *pic_file = NULL;
@@ -104,9 +107,35 @@ int get_fb_settings(int fb_num)
 #ifdef TARGET_KERNEL
 	remove_dev(fn, 0x1);
 #endif
-
 	bytespp = (fb_var.bits_per_pixel + 7) >> 3;
-	
+
+	/* Check optimized code can be used. We use special optimizations for
+	 * 24/32bpp modes in which all color components have a length of 8 bits. */
+	if (bytespp < 3 || fb_var.blue.length != 8 || fb_var.green.length != 8 || fb_var.red.length != 8) {
+		fb_opt = 0;
+
+		if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR) {
+			fb_blen = fb_glen = fb_rlen = min(min(fb_var.red.length,fb_var.green.length),fb_var.blue.length);
+		} else {
+			fb_rlen = fb_var.red.length;
+			fb_glen = fb_var.green.length;
+			fb_blen = fb_var.blue.length;
+		}
+	} else {
+		fb_opt = 1;
+
+		/* Compute component offsets (ie. indexes in an array of u8's) */
+		fb_ro = (fb_var.red.offset >> 3);
+		fb_go = (fb_var.green.offset >> 3);
+		fb_bo = (fb_var.blue.offset >> 3);
+			
+		if (endianess == big) {
+			fb_ro = bytespp - 1 - fb_ro;
+			fb_go = bytespp - 1 - fb_go;
+			fb_bo = bytespp - 1 - fb_bo;
+		}
+	}
+
 	return 0;
 }
 

@@ -42,91 +42,21 @@ typedef struct {
  * framebuffer uses */
 void truecolor2fb (truecolor* data, u8* out, int len, int y, u8 alpha)
 {
-	int i, add = 0, r, g, b, a;
-	int rlen, blen, glen;
+	int i, add = 0;
 	rgbcolor* rgb = (rgbcolor*)data;
-	u32 t;
 	
-	if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR) {
-		blen = glen = rlen = min(min(fb_var.red.length,fb_var.green.length),fb_var.blue.length);
-	} else {
-		rlen = fb_var.red.length;
-		glen = fb_var.green.length;
-		blen = fb_var.blue.length;
-	}
-		
 	add ^= (0 ^ y) & 1 ? 1 : 3;
 
 	for (i = 0; i < len; i++) {
-
 		if (alpha) {
-			r = data[i].r;
-			g = data[i].g;
-			b = data[i].b;
-			a = data[i].a;
+			put_pixel(data->a, data->r, data->g, data->b, out, out, add);
+			data++;
 		} else {
-			r = rgb[i].r;
-			g = rgb[i].g;
-			b = rgb[i].b;
-		}
-			
-		if (alpha) {
-			switch (fb_var.bits_per_pixel) {
-			
-			case 32:
-				t = *(u32*)(&out[(i * 4)]);
-				break;
-			case 24:
-				t = *(u32*)(&out[(i * 3)]) & 0xffffff;
-				break;
-			case 16:
-			case 15:
-				t = *(u16*)(&out[(i * 2)]);
-				break;
-			}
-	
-			r = (( (t >> fb_var.red.offset & ((1 << rlen)-1)) 
-				<< (8 - rlen)) * (255 - a) + r * a) / 255;
-			g = (( (t >> fb_var.green.offset & ((1 << glen)-1)) 
-			    	<< (8 - glen)) * (255 - a) + g * a) / 255;
-			b = (( (t >> fb_var.blue.offset & ((1 << blen)-1)) 
-				<< (8 - blen)) * (255 - a) + b * a) / 255;
-		} 
-
-		if (fb_var.bits_per_pixel < 24) {
-			r = CLAMP(r + add*2 + 1);
-			g = CLAMP(g + add);
-			b = CLAMP(b + add*2 + 1);
-		}
-		
-		r >>= (8 - rlen);
-		g >>= (8 - glen);
-		b >>= (8 - blen);
-	
-		t = (r << fb_var.red.offset) | 
-		    (g << fb_var.green.offset) |
-		    (b << fb_var.blue.offset);
-
-		switch (fb_var.bits_per_pixel) {
-
-		case 32:
-			*(u32*)(&out[(i * 4)]) = t;
-			break;
-		case 24:
-			if (endianess == little) {
-				*(u16*)(&out[(i*3)]) = t & 0xffff;
-				*(u8*)(&out[(i*3+2)]) = t >> 16;
-			} else {
-				*(u16*)(&out[(i*3)]) = t >> 8;
-				*(u8*)(&out[(i*3+2)]) = t & 0xff;
-			}
-			break;
-		case 16:
-		case 15:
-			*(u16*)(&out[(i * 2)]) = t;
-			break;
+			put_pixel(255, rgb->r, rgb->g, rgb->b, out, out, add);
+			rgb++;
 		}
 
+		out += bytespp;
 		add ^= 3;
 	}
 }

@@ -41,27 +41,86 @@ void render_icon(icon *ticon, u8 *target)
 	}
 }
 
+inline void put_pixel (u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add)
+{
+	if (fb_opt) {
+		if (a != 255) {
+			dst[fb_ro] = (src[fb_ro]*(255-a) + r*a) / 255;
+			dst[fb_go] = (src[fb_go]*(255-a) + g*a) / 255;
+			dst[fb_bo] = (src[fb_bo]*(255-a) + b*a) / 255;
+		} else {
+			dst[fb_ro] = r;
+			dst[fb_go] = g;
+			dst[fb_bo] = b;
+		}
+	} else {
+		u32 i;
+		u8 tr, tg, tb;
+
+		if (a != 255) {
+			if (fb_var.bits_per_pixel == 16) { 
+				i = *(u16*)src;
+			} else if (fb_var.bits_per_pixel == 24) {
+				i = *(u32*)src & 0xffffff;
+			} else if (fb_var.bits_per_pixel == 32) {
+				i = *(u32*)src;
+			} else {
+				i = *(u32*)src & ((2 << fb_var.bits_per_pixel)-1);
+			}
+
+			tr = (( (i >> fb_var.red.offset & ((1 << fb_rlen)-1)) 
+			      << (8 - fb_rlen)) * (255 - a) + r * a) / 255;
+			tg = (( (i >> fb_var.green.offset & ((1 << fb_glen)-1)) 
+			      << (8 - fb_glen)) * (255 - a) + g * a) / 255;
+			tb = (( (i >> fb_var.blue.offset & ((1 << fb_blen)-1)) 
+			      << (8 - fb_blen)) * (255 - a) + b * a) / 255;
+		} else {
+			tr = r;
+			tg = g;
+			tb = b;
+		}
+		
+		/* We only need to do dithering if depth is <24bpp */
+		if (fb_var.bits_per_pixel < 24) {
+			tr = CLAMP(tr + add*2 + 1);
+			tg = CLAMP(tg + add);
+			tb = CLAMP(tb + add*2 + 1);
+		}
+	
+		tr >>= (8 - fb_rlen);
+		tg >>= (8 - fb_glen);
+		tb >>= (8 - fb_blen);
+
+		i = (tr << fb_var.red.offset) |
+		    (tg << fb_var.green.offset) |
+		    (tb << fb_var.blue.offset);
+
+		if (fb_var.bits_per_pixel == 16) {
+			*(u16*)dst = i;
+		} else if (fb_var.bits_per_pixel == 24) {
+			if (endianess == little) { 
+				*(u16*)dst = i & 0xffff;
+				dst[2] = (i >> 16) & 0xff;
+			} else {
+				*(u16*)dst = (i >> 8) & 0xffff;
+				dst[2] = i & 0xff;
+			}
+		} else if (fb_var.bits_per_pixel == 32) {
+			*(u32*)dst = i;
+		}
+	}
+}
+
 void render_box2(box *box, u8 *target)
 {
-	int rlen, glen, blen;
-	int x, y, a, r, g, b, i;
+	int x, y, a, r, g, b;
 	int add;
 	u8 *pic;
-
 	u8 solid = 0;
 	
-	int bytespp = (fb_var.bits_per_pixel + 7) >> 3;
 	int b_width = box->x2 - box->x1 + 1;
 	int b_height = box->y2 - box->y1 + 1;
-
-	if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR) {
-		blen = glen = rlen = min(min(fb_var.red.length,fb_var.green.length),fb_var.blue.length);
-	} else {
-		rlen = fb_var.red.length;
-		glen = fb_var.green.length;
-		blen = fb_var.blue.length;
-	}
-
+	
 	if (!memcmp(&box->c_ul, &box->c_ur, sizeof(color)) &&
 	    !memcmp(&box->c_ul, &box->c_ll, sizeof(color)) &&
 	    !memcmp(&box->c_ul, &box->c_lr, sizeof(color))) {
@@ -145,211 +204,13 @@ void render_box2(box *box, u8 *target)
 				g = (u8)fg;
 				r = (u8)fr;
 			}
-				
-			if (a != 255) {
-				if (fb_var.bits_per_pixel == 16) { 
-					i = *(u16*)pic;
-				} else if (fb_var.bits_per_pixel == 24) {
-					i = *(u32*)pic & 0xffffff;
-				} else if (fb_var.bits_per_pixel == 32) {
-					i = *(u32*)pic;
-				} else {
-					i = *(u32*)pic & ((2 << fb_var.bits_per_pixel)-1);
-				}
 
-				r1 = (( (i >> fb_var.red.offset & ((1 << rlen)-1)) 
-				      << (8 - rlen)) * (255 - a) + r * a) / 255;
-				g1 = (( (i >> fb_var.green.offset & ((1 << glen)-1)) 
-				      << (8 - glen)) * (255 - a) + g * a) / 255;
-				b1 = (( (i >> fb_var.blue.offset & ((1 << blen)-1)) 
-				      << (8 - blen)) * (255 - a) + b * a) / 255;
-			} else {
-				r1 = r;
-				g1 = g;
-				b1 = b;
-			}
-		
-			/* we only need to do dithering is depth is <24bpp */
-			if (fb_var.bits_per_pixel < 24) {
-				r1 = CLAMP(r1 + add*2 + 1);
-				g1 = CLAMP(g1 + add);
-				b1 = CLAMP(b1 + add*2 + 1);
-			}
-	
-			r1 >>= (8 - rlen);
-			g1 >>= (8 - glen);
-			b1 >>= (8 - blen);
-
-			i = (r1 << fb_var.red.offset) |
-		 	    (g1 << fb_var.green.offset) |
-			    (b1 << fb_var.blue.offset);
-
-			if (fb_var.bits_per_pixel == 16) {
-				*(u16*)pic = i;
-				pic += 2;
-			} else if (fb_var.bits_per_pixel == 24) {
-				if (endianess == little) { 
-					*(u16*)pic = i & 0xffff;
-					pic[2] = (i >> 16) & 0xff;
-				} else {
-					*(u16*)pic = (i >> 8) & 0xffff;
-					pic[2] = i & 0xff;
-				}
-				pic += 3;
-			} else if (fb_var.bits_per_pixel == 32) {
-				*(u32*)pic = i;
-				pic += 4;
-			}
-
+			put_pixel(a, r, g, b, pic, pic, add);
+			pic += bytespp;
 			add ^= 3;
 		}
 	}
 }
-
-#if 0
-
-/* A slower version of render_box2(). Not used for anything anymore.
- * Let's keep it commented like this just in case it could come in
- * handy at some point in the future. */
-void render_box(box *box, u8 *target)
-{
-	int rlen, glen, blen;
-	int x, y, a, r, g, b, i;
-	int add;
-	u8 *pic;
-	struct colorf h_ap1, h_ap2, h_bp1, h_bp2;
-	
-	u8 solid = 0;
-	int bytespp = (fb_var.bits_per_pixel + 7) >> 3;
-	int b_width = box->x2 - box->x1 + 1;
-	int b_height = box->y2 - box->y1 + 1;
-	
-	if (box->x2 > fb_var.xres || box->y2 > fb_var.yres || b_width <= 0 || b_height <= 0) {
-		fprintf(stderr, "Ignoring invalid box (%d, %d, %d, %d).\n", box->x1, box->y1, box->x2, box->y2);
-		return;
-	}	
-
-	if (!memcmp(&box->c_ul, &box->c_ur, sizeof(color)) &&
-	    !memcmp(&box->c_ul, &box->c_ll, sizeof(color)) &&
-	    !memcmp(&box->c_ul, &box->c_lr, sizeof(color))) {
-		solid = 1;
-	} else {
-		h_ap1.r = (float)box->c_ul.r / b_height;
-		h_ap1.g = (float)box->c_ul.g / b_height;
-		h_ap1.b = (float)box->c_ul.b / b_height;
-		h_ap1.a = (float)box->c_ul.a / b_height;
-
-		h_ap2.r = (float)(box->c_ur.r - box->c_ul.r) / (b_width * b_height);
-		h_ap2.g = (float)(box->c_ur.g - box->c_ul.g) / (b_width * b_height);
-		h_ap2.b = (float)(box->c_ur.b - box->c_ul.b) / (b_width * b_height);
-		h_ap2.a = (float)(box->c_ur.a - box->c_ul.a) / (b_width * b_height);
-
-		h_bp1.r = (float)box->c_ll.r / b_height;
-		h_bp1.g = (float)box->c_ll.g / b_height;
-		h_bp1.b = (float)box->c_ll.b / b_height;
-		h_bp1.a = (float)box->c_ll.a / b_height;
-
-		h_bp2.r = (float)(box->c_lr.r - box->c_ll.r) / (b_width * b_height);
-		h_bp2.g = (float)(box->c_lr.g - box->c_ll.g) / (b_width * b_height);
-		h_bp2.b = (float)(box->c_lr.b - box->c_ll.b) / (b_width * b_height);
-		h_bp2.a = (float)(box->c_lr.a - box->c_ll.a) / (b_width * b_height);
-	}
-		
-	if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR) {
-		blen = glen = rlen = min(min(fb_var.red.length,fb_var.green.length),fb_var.blue.length);
-	} else {
-		rlen = fb_var.red.length;
-		glen = fb_var.green.length;
-		blen = fb_var.blue.length;
-	}
-
-	for (y = box->y1; y <= box->y2; y++) {
-
-		pic = target + (box->x1 + y * fb_var.xres) * bytespp;
-
-		/* do a nice 2x2 ordered dithering, like it was done in bootsplash;
-		 * this makes the pics in 15/16bpp modes look much nicer;
-		 * the produced pattern is:
-		 * 303030303..
-		 * 121212121..
-		 */
-		add = (box->x1 & 1);
-		add ^= (add ^ y) & 1 ? 1 : 3;
-
-		for (x = box->x1; x <= box->x2; x++) {
-
-			int t1 = b_height - (y-box->y1);
-			int t2 = y - box->y1;	
-			int t3 = x - box->x1;
-
-			if (!solid) {
-				a = t1 * (h_ap1.a + t3*h_ap2.a) + t2 * (h_bp1.a + t3*h_bp2.a);
-				r = t1 * (h_ap1.r + t3*h_ap2.r) + t2 * (h_bp1.r + t3*h_bp2.r);
-				g = t1 * (h_ap1.g + t3*h_ap2.g) + t2 * (h_bp1.g + t3*h_bp2.g);
-				b = t1 * (h_ap1.b + t3*h_ap2.b) + t2 * (h_bp1.b + t3*h_bp2.b);
-			} else {
-				a = box->c_ul.a;
-				r = box->c_ul.r;
-				g = box->c_ul.g;
-				b = box->c_ul.b;
-			}
-	
-			if (a != 255) {
-				if (fb_var.bits_per_pixel == 16) { 
-					i = *(u16*)pic;
-				} else if (fb_var.bits_per_pixel == 24) {
-					i = *(u32*)pic & 0xffffff;
-				} else if (fb_var.bits_per_pixel == 32) {
-					i = *(u32*)pic;
-				} else {
-					i = *(u32*)pic & ((2 << fb_var.bits_per_pixel)-1);
-				}
-
-				r = (( (i >> fb_var.red.offset & ((1 << rlen)-1)) 
-				      << (8 - rlen)) * (255 - a) + r * a) / 255;
-				g = (( (i >> fb_var.green.offset & ((1 << glen)-1)) 
-				      << (8 - glen)) * (255 - a) + g * a) / 255;
-				b = (( (i >> fb_var.blue.offset & ((1 << blen)-1)) 
-				      << (8 - blen)) * (255 - a) + b * a) / 255;
-			}
-		
-			/* we only need to do dithering if depth is <24bpp */
-			if (fb_var.bits_per_pixel < 24) {
-				r = CLAMP(r + add*2 + 1);
-				g = CLAMP(g + add);
-				b = CLAMP(b + add*2 + 1);
-			}
-	
-			r >>= (8 - rlen);
-			g >>= (8 - glen);
-			b >>= (8 - blen);
-
-			i = (r << fb_var.red.offset) |
-		 	    (g << fb_var.green.offset) |
-			    (b << fb_var.blue.offset);
-
-			if (fb_var.bits_per_pixel == 16) {
-				*(u16*)pic = i;
-				pic += 2;
-			} else if (fb_var.bits_per_pixel == 24) {
-				if (endianess == little) { 
-					*(u16*)pic = i & 0xffff;
-					pic[2] = (i >> 16) & 0xff;
-				} else {
-					*(u16*)pic = (i >> 8) & 0xffff;
-					pic[2] = i & 0xff;
-				}
-				pic += 3;
-			} else if (fb_var.bits_per_pixel == 32) {
-				*(u32*)pic = i;
-				pic += 4;
-			}
-
-			add ^= 3;
-		}
-	}
-}
-#endif
 
 /* Interpolates two boxes, based on the value of the arg_progress variable.
  * This is a strange implementation of a progress bar, introduced by the

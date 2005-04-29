@@ -35,8 +35,6 @@ char *boot_message = NULL;
 #define DEFAULT_PTSIZE  18
 #define NUM_GRAYS       256
 
-static int alpha = 100;
-
 void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 	 		      TTF_Font* font, int x, int y, color fcol, u8 hotspot);
 
@@ -565,9 +563,7 @@ int TTF_SizeUNICODE(TTF_Font *font, const unsigned short *text, int *w, int *h)
 void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
  			      TTF_Font* font, int x, int y, color fcol, u8 hotspot)
 {
-	int rlen, glen, blen;
 	int xstart, width, height, i, j, row_underline;
-	int rd, gd, bd;
 	unsigned int val;
 	const unsigned short* ch;
 	unsigned char* src;
@@ -582,14 +578,6 @@ void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 		return;
 	}
 	height = font->height;
-
-	if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR) {
-		blen = glen = rlen = min(min(fb_var.red.length,fb_var.green.length),fb_var.blue.length);
-	} else {
-		rlen = fb_var.red.length;
-		glen = fb_var.green.length;
-		blen = fb_var.blue.length;
-	}
 
 	i = hotspot & F_HS_HORIZ_MASK;
 	if (i == F_HS_HMIDDLE)
@@ -656,16 +644,11 @@ void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 			for (col= ((font->style & TTF_STYLE_UNDERLINE && glyph->minx > 0) ? -glyph->minx : 0); 
 			     col < ((font->style & TTF_STYLE_UNDERLINE && *(ch+1)) ? 
 			           current->width + glyph->advance : current->width); col++) {
-				int rb, gb, bb;
-		
+			
 				if (col + j >= fb_var.xres-1)
 					continue;
 				
-				if (bytespp == 2 && dst+1 > memlimit)
-					break;
-				else if (bytespp == 3 && dst+2 > memlimit)
-					break;
-				else if (bytespp == 4 && dst+3 > memlimit)
+				if (dst+bytespp-1 > memlimit)
 					break;
 				
 				if (row < current->rows && col < current->width && col >= 0)
@@ -678,68 +661,9 @@ void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 				    row+glyph->yoffset < row_underline + font->underline_height) {
 					val = NUM_GRAYS-1;
 				}
-					
-				val=alpha*val/100;
-
-				rd = fcol.r * val/255;
-				gd = fcol.g * val/255;
-				bd = fcol.b * val/255;
-			
-				if (bytespp == 2) { 
-					i = *(u16*)dst;
-				} else if (bytespp == 3) {
-					i = *(u32*)dst & 0xffffff;
-				} else if (bytespp == 4) {
-					i = *(u32*)dst;
-				}				
-
-				rb = ((i >> fb_var.red.offset & ((1 << rlen)-1)) << (8 - rlen));
-				gb = ((i >> fb_var.green.offset & ((1 << glen)-1)) << (8 - glen));
-				bb = ((i >> fb_var.blue.offset & ((1 << blen)-1)) << (8 - blen));
-							
-				rd += rb * (255-val)/255;
-				gd += gb * (255-val)/255;
-				bd += bb * (255-val)/255;
-
-				if (fcol.a != 255) {
-					rd = (rd * fcol.a + rb * (255-fcol.a))/255;
-					gd = (gd * fcol.a + gb * (255-fcol.a))/255;
-					bd = (bd * fcol.a + bb * (255-fcol.a))/255;
-				}
-		
-				/* We only need to do dithering if depth is <24bpp */
-				if (fb_var.bits_per_pixel < 24) {
-					rd = CLAMP(rd + add*2 + 1);
-					gd = CLAMP(gd + add);
-					bd = CLAMP(bd + add*2 + 1);
-				}
-						
-				rd >>= (8 - rlen);
-				gd >>= (8 - glen);
-				bd >>= (8 - blen);
-
-				i = (rd << fb_var.red.offset) |
-		 	    	    (gd << fb_var.green.offset) |
-			    	    (bd << fb_var.blue.offset);
-
-				if (bytespp == 2) {
-					*(u16*)dst = i;
-					dst += 2;
-				} else if (bytespp == 3) {
 				
-					if (endianess == little) { 
-						*(u16*)dst = i & 0xffff;
-						dst[2] = (i >> 16) & 0xff;
-					} else {
-						*(u16*)dst = (i >> 8) & 0xffff;
-						dst[2] = i & 0xff;
-					}
-					dst += 3;
-				} else if (bytespp == 4) {
-					*(u32*)dst = i;
-					dst += 4;
-				}
-	
+				put_pixel(fcol.a*val/255, fcol.r, fcol.g, fcol.b, dst, dst, add);
+				dst += bytespp;
 				add ^= 3;
 			}
 		}
