@@ -72,10 +72,11 @@ K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/dev.o $(KOUT)/parse.o $(KOUT)/render.o $(KOU
 	   $(KOUT)/cmd.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o 
 K_DEPS   = 
 
-# flags for the user utills
-CFLAGS   = -Wall -g -I${ROOT}/linux/include -I/usr/include/freetype2
+# flags for the user utils
+CFLAGS   = -Wall -g
 LDLIBS   = -ljpeg -lm
 LDFLAGS  = 
+INCLUDES = -I${ROOT}/linux/include -I/usr/include/freetype2
 OBJS     = splash.o parse.o render.o image.o cmd.o common.o daemon.o list.o effects.o
 
 # checks whether an opton is set in config.h
@@ -206,7 +207,7 @@ $(KOUT)/%.o: %.c config.h splash.h
 
 %.o: %.c config.h splash.h
 	@$(call info,CC,$@)
-	@$(CC) $(CFLAGS) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
+	@$(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
 
 clean:	clean_klibc clean_jpg clean_png clean_zlib clean_ft2 clean_splash
 
