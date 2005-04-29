@@ -196,18 +196,30 @@ $(SP_HELPER): $(K_OBJS)
 	@$(call info,LD,$@)
 ifeq ($(strip $(K_SHARED)),true)
 	@ld $(K_LDFLAGS) -o $@ -e main $(CRT0) $+ $(K_LDLIBS) -R $(LIBC) $(LIBGCC)
+ifeq ($(strip $(QUIET)),false)
+	@echo ld $(K_LDFLAGS) -o $@ -e main $(CRT0) $+ $(K_LDLIBS) -R $(LIBC) $(LIBGCC)
+endif
 else
 	@ld $(K_LDFLAGS) -o $@ $(CRT0) $+ $(K_LDLIBS) $(LIBC) $(LIBGCC) 
+ifeq ($(strip $(QUIET)),false)
+	@echo ld $(K_LDFLAGS) -o $@ $(CRT0) $+ $(K_LDLIBS) $(LIBC) $(LIBGCC) 
+endif
 endif
 	@$(STRIP) $@
 
 $(KOUT)/%.o: %.c config.h splash.h
 	@$(call info,CC,$@)
 	@$(CC) $(K_CFLAGS) -c -o $@ $<
+ifeq ($(strip $(QUIET)),false)
+	@echo $(CC) $(K_CFLAGS) -c -o $@ $<
+endif
 
 %.o: %.c config.h splash.h
 	@$(call info,CC,$@)
 	@$(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
+ifeq ($(strip $(QUIET)),false)
+	@echo $(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
+endif
 
 clean:	clean_klibc clean_jpg clean_png clean_zlib clean_ft2 clean_splash
 
