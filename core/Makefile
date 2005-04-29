@@ -142,7 +142,9 @@ klibc: linux
 	fi
 	@cd $(LIBCSRC) ; \
 	if ! make -q; then $(call info,MAKE,klibc) ; fi ; \
-	make > $(OUTPUT)
+	make > $(OUTPUT) \
+	@cd .. ; \
+	make klibc.config > $(OUTPUT)
 
 zlib:	config.h
 	@cd $(ZLIBSRC) ; \
