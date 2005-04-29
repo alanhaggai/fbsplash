@@ -62,6 +62,12 @@ void render_box2(box *box, u8 *target)
 		blen = fb_var.blue.length;
 	}
 
+	if (!memcmp(&box->c_ul, &box->c_ur, sizeof(color)) &&
+	    !memcmp(&box->c_ul, &box->c_ll, sizeof(color)) &&
+	    !memcmp(&box->c_ul, &box->c_lr, sizeof(color))) {
+		solid = 1;
+	}
+	
 	for (y = box->y1; y <= box->y2; y++) {
 
 		int r1, r2, g1, g2, b1, b2, a1, a2;
@@ -71,54 +77,62 @@ void render_box2(box *box, u8 *target)
 
 		pic = target + (box->x1 + y * fb_var.xres) * bytespp;
 
-		/* do a nice 2x2 ordered dithering, like it was done in bootsplash;
-		 * this makes the pics in 15/16bpp modes look much nicer;
-		 * the produced pattern is:
-		 * 303030303..
-		 * 121212121..
-		 */
-		add = (box->x1 & 1);
-		add ^= (add ^ y) & 1 ? 1 : 3;
-	
-		h1 = box->y2 - y;
-		h2 = y - box->y1;
-	
-		if (b_height > 1)
-			h = b_height -1;
-		else
-			h = 1;
-		
-		r1 = (h1 * box->c_ul.r + h2 * box->c_ll.r)/h;
-		r2 = (h1 * box->c_ur.r + h2 * box->c_lr.r)/h;
-
-		g1 = (h1 * box->c_ul.g + h2 * box->c_ll.g)/h;
-		g2 = (h1 * box->c_ur.g + h2 * box->c_lr.g)/h;
-
-		b1 = (h1 * box->c_ul.b + h2 * box->c_ll.b)/h;
-		b2 = (h1 * box->c_ur.b + h2 * box->c_lr.b)/h;
-
-		a1 = (h1 * box->c_ul.a + h2 * box->c_ll.a)/h;
-		a2 = (h1 * box->c_ur.a + h2 * box->c_lr.a)/h;
-
-		if (r1 == r2 && g1 == g2 && b1 == b2 && a1 == a2) { 
-			opt = 1;	
+		if (solid) {
+			r = box->c_ul.r;
+			g = box->c_ul.g;
+			b = box->c_ul.b;
+			a = box->c_ul.a;
+			opt = 1;
 		} else {
-			r2 -= r1;
-			g2 -= g1;
-			b2 -= b1;
-			a2 -= a1;
+			/* Do a nice 2x2 ordered dithering, like it was done in bootsplash;
+			 * this makes the pics in 15/16bpp modes look much nicer;
+			 * the produced pattern is:
+			 * 303030303..
+			 * 121212121..
+			 */
+			add = (box->x1 & 1);
+			add ^= (add ^ y) & 1 ? 1 : 3;
+		
+			h1 = box->y2 - y;
+			h2 = y - box->y1;
+		
+			if (b_height > 1)
+				h = b_height -1;
+			else
+				h = 1;
+			
+			r1 = (h1 * box->c_ul.r + h2 * box->c_ll.r)/h;
+			r2 = (h1 * box->c_ur.r + h2 * box->c_lr.r)/h;
 
-			hr = 1.0/b_width * r2;
-			hg = 1.0/b_width * g2;
-			hb = 1.0/b_width * b2;
-			ha = 1.0/b_width * a2;
+			g1 = (h1 * box->c_ul.g + h2 * box->c_ll.g)/h;
+			g2 = (h1 * box->c_ur.g + h2 * box->c_lr.g)/h;
+
+			b1 = (h1 * box->c_ul.b + h2 * box->c_ll.b)/h;
+			b2 = (h1 * box->c_ur.b + h2 * box->c_lr.b)/h;
+
+			a1 = (h1 * box->c_ul.a + h2 * box->c_ll.a)/h;
+			a2 = (h1 * box->c_ur.a + h2 * box->c_lr.a)/h;
+
+			if (r1 == r2 && g1 == g2 && b1 == b2 && a1 == a2) { 
+				opt = 1;	
+			} else {
+				r2 -= r1;
+				g2 -= g1;
+				b2 -= b1;
+				a2 -= a1;
+
+				hr = 1.0/b_width * r2;
+				hg = 1.0/b_width * g2;
+				hb = 1.0/b_width * b2;
+				ha = 1.0/b_width * a2;
+			}
+				
+			r = r1; fr = (float)r1;
+			g = g1; fg = (float)g1;
+			b = b1; fb = (float)b1;
+			a = a1; fa = (float)a1;
 		}
 			
-		r = r1; fr = (float)r1;
-		g = g1; fg = (float)g1;
-		b = b1; fb = (float)b1;
-		a = a1; fa = (float)a1;
-				
 		for (x = box->x1; x <= box->x2; x++) {
 			if (!opt) { 
 				fa += ha;
