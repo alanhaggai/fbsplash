@@ -151,7 +151,7 @@ zlib:	config.h
 	@cd $(ZLIBSRC) ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,zlib) ; \
-		./configure > /dev/null; \
+		./configure > $(OUTPUT); \
 		sed -i 's#^CFLAGS=\(.*\)#CFLAGS=\1 $(K_CFLAGS)#' Makefile ; \
 	fi ; \
 	if ! make -q libz.a; then $(call info,MAKE,zlib) ; fi ; \
@@ -161,7 +161,7 @@ libpng:	zlib config.h
 	@cd $(LPNGSRC) ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,libpng) ; \
-		cp scripts/makefile.linux Makefile > /dev/null; \
+		cp scripts/makefile.linux Makefile > $(OUTPUT); \
 		sed -i -e '/^CFLAGS/ { N ; s#^CFLAGS=.*#CFLAGS=$(K_CFLAGS) $(PNGDEFS)# ; P ; D }' \
 		       -e 's#^ZLIBINC=.*#ZLIBINC=$(ZLIBSRC)#' \
 		       -e 's#^ZLIBLIB=.*#ZLIBLIB=$(ZLIBSRC)#' Makefile ; \
@@ -173,7 +173,7 @@ jpeglib:
 	@cd $(JPEGSRC) ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,libjpeg) ; \
-		./configure > /dev/null ; \
+		./configure > $(OUTPUT) ; \
 		echo "#define NO_GETENV 1" >> jconfig.h ; \
 		sed -i "s#CFLAGS=.*#CFLAGS=$(K_CFLAGS)#" Makefile ; \
 		sed -i "s:#define JMESSAGE.*::" jerror.c ; \
@@ -185,7 +185,7 @@ ft2:	config.h
 	@cd $(FT2SRC) ; \
 	if [ ! -e ./config.mk ]; then \
 		$(call info,CONF,freetype2) ; \
-		./configure > /dev/null ; \
+		./configure > $(OUTPUT) ; \
 	fi ; \
 	if ! make -q library; then $(call info,MAKE,freetype2) ; fi ; \
 	make CFLAGS="-c $(K_CFLAGS)" library > $(OUTPUT)
