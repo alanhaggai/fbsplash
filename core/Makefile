@@ -129,11 +129,13 @@ $(SP_UTIL): $(OBJS)
 	@$(CC) $+ $(LDLIBS) -static -o $@.static
 
 linux:
-	@if [ ! -e linux ]; then \
-		ln -s /lib/modules/`uname -r`/source/ linux; \
+	@if [ ! -e "$(ROOT)/linux" ]; then \
+		ln -s /lib/modules/`uname -r`/source/ "$(ROOT)/linux"; \
 	fi
-	@if [ ! -d $(KOUT) ]; then \
-		mkdir $(KOUT) ; \
+
+kdir:
+	@if [ ! -d "$(ROOT)/$(KOUT)" ]; then \
+		mkdir "$(ROOT)/$(KOUT)" ; \
 	fi
 
 klibc: linux
@@ -190,7 +192,7 @@ ft2:	config.h
 	if ! make -q library; then $(call info,MAKE,freetype2) ; fi ; \
 	make CFLAGS="-c $(K_CFLAGS)" library > $(OUTPUT)
 	
-splash_kern: klibc jpeglib $(K_DEPS) $(SP_HELPER) $(LIBC) config.h $(K_LDLIBS)
+splash_kern: klibc jpeglib kdir $(K_DEPS) $(SP_HELPER) $(LIBC) config.h $(K_LDLIBS)
 
 $(SP_HELPER): $(K_OBJS)
 	@$(call info,LD,$@)
