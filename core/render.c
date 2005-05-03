@@ -422,7 +422,6 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 	item *i;
 	obj *o;
 	icon *c;
-	anim *a;
 	box tmp, *b, *n;
 
 	if (fb_var.bits_per_pixel == 8)
@@ -472,10 +471,11 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 			}
 
 			render_icon(c, target);
-		} else if (o->type == o_anim) {
+		} 
+#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
+		else if (o->type == o_anim) {
 			u8 render_it = 0;
-
-			a = (anim*)o->p;
+			anim *a = (anim*)o->p;
 
 			if ((a->flags & F_ANIM_SILENT) && mode != 's')
 				continue;
@@ -510,6 +510,7 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 			if (render_it)
 				mng_display_next(a->mng, target, a->x, a->y);
 		}
+#endif /* CONFIG_MNG */
 #if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || (defined(CONFIG_TTF) && !defined(TARGET_KERNEL))
 		else if (o->type == o_text) {
 

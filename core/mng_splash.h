@@ -27,8 +27,8 @@ extern int mng_display_next(mng_handle mngh, char* dest, int x, int y);
 extern mng_retcode mng_render_proportional(mng_handle mngh, int progress);
 
 /* mng_callbacks.c */
-extern mng_ptr fbsplash_mng_memalloc(mng_size_t len);
-extern void fbsplash_mng_memfree(mng_ptr p, mng_size_t len);
+extern mng_ptr fb_mng_memalloc(mng_size_t len);
+extern void fb_mng_memfree(mng_ptr p, mng_size_t len);
 extern mng_retcode mng_init_callbacks(mng_handle handle);
 extern mng_retcode mng_display_restart(mng_handle mngh);
 

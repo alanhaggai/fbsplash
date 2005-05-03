@@ -87,6 +87,11 @@ ifeq ($(call config_opt,CONFIG_TTF),true)
 	LDLIBS += -lfreetype -lz
 endif
 
+ifeq ($(call config_opt,CONFIG_MNG),true)
+	OBJS   += mng_render.o mng_callbacks.o
+	LDLIBS += -lmng -llcms -ljpeg -lz
+endif
+
 ifeq ($(call config_opt,CONFIG_TTF_KERNEL),true)
 	K_LDLIBS += $(FT2SRC)/objs/.libs/libfreetype.a 
 	K_OBJS 	 += $(KOUT)/ttf.o

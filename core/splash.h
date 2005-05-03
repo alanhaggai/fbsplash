@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <linux/fb.h>
 #include <linux/types.h>
-#include "mng_splash.h"
+#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
+	#include "mng_splash.h"
+#endif
 
 /* Adjustable settings */
 #define MAX_RECTS 	32
@@ -97,6 +99,17 @@ typedef struct {
 	int x1, x2, y1, y2;
 } rect;
 
+#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
+#define F_ANIM_SILENT		1
+#define F_ANIM_VERBOSE		2
+
+#define F_ANIM_METHOD_MASK	12
+#define F_ANIM_ONCE		0
+#define F_ANIM_LOOP		4
+#define F_ANIM_PROPORTIONAL	8
+
+#define F_ANIM_STATUS_DONE 1
+
 typedef struct {
 	int x, y;
 	mng_handle mng;
@@ -105,6 +118,7 @@ typedef struct {
 	u8 status;
 	u8 flags;
 } anim;
+#endif	/* CONFIG_MNG */
 
 #define F_TXT_SILENT  	1
 #define F_TXT_VERBOSE	2
@@ -121,16 +135,6 @@ typedef struct {
 #define F_HS_LEFT	1
 #define F_HS_HMIDDLE	2
 #define F_HS_RIGHT	4
-
-#define F_ANIM_SILENT		1
-#define F_ANIM_VERBOSE		2
-
-#define F_ANIM_METHOD_MASK	12
-#define F_ANIM_ONCE		0
-#define F_ANIM_LOOP		4
-#define F_ANIM_PROPORTIONAL	8
-
-#define F_ANIM_STATUS_DONE 1
 
 #include "ttf.h"
 

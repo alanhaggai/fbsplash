@@ -194,12 +194,10 @@ mng_retcode mng_render_proportional(mng_handle mngh, int progress)
 int mng_display_next(mng_handle mngh, char* dest, int x, int y)
 {
 	truecolor *src;
-	int line;
 	mng_anim *mng = mng_get_userdata(mngh);
-	int bpp = (fb_var.bits_per_pixel + 7) >> 3;
-	int dispwidth, dispheight;
+	int dispwidth, dispheight, line;
 
-	dest += y * fb_var.xres * bpp;
+	dest += y * fb_var.xres * bytespp;
 	src = (truecolor*)mng->canvas;
 
 	if (x + mng->canvas_w > fb_var.xres)
@@ -213,8 +211,8 @@ int mng_display_next(mng_handle mngh, char* dest, int x, int y)
 		dispheight = mng->canvas_h;
 
 	for (line = 0; line < dispheight; line++) {
-		truecolor2fb(src, dest + (x * bpp), dispwidth, y + line, 1);
-		dest += fb_var.xres * bpp;
+		truecolor2fb(src, dest + (x * bytespp), dispwidth, y + line, 1);
+		dest += fb_var.xres * bytespp;
 		src  += mng->canvas_w;
 	}
 
