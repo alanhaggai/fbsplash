@@ -116,6 +116,7 @@ SP_UTIL   = splash_util
 SP_GIRAM  = splash_geninitramfs
 SP_RESIZE = splash_resize
 SP_CONV	  = bootsplash2fbsplash
+SP_MNGR	  = splash_manager
 
 #### make rules below #####
 
@@ -276,6 +277,7 @@ install: all
 	@$(call install_script,$(SP_GIRAM))
 	@$(call install_script,$(SP_CONV))
 	@$(call install_script,$(SP_RESIZE))
+	@$(call install_script,$(SP_MNGR))
 
 uninstall:
 	@$(call info,UNINSTALL,$(SP_HELPER)) ; rm $(sbindir)/$(SP_HELPER)
@@ -284,3 +286,5 @@ uninstall:
 	@$(call info,UNINSTALL,$(SP_GIRAM)) ; rm $(usrbindir)/$(SP_GIRAM)
 	@$(call info,UNINSTALL,$(SP_CONV)) ; rm $(usrbindir)/$(SP_CONV)
 	@$(call info,UNINSTALL,$(SP_RESIZE)) ; rm $(usrbindir)/$(SP_RESIZE)
+	@$(call info,UNINSTALL,$(SP_MNGR)) ; rm $(usrbindir)/$(SP_MNGR)
+	
