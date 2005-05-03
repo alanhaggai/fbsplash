@@ -346,7 +346,7 @@ setpic_out:	break;
 		if (pic.cmap.red)
 			ioctl(c, FBIOPUTCMAP, &pic.cmap);
 
-		if (arg_task == repaint) {
+		if (arg_task == repaint || arg_mode == 'v') {
 			put_img(out, (u8*)pic.data);
 		} else {
 			do_paint(out, (u8*)pic.data);
