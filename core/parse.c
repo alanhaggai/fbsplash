@@ -18,7 +18,8 @@
 
 struct config_opt {
 	char *name;
-	enum { t_int, t_path, t_box, t_icon, t_rect, t_color, t_fontpath, t_text } type;
+	enum { t_int, t_path, t_box, t_icon, t_rect, t_anim, t_color, t_fontpath, 
+		t_text } type;
 	void *val;
 };
 
@@ -63,7 +64,7 @@ struct config_opt opts[] =
 		.type = t_path,
 		.val = &cf_silentpic	},
 	
-	{ 	.name = "bg_color",
+	{	.name = "bg_color",
 		.type = t_int,
 		.val = &cf.bg_color	},
 
@@ -95,6 +96,10 @@ struct config_opt opts[] =
 		.type = t_rect,
 		.val = NULL		},
 
+	{	.name = "anim",
+		.type = t_anim,
+		.val = NULL		},
+	
 #if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)
 	{	.name = "text_x",
 		.type = t_int,
@@ -496,6 +501,104 @@ pr_err:
 	return;
 }
 
+void parse_anim(char *t)
+{
+	char *p;	
+	char *filename;
+	obj *cobj = NULL;
+	anim *canim = malloc(sizeof(anim));
+	
+	if (!canim)
+		return;
+	
+	skip_whitespace(&t);
+	canim->flags = 0;
+
+	while (1) {
+		if (!strncmp(t, "verbose", 7)) {
+			canim->flags |= F_ANIM_VERBOSE;
+			t += 7;
+		} else if (!strncmp(t, "silent", 6)) {
+			canim->flags |= F_ANIM_SILENT;
+			t += 6;
+		} else {
+			skip_whitespace(&t);
+			break;
+		}
+
+		skip_whitespace(&t);
+	}
+
+	if (canim->flags == 0)
+	    canim->flags = F_ANIM_SILENT | F_ANIM_VERBOSE;
+
+	if (!strncmp(t, "once", 4)) {
+		canim->flags |= F_ANIM_ONCE;
+		t += 4;
+	} else if (!strncmp(t, "loop", 4)) {
+		canim->flags |= F_ANIM_LOOP;
+		t += 4;
+	} else if (!strncmp(t, "proportional", 12)) {
+		canim->flags |= F_ANIM_PROPORTIONAL;
+		t += 12;
+	} else {
+		goto pa_err;
+	}
+
+	skip_whitespace(&t);
+
+	filename = t;
+	skip_nonwhitespace(&t);
+	*t = '\0';
+	t++;
+
+	skip_whitespace(&t);
+
+	canim->x = strtol(t,&p,0);
+	if (t == p)
+		goto pa_err;
+	t = p; skip_whitespace(&t);
+
+	canim->y = strtol(t,&p,0);
+	if (t == p)
+		goto pa_err;
+	t = p; skip_whitespace(&t);
+
+	/* sanity checks */
+	if (canim->x >= fb_var.xres)
+		canim->x = fb_var.xres-1;
+	if (canim->y >= fb_var.yres)
+		canim->y = fb_var.yres-1;
+
+	canim->status = 0;
+
+	filename = get_filepath(filename);
+
+	canim->mng = mng_load(filename);
+	if (!canim->mng) {
+		free(filename);
+		printerr("Cannot allocate memory for mng (parse_anim)!\n");
+		goto pa_out;
+	}
+
+	free(filename);
+
+	cobj = malloc(sizeof(obj));
+	if (!cobj) {
+		printerr("Cannot allocate memory (parse_anim)!\n");
+		goto pa_out;
+	}
+	cobj->type = o_anim;
+	cobj->p = canim;
+	list_add(&objs, cobj);
+	return;
+pa_err:
+	fprintf(stderr, "parse error @ line %d\n", line);
+pa_out:
+	free(canim);
+	return;
+}
+
 void parse_box(char *t)
 {
 	char *p;	
@@ -635,7 +738,7 @@ char *parse_quoted_string(char *t, u8 keepvar)
 	len = p-t;
 	out = malloc(len - cnt + 1);
 	if (!out) {
-		printerr("Failed to allocate memory for a quoted string.");
+		printerr("Failed to allocate memory for a quoted string.\n");
 		return NULL;
 	}
 
@@ -686,7 +789,7 @@ void parse_text(char *t)
 		}
 
 		skip_whitespace(&t);
-	}	
+	}
 
 	if (ct->flags == 0)
 		ct->flags = F_TXT_VERBOSE | F_TXT_SILENT;
@@ -826,7 +929,7 @@ void parse_text(char *t)
 
 pt_end:	cobj = malloc(sizeof(obj));
 	if (!cobj) {
-pt_outm:	printerr("Cannot allocate memory (parse_text)!");
+pt_outm:	printerr("Cannot allocate memory (parse_text)!\n");
 		goto pt_out;
 	}
 	cobj->type = o_text;
@@ -917,6 +1020,10 @@ int parse_cfg(char *cfgfile)
 				
 				case t_rect:
 					parse_rect(t);
+					break;
+
+				case t_anim:
+					parse_anim(t);
 					break;
 
 #if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)

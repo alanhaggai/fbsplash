@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <linux/fb.h>
 #include <linux/types.h>
+#include "mng_splash.h"
 
 /* Adjustable settings */
 #define MAX_RECTS 	32
@@ -80,7 +81,7 @@ typedef struct {
 } icon;
 
 typedef struct obj {
-	enum { o_box, o_icon, o_text } type;
+	enum { o_box, o_icon, o_text, o_anim } type;
 	void *p;
 } obj;
 
@@ -95,6 +96,15 @@ struct colorf {
 typedef struct {
 	int x1, x2, y1, y2;
 } rect;
+
+typedef struct {
+	int x, y;
+	mng_handle mng;
+	char *svc;
+	enum ESVC type;
+	u8 status;
+	u8 flags;
+} anim;
 
 #define F_TXT_SILENT  	1
 #define F_TXT_VERBOSE	2
@@ -111,6 +121,16 @@ typedef struct {
 #define F_HS_LEFT	1
 #define F_HS_HMIDDLE	2
 #define F_HS_RIGHT	4
+
+#define F_ANIM_SILENT		1
+#define F_ANIM_VERBOSE		2
+
+#define F_ANIM_METHOD_MASK	12
+#define F_ANIM_ONCE		0
+#define F_ANIM_LOOP		4
+#define F_ANIM_PROPORTIONAL	8
+
+#define F_ANIM_STATUS_DONE 1
 
 #include "ttf.h"
 
@@ -205,7 +225,7 @@ void truecolor2fb (truecolor* data, u8* out, int len, int y, u8 alpha);
 
 /* cmd.c */
 void cmd_setstate(unsigned int state, unsigned char origin);
-void cmd_setpic(struct fb_image *img,unsigned char origin);
+void cmd_setpic(struct fb_image *img, unsigned char origin);
 void cmd_setcfg(unsigned char origin);
 void cmd_getcfg();
 
