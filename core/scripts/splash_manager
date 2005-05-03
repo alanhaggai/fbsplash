@@ -4,10 +4,8 @@
 # - fix header
 # - support for icons and scripts in themes
 # - check whether all necessary programs are in place
-# - support for verbose mode demo
 # - support for '-v'
 # - support for '--pretend'
-# - support for theme setting
 # - support for theme switching
 
 spl_fifo=/lib/splash/cache/.splash
@@ -24,6 +22,7 @@ Usage: splash_manager [options] <command>
 
 Commands:
   -d, --demo  test a splash theme
+  -s, --set   set a splash theme on a specific tty
   -h, --help  display this message
   
 Options:
@@ -31,6 +30,7 @@ Options:
       --steps=N	     use N steps when testing the silent splash [d]
       --delay=N      delay each step by N seconds [d]
   -m, --mode=(v|s)   specify which mode to use (verbose/silent) [d]
+      --tty=N        set the theme on the Nth tty
 EOTB
 }
 
@@ -42,6 +42,104 @@ spl_comm() {
 	echo "$*" > ${spl_fifo}
 }
 
+chvt() {
+	local ntty=$1
+	
+	if [ -x /usr/bin/chvt ] ; then
+		/usr/bin/chvt ${ntty}
+	else
+		echo -en "\e[12;${ntty}]"
+	fi
+}
+
+theme_sanity_check() {
+	local theme=$1
+	
+	if [ -z "${theme}" ]; then
+		err "You have to specify a theme name."
+		exit 1
+	fi
+	
+	if [ ! -e "/etc/splash/${theme}/${res}.cfg" ]; then
+		err "Theme '${theme}' doesn't seem to provide a config file for the current resolution (${res})."
+		exit 1
+	fi
+}
+
+set_theme() {
+	local theme=$1
+	local tty=$2
+	
+	theme_sanity_check "${theme}"
+	[ -z "${tty}" ] && tty="${ctty}"
+	splash_util -c setcfg -t ${theme} --tty="${tty}"
+	[ "${tty}" == "${ctty}" ] && splash_util -c setpic -t "${theme}" --tty="${tty}"
+	splash_util -c on --tty=${tty}
+}
+
+demo_theme_silent() {
+	if [ -z $(cat /etc/splash/${theme}/${res}.cfg | egrep "^silent(pic|jpeg)=") ]; then
+		err "Thene '${theme}' doesn't not support the silent splash mode."
+		exit 1
+	fi
+	
+	has_text="no"
+
+	# Set text_* variables based on settings from the theme config file
+	eval `cat /etc/splash/${theme}/${res}.cfg | grep "^text_[a-z]\+="`
+		
+	[[ -n "${text_x}" && -n "${text_y}" && -n "${text_size}" ]] && has_text="yes"
+		
+	trap "cleanup" EXIT
+
+	# Make sure the splash daemon is not running
+	killall -9 splash_util 2>/dev/null
+	splash_util -d -t "${theme}"
+	pid=$(ps -o pid,ppid -C splash_util 2>/dev/null | grep '.* 1$' | awk '{ print $1 }')
+	spl_comm "set message Testing the '${theme}' theme (\$progress%)..."
+	[ -n "${tty}" ] && spl_comm "set tty silent ${tty}"
+	[ -z "${delay}" ] && delay=0.05
+	spl_comm "set mode silent"
+	spl_comm "repaint"
+		
+	step=$((65535/$steps))
+		
+	for ((i=0;i<65536;i=$i+$step)) ; do
+		spl_comm "progress $i"
+		spl_comm "paint"	
+		[ ${has_text} == "yes" ] && spl_comm "paint rect ${text_x} ${text_y} ${xres} $(($text_y+5*$text_size))"
+		sleep ${delay}
+	done
+	spl_comm "progress 65535"
+	spl_comm "paint"	
+	[ ${has_text} == "yes" ] && spl_comm "paint rect ${text_x} ${text_y} ${xres} $(($text_y+5*$text_size))"
+	spl_comm "exit"
+	
+	while [[ "$(head -n 1 /proc/${pid}/status 2>/dev/null | cut -f2)" == "splash_util" ]]; do
+		sleep 0.5
+	done
+	
+	while [ "`fgconsole`" != ${ctty} ] ; do
+		chvt ${ctty}
+	done
+}
+
+demo_theme_verbose() {
+	ctheme=$(splash_util --tty=${ctty} -c getcfg | grep theme | awk '{ print $2 }')
+	[ -z "${delay}" ] && delay=5
+
+	set_theme "${theme}" "${ctty}"
+
+	echo "Testing the '${theme}' theme..."
+	for (( i = 0 ; i < ${delay} ; i = i+1 )) ; do
+		echo -n "$i "
+		sleep 1
+	done
+	echo ""
+
+	set_theme "${ctheme}" "${ctty}"
+}
+
 # Set some useful variables that we'll be using in various places
 res=$(/lib/splash/bin/fbres)
 ctty=$(/lib/splash/bin/fgconsole)
@@ -49,14 +147,11 @@ yres=${res#*x}
 xres=${res%x*}
 
 # Default settings
-delay=0.05
 steps=100
 mode='s'
-theme=''
-op=''
 
 args="$@"
-temp=`getopt -l demo,help,theme:,steps:,delay:,mode: m:dt:h "$@"`
+temp=`getopt -l demo,help,set,theme:,steps:,delay:,mode:,tty: m:dt:hs "$@"`
 
 if [ $? != 0 ]; then
 	usage; exit 2
@@ -68,10 +163,12 @@ for i ; do
 	case "$i" in
 		-d|--demo)	op='d'; shift;;
 		-h|--help)	usage; exit 0;;
+		-s|--set)	op='s'; shift;;
 		-m|--mode)	mode="$2"; shift; shift;;
 		-t|--theme)	theme="$2"; shift; shift;;
 		--steps)	steps="$2"; shift; shift;;
 		--delay)	delay="$2"; shift; shift;;
+		--tty)		tty="$2"; shift; shift;;
 		--)		shift; break;;
 	esac
 done
@@ -81,60 +178,14 @@ if [ -z ${op} ]; then
 fi
 
 case "${op}" in
-	'd')
-		if [ -z ${theme} ]; then
-			err "You have to specify a theme name."
-			exit 1
+	's')	set_theme "${theme}" "${tty}" ;;
+	'd')	theme_sanity_check "${theme}"
+		if [ ${mode} == 's' ]; then
+			demo_theme_silent
+		else
+			demo_theme_verbose
 		fi
-	
-		if [ ! -e /etc/splash/${theme}/${res}.cfg ]; then
-			err "Theme '${theme}' doesn't seem to provide a config file for the current resolution (${res})."
-			exit 1
-		fi
-	
-		if [ -z $(cat /etc/splash/${theme}/${res}.cfg | egrep "^silent(pic|jpeg)=") ]; then
-			err "Thene '${theme}' doesn't not support the silent splash mode."
-			exit 1
-		fi
-		
-		has_text="no"
-		
-		# Set text_* variables based on settings from the theme config file
-		eval `cat /etc/splash/${theme}/${res}.cfg | grep "^text_[a-z]\+="`
-		
-		[[ -n ${text_x} && -n ${text_y} && -n ${text_size} ]] && has_text="yes"
-		
-		trap "cleanup" EXIT
-
-		# Make sure the splash daemon is not running
-		killall -9 splash_util 2>/dev/null
-		splash_util -d -t ${theme}
-		pid=$(ps -o pid,ppid -C splash_util 2>/dev/null | grep '.* 1$' | awk '{ print $1 }')
-		spl_comm "set message Testing the splash theme '${theme}' (\$progress%)..."
-		spl_comm "set mode silent"
-
-		step=$((65535/$steps))
-		
-		for ((i=0;i<65536;i=$i+$step)) ; do
-			spl_comm "progress $i"
-			spl_comm "paint"	
-			[ ${has_text} == "yes" ] && spl_comm "paint rect ${text_x} ${text_y} ${xres} $(($text_y+5*$text_size))"
-			sleep ${delay}
-		done
-
-		spl_comm "progress 65535"
-		spl_comm "paint"	
-		[ ${has_text} == "yes" ] && spl_comm "paint rect ${text_x} ${text_y} ${xres} $(($text_y+5*$text_size))"
-		spl_comm "exit"
-	
-		while [[ "$(head -n 1 /proc/${pid}/status 2>/dev/null | cut -f2)" == "splash_util" ]]; do
-			sleep 0.5
-		done
-	
-		while [ "`fgconsole`" != ${ctty} ] ; do
-			chvt ${ctty}
-		done
-	;;
+		;;
 esac
 
 exit 0
