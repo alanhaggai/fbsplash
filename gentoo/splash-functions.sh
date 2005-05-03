@@ -168,7 +168,7 @@ splash_init() {
 	   [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
 		/sbin/splash "start"
 		# Set the input device if it exists
-		local t=$(grep -si keyboard /sys/class/input/event*/device/driver/description | grep -o 'event[0-9]\+') 
+		local t=$(grep -Hsi keyboard /sys/class/input/event*/device/driver/description | grep -o 'event[0-9]\+') 
 		if [[ -n "${t}" ]]; then
 			splash_comm_send "set event dev /dev/input/${t}"
 		fi
