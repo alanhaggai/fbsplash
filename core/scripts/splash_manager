@@ -3,10 +3,10 @@
 # TODO:
 # - fix header
 # - support for icons and scripts in themes
-# - check whether all necessary programs are in place
 # - support for '-v'
 # - support for '--pretend'
 # - support for theme switching
+# - support for 8bpp modes
 
 spl_fifo=/lib/splash/cache/.splash
 
@@ -18,30 +18,40 @@ cleanup() {
 usage() {
 	cat <<EOTB
 splash_geninitramfs/splashutils-%PKG_VERSION%
-Usage: splash_manager [options] <command>
+Usage: splash_manager [options] -c <command>
 
 Commands:
-  -d, --demo  test a splash theme
-  -s, --set   set a splash theme on a specific tty
-  -h, --help  display this message
+  demo  test a splash theme
+  set   set a splash theme on a specific tty
   
 Options:
+  -c, --cmd=CMD	     execute CMD
   -t, --theme=THEME  theme name
       --steps=N	     use N steps when testing the silent splash [d]
       --delay=N      delay each step by N seconds [d]
   -m, --mode=(v|s)   specify which mode to use (verbose/silent) [d]
       --tty=N        set the theme on the Nth tty
+  -h, --help         display this message
+  -e, --exec=CMD      
+      --progress=N
+      --msg=MSG
 EOTB
 }
 
+# void err(char *msg)
+#   Displays an error message.
 err() {
 	echo "Error: $*" >&2
 }
 
+# void spl_comm(char *msg)
+#   Sends 'msg' to the splash fifo.
 spl_comm() {
 	echo "$*" > ${spl_fifo}
 }
 
+# void chvt(int n)
+#   Switches to the n-th tty.
 chvt() {
 	local ntty=$1
 	
@@ -52,6 +62,8 @@ chvt() {
 	fi
 }
 
+# void theme_sanity_check(char *theme)
+#   Performs a theme sanity check.
 theme_sanity_check() {
 	local theme=$1
 	
@@ -66,6 +78,8 @@ theme_sanity_check() {
 	fi
 }
 
+# void set_theme(char *theme, int tty)
+#   Sets a theme on a tty.
 set_theme() {
 	local theme=$1
 	local tty=$2
@@ -77,42 +91,58 @@ set_theme() {
 	splash_util -c on --tty=${tty}
 }
 
-demo_theme_silent() {
-	if [ -z $(cat /etc/splash/${theme}/${res}.cfg | egrep "^silent(pic|jpeg)=") ]; then
-		err "Thene '${theme}' doesn't not support the silent splash mode."
+# void get_theme(int tty)
+#   Prints the name of the theme that is used on a tty.
+get_theme() {
+	local ctty=$1
+	echo $(splash_util --tty=${ctty} -c getcfg | grep theme | awk '{ print $2 }')
+}
+
+# void get_state(int tty)
+#   Prints 'on' or 'off', indicating fbsplash state on a tty.
+get_state() {
+	local ctty=$1
+	echo $(splash_util --tty=${ctty} -c getstate | cut -f2 -d: | tr -d ' ')
+}
+
+# void check_silent(char *theme)
+#   Checks whether a theme supports the silent splash mode.
+check_silent() {
+	local ctheme=$1
+
+	if [ -z $(cat /etc/splash/${ctheme}/${res}.cfg | egrep "^silent(pic|jpeg)=") ]; then
+		err "Theme '${ctheme}' doesn't support the silent splash mode."
 		exit 1
 	fi
-	
-	has_text="no"
+}
 
-	# Set text_* variables based on settings from the theme config file
-	eval `cat /etc/splash/${theme}/${res}.cfg | grep "^text_[a-z]\+="`
-		
-	[[ -n "${text_x}" && -n "${text_y}" && -n "${text_size}" ]] && has_text="yes"
-		
+# void check_verbose(char *theme)
+#   Checks whether a theme supports the verbose splash mode.
+check_verbose() {
+	local ctheme=$1
+
+	if [ -z $(cat /etc/splash/${ctheme}/${res}.cfg | egrep "^(pic|jpeg)=") ]; then
+		err "Theme '${ctheme}' doesn't support the silent splash mode."
+		exit 1
+	fi
+}
+
+set_silent() {
 	trap "cleanup" EXIT
 
 	# Make sure the splash daemon is not running
 	killall -9 splash_util 2>/dev/null
 	splash_util -d -t "${theme}"
 	pid=$(ps -o pid,ppid -C splash_util 2>/dev/null | grep '.* 1$' | awk '{ print $1 }')
-	spl_comm "set message Testing the '${theme}' theme (\$progress%)..."
+	
+	[ -z "${msg}" ] && msg="Testing the '${theme}' theme (\$progress%)..."
+	spl_comm "set message ${msg}"
 	[ -n "${tty}" ] && spl_comm "set tty silent ${tty}"
-	[ -z "${delay}" ] && delay=0.05
 	spl_comm "set mode silent"
 	spl_comm "repaint"
-		
-	step=$((65535/$steps))
-		
-	for ((i=0;i<65536;i=$i+$step)) ; do
-		spl_comm "progress $i"
-		spl_comm "paint"	
-		[ ${has_text} == "yes" ] && spl_comm "paint rect ${text_x} ${text_y} ${xres} $(($text_y+5*$text_size))"
-		sleep ${delay}
-	done
-	spl_comm "progress 65535"
-	spl_comm "paint"	
-	[ ${has_text} == "yes" ] && spl_comm "paint rect ${text_x} ${text_y} ${xres} $(($text_y+5*$text_size))"
+}
+
+exit_silent() {
 	spl_comm "exit"
 	
 	while [[ "$(head -n 1 /proc/${pid}/status 2>/dev/null | cut -f2)" == "splash_util" ]]; do
@@ -124,20 +154,103 @@ demo_theme_silent() {
 	done
 }
 
+demo_theme_silent() {
+	local has_text="no"
+	check_silent "${theme}"
+	
+	# Set text_* variables based on settings from the theme config file
+	eval `cat /etc/splash/${theme}/${res}.cfg | grep "^text_[a-z]\+="`
+		
+	[[ -n "${text_x}" && -n "${text_y}" && -n "${text_size}" ]] && has_text="yes"
+		
+	set_silent	
+
+	[ -z "${delay}" ] && delay=0.05
+	step=$((65535/$steps))
+		
+	for ((i=0;i<65536;i=$i+$step)) ; do
+		spl_comm "progress $i"
+		spl_comm "paint"	
+		[ ${has_text} == "yes" ] && spl_comm "paint rect ${text_x} ${text_y} ${xres} $(($text_y+5*$text_size))"
+		sleep ${delay}
+	done
+	spl_comm "progress 65535"
+	spl_comm "paint"	
+	[ ${has_text} == "yes" ] && spl_comm "paint rect ${text_x} ${text_y} ${xres} $(($text_y+5*$text_size))"
+
+	exit_silent
+}
+
+set_verbose() {
+	[ -z "${tty}" ]		&& tty=${ctty}
+
+	cstate=$(get_state ${tty})
+	[ ${cstate} == "on" ] && ctheme=$(get_theme ${tty})
+
+	set_theme "${theme}" "${tty}"
+	chvt "${tty}"
+}
+
+exit_verbose() {
+	chvt "${ctty}"	
+	if [ ${cstate} == "on" ]; then
+		set_theme "${ctheme}" "${tty}"
+	else
+		splash_util --tty=${tty} -c off
+	fi
+}
+
 demo_theme_verbose() {
-	ctheme=$(splash_util --tty=${ctty} -c getcfg | grep theme | awk '{ print $2 }')
-	[ -z "${delay}" ] && delay=5
-
-	set_theme "${theme}" "${ctty}"
-
-	echo "Testing the '${theme}' theme..."
+	[ -z "${delay}" ]	&& delay=5
+	
+	check_verbose "${theme}"
+	set_verbose
+	
+	echo -e "\nTesting the '${theme}' theme..." >/dev/tty${tty}
 	for (( i = 0 ; i < ${delay} ; i = i+1 )) ; do
-		echo -n "$i "
+		echo -n "$i " >/dev/tty${tty}
 		sleep 1
 	done
 	echo ""
 
-	set_theme "${ctheme}" "${ctty}"
+	exit_verbose
+}
+
+take_shot_silent() {
+	check_silent "${theme}"
+	set_silent
+	
+	[ -z "${progress}" ] && progress=16384 
+	spl_comm "progress ${progress}"  
+	spl_comm "repaint"
+
+	sleep 1
+	fbgrab ${theme}-${res}-silent.png
+
+	exit_silent
+}
+
+take_shot_verbose() {
+	check_verbose "${theme}"
+	set_verbose 
+
+	if [ -n "${cexec}" ]; then
+		ps -A -o pid,comm,tty > /tmp/spl-shot-$$.pre
+		openvt -f -c ${tty} -- ${cexec}
+		sleep 2
+		ps -A -o pid,comm,tty > /tmp/spl-shot-$$.post
+		local ce=$(basename "${cexec}")
+		pid=$(diff /tmp/spl-shot-$$.pre /tmp/spl-shot-$$.post | grep "${ce:0:15}" | grep "tty${tty}" | grep '^>' | awk '{ print $2 }')
+		rm -f /tmp/spl-shot-$$.pre /tmp/spl-shot-$$.post
+	fi
+	
+	fbgrab ${theme}-${res}-verbose.png
+
+	if [[ -n "${ce}" && -n "${pid}" &&
+	  	  "$(cat /proc/${pid}/status 2>/dev/null | grep 'Name:' | cut -f2)" == "${ce:0:15}" ]]; then
+		kill "${pid}"
+	fi
+	exit_verbose
 }
 
 # Set some useful variables that we'll be using in various places
@@ -149,9 +262,13 @@ xres=${res%x*}
 # Default settings
 steps=100
 mode='s'
+cexec=''
+progress=''
+msg=''
+pid=''
 
 args="$@"
-temp=`getopt -l demo,help,set,theme:,steps:,delay:,mode:,tty: m:dt:hs "$@"`
+temp=`getopt -l help,cmd:,theme:,steps:,delay:,mode:,tty:,exec:,progress: c:m:t:he: "$@"`
 
 if [ $? != 0 ]; then
 	usage; exit 2
@@ -161,33 +278,53 @@ eval set -- "$temp"
 
 for i ; do
 	case "$i" in
-		-d|--demo)	op='d'; shift;;
+		-c|--cmd)	op="$2"; shift; shift;;
 		-h|--help)	usage; exit 0;;
-		-s|--set)	op='s'; shift;;
 		-m|--mode)	mode="$2"; shift; shift;;
 		-t|--theme)	theme="$2"; shift; shift;;
+		-e|--exec)	cexec="$2"; shift; shift;;
+		--progress)	progress="$2"; shift; shift;;
 		--steps)	steps="$2"; shift; shift;;
 		--delay)	delay="$2"; shift; shift;;
 		--tty)		tty="$2"; shift; shift;;
+		--msg)		msg="$2"; shift; shift;;
 		--)		shift; break;;
 	esac
 done
 
-if [ -z ${op} ]; then
+if [ -z "${op}" ]; then
 	usage
+	exit 0
 fi
 
 case "${op}" in
-	's')	set_theme "${theme}" "${tty}" ;;
-	'd')	theme_sanity_check "${theme}"
-		if [ ${mode} == 's' ]; then
+	'set')	set_theme "${theme}" "${tty}" ;;
+	'demo')	theme_sanity_check "${theme}"
+		if [ ${mode} == 's' ]; then 
 			demo_theme_silent
 		else
 			demo_theme_verbose
 		fi
 		;;
+
+	'shot') theme_sanity_check "${theme}"
+		if [ ! -x /usr/bin/fbgrab ]; then
+			err "Cannot find /usr/bin/fbgrab"
+			exit 1
+		fi
+
+		if [ ${mode} == 's' ]; then
+			take_shot_silent
+		else
+			take_shot_verbose
+		fi
+		;;
+
+	*)	err "Unrecognized command"
+		usage
+		;;
 esac
 
 exit 0
 
-
+# vim: set ts=4 sts=4:
