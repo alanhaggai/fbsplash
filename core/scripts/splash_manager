@@ -7,8 +7,10 @@
 # - support for '--pretend'
 # - support for theme switching
 # - support for 8bpp modes
+# - support for theme listing
 
 spl_fifo=/lib/splash/cache/.splash
+themedir=/etc/splash
 
 cleanup() {
 	killall splash_util 2>/dev/null
@@ -72,7 +74,7 @@ theme_sanity_check() {
 		exit 1
 	fi
 	
-	if [ ! -e "/etc/splash/${theme}/${res}.cfg" ]; then
+	if [ ! -e "${themedir}/${theme}/${res}.cfg" ]; then
 		err "Theme '${theme}' doesn't seem to provide a config file for the current resolution (${res})."
 		exit 1
 	fi
@@ -86,7 +88,7 @@ set_theme() {
 	
 	theme_sanity_check "${theme}"
 	[ -z "${tty}" ] && tty="${ctty}"
-	splash_util -c setcfg -t ${theme} --tty="${tty}"
+	splash_util -c setcfg -t "${theme}" --tty="${tty}"
 	[ "${tty}" == "${ctty}" ] && splash_util -c setpic -t "${theme}" --tty="${tty}"
 	splash_util -c on --tty=${tty}
 }
@@ -105,26 +107,34 @@ get_state() {
 	echo $(splash_util --tty=${ctty} -c getstate | cut -f2 -d: | tr -d ' ')
 }
 
-# void check_silent(char *theme)
+# void check_silent(char *theme, char *res, char *action)
 #   Checks whether a theme supports the silent splash mode.
 check_silent() {
 	local ctheme=$1
-
-	if [ -z $(cat /etc/splash/${ctheme}/${res}.cfg | egrep "^silent(pic|jpeg)=") ]; then
+	local cres=$2
+	local action=$3
+	
+	if [ -z $(cat "${themedir}/${ctheme}/${cres}.cfg" | egrep "^silent(pic|jpeg)=") ]; then
+		[ "${action}" == "test" ] && return 1
 		err "Theme '${ctheme}' doesn't support the silent splash mode."
 		exit 1
 	fi
 }
 
-# void check_verbose(char *theme)
+# void check_verbose(char *theme, char *res, char *action)
 #   Checks whether a theme supports the verbose splash mode.
 check_verbose() {
 	local ctheme=$1
-
-	if [ -z $(cat /etc/splash/${ctheme}/${res}.cfg | egrep "^(pic|jpeg)=") ]; then
+	local cres=$2
+	local action=$3
+	
+	if [ -z $(cat "${themedir}/${ctheme}/${cres}.cfg" | egrep "^(pic|jpeg)=") ]; then
+		[ "${action}" == "test" ] && return 1
 		err "Theme '${ctheme}' doesn't support the silent splash mode."
 		exit 1
 	fi
+
+	return 0
 }
 
 set_silent() {
@@ -156,10 +166,10 @@ exit_silent() {
 
 demo_theme_silent() {
 	local has_text="no"
-	check_silent "${theme}"
+	check_silent "${theme}" "${res}"
 	
 	# Set text_* variables based on settings from the theme config file
-	eval `cat /etc/splash/${theme}/${res}.cfg | grep "^text_[a-z]\+="`
+	eval `cat ${themedir}/${theme}/${res}.cfg | grep "^text_[a-z]\+="`
 		
 	[[ -n "${text_x}" && -n "${text_y}" && -n "${text_size}" ]] && has_text="yes"
 		
@@ -203,7 +213,7 @@ exit_verbose() {
 demo_theme_verbose() {
 	[ -z "${delay}" ]	&& delay=5
 	
-	check_verbose "${theme}"
+	check_verbose "${theme}" "${res}"
 	set_verbose
 	
 	echo -e "\nTesting the '${theme}' theme..." >/dev/tty${tty}
@@ -217,7 +227,7 @@ demo_theme_verbose() {
 }
 
 take_shot_silent() {
-	check_silent "${theme}"
+	check_silent "${theme}" "${res}"
 	set_silent
 	
 	[ -z "${progress}" ] && progress=16384 
@@ -231,7 +241,7 @@ take_shot_silent() {
 }
 
 take_shot_verbose() {
-	check_verbose "${theme}"
+	check_verbose "${theme}" "${res}"
 	set_verbose 
 
 	if [ -n "${cexec}" ]; then
@@ -251,6 +261,51 @@ take_shot_verbose() {
 		kill "${pid}"
 	fi
 	exit_verbose
+}
+
+list_themes() {
+	for i in "${themedir}"/* ; do
+		[ ! -d "${i}" ] && continue
+		[ -z "$(ls "${i}"/*.cfg 2>/dev/null)" ] && continue
+
+		tn="${i/$themedir/}"
+		tn="${tn//\//}"
+
+		echo -n "$tn:"
+		local first=true
+		
+		for res in "${i}"/*.cfg ; do
+			res=${res##*/}
+			res=${res/.cfg/}
+
+			[ "$first" != "true" ] && echo -n ","
+			first=false
+			echo -n " ${res}"
+
+			local sil ver
+			
+			if check_silent "$tn" "$res" "test"; then
+				sil=true
+			else
+				sil=false
+			fi
+
+			if check_verbose "$tn" "$res" "test"; then
+				ver=true
+			else
+				ver=false
+			fi
+		
+			if [[ "$ver" == "true" && "$sil" == "true" ]]; then
+				echo -n " (sv)"
+			elif [[ "$sil" == "true" ]]; then
+				echo -n " (s)"
+			else
+				echo -n " (v)"
+			fi
+		done
+		echo ""
+	done
 }
 
 # Set some useful variables that we'll be using in various places
@@ -299,7 +354,8 @@ fi
 
 case "${op}" in
 	'set')	set_theme "${theme}" "${tty}" ;;
-	'demo')	theme_sanity_check "${theme}"
+	'demo')
+		theme_sanity_check "${theme}"
 		if [ ${mode} == 's' ]; then 
 			demo_theme_silent
 		else
@@ -307,7 +363,8 @@ case "${op}" in
 		fi
 		;;
 
-	'shot') theme_sanity_check "${theme}"
+	'shot') 
+		theme_sanity_check "${theme}"
 		if [ ! -x /usr/bin/fbgrab ]; then
 			err "Cannot find /usr/bin/fbgrab"
 			exit 1
@@ -320,6 +377,15 @@ case "${op}" in
 		fi
 		;;
 
+	'switch')
+		theme_sanity_check "${theme}"
+		theme_switch
+		;;	
+		
+	'list') 
+		list_themes
+		;;
+		
 	*)	err "Unrecognized command"
 		usage
 		;;
