@@ -20,6 +20,7 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <sys/vt.h>
+#include <linux/kd.h>
 
 #include "splash.h"
 
@@ -35,6 +36,7 @@ int arg_vc = 0;
 char arg_mode = 'v';
 char *arg_theme = NULL;
 u16 arg_progress = 0;
+u8 arg_kdmode = KD_TEXT;
 
 #ifndef TARGET_KERNEL
 char *arg_export = NULL;

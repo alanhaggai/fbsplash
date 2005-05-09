@@ -261,6 +261,7 @@ extern int arg_vc;
 extern char *arg_theme;
 extern char arg_mode;
 extern u16 arg_progress;
+extern u8 arg_kdmode;
 
 #ifndef TARGET_KERNEL
 extern char *arg_export;

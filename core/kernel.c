@@ -68,7 +68,9 @@ int handle_init()
 				arg_mode = 's';
 			} else if (!strncmp(opt, "theme:", 6)) {
 				arg_theme = strdup(opt+6);
-			} 
+			} else if (!strncmp(opt, "kdgraphics", 10)) {
+				arg_kdmode = KD_GRAPHICS;
+			}
 		}
 	} else {
 		/* If we can't parse the command line, we can't
@@ -158,6 +160,9 @@ parse_failure:	if (h == 0)
 	}
 
 	tty_set_silent(stty, fd_vc);
+		
+	if (arg_kdmode == KD_GRAPHICS) 
+		ioctl(fd_vc, KDSETMODE, KD_GRAPHICS);	
 	
 	if (silent_img.cmap.red)
 		ioctl(fd_fb, FBIOPUTCMAP, &silent_img.cmap);

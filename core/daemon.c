@@ -479,9 +479,9 @@ void handle_silent_switch()
 //	/* Clear the screen */
 //	write(fd_tty_s, "\e[2J", 4);
 	
-#ifdef CONFIG_SILENT_KD_GRAPHICS
-	ioctl(fd_tty_s, KDSETMODE, KD_GRAPHICS);
-#endif
+	if (arg_kdmode == KD_GRAPHICS)
+		ioctl(fd_tty_s, KDSETMODE, KD_GRAPHICS);
+
 	if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR)
 		set_directcolor_cmap(fd_fb);
 
