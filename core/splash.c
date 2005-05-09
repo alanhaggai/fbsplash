@@ -35,6 +35,7 @@ struct option options[] = {
 	{ "progress", 	required_argument, NULL, 0x105 },
 	{ "tty",	required_argument, NULL, 0x106 },
 	{ "export",	required_argument, NULL, 0x107 },
+	{ "kdgraphics", no_argument, NULL, 0x108 },
 	{ "daemon",	no_argument, NULL, 'd'},
 	{ "help",	no_argument, NULL, 'h'}	
 };
@@ -90,6 +91,8 @@ void usage(void)
 "  -e, --export=FILE   export the silent background image to a file\n"
 "                      this option is only used when splash_util is\n"
 "                      running in daemon mode\n"
+"      --kdgraphics    use KD_GRAPHICS mode for the silent splash\n"
+"                      when splash_util is running in daemon mode\n"
 #ifndef CONFIG_FBSPLASH
 "\nThis version of splashutils has been compiled without support for fbsplash.\n"
 #endif
@@ -162,6 +165,10 @@ int main(int argc, char **argv)
 		case 'e':
 		case 0x107:
 			arg_export = optarg;
+			break;
+		
+		case 0x108:
+			arg_kdmode = KD_GRAPHICS;
 			break;
 			
 		case 'd':
