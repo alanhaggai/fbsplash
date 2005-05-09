@@ -308,6 +308,199 @@ list_themes() {
 	done
 }
 
+bootloader=""
+
+detect_bootloader() {
+	if [[ -e /boot/grub/grub.conf && -e /etc/lilo.conf ]]; then
+		echo "Both GRUB and LILO seem to be installed and configured. Please"
+		echo "select which one should be configured by this script:"
+		echo "  1) GRUB"
+		echo "  2) LILO"
+		while true; do
+			echo -n "Your choice [1]: "
+			read choice
+			[ -z "${choice}" ] && echo "grub"
+			if [ "${choice}" == 1 ]; then
+				bootloader="grub"
+				return
+			elif [ "${choice}" == 2 ]; then
+				bootloader="lilo"
+				return
+			else
+				err "You have chosen an invalid number."
+			fi
+		done
+	elif [[ -e /boot/grub/grub.conf ]]; then
+		bootloader="grub"
+	elif [[ -e /etc/lilo.conf ]]; then
+		bootloader="lilo"
+	else
+		err "It appears that none of the supported bootloaders (GRUB, LILO) is installed"
+		err "on your system. Please install one of these or configure fbsplash/splashutils"
+		err "manually."
+		exit 1
+	fi
+}
+
+theme_switch_grub() {
+	local cnt="0"
+	local entries
+	local lines
+	local done=false
+
+	# FIXME: automatically mount /boot..
+	
+	echo "Please select which kernel should be configured for use with splashutils:"
+	
+	grep -n -v '^#' /boot/grub/grub.conf | grep '^[[:digit:]]\+:[[:space:]]*title' > /tmp/splash_mngr.$$
+	while read i ; do
+		line=$(echo "${i}" | cut -d: -f1)
+		i=$(echo "${i}" | cut -d: -f2)
+		i=${i:6}
+		entries[$cnt]="$i"
+		lines[$cnt]="$line"
+		cnt=$(($cnt+1))
+		printf "%3d) %s\n" "$cnt" "$i"
+	done < /tmp/splash_mngr.$$
+	rm /tmp/splash_mngr.$$
+
+	echo -n "Your choice: "
+	
+	while [ ${done} != "true" ]; do
+		read n
+		n=${n%% *}
+		
+		if [[ -z "${n}" || "${n}" -le 0 || "${n}" -gt ${cnt} ]]; then
+			err "Invalid entry number. Try again. Enter a number in the range: 1-${cnt}}."
+			echo -n "Your choice: "
+		else
+			done="true"
+		fi
+	done
+
+	n=$(($n-1))
+	echo "Configuring '${entries[$n]}'.."
+
+	line=${lines[$n]}
+
+	t="$(sed -e "${line}p" -e 'd' /boot/grub/grub.conf)"
+	
+	if [[ "$(echo ${t})" != "title ${entries[$n]}" ]]; then
+		err "The GRUB config file appears to have been modified while this script was"
+		err "working. Please run it again after making sure no one is modifying"
+		err "/boot/grub/grub.conf."
+		exit 1
+	fi
+	
+	cp /boot/grub/grub.conf /boot/grub/grub.conf.work.$$
+
+	initrd="$(awk "FNR == $line { 
+				print ;
+				while(getline > 0 && \$1 != \"title\") {
+						print \$0
+				}
+			}" /boot/grub/grub.conf.work.$$ | grep "^[[:space:]]*initrd")" 
+	initrd=$(echo "$initrd" | cut -f2 -d' ')
+
+	newinitrd=""
+	want_initrd=false
+	
+	if [ -z "${initrd}" ]; then
+		echo "It appears that you are not using an initrd. Do you want this script"
+		echo "to automatically generate one for use with the '${theme}' theme?"
+		echo "Your choice [Y/n]: "
+		
+		read choice
+		if [ "${choice}" != "n" && "${choice}" != "N" ]; then
+			want_initrd=true
+		fi
+	elif [ "${initrd:0:13}" == "/boot/splash/" ]; then
+		want_initrd=true
+	else
+		echo ""
+		echo "It appears that you are already using an initrd:"
+		echo "  '${initrd}'"
+		echo "Do you want this script to automatically generate another initrd for"
+		echo "use with the '${theme}' theme? The new initrd will be used instead of"
+		echo "the current one."
+		echo -n "Your choice [y/N]: "
+		read choice
+ 		if [[ "${choice}" == "y" || "${choice}" == "Y" ]]; then
+			want_initrd=true
+		fi
+	fi
+
+	if [ ${want_initrd} == "true" ]; then
+		[ ! -d /boot/splash ] && mkdir /boot/splash
+		newinitrd="/boot/splash/initrd-spl-${theme}-all"
+		splash_geninitramfs -g "${newinitrd}" -v "${theme}"
+	fi
+
+	cp /boot/grub/grub.conf /boot/grub/grub.conf.backup
+
+	awk "FNR == $line { 
+		initrd=0
+		if (\"${newinitrd}\" != \"\") {
+			initrd=1
+		}
+	
+		while(\$1 != \"kernel\") { 
+			if (initrd == 1 && \$1 == \"initrd\") {
+				sub(/initrd .*/, \"initrd ${newinitrd}\", \$0)
+			}
+			print \$0 
+			getline 
+		}
+		splash=0
+		cons=0
+		quiet=0 
+		for(i=1; i<=NF+1; i++) { 
+			if (substr(\$i,0,6) == \"splash\") { 
+				splash=1 
+			} else if (\$i == \"CONSOLE=/dev/tty1\") { 
+				cons=1 
+			} else if (\$i == \"quiet\") {
+				quiet=1 
+			}
+		}
+		if (splash == 1) {
+			sub(/splash=[^ ]+/, \"splash=silent,fadein,theme:${theme}\", \$0)
+			printf \"%s\",\$0
+		} else {
+			printf \"%s splash=silent,fadein,theme:${theme}\", \$0
+		}
+		if (cons == 0) {  printf \" %s\", \"CONSOLE=/dev/tty1\"	}
+		if (quiet == 0) { printf \" %s\", \"quiet\" 	}
+		printf \"\n\"
+
+		getline
+		while (\$1 != \"title\") {
+			if (initrd == 1 && \$1 == \"initrd\") {
+				sub(/initrd .*/, \"initrd ${newinitrd}\", \$0)
+			}
+			print \$0 
+			getline 
+		}
+	}
+	
+	FNR != $line { print \$0 }" /boot/grub/grub.conf.work.$$ > /boot/grub/grub.conf.tmp.$$
+	
+	rm /boot/grub/grub.conf.work.$$
+	mv /boot/grub/grub.conf.tmp.$$ /boot/grub/grub.conf
+
+	echo "GRUB config file has been updated."
+}
+
+theme_switch() {
+	detect_bootloader
+	
+	if [[ ${bootloader} == "grub" ]]; then
+		theme_switch_grub
+	else
+		theme_switch_lilo
+	fi
+}
+
 # Set some useful variables that we'll be using in various places
 res=$(/lib/splash/bin/fbres)
 ctty=$(/lib/splash/bin/fgconsole)
