@@ -113,9 +113,12 @@ if [ "$1" == "start" ]; then
 	
 	# Prepare the communications FIFO
 	mkfifo ${spl_fifo}	
-	
+
+	options=""
+	[[ ${SPLASH_KDMODE} == "GRAPHICS" ]] && options="--kdgraphics"
+		
 	# Start the splash daemon
-	${SPLUTIL} -d --theme=${SPLASH_THEME}
+	${SPLUTIL} -d --theme="${SPLASH_THEME}" "${options}"
 
 	# Get the PID of the daemon and save it
 	pid=$(ps -o pid,ppid -C splash_util.static 2>/dev/null | grep '.* 1$' | awk '{ print $1 }')

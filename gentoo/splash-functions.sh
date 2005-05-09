@@ -104,7 +104,8 @@ splash_setup() {
 	export SPLASH_MODE_REQ="off"
 	export SPLASH_THEME="default"
 	export SPLASH_TTY="8"
-
+	export SPLASH_KDMODE="TEXT"
+	
 	# Choose a default tty which will allow to avoid conflicts with consolefont
 	if [[ -n ${RC_TTY_NUMBER} ]]; then
 		SPLASH_TTY=$((${RC_TTY_NUMBER}+1))
@@ -124,6 +125,7 @@ splash_setup() {
 				tty)		SPLASH_TTY=${i#*:} ;;
 				verbose) 	SPLASH_MODE_REQ="verbose" ;;
 				silent)		SPLASH_MODE_REQ="silent" ;;
+				kdgraphics)	SPLASH_KDMODE="GRAPHICS" ;;
 			esac
 		done
 	fi
