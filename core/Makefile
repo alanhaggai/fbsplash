@@ -193,7 +193,7 @@ ft2:	config.h
 	@cd $(FT2SRC) ; \
 	if [ ! -e ./config.mk ]; then \
 		$(call info,CONF,freetype2) ; \
-		./configure > $(OUTPUT) ; \
+		./configure --disable-shared > $(OUTPUT) ; \
 	fi ; \
 	if ! make -q library; then $(call info,MAKE,freetype2) ; fi ; \
 	make CFLAGS="-c $(K_CFLAGS)" library > $(OUTPUT)
