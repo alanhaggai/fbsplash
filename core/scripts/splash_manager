@@ -40,10 +40,25 @@ Options:
 EOTB
 }
 
+CGOOD=$'\e[32;01m'
+CWARN=$'\e[33;01m'
+CBAD=$'\e[31;01m'
+CNORM=$'\e[0m'
+CHILITE=$'\e[36;01m'
+CBRACKET=$'\e[34;01m'
+
 # void err(char *msg)
 #   Displays an error message.
 err() {
-	echo "Error: $*" >&2
+	echo -e "${CBAD}Error:${CNORM} $*" >&2
+}
+
+einfo() {
+	echo -e "${CGOOD}*${CNORM} $*"
+}
+
+ewarn() {
+	echo -e "${CWARN}*${CNORM} $*"
 }
 
 # void spl_comm(char *msg)
@@ -216,7 +231,7 @@ demo_theme_verbose() {
 	check_verbose "${theme}" "${res}"
 	set_verbose
 	
-	echo -e "\nTesting the '${theme}' theme..." >/dev/tty${tty}
+	einfo -e "\nTesting the '${theme}' theme..." >/dev/tty${tty}
 	for (( i = 0 ; i < ${delay} ; i = i+1 )) ; do
 		echo -n "$i " >/dev/tty${tty}
 		sleep 1
@@ -312,15 +327,17 @@ bootloader=""
 
 detect_bootloader() {
 	if [[ -e /boot/grub/grub.conf && -e /etc/lilo.conf ]]; then
-		echo "Both GRUB and LILO seem to be installed and configured. Please"
-		echo "select which one should be configured by this script:"
-		echo "  1) GRUB"
-		echo "  2) LILO"
+		ewarn "Both GRUB and LILO seem to be installed and configured. Please"
+		ewarn "select which one should be configured by this script:"
+		ewarn "  1) GRUB"
+		ewarn "  2) LILO"
 		while true; do
 			echo -n "Your choice [1]: "
 			read choice
-			[ -z "${choice}" ] && echo "grub"
-			if [ "${choice}" == 1 ]; then
+			if [ -z "${choice}" ]; then
+				bootloader="grub"
+				return
+			elif [ "${choice}" == 1 ]; then
 				bootloader="grub"
 				return
 			elif [ "${choice}" == 2 ]; then
@@ -342,15 +359,51 @@ detect_bootloader() {
 	fi
 }
 
+#
+# The code of mount_boot_partition() is stolen from Gentoo's mount-boot.eclass.
+#
+mount_boot_partition() {
+	# note that /dev/BOOT is in the Gentoo default /etc/fstab file
+	local fstabstate="$(cat /etc/fstab | awk '!/^#|^[[:blank:]]+#|^\/dev\/BOOT/ {print $2}' | egrep "^/boot$" )"
+	local procstate="$(cat /proc/mounts | awk '{print $2}' | egrep "^/boot$" )"
+	local proc_ro="$(cat /proc/mounts | awk '{ print $2, $4 }' | sed -n '/\/boot/{ /[ ,]\?ro[ ,]\?/p }' )"
+
+	if [ -n "${fstabstate}" ] && [ -n "${procstate}" ]; then
+		if [ -n "${proc_ro}" ]; then
+			einfo "Your boot partition, detected as being mounted as /boot, is read-only."
+			einfo "Remounting it in read-write mode ..."
+			mount -o remount,rw /boot &>/dev/null
+			if [ "$?" -ne 0 ]; then
+				err "Unable to remount in rw mode. Please do it manually!"
+				exit 1
+			fi
+		else
+			einfo "Your boot partition was detected as being mounted as /boot."
+		fi
+	elif [ -n "${fstabstate}" ] && [ -z "${procstate}" ]; then
+		mount /boot -o rw &>/dev/null
+		if [ "$?" -eq 0 ]; then
+			einfo "Your boot partition was not mounted as /boot, but this"
+			einfo "script was able to mount it without additional intervention."
+		else
+			err "Cannot automatically mount your /boot partition."
+			err "Your boot partition has to be mounted rw before the splash configuration"
+			err "can be continued."
+			exit 1
+		fi
+	else
+		einfo "Assuming you do not have a separate /boot partition."
+	fi
+}
+
 theme_switch_grub() {
 	local cnt="0"
 	local entries
 	local lines
 	local done=false
 
-	# FIXME: automatically mount /boot..
-	
-	echo "Please select which kernel should be configured for use with splashutils:"
+	mount_boot_partition
+	einfo "Please select which kernel should be configured for use with splashutils:"
 	
 	grep -n -v '^#' /boot/grub/grub.conf | grep '^[[:digit:]]\+:[[:space:]]*title' > /tmp/splash_mngr.$$
 	while read i ; do
@@ -379,7 +432,7 @@ theme_switch_grub() {
 	done
 
 	n=$(($n-1))
-	echo "Configuring '${entries[$n]}'.."
+	einfo "Configuring '${entries[$n]}'.."
 
 	line=${lines[$n]}
 
@@ -406,9 +459,9 @@ theme_switch_grub() {
 	want_initrd=false
 	
 	if [ -z "${initrd}" ]; then
-		echo "It appears that you are not using an initrd. Do you want this script"
-		echo "to automatically generate one for use with the '${theme}' theme?"
-		echo "Your choice [Y/n]: "
+		einfo "It appears that you are not using an initrd. Do you want this script"
+		einfo "to automatically generate one for use with the '${theme}' theme?"
+		echo -n "Your choice [Y/n]: "
 		
 		read choice
 		if [ "${choice}" != "n" && "${choice}" != "N" ]; then
@@ -418,11 +471,11 @@ theme_switch_grub() {
 		want_initrd=true
 	else
 		echo ""
-		echo "It appears that you are already using an initrd:"
-		echo "  '${initrd}'"
-		echo "Do you want this script to automatically generate another initrd for"
-		echo "use with the '${theme}' theme? The new initrd will be used instead of"
-		echo "the current one."
+		einfo "It appears that you are already using an initrd:"
+		einfo "  '${initrd}'"
+		einfo "Do you want this script to automatically generate another initrd for"
+		einfo "use with the '${theme}' theme?"
+		einfo "The new initrd will be used instead of the current one."
 		echo -n "Your choice [y/N]: "
 		read choice
  		if [[ "${choice}" == "y" || "${choice}" == "Y" ]]; then
@@ -488,7 +541,7 @@ theme_switch_grub() {
 	rm /boot/grub/grub.conf.work.$$
 	mv /boot/grub/grub.conf.tmp.$$ /boot/grub/grub.conf
 
-	echo "GRUB config file has been updated."
+	einfo "GRUB config file has been updated."
 }
 
 theme_switch() {
