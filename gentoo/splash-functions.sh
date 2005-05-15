@@ -106,11 +106,6 @@ splash_setup() {
 	export SPLASH_TTY="16"
 	export SPLASH_KDMODE="TEXT"
 	
-	# Choose a default tty which will allow to avoid conflicts with consolefont
-	if [[ -n ${RC_TTY_NUMBER} ]]; then
-		SPLASH_TTY=$((${RC_TTY_NUMBER}+1))
-	fi
-
 	if [[ -f /etc/conf.d/splash ]]; then 
 		. /etc/conf.d/splash
 	fi
