@@ -35,6 +35,7 @@ Options:
                   comma-separated list of the resolutions for which the images
 		  are to be copied
   -v, --verbose   verbose output
+      --no8bpp    ignore 8bpp images (can save a lot of space)
 EOTB
 
 #   -d              use dynamically linked splash helper
@@ -65,6 +66,7 @@ splash_hlp="/sbin/splash_helper"
 res=""
 verbose=0
 index=0
+no8bpp=0
 
 args="$@"
 temp=`getopt -l all,generate:,append:,copy:,help,verbose,res: a:g:c:r:hv "$@"`
@@ -84,6 +86,7 @@ for i ; do
 #		-d)		splash_hlp="/sbin/splash_helper.dyn"; shift;;
 		-r|--res)	res=${2/,/ }; shift; shift;;
 		-v|--verbose)	verbose=$(($verbose + 1)); shift;;
+		--no8bpp)	no8bpp=1; shift;;
 		--)		shift; break;;
 		--all)		
 				shift; 
@@ -180,9 +183,15 @@ for (( i=0 ; i < index ; i++ )) ; do
 
 		cp -pRH --parents "${themedir}/${theme}/${j}.cfg" "${imgdir}"
 
+		if [[ ${no8bpp} == 0 ]]; then
+			t="[0-9*]"
+		else
+			t=""
+		fi
+		
 		# config file parsing
 		pics=`cat "${themedir}/${theme}/${j}.cfg" | \
-		      sed -r -e '/(^(silent)?jpeg=)|(^(silent)?pic[0-9]*=)/! d' \
+		      sed -r -e "/(^(silent)?jpeg=)|(^(silent)?pic${t}*=)/! d" \
 			     -e 's/[a-z0-9]+=(.*)/\1/'`
 		for pic in $pics ; do
 			put_item "${pic}"
@@ -216,3 +225,4 @@ fi
 
 exit 0
 
+# vim: set ts=4 sts=4 :
