@@ -80,7 +80,7 @@ INCLUDES = -I${ROOT}/linux/include -I/usr/include/freetype2
 OBJS     = splash.o parse.o render.o image.o cmd.o common.o daemon.o list.o effects.o
 
 # checks whether an opton is set in config.h
-config_opt	= $(shell if [[ -n "`egrep '\#define[[:space:]]+$(1)([[:space:]]+|$$)' config.h`" ]]; then echo true ; fi)
+config_opt	= $(shell if [[ -n "`egrep '^\#define[[:space:]]+$(1)([[:space:]]+|$$)' config.h`" ]]; then echo true ; fi)
 
 ifeq ($(call config_opt,CONFIG_TTF),true)
 	OBJS   += ttf.o
