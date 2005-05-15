@@ -14,8 +14,13 @@ einfo Got version: ${ver}
 
 mv core "splashutils-${ver}"
 
-ebegin Creating a tarball
+ebegin "Creating a tarball"
 tar cf - "splashutils-${ver}" | bzip2 -f > "splashutils-${ver}.tar.bz2"
+eend $?
+
+ebegin "Creating a -lite tarball"
+rm -rf splashutils-${ver}/libs/*
+tar cf - "splashutils-${ver}" | bzip2 -f > "splashutils-lite-${ver}.tar.bz2"
 eend $?
 
 ebegin Removing the working copy
