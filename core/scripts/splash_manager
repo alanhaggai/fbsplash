@@ -23,20 +23,42 @@ splash_geninitramfs/splashutils-%PKG_VERSION%
 Usage: splash_manager [options] -c <command>
 
 Commands:
-  demo  test a splash theme
-  set   set a splash theme on a specific tty
-  
+ demo    test a splash theme
+ list    list available splash themes
+ set     set a splash theme on a specific tty
+ shot    take a screenshot of a selected splash theme
+ switch  switch a splash theme by changing GRUB/LILO config files
+ 
 Options:
-  -c, --cmd=CMD	     execute CMD
-  -t, --theme=THEME  theme name
-      --steps=N	     use N steps when testing the silent splash [d]
-      --delay=N      delay each step by N seconds [d]
-  -m, --mode=(v|s)   specify which mode to use (verbose/silent) [d]
-      --tty=N        set the theme on the Nth tty
-  -h, --help         display this message
-  -e, --exec=CMD      
-      --progress=N
-      --msg=MSG
+ -c, --cmd=CMD      execute CMD
+ -h, --help         display this message
+ -t, --theme=THEME  [dehs] theme name
+     --steps=N	    [d   ] use N steps when testing the silent splash
+     --delay=N      [d   ] delay each step by N seconds
+ -m, --mode=(v|s)   [d h ] specify which mode to use (verbose/silent)
+     --tty=N        [deh ] set the theme on the Nth tty
+ -e, --exec=CMD     [  h ] run CMD on the tty where splash is being tested
+     --progress=N   [  h ] set progress to N (0-65535)
+     --msg=MSG	    [d h ] set the main system message to MSG
+ 
+The letters in the square brackets indicate the commands with which
+specific options can be used: d (demo), e (set), h (shot), s (switch).
+
+Examples:
+ splash_manager -c switch -t livecd-2005.0
+   (switch to the 'livecd-2005.0' theme; the new theme will be used
+    after reboot)
+ 
+ splash_manager -c set -t linux --tty=8
+   (set the 'linux' theme on the 8th tty)
+
+ splash_manager -c demo -t livecd-2005.0 -m s --steps=100
+   (run a demonstration of the 'livecd-2005.0' theme, silent mode;
+    use 100 steps for the progress bar)
+
+ splash_manager -c shot -t foobar -m s --progress=32767 --msg='Smile!'
+   (take a screenshot of the 'foobar' theme, silent mode; set progress
+    to 50% and use 'Smile!' as the main system message)
 EOTB
 }
 
@@ -743,7 +765,7 @@ msg=''
 pid=''
 
 args="$@"
-temp=`getopt -l help,cmd:,theme:,steps:,delay:,mode:,tty:,exec:,progress: c:m:t:he: "$@"`
+temp=`getopt -l help,cmd:,theme:,steps:,delay:,mode:,msg:,tty:,exec:,progress: c:m:t:he: "$@"`
 
 if [ $? != 0 ]; then
 	usage; exit 2
