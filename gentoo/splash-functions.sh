@@ -103,7 +103,7 @@ splash_setup() {
 	
 	export SPLASH_MODE_REQ="off"
 	export SPLASH_THEME="default"
-	export SPLASH_TTY="8"
+	export SPLASH_TTY="16"
 	export SPLASH_KDMODE="TEXT"
 	
 	# Choose a default tty which will allow to avoid conflicts with consolefont
