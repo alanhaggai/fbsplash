@@ -28,12 +28,14 @@ rm -rf "splashutils-${ver}"
 eend $?
 
 if [[ ${TESTING} == "no" ]]; then
-	ebegin Copying the tarball to dev.gentoo.org
+	ebegin Copying the tarballs to dev.gentoo.org
 	scp splashutils-${ver}.tar.bz2 spock@dev.gentoo.org:/home/spock
+	scp splashutils-lite-${ver}.tar.bz2 spock@dev.gentoo.org:/home/spock
 	eend $?
 
-	ebegin Copying the tarball to the SDS
+	ebegin Copying the tarballs to the SDS
 	cp splashutils-${ver}.tar.bz2 ${SDS_ROOT}/htdocs/projects/gensplash/archive
+	cp splashutils-lite-${ver}.tar.bz2 ${SDS_ROOT}/htdocs/projects/gensplash/archive
 	eend $?
 fi
 
