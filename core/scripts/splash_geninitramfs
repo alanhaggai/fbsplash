@@ -69,7 +69,7 @@ index=0
 no8bpp=0
 
 args="$@"
-temp=`getopt -l all,generate:,append:,copy:,help,verbose,res: a:g:c:r:hv "$@"`
+temp=`getopt -l no8bpp,all,generate:,append:,copy:,help,verbose,res: a:g:c:r:hv "$@"`
 
 if [ $? != 0 ]; then
 	usage; exit 2
