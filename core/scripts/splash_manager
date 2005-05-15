@@ -1,14 +1,23 @@
 #!/bin/bash
+#
+# splash_manager -- a convenience utility to perform various splash related
+#                   tasks in an easy and user-friendly way
+#
+# Copyright (C) 2005, Michal Januszewski <spock@gentoo.org>
+#
+# This file is a part of the splashutils package.
+#
+# This file is subject to the terms and conditions of the GNU General Public
+# License v2.  See the file COPYING in the main directory of this archive for
+# more details.
+#
 
 # TODO:
-# - fix header
 # - support for icons and scripts in themes
 # - support for '-v'
-# - support for '--pretend'
-# - support for theme switching
 # - support for 8bpp modes
-# - support for theme listing
 
+# System configuration variables
 spl_fifo=/lib/splash/cache/.splash
 themedir=/etc/splash
 
@@ -75,10 +84,14 @@ err() {
 	echo -e "${CBAD}Error:${CNORM} $*" >&2
 }
 
+# void einfo(char *msg)
+#   Displays an informational message.
 einfo() {
 	echo -e "${CGOOD}*${CNORM} $*"
 }
 
+# void ewarn(char *msg0
+#   Display a warning message.
 ewarn() {
 	echo -e "${CWARN}*${CNORM} $*"
 }
@@ -102,7 +115,7 @@ chvt() {
 }
 
 # void theme_sanity_check(char *theme)
-#   Performs a theme sanity check.
+#   Performs a theme sanity check -- checks whether a theme exists.
 theme_sanity_check() {
 	local theme=$1
 	
@@ -118,7 +131,7 @@ theme_sanity_check() {
 }
 
 # void set_theme(char *theme, int tty)
-#   Sets a theme on a tty.
+#   Sets a theme on a specific tty.
 set_theme() {
 	local theme=$1
 	local tty=$2
@@ -381,9 +394,7 @@ detect_bootloader() {
 	fi
 }
 
-#
 # The code of mount_boot_partition() is stolen from Gentoo's mount-boot.eclass.
-#
 mount_boot_partition() {
 	# note that /dev/BOOT is in the Gentoo default /etc/fstab file
 	local fstabstate="$(cat /etc/fstab | awk '!/^#|^[[:blank:]]+#|^\/dev\/BOOT/ {print $2}' | egrep "^/boot$" )"
@@ -418,6 +429,8 @@ mount_boot_partition() {
 	fi
 }
 
+# int input_number(int min, int max, int default)
+#   Asks the user to enter a number in the range [min;max].
 input_number() {
 	local min=$1
 	local max=$2
@@ -441,6 +454,8 @@ input_number() {
 	return ${n}
 }
 
+# bool input_bool(bool default)
+#   Asks the user to enter 'y' or 'n'.
 input_bool() {
 	local default=$1
 	local choice
@@ -470,6 +485,8 @@ input_bool() {
 	fi
 }
 
+# void theme_switch_initrd(char *initrd)
+#   Asks the user whether (s)he wants to generate and use a new initrd.
 theme_switch_initrd() {
 	local initrd=$1
 	newinitrd=""
@@ -509,8 +526,8 @@ theme_switch_lilo() {
 	local want_name=false
 	local linecnt=1
 	
+	# Display a list of entries from lilo.conf and ask the user to select one of them.
 	einfo "Please select which kernel should be configured for use with splashutils:"
-	
 	while read i ; do
 		line=$(echo ${i})
 		if [[ ${i:0:5} == "image" ]]; then
@@ -630,8 +647,8 @@ theme_switch_grub() {
 	local lines
 	local done=false
 
+	# Display a list of entries from grub.conf and ask the user to select one of them.
 	einfo "Please select which kernel should be configured for use with splashutils:"
-	
 	grep -n '^[[:space:]]*title' /boot/grub/grub.conf > /tmp/splash_mngr.$$
 	while read i ; do
 		line=$(echo "${i}" | cut -d: -f1)
@@ -649,7 +666,6 @@ theme_switch_grub() {
 	einfo "Configuring '${entries[$n]}'.."
 
 	line=${lines[$n]}
-
 	t="$(sed -e "${line}p" -e 'd' /boot/grub/grub.conf)"
 	
 	if [[ "$(echo ${t})" != "title ${entries[$n]}" ]]; then
