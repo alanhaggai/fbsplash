@@ -396,16 +396,223 @@ mount_boot_partition() {
 	fi
 }
 
+input_number() {
+	local min=$1
+	local max=$2
+	local default=$3
+	local done=false
+
+	echo -n "Your choice: "
+	
+	while [[ ${done} != "true" ]]; do
+		read n
+		n=${n%% *}
+		
+		if [[ -z "${n}" || "${n}" -lt ${min} || "${n}" -gt ${max} ]]; then
+			err "Invalid entry number. Try again. Enter a number in the range: ${min}-${max}}."
+			echo -n "Your choice: "
+		else
+			done="true"
+		fi
+	done
+
+	return ${n}
+}
+
+input_bool() {
+	local default=$1
+	local choice
+	
+	echo -n "Your choice "
+
+	if [[ "${default}" == "y" ]]; then
+		echo -n "[Y/n]: "
+	else
+		echo -n "[y/N]: "
+	fi
+
+	read choice
+	
+	if [[ "${default}" == "y" ]]; then
+		if [[ "${choice}" != "n" && "${choice}" != "N" ]]; then
+			return 0
+		else
+			return 1
+		fi
+	else
+		if [[ "${choice}" != "y" && "${choice}" != "Y" ]]; then
+			return 1
+		else
+			return 0
+		fi
+	fi
+}
+
+theme_switch_initrd() {
+	local initrd=$1
+	newinitrd=""
+	want_initrd=false
+	
+	if [ -z "${initrd}" ]; then
+		einfo "It appears that you are not using an initrd. Do you want this script"
+		einfo "to automatically generate one for use with the '${theme}' theme?"
+		if input_bool 'y'; then
+			want_initrd=true
+		fi
+	elif [ "${initrd:0:13}" == "/boot/splash/" ]; then
+		want_initrd=true
+	else
+		echo ""
+		einfo "It appears that you are already using an initrd:"
+		einfo "  '${initrd}'"
+		einfo "Do you want this script to automatically generate another initrd for"
+		einfo "use with the '${theme}' theme?"
+		einfo "The new initrd will be used instead of the current one."
+		if input_bool 'n'; then
+			want_initrd=true
+		fi
+	fi
+
+	if [ ${want_initrd} == "true" ]; then
+		[ ! -d /boot/splash ] && mkdir /boot/splash
+		newinitrd="/boot/splash/initrd-spl-${theme}-all"
+		splash_geninitramfs -g "${newinitrd}" -v "${theme}"
+	fi
+}
+
+theme_switch_lilo() {
+	local cnt=0
+	local entries
+	local lines
+	local want_name=false
+	local linecnt=1
+	
+	einfo "Please select which kernel should be configured for use with splashutils:"
+	
+	while read i ; do
+		line=$(echo ${i})
+		if [[ ${i:0:5} == "image" ]]; then
+			want_name=true
+			lines[$cnt]="$linecnt"
+		fi
+	
+		if [[ ${want_name} == "true" && ${i:0:5} == "label" ]]; then
+			i=$(echo ${i} | cut -d= -f2)
+			i=$(echo ${i})
+			entries[$cnt]="$i"
+			cnt=$(($cnt+1))
+			printf "%3d) %s\n" "$cnt" "$i"
+			want_name=false
+		fi
+		linecnt=$(($linecnt+1))
+	done < /etc/lilo.conf
+	
+	input_number 1 ${cnt} 1
+	n=$(($?-1))
+	einfo "Configuring '${entries[$n]}'.."
+
+	line=${lines[$n]}
+	cp /etc/lilo.conf /etc/lilo.conf.work.$$
+
+	initrd="$(awk "FNR == $line { 
+				print ;
+				while(getline > 0 && \$1 != \"image\") {
+						print \$0
+				}
+			}" /etc/lilo.conf.work.$$ | grep "^[[:space:]]*initrd")" 
+	initrd=$(echo "$initrd" | cut -f2 -d'=')
+
+	theme_switch_initrd "${initrd}"
+	cp /etc/lilo.conf /etc/lilo.conf.backup
+
+	awk "FNR == $(($line+1)) { 
+			initrd=0
+			if (\"${newinitrd}\" != \"\") {
+				initrd=1
+			}
+
+			do {
+				if (\$1 ~ /^append/) {
+					break;
+				} else if (\$1 ~ /^image/ || \$1 ~ /^other/) {
+					print \"\\tappend = \\\"splash=silent,fadein,theme:${theme} CONSOLE=/dev/tty1 quiet\\\"\"
+					if (initrd == 1) {
+						print \"\\\tinitrd = ${newinitrd}\"
+					}
+					print \$0
+					next
+				} else {
+					if (initrd == 1 && \$1 ~ /^initrd/) {
+						sub(/initrd.*/, \"initrd = ${newinitrd}\", \$0)
+						initrd=0	
+					}
+					print \$0
+				}
+			} while (getline > 0)
+		
+			splash=0
+			cons=0
+			quiet=0
+			full=\$0
+			\$0=gensub(/.*\"([^\"]+)\"/,\"\\\\1\",\"g\",\$0)
+			sub(/\".*/,\"\",\$0)
+			for(i=1; i<=NF+1; i++) { 
+				if (substr(\$i,0,6) == \"splash\") { 
+					splash=1 
+				} else if (\$i == \"CONSOLE=/dev/tty1\") { 
+					cons=1 
+				} else if (\$i == \"quiet\") {
+					quiet=1 
+				}
+			}
+			if (splash == 1) {
+				sub(/splash=[^ ]+/, \"splash=silent,fadein,theme:${theme}\", \$0)
+			} else {
+				\$0=\$0 \" splash=silent,fadein,theme:${theme}\"
+			}
+			if (cons == 0) {  \$0 = \$0 \" CONSOLE=/dev/tty1\"	}
+			if (quiet == 0) { \$0 = \$0 \" quiet\" 	}
+
+			sub(/\".*\"/, \"\\\"\" \$0 \"\\\"\", full)
+			print full
+			
+			if (initrd) {
+				getline
+				while (!(\$1 ~ /^image/) && !(\$1 ~ /^other/)) {
+					if (\$1 ~ /^initrd/) {
+						sub(/initrd.*/, \"initrd = ${newinitrd}\", \$0)
+						initrd=0
+					}
+					print \$0
+					getline
+				}
+				
+				if (initrd) {
+					print \"\\tinitrd = ${newinitrd}\"
+				}
+
+				print \$0
+			}
+			next
+		}
+				
+		FNR != $(($line+1)) { print \$0 }" /etc/lilo.conf.work.$$ > /etc/lilo.conf.tmp.$$
+
+	rm /etc/lilo.conf.work.$$
+	mv /etc/lilo.conf.tmp.$$ /etc/lilo.conf
+
+	einfo "LILO config file has been updated."
+}
+
 theme_switch_grub() {
 	local cnt="0"
 	local entries
 	local lines
 	local done=false
 
-	mount_boot_partition
 	einfo "Please select which kernel should be configured for use with splashutils:"
 	
-	grep -n -v '^#' /boot/grub/grub.conf | grep '^[[:digit:]]\+:[[:space:]]*title' > /tmp/splash_mngr.$$
+	grep -n '^[[:space:]]*title' /boot/grub/grub.conf > /tmp/splash_mngr.$$
 	while read i ; do
 		line=$(echo "${i}" | cut -d: -f1)
 		i=$(echo "${i}" | cut -d: -f2)
@@ -417,21 +624,8 @@ theme_switch_grub() {
 	done < /tmp/splash_mngr.$$
 	rm /tmp/splash_mngr.$$
 
-	echo -n "Your choice: "
-	
-	while [ ${done} != "true" ]; do
-		read n
-		n=${n%% *}
-		
-		if [[ -z "${n}" || "${n}" -le 0 || "${n}" -gt ${cnt} ]]; then
-			err "Invalid entry number. Try again. Enter a number in the range: 1-${cnt}}."
-			echo -n "Your choice: "
-		else
-			done="true"
-		fi
-	done
-
-	n=$(($n-1))
+	input_number 1 ${cnt} 1
+	n=$(($?-1))
 	einfo "Configuring '${entries[$n]}'.."
 
 	line=${lines[$n]}
@@ -455,40 +649,7 @@ theme_switch_grub() {
 			}" /boot/grub/grub.conf.work.$$ | grep "^[[:space:]]*initrd")" 
 	initrd=$(echo "$initrd" | cut -f2 -d' ')
 
-	newinitrd=""
-	want_initrd=false
-	
-	if [ -z "${initrd}" ]; then
-		einfo "It appears that you are not using an initrd. Do you want this script"
-		einfo "to automatically generate one for use with the '${theme}' theme?"
-		echo -n "Your choice [Y/n]: "
-		
-		read choice
-		if [ "${choice}" != "n" && "${choice}" != "N" ]; then
-			want_initrd=true
-		fi
-	elif [ "${initrd:0:13}" == "/boot/splash/" ]; then
-		want_initrd=true
-	else
-		echo ""
-		einfo "It appears that you are already using an initrd:"
-		einfo "  '${initrd}'"
-		einfo "Do you want this script to automatically generate another initrd for"
-		einfo "use with the '${theme}' theme?"
-		einfo "The new initrd will be used instead of the current one."
-		echo -n "Your choice [y/N]: "
-		read choice
- 		if [[ "${choice}" == "y" || "${choice}" == "Y" ]]; then
-			want_initrd=true
-		fi
-	fi
-
-	if [ ${want_initrd} == "true" ]; then
-		[ ! -d /boot/splash ] && mkdir /boot/splash
-		newinitrd="/boot/splash/initrd-spl-${theme}-all"
-		splash_geninitramfs -g "${newinitrd}" -v "${theme}"
-	fi
-
+	theme_switch_initrd "${initrd}"
 	cp /boot/grub/grub.conf /boot/grub/grub.conf.backup
 
 	awk "FNR == $line { 
@@ -502,7 +663,9 @@ theme_switch_grub() {
 				sub(/initrd .*/, \"initrd ${newinitrd}\", \$0)
 			}
 			print \$0 
-			getline 
+			if (getline < 0) {
+				exit 0
+			}
 		}
 		splash=0
 		cons=0
@@ -532,11 +695,14 @@ theme_switch_grub() {
 				sub(/initrd .*/, \"initrd ${newinitrd}\", \$0)
 			}
 			print \$0 
-			getline 
+			if (getline < 0) {
+				exit 0
+			}
 		}
 	}
 	
-	FNR != $line { print \$0 }" /boot/grub/grub.conf.work.$$ > /boot/grub/grub.conf.tmp.$$
+	FNR != $line { print \$0 }" /boot/grub/grub.conf.work.$$ 
+	#> /boot/grub/grub.conf.tmp.$$
 	
 	rm /boot/grub/grub.conf.work.$$
 	mv /boot/grub/grub.conf.tmp.$$ /boot/grub/grub.conf
@@ -545,6 +711,7 @@ theme_switch_grub() {
 }
 
 theme_switch() {
+	mount_boot_partition
 	detect_bootloader
 	
 	if [[ ${bootloader} == "grub" ]]; then
