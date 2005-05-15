@@ -193,6 +193,19 @@ out:	free(silent_img.data);
 //	remove_dev(SPLASH_DEV, 0x1);
 }
 
+/* Opens /dev/console as stdout and stderr. */
+void prep_io()
+{
+	int fd = 0;
+
+	fd = open("/dev/console", O_WRONLY);
+	if (fd >= 0) {
+		dup2(fd,0);
+		dup2(fd,1);
+		dup2(fd,2);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	int err = 0, i = 5;
@@ -203,6 +216,10 @@ int main(int argc, char **argv)
 	if (argc < 3)
 		goto out;
 
+	/* If possible, make sure that the error messages that we print don't
+	 * go straight to /dev/null and are displayed on the screen instead. */
+	prep_io();
+	
 	if (strcmp(argv[1],"2") && strcmp(argv[1], "1")) {
 		fprintf(stderr, "Splash protocol mismatch: %s\n", argv[1]);
 		fprintf(stderr, "This version of splashutils supports splash protocol v1 and v2.\n");
