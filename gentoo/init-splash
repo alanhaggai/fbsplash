@@ -39,7 +39,7 @@ start() {
 			fi
 
 			if [[ -x /usr/bin/openvt ]]; then
-				/usr/bin/openvt -fc ${TTY} 2>/dev/null
+				/usr/bin/openvt -c ${TTY} echo -n "" 2>/dev/null
 			fi
 
 			/sbin/splash_util --tty="${TTY}" -m v -t "${theme}" -c setcfg 2>/dev/null 
