@@ -48,7 +48,7 @@ int handle_init()
 	char fn_vc[16];
 	char buf[512];
 	char *t, *p;
-	int fd, fd_vc, fd_fb, h;
+	int fd, fd_vc, fd_fb, h, cnt;
 	u8 created_dev = 0;
 	u8 effects = 0;
 #ifdef CONFIG_FBSPLASH
@@ -63,8 +63,9 @@ int handle_init()
 	/* Mount the proc filesystem */
 	h = mount("proc", "/proc", "proc", 0, NULL);
 	fd = open("/proc/cmdline", O_RDONLY);
-	if (fd != -1 && read(fd, buf, 512) > 0) {
+	if (fd != -1 && (cnt = read(fd, buf, 512)) > 0) {
 		char *opt;
+		buf[cnt-1] = 0;
 		
 		t = strstr(buf, "splash=");
 		if (!t)
