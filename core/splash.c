@@ -197,7 +197,8 @@ int main(int argc, char **argv)
 #endif
 	
 	if (arg_task == start_daemon) {
-		load_images('a');
+		if (load_images('a'))
+			return -1;
 		daemon_start();
 		/* we never get here */
 	}

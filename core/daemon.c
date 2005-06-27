@@ -409,7 +409,8 @@ int reload_theme(void)
 #endif
 
 	parse_cfg(config_file);
-	load_images('a');
+	if (load_images('a'))
+		return -2;
 	
 #ifdef CONFIG_TTF
 	load_fonts();

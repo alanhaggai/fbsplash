@@ -345,10 +345,12 @@ int load_images(char mode)
 	}
 	
 	if (mode == 'v' || mode == 'a')
-		load_bg_images('v');
+		if (load_bg_images('v'))
+			return -2;
 
 	if (mode == 's' || mode == 'a') {
-		load_bg_images('s');
+		if (load_bg_images('s'))
+			return -2;
 
 #ifdef CONFIG_PNG
 		for (i = icons.head; i != NULL; i = i->next) {
