@@ -244,8 +244,8 @@ demo_theme_silent() {
 set_verbose() {
 	[ -z "${tty}" ]		&& tty=${ctty}
 
-	cstate=$(get_state ${tty})
-	[ ${cstate} == "on" ] && ctheme=$(get_theme ${tty})
+	export cstate=$(get_state ${tty})
+	[ "${cstate}" == "on" ] && export ctheme=$(get_theme ${tty})
 
 	set_theme "${theme}" "${tty}"
 	chvt "${tty}"
@@ -253,7 +253,7 @@ set_verbose() {
 
 exit_verbose() {
 	chvt "${ctty}"	
-	if [ ${cstate} == "on" ]; then
+	if [ "${cstate}" == "on" ]; then
 		set_theme "${ctheme}" "${tty}"
 	else
 		splash_util --tty=${tty} -c off
@@ -266,7 +266,7 @@ demo_theme_verbose() {
 	check_verbose "${theme}" "${res}"
 	set_verbose
 	
-	einfo -e "\nTesting the '${theme}' theme..." >/dev/tty${tty}
+	einfo "Testing the '${theme}' theme..." >/dev/tty${tty}
 	for (( i = 0 ; i < ${delay} ; i = i+1 )) ; do
 		echo -n "$i " >/dev/tty${tty}
 		sleep 1
