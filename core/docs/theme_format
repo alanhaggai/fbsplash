@@ -125,6 +125,8 @@ o text [flags] <font> [style] <size> <x> [left|middle|right]
   values. Recognized variables:
    - $progress - progress indicator (in percents)
 
+  The 'text' argument has to be enclosed in double quotes.
+
 o box [flags] <x0> <y0> <x1> <y1> <color1> [color2 color3 color4]
   Draws a box on the image. 
 
