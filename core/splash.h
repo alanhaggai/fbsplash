@@ -6,6 +6,11 @@
 	#include "mng_splash.h"
 #endif
 
+#if !defined(CONFIG_FBSPLASH)
+	#define FB_SPLASH_IO_ORIG_USER 	 0
+	#define FB_SPLASH_IO_ORIG_KERNEL 1
+#endif
+
 /* Adjustable settings */
 #define MAX_RECTS 	32
 #define MAX_BOXES 	256

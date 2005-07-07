@@ -40,7 +40,7 @@ void prep_io()
 	}
 }
 
-int handle_init()
+int handle_init(u8 update)
 {
 	int stty = TTY_SILENT;
 	char sys[128]; 
@@ -56,10 +56,12 @@ int handle_init()
 #endif
 	arg_mode = ' ';
 
-	/* If possible, make sure that the error messages that we print don't
-	 * go straight to /dev/null and are displayed on the screen instead. */
-	prep_io();
-	
+	if (!update) {
+		/* If possible, make sure that the error messages that we print don't
+		 * go straight to /dev/null and are displayed on the screen instead. */
+		prep_io();
+	}
+		
 	/* Mount the proc filesystem */
 	h = mount("proc", "/proc", "proc", 0, NULL);
 	fd = open("/proc/cmdline", O_RDONLY);
@@ -99,18 +101,27 @@ parse_failure:	if (h == 0)
 
 		return -1;
 	}
-	
+
 	close(fd);
 	if (h == 0)
 		umount("/proc");
 
+	/* We don't want to use any effects if we're just updating the image. 
+	 * Nor do we want to mess with the verbose mode. */
+	if (update) {
+		effects = 0;
+		fbsplash = 0;
+	}
+		
 	/* If no mode was specified, we can't make any decisions
 	 * by ourselves. */
 	if (arg_mode == ' ')
 		return 0;	
-
+	
 #ifdef CONFIG_FBSPLASH
-	create_dev(SPLASH_DEV, "/sys/class/misc/fbsplash/dev", 0x1);
+	if (!update) {
+		create_dev(SPLASH_DEV, "/sys/class/misc/fbsplash/dev", 0x1);
+	}
 #endif
 	if (!arg_theme) {
 		arg_theme = strdup(DEFAULT_THEME);
@@ -122,12 +133,14 @@ parse_failure:	if (h == 0)
 	parse_cfg(config_file);
 
 #ifdef CONFIG_FBSPLASH
-	/* Load the configuartion and the verbose background picture
-	 * but don't activate fbsplash just yet. We'll enable it
-	 * after the silent screen is displayed. */
-	if (do_config(FB_SPLASH_IO_ORIG_USER) || do_getpic(FB_SPLASH_IO_ORIG_USER, 1, 'v')) {
-		fbsplash = 0;
-	}
+	if (!update) {
+		/* Load the configuartion and the verbose background picture
+		 * but don't activate fbsplash just yet. We'll enable it
+		 * after the silent screen is displayed. */
+		if (do_config(FB_SPLASH_IO_ORIG_USER) || do_getpic(FB_SPLASH_IO_ORIG_USER, 1, 'v')) {
+			fbsplash = 0;
+		}
+	}	
 #endif
 	if (arg_mode != 's') {
 #ifdef CONFIG_FBSPLASH
@@ -213,6 +226,7 @@ out:	free(silent_img.data);
 
 int main(int argc, char **argv)
 {
+	char *tmpc;
 	int err = 0, i = 5;
 	u8 mounts = 0;
 
@@ -262,11 +276,18 @@ int main(int argc, char **argv)
 	if (TTF_Init() < 0) {
 		fprintf(stderr, "Couldn't initialize TTF.\n");
 	}
+	boot_message = getenv("BOOT_MSG");
 #endif
+	/* The PROGRESS env. variable can be used to set the progress status. */
+	tmpc = getenv("PROGRESS");
+	if (tmpc)
+		arg_progress = atoi(tmpc);
 	
 	if (!strcmp(argv[2],"init")) {
-		err = handle_init();
-	} 
+		err = handle_init(0);
+	} else if (!strcmp(argv[2],"update")) {
+		err = handle_init(1);
+	}
 #ifdef CONFIG_FBSPLASH
 	else if (!strcmp(argv[2],"getpic")) {
 		err = do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, 'v');
