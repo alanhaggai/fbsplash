@@ -226,10 +226,16 @@ splash_cache_cleanup() {
 	[[ -z "$(grep ${spl_cachedir} /proc/mounts)" ]] && return;
 	[[ ! -d "${spl_tmpdir}" ]] && mkdir "${spl_tmpdir}"
 	mount -n --move "${spl_cachedir}" "${spl_tmpdir}"
-	cp -a "${spl_tmpdir}"/{envcache,depcache,deptree,svcs_start,svcs_stop} "${spl_cachedir}" 2>/dev/null
-	echo "${BOOTLEVEL}/${DEFAULTLEVEL}" > "${spl_cachedir}/levels"
-	echo "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" \
-		 >> "${spl_cachedir}/levels"
+
+	# There's no point in saving all this data if we're running off a livecd.
+	if [[ -z "${CDBOOT}" ]]; then
+		cp -a "${spl_tmpdir}"/{envcache,depcache,deptree,svcs_start,svcs_stop} "${spl_cachedir}" 2>/dev/null
+		echo "${BOOTLEVEL}/${DEFAULTLEVEL}" > "${spl_cachedir}/levels"
+		echo "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" \
+			 >> "${spl_cachedir}/levels"
+	fi
+
+	# Make sure the splash daemon is dead.
 	killall -9 splash_util.static >/dev/null 2>/dev/null
 	umount -l "${spl_tmpdir}" 2>/dev/null
 }
