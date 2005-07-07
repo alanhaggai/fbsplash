@@ -16,7 +16,7 @@ splash() {
 	splash_setup
 	
 	[ ! -x /sbin/splash_helper ] && return
-	[ ${SPLASH_MODE_REQ} != "silent" ] && return
+	[ "${SPLASH_MODE_REQ}" != 'silent'] && return
 
 	case "${cmd}" in
 		set_msg)
@@ -26,7 +26,7 @@ splash() {
 		init)	
 			if [ -n "$2" ]; then
 				export BOOT_MSG="$2"
-			elif [ "${CDROOT}" == "1" ]; then
+			elif [ "${CDROOT}" -eq '1' ]; then
 				export BOOT_MSG="Preparing the LiveCD environment... Press Alt+F1 for verbose mode."
 			else
 				export BOOT_MSG="Preparing the system for boot... Press Alt+F1 for verbose mode."
@@ -43,7 +43,7 @@ splash() {
 splash_setup() {
 	# If it's already set up, let's not waste time on parsing the config 
 	# files again
-	if [ ${SPLASH_THEME} != "" -a ${SPLASH_TTY} != "" -a "$1" != "force" ]; then
+	if [ "${SPLASH_THEME}" != '' -a "${SPLASH_TTY}" != '' -a "$1" != 'force' ]; then
 		return 0
 	fi
 	
