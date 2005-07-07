@@ -243,8 +243,15 @@ int main(int argc, char **argv)
 	}
 
 	arg_task = none;
-	arg_vc = atoi(argv[3]);
-	arg_fb = atoi(argv[4]);
+	if (argv[3]) 
+		arg_vc = atoi(argv[3]);
+	else
+		arg_vc = 0;
+
+	if (argv[4])
+		arg_fb = atoi(argv[4]);
+	else
+		arg_fb = 0;
 
 	if (arg_vc < 0 || arg_fb < 0)
 		goto out;
@@ -285,7 +292,7 @@ int main(int argc, char **argv)
 	
 	if (!strcmp(argv[2],"init")) {
 		err = handle_init(0);
-	} else if (!strcmp(argv[2],"update")) {
+	} else if (!strcmp(argv[2],"repaint")) {
 		err = handle_init(1);
 	}
 #ifdef CONFIG_FBSPLASH
