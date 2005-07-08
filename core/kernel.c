@@ -243,12 +243,12 @@ int main(int argc, char **argv)
 	}
 
 	arg_task = none;
-	if (argv[3]) 
+	if (argc > 3 && argv[3]) 
 		arg_vc = atoi(argv[3]);
 	else
 		arg_vc = 0;
 
-	if (argv[4])
+	if (argc > 4 && argv[4])
 		arg_fb = atoi(argv[4]);
 	else
 		arg_fb = 0;
@@ -262,7 +262,7 @@ int main(int argc, char **argv)
 	
 	/* On 'init' the theme isn't defined yet, and thus NULL is passed
 	 * instead of any meaningful value. */
-	if (argv[i]) 
+	if (argc > i && argv[i]) 
 		arg_theme = strdup(argv[i]);
 	else
 		arg_theme = NULL;
