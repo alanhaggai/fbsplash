@@ -344,47 +344,13 @@ splash_svclist_update() {
 		return
 	}
 
-	# This functions should return a list of services that will be started
-	# from /etc/init.d/autoconfig. In order to do that, we have to do
-	# kernel command line parsing, just as it's done in the autoconfig
-	# script.
+	# This function should return a list of services that will be started
+	# from /etc/init.d/autoconfig. In order to do that, we source 
+	# /etc/init.d/autoconfig and use its list_services() function.
 	autoconfig_svcs() {
-		GPM="yes"
-		HOTPLUG="yes"
-		CMDLINE="`cat /proc/cmdline`"
-		asvcs=""
-		
-		for x in ${CMDLINE} ; do
-			if [ "${x}" == "nodetect" ]; then
-				GPM="no"
-				HOTPLUG="no"
-			fi
-			if [[ ${x} == "apci=on" || ${x} == "acpi=force" ]] && [[ -x /etc/init.d/acpid ]]; then
-				asvcs="${asvcs} acpid"
-			elif [[ ${x} == "doapm" && -x /etc/init.d/apmd ]]; then
-				asvcs="${asvcs} apmd"
-			fi
-			if [[ ${x} == "dopcmcia" && -x /etc/init.d/pcmcia ]]; then
-				asvcs="${asvcs} pcmcia"
-			fi
-			if [[ ${x} == "nogpm" ]]; then
-				GPM="no"
-			fi
-			if [[ ${x} == "nohotplug" ]]; then
-				HOTPLUG="no"
-			fi
-		done
-
-		[[ ${GPM} == "yes" && -x /etc/init.d/gpm ]] && asvcs="${asvcs} gpm"
-		if [[ ${HOTPLUG} == "yes" ]]; then
-			if [[ -x /etc/init.d/coldplug ]]; then
-				asvcs="${asvcs} coldplug"
-			elif [[ -x /etc/init.d/hotplug ]]; then
-				asvcs="${asvcs} hotplug"
-			fi
-		fi
-
-		echo "${asvcs}"
+		[ -r /etc/init.d/autoconfig ] || return
+		. /etc/init.d/autoconfig
+		echo "$(list_services)"
 	}
 	
 	as="$(autoconfig_svcs)"
