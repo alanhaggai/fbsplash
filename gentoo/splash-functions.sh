@@ -63,9 +63,15 @@ splash() {
 	fi
 
 	# Prepare the cache here - rc_init-pre might want to use it
-	if [[ ${event} == "rc_init" && ${RUNLEVEL} == "S" && "$2" == "sysinit" ]]; then
-		if ! splash_cache_prep; then
-			return
+	if [[ ${event} == "rc_init" ]]; then
+		if [[ ${RUNLEVEL} == "S" && "$2" == "sysinit" ]]; then
+			splash_cache_prep 'start' || return
+		elif [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
+			# Check if the splash cachedir is mounted readonly. If it is,
+			# we need to mount a tmpfs over it.
+			if ! touch ${spl_cachedir}/message 2>/dev/null ; then
+				splash_cache_prep 'stop' || return
+			fi
 		fi
 	fi
 	
@@ -198,26 +204,28 @@ splash_cache_prep() {
 
 	# Point depscan.sh to our cachedir
 	spl_cache_depscan="yes" /sbin/depscan.sh -u
-	
-	# Check whether the list of services that will be started during boot
-	# needs updating. This is generally the case if:
-	#  - one of the caches doesn't exist
-	#  - out deptree was out of date
-	#  - we're booting with a different boot/default level than the last time
-	#  - one of the runlevel dirs has been modified since the last boot
-	if [[ ! -e ${spl_cachedir}/levels || \
-		  ! -e ${spl_cachedir}/svcs_start ]]; then
-		echo $(splash_svclist_update "start") > ${spl_cachedir}/svcs_start
-	else
-		local lastlev timestamp
-		{ read lastlev; read timestamp; } < ${spl_cachedir}/levels
-		if [[ "${lastlev}" != "${BOOTLEVEL}/${DEFAULTLEVEL}" || \
-			  "${timestamp}" != "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" || \
-			  "$(stat -c '%y' ${spl_cachedir}/deptree)" != "${h}" ]]; then
+
+	if [[ "$1" == "start" ]]; then
+		# Check whether the list of services that will be started during boot
+		# needs updating. This is generally the case if:
+		#  - one of the caches doesn't exist
+		#  - out deptree was out of date
+		#  - we're booting with a different boot/default level than the last time
+		#  - one of the runlevel dirs has been modified since the last boot
+		if [[ ! -e ${spl_cachedir}/levels || \
+			  ! -e ${spl_cachedir}/svcs_start ]]; then
 			echo $(splash_svclist_update "start") > ${spl_cachedir}/svcs_start
+		else
+			local lastlev timestamp
+			{ read lastlev; read timestamp; } < ${spl_cachedir}/levels
+			if [[ "${lastlev}" != "${BOOTLEVEL}/${DEFAULTLEVEL}" || \
+				  "${timestamp}" != "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" || \
+				  "$(stat -c '%y' ${spl_cachedir}/deptree)" != "${h}" ]]; then
+				echo $(splash_svclist_update "start") > ${spl_cachedir}/svcs_start
+			fi
 		fi
 	fi
-
+		
 	return 0
 }
 
@@ -556,12 +564,10 @@ splash_init_svclist() {
 			splash_update_svc ${i} "svc_inactive_stop"
 		done
 	elif [[ ${RUNLEVEL} == "S" ]]; then
-		ts="`dolisting "/etc/runlevels/${SOFTLEVEL}/" | sed -e "s#/etc/runlevels/${SOFTLEVEL}/##g"`"
-		tb="`dolisting "/etc/runlevels/${BOOTLEVEL}/" | sed -e "s#/etc/runlevels/${BOOTLEVEL}/##g"`"
-		td="`dolisting "/etc/runlevels/${DEFAULTLEVEL}/" | sed -e "s#/etc/runlevels/${DEFAULTLEVEL}/##g"`"
+		local svcs=$(splash_svclist_get start)
 		
 		if [[ ${arg} == "sysinit" ]]; then
-			for i in ${CRITICAL_SERVICES} ${ts} ${tb} ${td}; do
+			for i in ${svcs} ; do
 				splash_update_svc ${i} "svc_inactive_start"
 			done
 		fi
