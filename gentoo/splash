@@ -63,7 +63,9 @@ update_progress() {
 
 		if [[ -z "${t//*\$progress*/}" && -e ${spl_cachedir}/message ]]; then
 			source ${spl_cachedir}/message
-			splash_comm_send "paint rect ${text_x} ${text_y} ${xres} $(($text_y+5*$text_size))"
+			if [[ -n "${text_x}" && -n "${text_y}" && -n "${text_size}" ]]; then
+				splash_comm_send "paint rect ${text_x} ${text_y} ${xres} $(($text_y+5*$text_size))"
+			fi
 		fi
 	fi
 }
