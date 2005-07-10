@@ -68,7 +68,7 @@ o text_font=<file>
 o text [flags] <font> [style] <size> <x> [left|middle|right] 
   <y> [top|middle|bottom] <color> [exec|eval] "text"
 
-  Draws a text string somewhere on the screen.
+  Draws an UTF8-encoded text string somewhere on the screen.
 
   Flags:
   silent  - The text is rendered only in silent mode.
