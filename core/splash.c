@@ -36,7 +36,9 @@ struct option options[] = {
 	{ "tty",	required_argument, NULL, 0x106 },
 	{ "export",	required_argument, NULL, 0x107 },
 	{ "kdgraphics", no_argument, NULL, 0x108 },
+#ifdef CONFIG_TTF
 	{ "mesg",	required_argument, NULL, 0x109 },
+#endif
 	{ "daemon",	no_argument, NULL, 'd'},
 	{ "help",	no_argument, NULL, 'h'}	
 };
@@ -94,7 +96,9 @@ void usage(void)
 "                      running in daemon mode\n"
 "      --kdgraphics    use KD_GRAPHICS mode for the silent splash\n"
 "                      when splash_util is running in daemon mode\n"
+#ifdef CONFIG_TTF
 "      --mesg=TEXT     use TEXT as the main splash message\n"
+#endif
 #ifndef CONFIG_FBSPLASH
 "\nThis version of splashutils has been compiled without support for fbsplash.\n"
 #endif
@@ -172,11 +176,11 @@ int main(int argc, char **argv)
 		case 0x108:
 			arg_kdmode = KD_GRAPHICS;
 			break;
-		
+#ifdef CONFIG_TTF
 		case 0x109:
 			boot_message = strdup(optarg);
 			break;
-			
+#endif
 		case 'd':
 			arg_task = start_daemon;
 			break;
