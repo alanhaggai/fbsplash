@@ -635,7 +635,7 @@ void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 				j -= glyph->minx;
 			}
 			
-			dst = (unsigned char *)target + i*fb_fix.line_length + j*bytespp;
+			dst = (unsigned char *)target + (i * fb_var.xres + j)*bytespp;
 			src = current->buffer + row*current->pitch;
 
 			add = x & 1;
