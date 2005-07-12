@@ -78,7 +78,8 @@ void usage(void)
 "           note that this command will only have any effect if\n"
 "           it's called for the current console\n"
 #endif
-"  paint    paint background picture\n"
+"  paint    paint the background picture\n"
+"  repaint  paint the whole background picture (full refresh)\n"
 "  setmode  set global splash mode\n"
 "  getmode  get global splash mode\n\n"
 "Options:\n"
