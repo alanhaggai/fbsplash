@@ -919,8 +919,9 @@ void daemon_start()
 	}
 
 	/* Create the splash FIFO if it's not already in place */
-	stat(SPLASH_FIFO, &mystat);
-	if (!S_ISFIFO(mystat.st_mode)) {
+	
+	if (stat(SPLASH_FIFO, &mystat) == -1 || !S_ISFIFO(mystat.st_mode)) {
+		unlink(SPLASH_FIFO);
 		if (mkfifo(SPLASH_FIFO, 0700))
 			exit(3);
 	}
@@ -959,5 +960,6 @@ void daemon_start()
 	
 	start_tty_handlers();
 	daemon_comm();	
+	exit(0);
 }
 
