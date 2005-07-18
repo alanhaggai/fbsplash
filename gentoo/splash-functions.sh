@@ -424,6 +424,11 @@ splash_exit() {
 
 	splash_comm_send "exit"
 	splash_cache_cleanup
+
+	# Make sure the splash daemon is really dead (just in case the killall
+	# in splash_cache_cleanup didn't get executed). This should fix Gentoo
+	# bug #96697.
+	killall -9 splash_util.static >/dev/null 2>/dev/null
 }
 
 # <svc> <state>
