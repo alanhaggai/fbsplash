@@ -110,7 +110,9 @@ parse_failure:	if (h == 0)
 	 * Nor do we want to mess with the verbose mode. */
 	if (update) {
 		effects = 0;
+#ifdef CONFIG_FBSPLASH
 		fbsplash = 0;
+#endif
 	}
 		
 	/* If no mode was specified, we can't make any decisions
