@@ -2,12 +2,6 @@
 # Copyright 1999-2005 Gentoo Foundation 
 # Distributed under the terms of the GNU General Public License v2
 
-# run after local so that the boot time splash image
-# is visible for as long as possible
-depend() {
-	need local
-}
-
 start() {
 	source /etc/conf.d/splash
 	[[ -z "${SPLASH_THEME}" ]] && SPLASH_THEME="default"                                                                             
