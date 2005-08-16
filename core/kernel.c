@@ -22,6 +22,7 @@
 #include <sys/mman.h>
 #include <linux/kd.h>
 #include <linux/tty.h>
+#include <linux/tiocl.h>
 
 #include "splash.h"
 
@@ -127,14 +128,6 @@ parse_failure:	if (h == 0)
 
 	close(fd);
 
-	/* Try to set the console loglevel so that only critical
-	 * messages are printed. */
-	fd = open("/proc/sys/kernel/printk", O_RDWR);
-	if (fd != -1) {
-		write(fd, "2", 2);
-		close(fd);
-	}
-		
 	if (h == 0)
 		umount("/proc");
 
@@ -224,6 +217,12 @@ parse_failure:	if (h == 0)
 		goto clean;
 	}
 
+	/* Redirect all kernel messages to tty1 so that they don't get
+	 * printed over our silent splash image. */
+	buf[0] = TIOCL_SETKMSGREDIRECT;
+	buf[1] = 1;
+	ioctl(fd_vc, TIOCLINUX, buf);
+	
 	tty_set_silent(stty, fd_vc);
 		
 	if (arg_kdmode == KD_GRAPHICS) 
