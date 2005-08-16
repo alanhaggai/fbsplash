@@ -46,7 +46,7 @@ int handle_init(u8 update)
 	char sys[128]; 
 	char fn_fb[16];
 	char fn_vc[16];
-	char buf[512];
+	char buf[1024];
 	char *t, *p;
 	int fd, fd_vc, fd_fb, h, cnt;
 	u8 created_dev = 0;
@@ -65,8 +65,12 @@ int handle_init(u8 update)
 	/* Mount the proc filesystem */
 	h = mount("proc", "/proc", "proc", 0, NULL);
 	fd = open("/proc/cmdline", O_RDONLY);
-	if (fd != -1 && (cnt = read(fd, buf, 512)) > 0) {
+	if (fd != -1 && (cnt = read(fd, buf, 1024)) > 0) {
 		char *opt;
+#ifdef CONFIG_TTF_KERNEL
+		char quot = 0;
+		int i;
+#endif
 		buf[cnt-1] = 0;
 		
 		t = strstr(buf, "splash=");
@@ -92,6 +96,25 @@ int handle_init(u8 update)
 				arg_kdmode = KD_GRAPHICS;
 			}
 		}
+
+#ifdef CONFIG_TTF_KERNEL
+		t = strstr(buf, "BOOT_MSG=\"");
+		if (t) {
+			t += 10;
+			for (i = 0; i < 1024-(t-buf); i++) {
+				if (t[i] == '"' && !quot)
+					break;
+				if (t[i] == '\\') {
+					quot = 1;
+				} else {
+					quot = 0;
+				}
+			}
+	
+			t[i] = 0;
+			boot_message = strdup(t);
+		}
+#endif
 	} else {
 		/* If we can't parse the command line, we can't
 		 * make any assuptions as to in which mode splash
@@ -103,6 +126,15 @@ parse_failure:	if (h == 0)
 	}
 
 	close(fd);
+
+	/* Try to set the console loglevel so that only critical
+	 * messages are printed. */
+	fd = open("/proc/sys/kernel/printk", O_RDWR);
+	if (fd != -1) {
+		write(fd, "2", 2);
+		close(fd);
+	}
+		
 	if (h == 0)
 		umount("/proc");
 
