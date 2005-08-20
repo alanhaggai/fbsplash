@@ -3,20 +3,11 @@
 # Distributed under the terms of the GNU General Public License v2
 
 start() {
-	source /etc/conf.d/splash
-	[[ -z "${SPLASH_THEME}" ]] && SPLASH_THEME="default"                                                                             
-	if [[ -z "${SPLASH_TTYS}" ]]; then
-		if [ -n "${RC_TTY_NUMBER}" ]; then	
-			SPLASH_TTYS=$(seq 1 "${RC_TTY_NUMBER}")
-		else
-			SPLASH_TTYS="1 2 3 4 5 6"
-		fi
-	fi
+	splash_setup
 
 	# only do this if the kernel supports fbsplash
-	if [[ -e /dev/fbsplash ]]; then
+	if [[ -e /dev/fbsplash && "${SPLASH_MODE_REQ}" != "off" ]]; then
 		ebegin "Setting framebuffer console images"
-		splash_setup
 		
 		for TTY in ${SPLASH_TTYS} ; do
 			theme="${SPLASH_THEME}"
