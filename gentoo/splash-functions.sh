@@ -172,6 +172,13 @@ splash_init() {
 		/sbin/splash "start"
 		# Set the input device if it exists
 		local t=$(grep -Hsi keyboard /sys/class/input/event*/device/driver/description | grep -o 'event[0-9]\+') 
+		if [[ -z "${t}" ]]; then
+			# Try an alternative method of finding the event device. The idea comes
+			# from Bombadil <bombadil(at)h3c.de>. We're couting on the keyboard controller
+			# being the first device handled by kbd listed in input/devices.
+			t=$(/bin/grep -s -m 1 '^H: Handlers=kbd' /proc/bus/input/devices | grep -o 'event[0-9]*')
+		fi
+
 		if [[ -n "${t}" ]]; then
 			splash_comm_send "set event dev /dev/input/${t}"
 		fi
