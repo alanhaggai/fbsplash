@@ -213,6 +213,8 @@ for (( i=0 ; i < index ; i++ )) ; do
 		font=${font#*=}
 		if [[ -n "${font}" ]]; then
 			put_item "${font}"
+		else
+			put_item "/etc/splash/luxisri.ttf"
 		fi
 	done
 done
