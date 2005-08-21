@@ -5,6 +5,14 @@
 start() {
 	splash_setup
 
+	if [[ -z "${SPLASH_TTYS}" ]]; then
+		if [ -n "${RC_TTY_NUMBER}" ]; then	
+			SPLASH_TTYS=$(seq 1 "${RC_TTY_NUMBER}")
+		else
+			SPLASH_TTYS="1 2 3 4 5 6"
+		fi
+	fi
+
 	# only do this if the kernel supports fbsplash
 	if [[ -e /dev/fbsplash && "${SPLASH_MODE_REQ}" != "off" ]]; then
 		ebegin "Setting framebuffer console images"
