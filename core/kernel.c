@@ -73,7 +73,25 @@ int handle_init(u8 update)
 		int i;
 #endif
 		buf[cnt-1] = 0;
-		
+	
+#ifdef CONFIG_TTF_KERNEL
+		t = strstr(buf, "BOOT_MSG=\"");
+		if (t) {
+			t += 10;
+			for (i = 0; i < cnt-(t-buf) && buf[i]; i++) {
+				if (t[i] == '"' && !quot)
+					break;
+				if (t[i] == '\\') {
+					quot = 1;
+				} else {
+					quot = 0;
+				}
+			}
+	
+			t[i] = 0;
+			boot_message = strdup(t);
+		}
+#endif
 		t = strstr(buf, "splash=");
 		if (!t)
 			goto parse_failure;
@@ -81,7 +99,7 @@ int handle_init(u8 update)
 		t += 7; p = t;
 		for (p = t; *p != ' ' && *p != 0; p++);
 		*p = 0;
-				
+		
 		while ((opt = strsep(&t, ",")) != NULL) {
 			if (!strncmp(opt, "tty:", 4)) {
 				stty = strtol(opt+4, NULL, 0);
@@ -97,25 +115,6 @@ int handle_init(u8 update)
 				arg_kdmode = KD_GRAPHICS;
 			}
 		}
-
-#ifdef CONFIG_TTF_KERNEL
-		t = strstr(buf, "BOOT_MSG=\"");
-		if (t) {
-			t += 10;
-			for (i = 0; i < 1024-(t-buf); i++) {
-				if (t[i] == '"' && !quot)
-					break;
-				if (t[i] == '\\') {
-					quot = 1;
-				} else {
-					quot = 0;
-				}
-			}
-	
-			t[i] = 0;
-			boot_message = strdup(t);
-		}
-#endif
 	} else {
 		/* If we can't parse the command line, we can't
 		 * make any assuptions as to in which mode splash
