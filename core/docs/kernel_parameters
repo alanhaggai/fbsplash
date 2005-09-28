@@ -1,12 +1,12 @@
 To make sure the silent mode works correctly with this version of 
 splashutils, additional kernel command line arguments are required.
 
-It is recommeneded that you add 'quiet' and 'CONSOLE=/dev/tty1' to
-your kernel command line. The first option will prevent any initial
-kernel messages from being displayed. This is required for the silent
-mode, unless you have compiled splashutils with CONFIG_SILENT_KD_GRAPHICS.
-The second option will instruct init and its children processes to 
-output all messages to /dev/tty1 and not to the foreground tty.
+It is required that you add either 'quiet CONSOLE=/dev/tty1' or
+'console=tty1' to your kernel command line. 
+
+'quiet' will prevent most initial kernel messages from being displayed.
+'CONSOLE=/dev/tty1' will redirect all initscript messages to tty1.
+'console=tty1' will redirect both kernel and initscript messages to tty1.
 
 It is also possible to override some splash parameters set up in the 
 system configuration files with options passed on the kernel command 
@@ -21,14 +21,27 @@ a continuous configuration string. The following options are recognized:
  - fadein     - use a 'fade from black' effect to display the silent image
  - theme:foo  - use theme 'foo'
  - tty:n      - use the n-th tty as the silent tty. Default silent tty is 
-                tty8.
+                tty8
+ - kdgraphics - run in KDGRAPHICS mode. Use of this option in discouraged
+                but might be necessary in case of some kernel drivers that
+		display messages on the foreground tty.
 
 A sample splash kernel command line setting:
   splash=silent,fadein,theme:linuxrocks,tty:12
  
 A sample full kernel command line:
-  root=/dev/hda5 video=vesafb:1024x768-32@85 splash=silent,fadein,theme:linuxrocks,tty:12 quiet CONSOLE=/dev/tty1
+  root=/dev/hda5 video=vesafb:1024x768-32@85 splash=silent,fadein,theme:linuxrocks,tty:12 console=tty1
+
+The splash programs recognize the following additional kernel command line
+parameters:
+
+ BOOT_MSG="message" - use 'message' for the initial greeting (instead of 
+                      'Initializing the kernel...') for the silent splash.
+
+Note that these additional parameters are never specified as a part of the
+splash= config string. The correct way of using them is:
+
+.. splash=silent,theme:linuxrocks console=tty1 BOOT_MSG="Welcome to Linux!" ..
 
 -- 
-Michal Januszewski
-<spock@gentoo.org>
+ Michal Januszewski <spock@gentoo.org>
