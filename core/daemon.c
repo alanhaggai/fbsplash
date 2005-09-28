@@ -117,6 +117,7 @@ void start_tty_handlers()
 	}
 	
 	if (!evdev) {
+		signal(SIGCHLD, SIG_IGN);
 		pid_s = fork();
 		if (pid_s == 0) {
 			signal(SIGTERM, SIG_DFL);
@@ -206,6 +207,7 @@ void daemon_switch2()
 	if (fd == -1)
 		return;
 
+	signal(SIGCHLD, SIG_IGN);
 	i = fork();
 	if (i > 0) {
 		if (pid_s) {
@@ -929,7 +931,8 @@ void daemon_start()
 	for (i = 0; i < 2; i++) {
 		notify[i] = NULL;
 	}
-	
+
+	signal(SIGCHLD, SIG_IGN);
 	i = fork();
 	if (i)
 		exit(0);
