@@ -17,7 +17,7 @@ KLCC	= klcc
 
 JPEGSRC	?= libs/jpeg-6b
 LPNGSRC ?= libs/libpng-1.2.8
-ZLIBSRC ?= libs/zlib-1.2.1
+ZLIBSRC ?= libs/zlib-1.2.3
 FT2SRC  ?= libs/freetype-2.1.9
 
 prefix     =
