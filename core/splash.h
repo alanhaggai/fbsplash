@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <linux/fb.h>
 #include <linux/types.h>
+
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
 	#include "mng_splash.h"
 #endif
@@ -15,7 +16,10 @@
 #define MAX_RECTS 	32
 #define MAX_BOXES 	256
 #define MAX_ICONS 	512
-#define SPLASH_DEV	"/dev/fbsplash"
+#define PATH_DEV	"/dev"
+#define PATH_PROC	"/proc"
+#define PATH_SYS	"/sys"
+#define SPLASH_DEV	PATH_DEV "/fbsplash"
 
 #define TTY_SILENT 	8
 #define TTY_VERBOSE 	1
@@ -38,11 +42,6 @@
 #define max(a,b)		((a) > (b) ? (a) : (b))
 #define CLAMP(x) 		((x) > 255 ? 255 : (x))
 #define DEBUG(x...)
-
-#ifndef CONFIG_FBSPLASH
-#define FB_SPLASH_IO_ORIG_USER 0
-#define FB_SPLASH_IO_ORIG_KERNEL 1
-#endif
 						    
 /* ************************************************************************
  * 				Lists 
@@ -141,8 +140,8 @@ typedef struct {
 #define F_HS_HMIDDLE	2
 #define F_HS_RIGHT	4
 
+#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)
 #include "ttf.h"
-
 typedef struct {
 	char *file;
 	int size;
@@ -158,6 +157,7 @@ typedef struct {
 	char *val;
 	font_e *font;
 } text;
+#endif /* TTF */
 
 typedef struct {
 	int x1, x2, y1, y2;

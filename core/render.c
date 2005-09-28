@@ -535,7 +535,9 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 			}
 			
 			if (txt) {
-				TTF_Render(target, txt, ct->font->font, ct->style, ct->x, ct->y, ct->col, ct->hotspot);
+				TTF_Render(target, txt, ct->font->font, 
+				           ct->style, ct->x, ct->y, ct->col, 
+					   ct->hotspot);
 				if ((ct->flags & F_TXT_EXEC) || (ct->flags & F_TXT_EVAL))
 					free(txt);
 			}
@@ -546,11 +548,15 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 #if (defined(CONFIG_TTF_KERNEL) && defined(TARGET_KERNEL)) || (!defined(TARGET_KERNEL) && defined(CONFIG_TTF))
 	if (mode == 's') {
 		if (!boot_message)
-			TTF_Render(target, DEFAULT_MESSAGE, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color, F_HS_LEFT | F_HS_TOP);
+			TTF_Render(target, DEFAULT_MESSAGE, global_font, 
+				   TTF_STYLE_NORMAL, cf.text_x, cf.text_y,
+				   cf.text_color, F_HS_LEFT | F_HS_TOP);
 		else {
 			char *t;
 			t = eval_text(boot_message);
-			TTF_Render(target, t, global_font, TTF_STYLE_NORMAL, cf.text_x, cf.text_y, cf.text_color, F_HS_LEFT | F_HS_TOP);
+			TTF_Render(target, t, global_font, TTF_STYLE_NORMAL,
+				   cf.text_x, cf.text_y, cf.text_color, 
+				   F_HS_LEFT | F_HS_TOP);
 			free(t);
 		}
 	}
