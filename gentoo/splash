@@ -86,13 +86,17 @@ if [ "$1" == "start" ]; then
 	# to tty1. This can cause a lot of problems if it's not handled correctly, so
 	# we don't allow silent splash to run on incorrectly configured systems.
 	if [[ ${SPLASH_MODE_REQ} == "silent" ]]; then
-		if [[ -z "`grep -E '(^| )CONSOLE=/dev/tty1( |$)' /proc/cmdline`" ]]; then
+		if [[ -z "`grep -E '(^| )CONSOLE=/dev/tty1( |$)' /proc/cmdline`" &&
+			  -z "`grep -E '(^| )console=tty1( |$)' /proc/cmdline`" ]]; then
 			clear
 			ewarn "You don't appear to have a correct CONSOLE= setting on your kernel"
 			ewarn "command line. Silent splash will not be enabled. Please add"
-			ewarn "CONSOLE=/dev/tty1 to your kernel command line to avoid this message."
-			if [[ -n "`grep 'CONSOLE=/dev/tty1' /proc/cmdline`" ]]; then
-				ewarn "Note that CONSOLE=/dev/tty1 is a general parameter and not a splash= setting."
+			ewarn "CONSOLE=/dev/tty1 or console=tty1 to your kernel command line"
+			ewarn "to avoid this message."
+			if [[ -n "`grep 'CONSOLE=/dev/tty1' /proc/cmdline`" ||
+				  -n "`grep 'console=tty1' /proc/cmdline`" ]]; then
+				ewarn "Note that CONSOLE=/dev/tty1 and console=tty1 are general parameters and"
+				ewarn "not splash= settings."
 			fi
 			exit 1
 		fi
