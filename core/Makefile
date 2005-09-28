@@ -7,7 +7,7 @@
 # more details.
 #
 
-PKG_VERSION = 1.1.9.9
+PKG_VERSION = 1.1.9.10
 DEBUG 	 = false		# set to true to prevent stripping
 K_SHARED = false		# set to true if you want to link to a shared klibc
 QUIET    = true
@@ -180,7 +180,7 @@ ft2:	config.h
 	if ! make -q CFLAGS="$(K_CFLAGS)" library; then $(call info,MAKE,freetype2) ; fi ; \
 	make CFLAGS="-c $(K_CFLAGS)" library > $(OUTPUT)
 	
-splash_kern: jpeglib kdir $(K_DEPS) $(SP_HELPER) config.h $(K_LDLIBS)
+splash_kern: linux jpeglib kdir $(K_DEPS) $(SP_HELPER) config.h $(K_LDLIBS)
 
 $(SP_HELPER): $(K_OBJS)
 	@$(call info,LD,$@)

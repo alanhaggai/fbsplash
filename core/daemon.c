@@ -448,7 +448,6 @@ void alloc_bg_buffer()
 			exit(1);
 		}
 	} else {
-			
 		fd_bg = open(arg_export, O_CREAT | O_TRUNC | O_RDWR, 0660);
 		if (fd_bg == -1) {
 			printerr("Can't open file for the background buffer.\n");
@@ -545,7 +544,6 @@ int cmd_set_tty(void **args)
 	}
 
 	/* FIXME: do we need to do anything to the previous terminal? */
-
 	vt_cursor_enable(fd_tty_s);
 	start_tty_handlers();	
 	vt_cursor_disable(fd_tty_s);
@@ -921,7 +919,6 @@ void daemon_start()
 	}
 
 	/* Create the splash FIFO if it's not already in place */
-	
 	if (stat(SPLASH_FIFO, &mystat) == -1 || !S_ISFIFO(mystat.st_mode)) {
 		unlink(SPLASH_FIFO);
 		if (mkfifo(SPLASH_FIFO, 0700))
