@@ -65,23 +65,23 @@ void detect_endianess(void)
 
 int get_fb_settings(int fb_num)
 {
-	char fn[11];
+	char fn[32];
 	int fb;
 #ifdef TARGET_KERNEL
 	char sys[128];
 #endif
 
-	sprintf(fn, "/dev/fb/%d", fb_num);	
+	sprintf(fn, PATH_DEV "/fb/%d", fb_num);	
 	fb = open(fn, O_WRONLY, 0);
 
 	if (fb == -1) {
-		sprintf(fn, "/dev/fb%d", fb_num);
+		sprintf(fn, PATH_DEV "/fb%d", fb_num);
 		fb = open(fn, O_WRONLY, 0);
 	}
 	
 	if (fb == -1) {
 #ifdef TARGET_KERNEL
-		sprintf(sys, "/sys/class/graphics/fb%d/dev", fb_num);
+		sprintf(sys, PATH_SYS "/class/graphics/fb%d/dev", fb_num);
 		create_dev(fn, sys, 0x1);
 		fb = open(fn, O_WRONLY, 0);
 		if (fb == -1)
@@ -89,7 +89,8 @@ int get_fb_settings(int fb_num)
 		if (fb == -1)
 #endif
 		{
-			printerr("Failed to open /dev/fb%d or /dev/fb%d for reading.\n", fb_num, fb_num);
+			printerr("Failed to open " PATH_DEV "/fb%d or " PATH_DEV 
+				 "/fb%d for reading.\n", fb_num, fb_num);
 			return 1;
 		}
 	}
@@ -225,14 +226,15 @@ void vt_cursor_enable(int fd)
 
 int open_fb()
 {
-	char dev[16];
+	char dev[32];
 	int c;
 	
-	sprintf(dev, "/dev/fb%d", arg_fb);
+	sprintf(dev, PATH_DEV "/fb%d", arg_fb);
 	if ((c = open(dev, O_RDWR)) == -1) {
-		sprintf(dev, "/dev/fb/%d", arg_fb);
+		sprintf(dev, PATH_DEV "/fb/%d", arg_fb);
 		if ((c = open(dev, O_RDWR)) == -1) {
-			printerr("Failed to open /dev/fb%d or /dev/fb/%d.\n", arg_fb, arg_fb);
+			printerr("Failed to open " PATH_DEV "/fb%d or " 
+			         PATH_DEV "/fb/%d.\n", arg_fb, arg_fb);
 			return 0;
 		}
 	}
@@ -242,14 +244,15 @@ int open_fb()
 
 int open_tty(int tty)
 {
-	char dev[16];
+	char dev[32];
 	int c;
 
-	sprintf(dev, "/dev/tty%d", tty);
+	sprintf(dev, PATH_DEV "/tty%d", tty);
 	if ((c = open(dev, O_RDWR)) == -1) {
-		sprintf(dev, "/dev/vc/%d", tty);
+		sprintf(dev, PATH_DEV "/vc/%d", tty);
 		if ((c = open(dev, O_RDWR)) == -1) {
-			printerr("Failed to open /dev/tty%d or /dev/vc/%d\n", tty, tty);
+			printerr("Failed to open " PATH_DEV "/tty%d or " 
+				 PATH_DEV "/vc/%d\n", tty, tty);
 			return 0;
 		}
 	}

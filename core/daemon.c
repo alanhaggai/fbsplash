@@ -75,10 +75,10 @@ void start_tty_handlers()
 	if (fd_tty_v)
 		close(fd_tty_v);
 		
-	sprintf(t, "/dev/tty%d", tty_v);
+	sprintf(t, PATH_DEV "/tty%d", tty_v);
 	fd_tty_v = open(t, O_RDWR);
 	if (fd_tty_v == -1) {
-		sprintf(t, "/dev/vc/%d", tty_v);
+		sprintf(t, PATH_DEV "/vc/%d", tty_v);
 		fd_tty_v = open(t, O_RDWR);
 		if (fd_tty_v == -1) {
 			fprintf(stderr, "Can't open %s.\n", t);
@@ -91,10 +91,10 @@ void start_tty_handlers()
 		close(fd_tty_s);
 	}
 		
-	sprintf(t, "/dev/tty%d", tty_s);
+	sprintf(t, PATH_DEV "/tty%d", tty_s);
 	fd_tty_s = open(t, O_RDWR);
 	if (fd_tty_s == -1) {
-		sprintf(t, "/dev/vc/%d", tty_s);
+		sprintf(t, PATH_DEV "/vc/%d", tty_s);
 		fd_tty_s = open(t, O_RDWR);
 		if (fd_tty_s == -1) {
 			fprintf(stderr, "Can't open %s.\n", t);
@@ -497,7 +497,7 @@ void handle_silent_switch()
 			      MAP_SHARED, fd_fb, 0); 
 	
 		if (fb_mem == MAP_FAILED) {
-			printerr("mmap() /dev/fb%d failed.\n", arg_fb);
+			printerr("mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
 			exit(1);	
 		}
 
@@ -915,7 +915,7 @@ void daemon_start()
 			MAP_SHARED, fd_fb, 0); 
 	
 	if (fb_mem == MAP_FAILED) {
-		printerr("mmap() /dev/fb%d failed.\n", arg_fb);
+		printerr("mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
 		close(fd_fb);
 		exit(1);	
 	}

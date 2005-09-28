@@ -237,7 +237,7 @@ int main(int argc, char **argv)
 	{
 		struct vt_stat stat;
 		
-		if ((fp = open("/dev/tty", O_NOCTTY)) != -1) {
+		if ((fp = open(PATH_DEV "/tty", O_NOCTTY)) != -1) {
 			if (ioctl(fp, VT_GETSTATE, &stat) != -1) {
 				if (arg_vc != stat.v_active - 1)
 					goto setpic_out;				
@@ -314,7 +314,7 @@ setpic_out:	break;
 		struct vt_stat stat;
 		i = 0;
 		
-		if ((fp = open("/dev/tty", O_NOCTTY)) != -1) {
+		if ((fp = open(PATH_DEV "/tty", O_NOCTTY)) != -1) {
 			if (ioctl(fp, VT_GETSTATE, &stat) != -1) {
 				if (stat.v_active == TTY_SILENT)
 					i = 1;				
@@ -332,11 +332,12 @@ setpic_out:	break;
 		struct fb_image pic;
 		u8 *out;
 			
-		sprintf(dev, "/dev/fb%d", arg_fb);
+		sprintf(dev, PATH_DEV "/fb%d", arg_fb);
 		if ((c = open(dev, O_RDWR)) == -1) {
-			sprintf(dev, "/dev/fb/%d", arg_fb);
+			sprintf(dev, PATH_DEV "/fb/%d", arg_fb);
 			if ((c = open(dev, O_RDWR)) == -1) {
-				printerr("Failed to open /dev/fb%d or /dev/fb/%d.\n", arg_fb, arg_fb);
+				printerr("Failed to open " PATH_DEV "/fb%d or "
+					 PATH_DEV "/fb/%d.\n", arg_fb, arg_fb);
 				break;
 			}
 		}
@@ -345,7 +346,7 @@ setpic_out:	break;
 				MAP_SHARED, c, fb_var.yoffset * fb_fix.line_length); 
 	
 		if (out == MAP_FAILED) {
-			printerr("mmap() /dev/fb%d failed.\n", arg_fb);
+			printerr("mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
 			close(c);
 			err = -1;
 			break;	

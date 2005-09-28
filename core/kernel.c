@@ -33,7 +33,7 @@ void prep_io()
 {
 	int fd = 0;
 
-	fd = open("/dev/console", O_WRONLY);
+	fd = open(PATH_DEV "/console", O_WRONLY);
 	if (fd >= 0) {
 		dup2(fd,0);
 		dup2(fd,1);
@@ -45,8 +45,8 @@ int handle_init(u8 update)
 {
 	int stty = TTY_SILENT;
 	char sys[128]; 
-	char fn_fb[16];
-	char fn_vc[16];
+	char fn_fb[32];
+	char fn_vc[32];
 	char buf[1024];
 	char *t, *p;
 	int fd, fd_vc, fd_fb, h, cnt;
@@ -64,8 +64,8 @@ int handle_init(u8 update)
 	}
 		
 	/* Mount the proc filesystem */
-	h = mount("proc", "/proc", "proc", 0, NULL);
-	fd = open("/proc/cmdline", O_RDONLY);
+	h = mount("proc", PATH_PROC, "proc", 0, NULL);
+	fd = open(PATH_PROC "/cmdline", O_RDONLY);
 	if (fd != -1 && (cnt = read(fd, buf, 1024)) > 0) {
 		char *opt;
 #ifdef CONFIG_TTF_KERNEL
@@ -120,7 +120,7 @@ int handle_init(u8 update)
 		 * make any assuptions as to in which mode splash
 		 * is to be started -- so we just quit. */
 parse_failure:	if (h == 0)
-			umount("/proc");
+			umount(PATH_PROC);
 
 		return -1;
 	}
@@ -128,7 +128,7 @@ parse_failure:	if (h == 0)
 	close(fd);
 
 	if (h == 0)
-		umount("/proc");
+		umount(PATH_PROC);
 
 	/* We don't want to use any effects if we're just updating the image. 
 	 * Nor do we want to mess with the verbose mode. */
@@ -146,7 +146,7 @@ parse_failure:	if (h == 0)
 	
 #ifdef CONFIG_FBSPLASH
 	if (!update) {
-		create_dev(SPLASH_DEV, "/sys/class/misc/fbsplash/dev", 0x1);
+		create_dev(SPLASH_DEV, PATH_SYS "/class/misc/fbsplash/dev", 0x1);
 	}
 #endif
 	if (!arg_theme) {
@@ -191,8 +191,8 @@ parse_failure:	if (h == 0)
 	if (stty < 0 || stty > MAX_NR_CONSOLES)
 		stty = TTY_SILENT;
 
-	sprintf(fn_fb,"/dev/fb%d", arg_fb);
-	sprintf(sys, "/sys/class/graphics/fb%d/dev", arg_fb);
+	sprintf(fn_fb, PATH_DEV "/fb%d", arg_fb);
+	sprintf(sys, PATH_SYS "/class/graphics/fb%d/dev", arg_fb);
 
 	if (do_getpic(FB_SPLASH_IO_ORIG_USER, 0, 's')) {
 		printerr("Failed to get silent splash image.\n");
@@ -205,8 +205,8 @@ parse_failure:	if (h == 0)
 				
 	open_cr(fd_fb, fn_fb, sys, out, 0x4);
 
-	sprintf(fn_vc,"/dev/tty%d", stty);
-	sprintf(sys, "/sys/class/tty/tty%d/dev", stty);
+	sprintf(fn_vc, PATH_DEV "/tty%d", stty);
+	sprintf(sys, PATH_SYS "/class/tty/tty%d/dev", stty);
 
 	open_cr(fd_vc, fn_vc, sys, out, 0x2);
 	t = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
@@ -299,7 +299,7 @@ int main(int argc, char **argv)
 	else
 		arg_theme = NULL;
 	
-	if (!mount("sysfs", "/sys", "sysfs", 0, NULL))
+	if (!mount("sysfs", PATH_SYS, "sysfs", 0, NULL))
 		mounts = 1;
 
 	get_fb_settings(arg_fb);
@@ -341,7 +341,7 @@ int main(int argc, char **argv)
 	}
 
 out:	if (mounts)
-		umount2("/sys",0);
+		umount2(PATH_SYS, 0);
 
 	if (config_file)
 		free(config_file);
