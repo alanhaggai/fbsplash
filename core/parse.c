@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <linux/fb.h>
 #include <sys/stat.h>
+#include <ctype.h>
 #include "splash.h"
 
 struct config_opt {
@@ -127,12 +128,6 @@ struct config_opt opts[] =
 #endif /* TTF */
 };
 
-/*
-int isdigit(char c) 
-{
-	return (c >= '0' && c <= '9') ? 1 : 0;
-}
-*/
 int ishexdigit(char c) 
 {
 	return (isdigit(c) || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) ? 1 : 0;
