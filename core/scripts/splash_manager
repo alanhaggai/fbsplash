@@ -225,6 +225,16 @@ demo_theme_silent() {
 		
 	set_silent	
 
+	# Try to configure an event input device so that F2 can work both ways.
+	local t=$(grep -Hsi keyboard /sys/class/input/event*/device/driver/description | grep -o 'event[0-9]\+') 
+	if [[ -z "${t}" ]]; then
+		t=$(/bin/grep -s -m 1 '^H: Handlers=kbd' /proc/bus/input/devices | grep -o 'event[0-9]*')
+	fi
+
+	if [[ -n "${t}" ]]; then
+		spl_comm "set event dev /dev/input/${t}"
+	fi
+
 	[ -z "${delay}" ] && delay=0.05
 	step=$((65535/$steps))
 		
