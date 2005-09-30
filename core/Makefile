@@ -63,7 +63,7 @@ K_DEPS   =
 
 # flags for the user utils
 CFLAGS   = -Wall -g
-LDLIBS   = -ljpeg -lm
+LDLIBS   = -ljpeg -lm -lpthread
 LDFLAGS  = 
 INCLUDES = -I$(ROOT)/linux/include -I/usr/include/freetype2
 OBJS     = splash.o parse.o render.o image.o cmd.o common.o daemon.o list.o effects.o
@@ -243,10 +243,10 @@ install: all
 	$(Q)$(INSTALL_PROG) -D $(SP_UTIL) $(DESTDIR)$(sbindir)/$(SP_UTIL)
 	@$(call info,INSTALL,$(SP_UTIL).static)
 	$(Q)$(INSTALL_PROG) -D $(SP_UTIL).static $(DESTDIR)$(sbindir)/$(SP_UTIL).static
-	@$(call install_script,$(SP_GIRAM))
-	@$(call install_script,$(SP_CONV))
-	@$(call install_script,$(SP_RESIZE))
-	@$(call install_script,$(SP_MNGR))
+	$(Q)$(call install_script,$(SP_GIRAM))
+	$(Q)$(call install_script,$(SP_CONV))
+	$(Q)$(call install_script,$(SP_RESIZE))
+	$(Q)$(call install_script,$(SP_MNGR))
 
 uninstall:
 	@$(call info,UNINSTALL,$(SP_HELPER))
