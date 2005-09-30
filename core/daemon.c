@@ -73,6 +73,7 @@ typedef struct {
 list svcs = { NULL, NULL };
 
 u8 theme_loaded = 0;
+pthread_mutex_t mtx_theme = PTHREAD_MUTEX_INITIALIZER;
 
 #define UPD_SILENT 	0x01
 #define UPD_MON		0x02
@@ -411,8 +412,10 @@ int cmd_set_theme(void **args)
 		free(arg_theme);
 
 	arg_theme = strdup(args[0]);
+	pthread_mutex_lock(&mtx_theme);
 	reload_theme();
-			
+	pthread_mutex_unlock(&mtx_theme);
+
 	return 0;
 }
 
@@ -472,6 +475,8 @@ void handle_silent_switch()
 
 	if (memcmp(&fb_fix, &old_fix, sizeof(struct fb_fix_screeninfo)) || 
 	    memcmp(&fb_var, &old_var, sizeof(struct fb_var_screeninfo))) {
+
+		pthread_mutex_lock(&mtx_theme);
 		reload_theme();
 
 		munmap(fb_mem, old_fix.line_length * old_var.yres);
@@ -488,6 +493,7 @@ void handle_silent_switch()
 			free(bg_buffer);
 		alloc_bg_buffer();
 		pthread_mutex_unlock(&mtx_bgbuf);
+		pthread_mutex_unlock(&mtx_theme);
 	}
 
 	cmd_repaint(NULL);
@@ -596,12 +602,6 @@ void do_paint(u8 *dst, u8 *src)
 	item *ti;
 	rect *re;
 
-	pthread_mutex_lock(&mtx_ctty);
-	if (ctty != CTTY_SILENT) {
-		pthread_mutex_unlock(&mtx_ctty);
-		return;
-	}
-
 	for (ti = rects.head ; ti != NULL; ti = ti->next) {
 		re = (rect*)ti->p;
 		do_paint_rect(dst, src, re);
@@ -629,16 +629,22 @@ void do_paint(u8 *dst, u8 *src)
 			memcpy(to, src + (y * fb_var.xres + b->x1) * bytespp, j); 
 		}			
 	}
-	pthread_mutex_unlock(&mtx_ctty);
 }
 
 int cmd_paint(void **args)
 {
-	char i = 0;
-	
-	if (!theme_loaded)
-		return -1;
-	
+	char i = 0, ret = 0;
+
+	pthread_mutex_lock(&mtx_theme);
+	if (!theme_loaded) {
+		ret = -1;
+		goto out2;
+	}
+
+	pthread_mutex_lock(&mtx_ctty);
+	if (ctty != CTTY_SILENT)
+		goto out1;
+
 	if (fd_bg) {
 		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
 		write(fd_bg, &i, 1);
@@ -651,22 +657,30 @@ int cmd_paint(void **args)
 	
 	pthread_mutex_lock(&mtx_bgbuf);
 	render_objs((u8*)bg_buffer, (u8*)silent_img.data, 's', FB_SPLASH_IO_ORIG_USER);
-	
+
 	if (notify[NOTIFY_PAINT])
 		system(notify[NOTIFY_PAINT]);
 
 	do_paint(fb_mem, bg_buffer);	
 	pthread_mutex_unlock(&mtx_bgbuf);
-
-	return 0;
+out1:	pthread_mutex_unlock(&mtx_ctty);
+out2:	pthread_mutex_unlock(&mtx_theme);
+	return ret;
 }
 
 int cmd_repaint(void **args)
 {
-	char i = 0;
+	char i = 0, ret = 0;
 
-	if (!theme_loaded)
-		return -1;
+	pthread_mutex_lock(&mtx_theme);
+	if (!theme_loaded) {
+		ret = -1;
+		goto out2;
+	}
+
+	pthread_mutex_lock(&mtx_ctty);
+	if (ctty != CTTY_SILENT)
+		goto out1;
 	
 	if (fd_bg) {
 		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
@@ -679,16 +693,11 @@ int cmd_repaint(void **args)
 
 	if (notify[NOTIFY_REPAINT])
 		system(notify[NOTIFY_REPAINT]);
-
-	pthread_mutex_lock(&mtx_ctty);
-	if (ctty != CTTY_SILENT) {
-		pthread_mutex_unlock(&mtx_ctty);
-		pthread_mutex_unlock(&mtx_bgbuf);
-		return 0;
-	}
+	
 	put_img(fb_mem, bg_buffer);
-	pthread_mutex_unlock(&mtx_ctty);
 	pthread_mutex_unlock(&mtx_bgbuf);
+out1:	pthread_mutex_unlock(&mtx_ctty);
+out2:	pthread_mutex_unlock(&mtx_theme);
 
 	return 0;
 }
@@ -715,10 +724,16 @@ int cmd_set_mesg(void **args)
 int cmd_paint_rect(void **args)
 {
 	rect re;
-	int t;
+	int t, ret = 0;
 
-	if (!theme_loaded)
-		return -1;
+	pthread_mutex_lock(&mtx_theme);
+	if (!theme_loaded) {
+		ret = -1;
+		goto out2;
+	}
+	pthread_mutex_lock(&mtx_ctty);
+	if (ctty != CTTY_SILENT)
+		goto out1;
 
 	re.x1 = *(int*)args[0];
 	re.x2 = *(int*)args[2];
@@ -761,16 +776,11 @@ int cmd_paint_rect(void **args)
 	if (re.y2 >= fb_var.yres)
 		re.y2 = fb_var.yres-1;
 
-
-	pthread_mutex_lock(&mtx_ctty);
-	if (ctty != CTTY_SILENT) {
-		pthread_mutex_unlock(&mtx_ctty);
-		return 0;
-	}
 	pthread_mutex_lock(&mtx_bgbuf);
 	do_paint_rect(fb_mem, bg_buffer, &re);
 	pthread_mutex_unlock(&mtx_bgbuf);
 	pthread_mutex_unlock(&mtx_ctty);
+	pthread_mutex_unlock(&mtx_theme);
 	return 0;
 }
 
