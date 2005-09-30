@@ -779,8 +779,8 @@ int cmd_paint_rect(void **args)
 	pthread_mutex_lock(&mtx_bgbuf);
 	do_paint_rect(fb_mem, bg_buffer, &re);
 	pthread_mutex_unlock(&mtx_bgbuf);
-	pthread_mutex_unlock(&mtx_ctty);
-	pthread_mutex_unlock(&mtx_theme);
+out1:	pthread_mutex_unlock(&mtx_ctty);
+out2:	pthread_mutex_unlock(&mtx_theme);
 	return 0;
 }
 
