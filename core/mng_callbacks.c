@@ -134,9 +134,9 @@ static mng_bool fb_mng_processheader(mng_handle handle, mng_uint32 width,
 	mng->canvas_h = height;
 
 	mng_set_canvasstyle(handle, MNG_CANVAS_RGBA8);
-
+#if 0
 	mng_set_bgcolor(handle, 0, 0, 0); /* FIXME - make configurable? */
-
+#endif
 	return MNG_TRUE;
 }
 

@@ -27,6 +27,29 @@
 #include <fcntl.h>
 #include "splash.h"
 
+/* Converts a RGBA/RGB image to whatever format the framebuffer uses */
+void rgba2fb (rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha)
+{
+	int i, add = 0;
+	rgbcolor* rgb = (rgbcolor*)data;
+	
+	add ^= (0 ^ y) & 1 ? 1 : 3;
+
+	for (i = 0; i < len; i++) {
+		if (alpha) {
+			put_pixel(data->a, data->r, data->g, data->b, bg, out, add);
+			data++;
+		} else {
+			put_pixel(255, rgb->r, rgb->g, rgb->b, bg, out, add);
+			rgb++;
+		}
+
+		out += bytespp;
+		bg += bytespp;
+		add ^= 3;
+	}
+}
+
 void render_icon(icon *ticon, u8 *target)
 {
 	int y, yi;
@@ -37,21 +60,26 @@ void render_icon(icon *ticon, u8 *target)
 	for (y = ticon->y, yi = 0; yi < ticon->img->h; yi++, y++) {
 		out = target + (ticon->x + y * fb_var.xres) * bytespp;
 		in = ticon->img->picbuf + yi * ticon->img->w * 4;
-		truecolor2fb((truecolor*)in, out, ticon->img->w, y, 1);
+		rgba2fb((rgbacolor*)in, out, out, ticon->img->w, y, 1);
 	}
 }
 
 inline void put_pixel (u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add)
 {
+	/* Can we use optimized code for 24/32bpp modes? */
 	if (fb_opt) {
-		if (a != 255) {
-			dst[fb_ro] = (src[fb_ro]*(255-a) + r*a) / 255;
-			dst[fb_go] = (src[fb_go]*(255-a) + g*a) / 255;
-			dst[fb_bo] = (src[fb_bo]*(255-a) + b*a) / 255;
-		} else {
+		if (a == 0) {
+			dst[fb_ro] = src[fb_ro];
+			dst[fb_go] = src[fb_go];
+			dst[fb_bo] = src[fb_bo];
+		} else if (a == 255) {
 			dst[fb_ro] = r;
 			dst[fb_go] = g;
 			dst[fb_bo] = b;
+		} else {
+			dst[fb_ro] = (src[fb_ro]*(255-a) + r*a) / 255;
+			dst[fb_go] = (src[fb_go]*(255-a) + g*a) / 255;
+			dst[fb_bo] = (src[fb_bo]*(255-a) + b*a) / 255;
 		}
 	} else {
 		u32 i;
@@ -111,7 +139,7 @@ inline void put_pixel (u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add)
 	}
 }
 
-void render_box2(box *box, u8 *target)
+void render_box(box *box, u8 *target)
 {
 	int x, y, a, r, g, b;
 	int add;
@@ -265,7 +293,7 @@ char *get_program_output(char *prg, unsigned char origin)
 			close(1);
 		}
 		dup(pfds[1]);
-	 	close(pfds[0]);
+		close(pfds[0]);
 		execlp("sh", "sh", "-c", prg, NULL);
 	} else {
 		FD_ZERO(&rfds);
@@ -305,7 +333,6 @@ char *eval_text(char *txt)
 	d = ret;
 
 	while (*p != 0) {
-
 		if (*p == '\\') {
 			p++;
 			*d = *p;
@@ -327,7 +354,7 @@ char *eval_text(char *txt)
 
 	*d = *p;
 	
-	return ret;	
+	return ret;
 }
 
 void prep_bgnd(u8 *target, u8 *src, int x, int y, int w, int h)
@@ -337,7 +364,7 @@ void prep_bgnd(u8 *target, u8 *src, int x, int y, int w, int h)
 
 	t = target + (y * fb_var.xres + x) * bytespp;
 	s = src    + (y * fb_var.xres + x) * bytespp;
-	j = w * bytespp;	
+	j = w * bytespp;
 	i = fb_var.xres * bytespp;
 	
 	for (y = 0; y < h; y++) {
@@ -352,14 +379,12 @@ void prep_bgnd(u8 *target, u8 *src, int x, int y, int w, int h)
 void prep_bgnds(u8 *target, u8 *bgnd, char mode)
 {
 	item *i;
-	obj *o;
-	icon *c;
-	box *b, *n;
 
 	for (i = objs.head; i != NULL; i = i->next) {
-		o = (obj*)i->p;	
+		obj *o = (obj*)i->p;
 
 		if (o->type == o_box) {
+			box *b, *n;
 			b = (box*)o->p;
 				
 			if (b->attr & BOX_SILENT && mode != 's')
@@ -375,27 +400,23 @@ void prep_bgnds(u8 *target, u8 *bgnd, char mode)
 				}
 			}
 		} else if (o->type == o_icon && mode == 's') {
-			c = (icon*)o->p;
+			icon *c = (icon*)o->p;
 
 			if (c->status == 0)
 				continue;
 
-			if (!c->img)
+			if (!c->img || !c->img->picbuf)
 				continue;
 
-			if (!c->img->picbuf)
+			if (c->img->w > fb_var.xres - c->x || c->img->h > fb_var.yres - c->y) 
 				continue;
-			
-			if (c->img->w > fb_var.xres - c->x || c->img->h > fb_var.yres - c->y) {
-				continue;				
-			}
 
 			prep_bgnd(target, bgnd, c->x, c->y, c->img->w, c->img->h); 
-		}	
+		}
 #if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || (defined(CONFIG_TTF) && !defined(TARGET_KERNEL))
 		else if (o->type == o_text) {
 			text *ct = (text*)o->p;
-								
+
 			if (mode == 's' && !(ct->flags & F_TXT_SILENT))
 				continue;
 
@@ -420,9 +441,6 @@ void prep_bgnds(u8 *target, u8 *bgnd, char mode)
 void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 {
 	item *i;
-	obj *o;
-	icon *c;
-	box tmp, *b, *n;
 
 	if (fb_var.bits_per_pixel == 8)
 		return;
@@ -431,9 +449,10 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 		prep_bgnds(target, bgnd, mode);
 	
 	for (i = objs.head; i != NULL; i = i->next) {
-		o = (obj*)i->p;	
+		obj *o = (obj*)i->p;	
 
 		if (o->type == o_box) {
+			box tmp, *b, *n;
 			b = (box*)o->p;
 				
 			if ((b->attr & BOX_SILENT) && mode != 's')
@@ -441,37 +460,37 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 
 			if (!(b->attr & BOX_SILENT) && mode != 'v')
 				continue;
-			
+
 			if ((b->attr & BOX_INTER) && i->next != NULL) {
 				if (((obj*)i->next->p)->type == o_box) {
 					n = (box*)((obj*)i->next->p)->p;
 					tmp = *b;
 					interpolate_box(&tmp, n);
-					render_box2(&tmp, target);
+					render_box(&tmp, target);
 					i = i->next;
 				}
 			} else {
-				render_box2(b, target);
+				render_box(b, target);
 			}
+		/* Icons are only allowed in silent mode. */
 		} else if (o->type == o_icon && mode == 's') {
+			icon *c;
 			c = (icon*)o->p;
 
 			if (c->status == 0)
 				continue;
 
-			if (!c->img)
-				continue;
-
-			if (!c->img->picbuf)
+			if (!c->img || !c->img->picbuf)
 				continue;
 			
 			if (c->img->w > fb_var.xres - c->x || c->img->h > fb_var.yres - c->y) {
 				printwarn("Icon %s does not fit on the screen - ignoring it.", c->img->filename);
-				continue;				
+				continue;
 			}
 
 			render_icon(c, target);
 		} 
+#if 0 
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
 		else if (o->type == o_anim) {
 			u8 render_it = 0;
@@ -511,12 +530,14 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 				mng_display_next(a->mng, target, a->x, a->y);
 		}
 #endif /* CONFIG_MNG */
+#endif
+
 #if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || (defined(CONFIG_TTF) && !defined(TARGET_KERNEL))
 		else if (o->type == o_text) {
 
 			text *ct = (text*)o->p;
 			char *txt;
-					
+
 			if (mode == 's' && !(ct->flags & F_TXT_SILENT))
 				continue;
 
@@ -533,7 +554,7 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 			} else {
 				txt = ct->val;
 			}
-			
+
 			if (txt) {
 				TTF_Render(target, txt, ct->font->font, 
 				           ct->style, ct->x, ct->y, ct->col, 
@@ -542,7 +563,7 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 					free(txt);
 			}
 		}
-#endif
+#endif /* TTF */
 	}
 
 #if (defined(CONFIG_TTF_KERNEL) && defined(TARGET_KERNEL)) || (!defined(TARGET_KERNEL) && defined(CONFIG_TTF))
@@ -560,6 +581,6 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 			free(t);
 		}
 	}
-#endif
+#endif /* TTF */
 }
 

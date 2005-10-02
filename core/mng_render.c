@@ -80,7 +80,6 @@ mng_handle mng_load(char* filename)
 	}
 
 	memset(mng, 0, sizeof(mng_anim));
-
 	mngh = mng_initialize(mng, fb_mng_memalloc, fb_mng_memfree,
 			MNG_NULL);
 	if (mngh == MNG_NULL) {
@@ -191,14 +190,15 @@ mng_retcode mng_render_proportional(mng_handle mngh, int progress)
 	return ret;
 }
 
-int mng_display_next(mng_handle mngh, char* dest, int x, int y)
+int mng_display_buf(mng_handle mngh, u8* bg, u8* dest, int x, int y, int stride, int bgstride)
 {
-	truecolor *src;
+	rgbacolor *src;
 	mng_anim *mng = mng_get_userdata(mngh);
 	int dispwidth, dispheight, line;
 
-	dest += y * fb_var.xres * bytespp;
-	src = (truecolor*)mng->canvas;
+	dest += y * stride;
+	bg += y * bgstride;
+	src = (rgbacolor*)mng->canvas;
 
 	if (x + mng->canvas_w > fb_var.xres)
 		dispwidth = fb_var.xres - x;
@@ -211,8 +211,9 @@ int mng_display_next(mng_handle mngh, char* dest, int x, int y)
 		dispheight = mng->canvas_h;
 
 	for (line = 0; line < dispheight; line++) {
-		truecolor2fb(src, dest + (x * bytespp), dispwidth, y + line, 1);
-		dest += fb_var.xres * bytespp;
+		rgba2fb(src, bg + (x * bytespp), dest + (x * bytespp), dispwidth, y + line, 1);
+		dest += stride;
+		bg   += bgstride;
 		src  += mng->canvas_w;
 	}
 

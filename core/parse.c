@@ -19,11 +19,19 @@
 
 struct config_opt {
 	char *name;
-	enum { t_int, t_path, t_box, t_icon, t_rect, t_anim, t_color, t_fontpath, 
-		t_text } type;
+	enum { 
+		t_int, t_path, t_box, t_icon, t_rect, t_color, t_fontpath,
+#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
+		t_anim,
+#endif
+#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)
+		t_text,	
+#endif
+	} type;
 	void *val;
 };
 
+list anims = { NULL, NULL };
 list fonts = { NULL, NULL };
 list icons = { NULL, NULL };
 list objs = { NULL, NULL };
@@ -97,10 +105,11 @@ struct config_opt opts[] =
 		.type = t_rect,
 		.val = NULL		},
 
+#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
 	{	.name = "anim",
 		.type = t_anim,
 		.val = NULL		},
-	
+#endif
 #if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)
 	{	.name = "text_x",
 		.type = t_int,
@@ -587,6 +596,7 @@ void parse_anim(char *t)
 	cobj->type = o_anim;
 	cobj->p = canim;
 	list_add(&objs, cobj);
+	list_add(&anims, canim);
 	return;
 pa_err:
 	fprintf(stderr, "parse error @ line %d\n", line);

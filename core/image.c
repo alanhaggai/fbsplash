@@ -34,33 +34,6 @@
 struct fb_image verbose_img;
 struct fb_image silent_img;
 
-typedef struct {
-	u8 r, g, b;
-} __attribute__ ((packed)) rgbcolor;
-
-/* This function converts a truecolor image to whatever format the 
- * framebuffer uses */
-void truecolor2fb (truecolor* data, u8* out, int len, int y, u8 alpha)
-{
-	int i, add = 0;
-	rgbcolor* rgb = (rgbcolor*)data;
-	
-	add ^= (0 ^ y) & 1 ? 1 : 3;
-
-	for (i = 0; i < len; i++) {
-		if (alpha) {
-			put_pixel(data->a, data->r, data->g, data->b, out, out, add);
-			data++;
-		} else {
-			put_pixel(255, rgb->r, rgb->g, rgb->b, out, out, add);
-			rgb++;
-		}
-
-		out += bytespp;
-		add ^= 3;
-	}
-}
-
 #ifdef CONFIG_PNG
 #define PALETTE_COLORS 240
 int load_png(char *filename, u8 **data, struct fb_cmap *cmap, int *width, int *height, u8 want_alpha)
@@ -167,9 +140,10 @@ int load_png(char *filename, u8 **data, struct fb_cmap *cmap, int *width, int *h
 				}
 			}
 		
-		/* We only need to convert the image if we the alpha channel is not required */	
+		/* We only need to convert the image if the alpha channel is not required */	
 		} else if (!want_alpha) {
-			truecolor2fb((truecolor*)buf, *data + info_ptr->width * bytespp * i, info_ptr->width, i, 0);
+			u8 *tmp = *data + info_ptr->width * bytespp * i;
+			rgba2fb((rgbacolor*)buf, tmp, tmp, info_ptr->width, i, 0);
 		}
 	}
 
@@ -244,8 +218,10 @@ int load_jpeg(char *filename, u8 **data, int *width, int *height)
 	}
 	
 	for (i = 0; i < cinfo.output_height; i++) {
+		u8 *tmp; 
 		jpeg_read_scanlines(&cinfo, (JSAMPARRAY) &buf, 1);
-		truecolor2fb((truecolor*)buf, *data + cinfo.output_width * bytespp * i, cinfo.output_width, i, 0);
+		tmp = *data + cinfo.output_width * bytespp * i;
+		rgba2fb((rgbacolor*)buf, tmp, tmp, cinfo.output_width, i, 0);
 	}
 
 	jpeg_finish_decompress(&cinfo);

@@ -3,10 +3,6 @@
 #include <linux/fb.h>
 #include <linux/types.h>
 
-#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
-	#include "mng_splash.h"
-#endif
-
 #if !defined(CONFIG_FBSPLASH)
 	#define FB_SPLASH_IO_ORIG_USER 	 0
 	#define FB_SPLASH_IO_ORIG_KERNEL 1
@@ -104,6 +100,8 @@ typedef struct {
 } rect;
 
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
+#include "mng_splash.h"
+
 #define F_ANIM_SILENT		1
 #define F_ANIM_VERBOSE		2
 
@@ -166,9 +164,13 @@ typedef struct {
 	u8 attr;
 } box;
 
-typedef struct truecolor {
+typedef struct {
 	u8 r, g, b, a;
-} __attribute__ ((packed)) truecolor;
+} __attribute__ ((packed)) rgbacolor;
+
+typedef struct {
+	u8 r, g, b;
+} __attribute__ ((packed)) rgbcolor;
 
 #define BOX_NOOVER 0x01
 #define BOX_INTER 0x02
@@ -227,10 +229,10 @@ int remove_dev(char *fn, int flag);
 /* render.c */
 void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin);
 inline void put_pixel (u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add);
+void rgba2fb (rgbacolor* data, u8* bg, u8* out, int len, int y, u8 alpha);
 
 /* image.c */
 int load_images(char mode);
-void truecolor2fb (truecolor* data, u8* out, int len, int y, u8 alpha);
 
 /* cmd.c */
 void cmd_setstate(unsigned int state, unsigned char origin);
@@ -279,6 +281,7 @@ extern list icons;
 extern list objs;
 extern list rects;
 extern list fonts;
+extern list anims;
 
 extern u8 *bg_buffer;
 extern int bytespp;

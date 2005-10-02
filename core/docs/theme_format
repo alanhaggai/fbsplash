@@ -170,7 +170,7 @@ o icon <path> <x> <y> [state service]
 
   An icon will be rendered on the screen only if the service name
   is found in a environment variable appropriate for the selected
-  state or if the state has been set though an appropriate splash
+  state or if the state has been set through an appropriate splash
   daemon command. The list of variable names corresponding to the 
   recognized states follows:
   SPL_SVC_INACTIVE_START	SPL_SVC_INACTIVE_STOP
@@ -191,3 +191,14 @@ o rect <attr> <x0> <y0> <x1> <y1>
             is called with the 'paint' command (with 'repaint', the
 	    whole screen is repainted)
  
+o anim [verbose|silent] <once|loop|proportional> <path> <x> <y> [state service]
+  FIXME
+
+  All animations are displayed on a separate 'layer' that is locate
+  above all other objects. That means that an animation will always
+  cover icons, boxes and other objects.
+
+  Overlapping animations should be avoided, as it may lead to 
+  unexpected results (flickering).
+
+

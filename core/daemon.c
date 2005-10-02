@@ -54,13 +54,13 @@ int fd_fb = -1;
 int fd_evdev = -1;
 
 u8 *fb_mem = NULL;
-u8 *bg_buffer = NULL;
+u8 *bg_buffer = NULL;	/* uses the same format as fb_mem */
 pthread_mutex_t mtx_bgbuf = PTHREAD_MUTEX_INITIALIZER;
 
 int fd_bg = 0;		/* FD for the exported background buffer */
 struct termios tios;
 
-pthread_t th_switchmon, th_sighandler;
+pthread_t th_switchmon, th_sighandler, th_anim;
 
 int cmd_repaint(void **args);
 void handle_silent_switch();
@@ -259,6 +259,110 @@ void start_tty_handlers(int need_update)
 	}
 }
 
+void anim_render_frame(anim *a)
+{
+	int ret;
+	mng_anim *mng;
+
+	mng = mng_get_userdata(a->mng);
+	mng->wait_msecs = 0;
+	memset(&mng->start_time, 0, sizeof(struct timeval));
+
+	/* FIXME: This is a workaround for what seems to be a bug in libmng.
+	 * Either we clear the canvas ourselves, or parts of the previous frame
+	 * will remain in it after rendering the current one. */
+	memset(mng->canvas, 0, mng->canvas_h * mng->canvas_w * mng->canvas_bytes_pp);
+	ret = mng_render_next(a->mng);
+	if (ret == MNG_NOERROR) {
+		if (a->flags & F_ANIM_ONCE) {
+			a->status = F_ANIM_STATUS_DONE;
+		} else {
+			mng_display_restart(a->mng);
+		}
+	}		
+
+	if ((ret == MNG_NOERROR || ret == MNG_NEEDTIMERWAIT) && ctty == CTTY_SILENT) {
+		pthread_mutex_lock(&mtx_bgbuf);
+		mng_display_buf(a->mng, bg_buffer, fb_mem, a->x, a->y, 
+				fb_fix.line_length, fb_var.xres * bytespp);
+		pthread_mutex_unlock(&mtx_bgbuf);
+	}
+}
+
+void *anim_loop(void *unused)
+{
+	anim *a = NULL;
+	mng_anim *mng;
+	anim *ca;
+	item *i;
+	int delay = 10000;
+
+	pthread_mutex_lock(&mtx_theme);
+	pthread_mutex_lock(&mtx_ctty);
+	for (i = anims.head; i != NULL; i = i->next) {
+		ca = i->p;
+
+		if (!(ca->flags & F_ANIM_SILENT) || (ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL)
+			continue;
+	
+		mng = mng_get_userdata(ca->mng);
+		if (!mng->displayed_first)
+			anim_render_frame(ca);
+	}
+	pthread_mutex_unlock(&mtx_ctty);
+	pthread_mutex_unlock(&mtx_theme);
+
+	while(1) {
+		pthread_mutex_lock(&mtx_theme);
+		for (i = anims.head; i != NULL; i = i->next) {
+			ca = i->p;
+	
+			if (!(ca->flags & F_ANIM_SILENT) || (ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL ||
+			    ca->status == F_ANIM_STATUS_DONE)
+				continue;
+		
+			mng = mng_get_userdata(ca->mng);
+	
+			if (mng->wait_msecs < delay && mng->wait_msecs > 0) {
+				delay = mng->wait_msecs;
+				a = ca;
+			}
+		}
+		pthread_mutex_unlock(&mtx_theme);
+
+		usleep(delay * 1000);
+
+		pthread_mutex_lock(&mtx_theme);
+		pthread_mutex_lock(&mtx_ctty);
+		if (ctty != CTTY_SILENT)
+			goto next;
+		
+		if (a) 
+			anim_render_frame(a);
+
+		for (i = anims.head ; i != NULL; i = i->next) {
+			ca = i->p;
+
+			if (!(ca->flags & F_ANIM_SILENT) || (ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL ||
+			    ca->status == F_ANIM_STATUS_DONE || ca == a)
+				continue;
+
+			mng = mng_get_userdata(ca->mng);
+			if (mng->wait_msecs > 0) {
+				mng->wait_msecs -= delay;
+				if (mng->wait_msecs <= 0)
+					anim_render_frame(ca);
+			}
+		}
+	
+next:		pthread_mutex_unlock(&mtx_ctty);
+		pthread_mutex_unlock(&mtx_theme);
+		
+		a = NULL;
+		delay = 10000;
+	}
+}
+
 void free_objs()
 {
 	item *i, *j;
@@ -377,7 +481,11 @@ int reload_theme(void)
 {
 	item *i;
 	theme_loaded = 0;
-	
+
+	/* The anim thread will be restarted when we're done
+	 * reloading the theme. */
+	pthread_cancel(th_anim);
+
 	if (config_file)
 		free(config_file);
 
@@ -402,7 +510,9 @@ int reload_theme(void)
 		svc_state *ss = (svc_state*)i->p;
 		update_icon_status(ss->svc, ss->state);
 	}
-	
+
+	pthread_create(&th_anim, NULL, &anim_loop, NULL);
+
 	return 0;
 }
 
@@ -649,7 +759,6 @@ int cmd_paint(void **args)
 		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
 		write(fd_bg, &i, 1);
 	}
-	
 /*	
  	memcpy(bg_buffer, silent_img.data, fb_var.xres * fb_var.yres * bytespp);
 	render_objs('s', (u8*)bg_buffer, FB_SPLASH_IO_ORIG_USER);		
@@ -991,7 +1100,8 @@ void daemon_start()
 	sigaddset(&sigset, SIGTERM);
 	sigprocmask(SIG_BLOCK, &sigset, NULL);
 	pthread_create(&th_sighandler, NULL, &sighandler, NULL);
-	
+	pthread_create(&th_anim, NULL, &anim_loop, NULL);
+
 	start_tty_handlers(UPD_ALL);
 
 	pthread_mutex_lock(&mtx_ctty);

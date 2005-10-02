@@ -1,0 +1,9 @@
+- clean up the code
+- animations handling:
+  - move code to correct places
+  - add more comments
+  - handle 'proportional' and 'done'
+- add effects (fadein/fadeout/blendin) for icon/anim
+- add a dirty tiles/rects system to handle prep_bgnds
+  in a more sensible way
+
