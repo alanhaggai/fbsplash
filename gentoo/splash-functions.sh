@@ -1,7 +1,7 @@
 # Copyright 1999-2005 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
-# Author: Michal Januszewski <spock@gentoo.org>
+# Author:     Michal Januszewski <spock@gentoo.org>
 # Maintainer: Michal Januszewski <spock@gentoo.org>
 
 # This file is a part of splashutils.
@@ -10,7 +10,7 @@
 
 # ####################################################################
 #    Change any settings ONLY when you are sure what you're doing.
-#    Don't try if it breaks afterwards.
+#    Don't cry if it breaks afterwards.
 # ####################################################################
 
 # The splash scripts need a cache which can be guaranteed to be
@@ -19,6 +19,8 @@
 # values for spl_cachetype are 'tmpfs' and 'ramfs'. spl_cachesize
 # is a size limit in KB, and it should probably be left with the
 # default value.
+spl_util="/sbin/splash_util.static"
+spl_bindir="/lib/splash/bin"
 spl_cachedir="/lib/splash/cache"
 spl_tmpdir="/lib/splash/tmp"
 spl_cachesize="4096"
@@ -33,7 +35,7 @@ spl_pidfile="${spl_cachedir}/daemon.pid"
 #
 # Here is how it works:
 # - $svcdir is defined in /sbin/functions.sh
-# - /sbin/splash-functions.sh is sourced from /sbin/function.sh, after $svcdir
+# - /sbin/splash-functions.sh is sourced from /sbin/functions.sh, after $svcdir
 #   is defined
 # - /sbin/functions.sh is sourced from /sbin/depscan.sh
 #
@@ -58,9 +60,7 @@ splash() {
 	local event="$1"
 	splash_setup
 
-	if [[ ${SPLASH_MODE_REQ} == "off" ]]; then
-		return
-	fi
+	[[ ${SPLASH_MODE_REQ} == "off" ]] && return
 
 	# Prepare the cache here - rc_init-pre might want to use it
 	if [[ ${event} == "rc_init" ]]; then
@@ -111,10 +111,11 @@ splash_setup() {
 	export SPLASH_THEME="default"
 	export SPLASH_TTY="16"
 	export SPLASH_KDMODE="TEXT"
-	
-	if [[ -f /etc/conf.d/splash ]]; then 
-		. /etc/conf.d/splash
-	fi
+	export SPLASH_BOOT_MESSAGE="Booting the system (\$progress%)... Press F2 for verbose mode."
+	export SPLASH_SHUTDOWN_MESSAGE="Shutting down the system (\$progress%)... Press F2 for verbose mode."
+	export SPLASH_REBOOT_MESSAGE="Rebooting the system (\$progress%)... Press F2 for verbose mode."
+
+	[[ -f /etc/conf.d/splash ]] && . /etc/conf.d/splash
 		
 	if [[ -f /proc/cmdline ]]; then
 		options=$(grep 'splash=[^ ]*' -o /proc/cmdline)
@@ -148,16 +149,14 @@ splash_init() {
 	# Initialize variables - either set the default values or load them from a file
 	if [[ ${RUNLEVEL} == "S" && ${arg} == "sysinit" ]] ||
 	   [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
-		spl_init=0
 		spl_count=0
 		spl_scripts=0
-		spl_rate=65535
 		spl_execed=""
  	else
 		splash_load_vars
 	fi
 
-	export spl_init spl_count spl_scripts spl_rate spl_execed
+	export spl_count spl_scripts spl_execed
 	
 	if [[ ${RUNLEVEL} == "S" && ${arg} == "sysinit" ]]; then
 		spl_scripts=$(splash_svclist_get start | tr ' ' '\n' | wc -l)
@@ -169,24 +168,280 @@ splash_init() {
 
 	if [[ ${RUNLEVEL} == "S" && ${arg} == "sysinit" ]] || 
 	   [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
-		/sbin/splash "start"
-		# Set the input device if it exists
-		local t=$(grep -Hsi keyboard /sys/class/input/event*/device/driver/description | grep -o 'event[0-9]\+') 
-		if [[ -z "${t}" ]]; then
-			# Try an alternative method of finding the event device. The idea comes
-			# from Bombadil <bombadil(at)h3c.de>. We're couting on the keyboard controller
-			# being the first device handled by kbd listed in input/devices.
-			t=$(/bin/grep -s -m 1 '^H: Handlers=kbd' /proc/bus/input/devices | grep -o 'event[0-9]*')
-		fi
-
-		if [[ -n "${t}" ]]; then
-			splash_comm_send "set event dev /dev/input/${t}"
-		fi
+		splash_start
 	fi
 	
-	splash_init_svclist "${arg}"
+	splash_svclist_init "${arg}"
 	splash_save_vars
 }
+
+splash_exit() {
+	if [[ ${RUNLEVEL} == "S" || ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
+		return 0
+	fi
+
+	if [[ "$(splash_get_mode)" == "silent" ]] ; then
+		splash_verbose
+	fi
+
+	splash_comm_send "exit"
+	splash_cache_cleanup
+
+	# Make sure the splash daemon is really dead (just in case the killall
+	# in splash_cache_cleanup didn't get executed). This should fix Gentoo
+	# bug #96697.
+	killall -9 splash_util.static >/dev/null 2>/dev/null
+}
+
+splash_start() {
+	# Prepare the communications FIFO
+	rm -f ${spl_fifo} 2>/dev/null
+		
+	if [[ ${SPLASH_MODE_REQ} == "verbose" ]]; then
+		${spl_util} -c on 2>/dev/null
+		return 0	
+	elif [[ ${SPLASH_MODE_REQ} != "silent" ]]; then
+		return 0
+	fi
+		
+	# Display a warning if the system is not configured to display init messages
+	# on tty1. This can cause a lot of problems if it's not handled correctly, so
+	# we don't allow silent splash to run on incorrectly configured systems.
+	if [[ ${SPLASH_MODE_REQ} == "silent" ]]; then
+		if [[ -z "`grep -E '(^| )CONSOLE=/dev/tty1( |$)' /proc/cmdline`" &&
+			  -z "`grep -E '(^| )console=tty1( |$)' /proc/cmdline`" ]]; then
+			clear
+			ewarn "You don't appear to have a correct console= setting on your kernel"
+			ewarn "command line. Silent splash will not be enabled. Please add"
+			ewarn "console=tty1 or CONSOLE=/dev/tty1 to your kernel command line"
+			ewarn "to avoid this message."
+			if [[ -n "`grep 'CONSOLE=/dev/tty1' /proc/cmdline`" ||
+				  -n "`grep 'console=tty1' /proc/cmdline`" ]]; then
+				ewarn "Note that CONSOLE=/dev/tty1 and console=tty1 are general parameters and"
+				ewarn "not splash= settings."
+			fi
+			return 1
+		fi
+
+		mount --bind / ${spl_tmpdir}
+		if [[ ! -c "${spl_tmpdir}/dev/tty1" ]]; then
+			umount ${spl_tmpdir}
+			clear
+			ewarn "The filesystem mounted on / doesn't contain the /dev/tty1 device"
+			ewarn "which is required for the silent splash to function properly."
+			ewarn "Silent splash will not be enabled. Please create the appropriate"
+			ewarn "device file to avoid this message."
+			exit 1
+		fi
+		umount ${spl_tmpdir}
+	fi
+
+	# In the unlikely case that there's a splash daemon running -- kill it.
+	killall -9 ${spl_util##*/} 2>/dev/null
+	
+	# Prepare the communications FIFO
+	mkfifo ${spl_fifo}
+
+	local options=""
+	[[ ${SPLASH_KDMODE} == "GRAPHICS" ]] && options="--kdgraphics"
+		
+	# Start the splash daemon
+	${spl_util} -d --theme=${SPLASH_THEME} --pidfile=${spl_pidfile} ${options}
+
+	# Set the silent TTY and boot message
+	splash_comm_send "set tty silent ${SPLASH_TTY}"
+	splash_comm_send "set message $(splash_get_boot_message)"
+	
+	if [[ ${SPLASH_MODE_REQ} == "silent" ]] ; then
+		splash_comm_send "set mode silent"
+		splash_comm_send "repaint"
+		${spl_util} -c on 2>/dev/null
+	fi
+
+	# Set the input device if it exists
+	local t=$(grep -Hsi keyboard /sys/class/input/event*/device/driver/description | grep -o 'event[0-9]\+') 
+	if [[ -z "${t}" ]]; then
+		# Try an alternative method of finding the event device. The idea comes
+		# from Bombadil <bombadil(at)h3c.de>. We're couting on the keyboard controller
+		# being the first device handled by kbd listed in input/devices.
+		t=$(/bin/grep -s -m 1 '^H: Handlers=kbd' /proc/bus/input/devices | grep -o 'event[0-9]*')
+	fi
+	[[ -n "${t}" ]] && splash_comm_send "set event dev /dev/input/${t}"
+
+	return 0
+}
+
+splash_get_boot_message() {
+	if [[ ${RUNLEVEL} == "6" ]]; then
+		echo ${SPLASH_REBOOT_MESSAGE}
+	elif [[ ${RUNLEVEL} == "0" ]]; then
+		echo ${SPLASH_SHUTDOWN_MESSAGE}
+	else
+		echo ${SPLASH_BOOT_MESSAGE}
+	fi	
+}
+
+splash_update_progress() {
+	local srv=$1
+		
+	# FIXME
+	splash_load_vars	
+	[[ -n "${spl_execed}" && -z "${spl_execed//* $srv */}" ]] && return
+	[[ -z "${spl_scripts}" ]] && return
+	spl_execed="${spl_execed} ${srv} "
+	spl_count=$((${spl_count} + 1))
+	
+	if [ "${spl_scripts}" -gt 0 ]; then
+		progress=$(($spl_count * (65535 - $spl_init) / $spl_scripts))
+	else
+		progress=0
+	fi
+
+	splash_comm_send "progress ${progress}"
+	splash_save_vars
+	
+	local t=$(splash_get_boot_message)
+	splash_comm_send "paint"
+}
+
+###########################################################################
+# Common functions
+###########################################################################
+
+# Sends data to the splash FIFO after making sure there's someone
+# alive on other end to receive it.
+splash_comm_send() {
+	if [[ ! -e ${spl_pidfile} ]]; then
+		return 1
+	fi
+	
+	if [[ -r /proc/$(<${spl_pidfile})/status && 
+		  "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]]; then
+		echo $* > ${spl_fifo} &
+	fi
+}
+
+splash_get_mode() {
+	local ctty="$(${spl_bindir}/fgconsole)"
+
+	if [[ ${ctty} == "${SPLASH_TTY}" ]]; then
+		echo "silent"
+	else
+		if [[ -z "$(${spl_util} -c getstate --vc=$(($ctty-1)) 2>/dev/null | grep off)" ]]; then
+			echo "verbose"
+		else
+			echo "off"
+		fi	
+	fi
+}	
+
+splash_verbose() {
+	if [[ -x /usr/bin/chvt ]]; then
+		/usr/bin/chvt 1
+	else
+		splash_comm_send "set mode verbose"
+	fi
+}
+
+splash_silent() {
+	splash_comm_send "set mode silent"
+	${spl_util} -c on 2>/dev/null
+}
+
+splash_load_vars() {
+	[[ -e ${spl_cachedir}/progress ]] && source ${spl_cachedir}/progress
+}
+
+splash_save_vars() {
+	if [[ ! -d ${spl_cachedir} || ! -w ${spl_cachedir} ]]; then
+		return
+	fi
+		
+	t="spl_execed=\"${spl_execed}\"\n"
+	t="${t}spl_count=${spl_count}\n"
+	t="${t}spl_scripts=${spl_scripts}\n"
+	
+	(echo -e "$t" > ${spl_cachedir}/progress) 2>/dev/null
+}
+
+###########################################################################
+# Service
+###########################################################################
+
+# args: <svc> <error-code> <action>
+splash_svc() {
+	local srv="$1"
+	local err="$2"
+	local act="$3"
+
+	# We ignore the serial initscript since it's known to return bogus error codes
+	# while not printing any error messages. This only confuses the users.
+	if [[ ${err} -ne 0 && ${SPLASH_VERBOSE_ON_ERRORS} == "yes" && "${srv}" != "serial" ]]; then
+		splash_verbose
+		return 1
+	fi
+
+	if [[ ${act} == "start" ]]; then
+		if [[ ${err} -eq 0 ]]; then
+			splash_svc_update ${srv} "svc_started"
+		else
+			splash_svc_update ${srv} "svc_start_failed"
+		fi
+	else
+		if [[ ${err} -eq 0 ]]; then
+			splash_svc_update ${srv} "svc_stopped"
+		else
+			splash_svc_update ${srv} "svc_stop_failed"
+		fi
+	fi
+
+	splash_update_progress "$srv"
+}
+
+# args: <svc> <state>
+splash_svc_update() {
+	splash_comm_send "update_svc $1 $2"
+}
+
+# args: <svc>
+splash_svc_start() {
+	local svc="$1"
+
+	splash_svc_update ${svc} "svc_start"
+	splash_update_progress "${svc}"
+}
+
+# args: <svc>
+splash_svc_stop() {
+	local svc="$1"
+
+	splash_svc_update ${svc} "svc_stop"
+	splash_update_progress "${svc}"
+}
+
+# args: <svc>
+splash_input_begin() {
+	local svc="$1"
+
+	if [[ "$(splash_get_mode)" == "silent" ]] ; then
+		splash_verbose
+		export SPL_SVC_INPUT_SILENT=${svc}
+	fi
+}
+
+# args: <svc>
+splash_input_end() {
+	local svc="$1"
+
+	if [[ ${SPL_SVC_INPUT_SILENT} == "${svc}" ]]; then
+		splash_silent
+		unset SPL_SVC_INPUT_SILENT	
+	fi
+}
+
+###########################################################################
+# Cache
+###########################################################################
 
 splash_cache_prep() {
 	mount -ns -t "${spl_cachetype}" cachedir "${spl_tmpdir}" \
@@ -216,7 +471,7 @@ splash_cache_prep() {
 		# Check whether the list of services that will be started during boot
 		# needs updating. This is generally the case if:
 		#  - one of the caches doesn't exist
-		#  - out deptree was out of date
+		#  - our deptree was out of date
 		#  - we're booting with a different boot/default level than the last time
 		#  - one of the runlevel dirs has been modified since the last boot
 		if [[ ! -e ${spl_cachedir}/levels || \
@@ -239,6 +494,8 @@ splash_cache_prep() {
 splash_cache_cleanup() {
 	# Don't try to clean anything up if the cachedir is not mounted.
 	[[ -z "$(grep ${spl_cachedir} /proc/mounts)" ]] && return;
+	
+	# Create the temp dir if necessary
 	[[ ! -d "${spl_tmpdir}" ]] && mkdir "${spl_tmpdir}"
 	mount -n --move "${spl_cachedir}" "${spl_tmpdir}"
 
@@ -250,9 +507,32 @@ splash_cache_cleanup() {
 			 >> "${spl_cachedir}/levels"
 	fi
 
-	# Make sure the splash daemon is dead.
+	# FIXME: Make sure the splash daemon is dead.
 	killall -9 splash_util.static >/dev/null 2>/dev/null
 	umount -l "${spl_tmpdir}" 2>/dev/null
+}
+
+###########################################################################
+# Service list
+###########################################################################
+
+# args: <internal-runlevel>
+splash_svclist_init() {
+	arg="$1"
+	
+	if [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
+		for i in `dolisting "${svcdir}/started/" | sed -e "s#${svcdir}/started/##g"`; do
+			splash_svc_update ${i} "svc_inactive_stop"
+		done
+	elif [[ ${RUNLEVEL} == "S" ]]; then
+		local svcs=$(splash_svclist_get start)
+		
+		if [[ ${arg} == "sysinit" ]]; then
+			for i in ${svcs} ; do
+				splash_svc_update ${i} "svc_inactive_start"
+			done
+		fi
+	fi
 }
 
 splash_svclist_get() {
@@ -355,7 +635,7 @@ splash_svclist_update() {
 	# from /etc/init.d/autoconfig. In order to do that, we source 
 	# /etc/init.d/autoconfig and use its list_services() function.
 	autoconfig_svcs() {
-		[ -r /etc/init.d/autoconfig ] || return
+		[[ -r /etc/init.d/autoconfig ]] || return
 		. /etc/init.d/autoconfig
 		echo "$(list_services)"
 	}
@@ -389,167 +669,6 @@ splash_svclist_update() {
 	done
 	echo "${svcs_order}"
 	)
-}
-
-splash_svc() {
-	local srv="$1"
-	local err="$2"
-	local act="$3"
-
-	# We ignore the serial initscript since it's known to return bogus error codes
-	# while not printing any error messages. This only confuses the users.
-	if [[ ${err} -ne 0 && ${SPLASH_VERBOSE_ON_ERRORS} == "yes" && "${srv}" != "serial" ]]; then
-		/sbin/splash "verbose"
-		return 1
-	fi
-
-	if [[ ${act} == "start" ]]; then
-		if [[ ${err} -eq 0 ]]; then
-			splash_update_svc ${srv} "svc_started"
-		else
-			splash_update_svc ${srv} "svc_start_failed"
-		fi
-	else
-		if [[ ${err} -eq 0 ]]; then
-			splash_update_svc ${srv} "svc_stopped"
-		else
-			splash_update_svc ${srv} "svc_stop_failed"
-		fi
-	fi
-
-	/sbin/splash "$srv"
-}
-
-splash_exit() {
-	if [[ ${RUNLEVEL} == "S" || ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
-		return 0
-	fi
-
-	if [[ "$(splash_get_mode)" == "silent" ]] ; then
-		/sbin/splash "verbose"
-	fi
-
-	splash_comm_send "exit"
-	splash_cache_cleanup
-
-	# Make sure the splash daemon is really dead (just in case the killall
-	# in splash_cache_cleanup didn't get executed). This should fix Gentoo
-	# bug #96697.
-	killall -9 splash_util.static >/dev/null 2>/dev/null
-}
-
-# <svc> <state>
-splash_update_svc() {
-	local svc=$1
-	local state=$2
-	splash_comm_send "update_svc ${svc} ${state}"
-}
-
-# Sends data to the splash FIFO after making sure there's someone
-# alive on other end to receive it.
-splash_comm_send() {
-	if [[ ! -e ${spl_pidfile} ]]; then
-		return 1
-	fi
-	
-	if [[ -r /proc/$(<${spl_pidfile})/status && 
-		  "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]]; then
-		echo $* > ${spl_fifo} &		
-	fi
-}
-
-splash_get_mode() {
-	local ctty="$(/lib/splash/bin/fgconsole)"
-
-	if [[ ${ctty} == "${SPLASH_TTY}" ]]; then
-		echo "silent"
-	else
-		if [[ -z "$(/sbin/splash_util.static -c getstate --vc=$(($ctty-1)) 2>/dev/null | grep off)" ]]; then
-			echo "verbose"
-		else
-			echo "off"
-		fi	
-	fi
-}	
-
-splash_verbose() {
-	/sbin/splash "verbose"
-}
-
-splash_load_vars() {
-	[[ -e ${spl_cachedir}/progress ]] && source ${spl_cachedir}/progress
-}
-
-splash_save_vars() {
-	if [[ ! -d ${spl_cachedir} || ! -w ${spl_cachedir} ]]; then
-		return
-	fi
-		
-	t="spl_execed=\"${spl_execed}\"\n"
-	t="${t}spl_count=${spl_count}\n"
-	t="${t}spl_scripts=${spl_scripts}\n"
-	t="${t}spl_rate=${spl_rate}\n"
-	t="${t}spl_init=${spl_init}\n"
-	t="${t}SPL_SVC_INACTIVE_START=\"${SPL_SVC_INACTIVE_START}\"\n"
-	t="${t}SPL_SVC_START=\"${SPL_SVC_START}\"\n"
-	t="${t}SPL_SVC_STARTED=\"${SPL_SVC_STARTED}\"\n"
-	t="${t}SPL_SVC_START_FAILED=\"${SPL_SVC_START_FAILED}\"\n"
-	t="${t}SPL_SVC_INACTIVE_STOP=\"${SPL_SVC_INACTIVE_STOP}\"\n"
-	t="${t}SPL_SVC_STOP=\"${SPL_SVC_STOP}\"\n"
-	t="${t}SPL_SVC_STOPPED=\"${SPL_SVC_STOPPED}\"\n"
-	t="${t}SPL_SVC_STOP_FAILED=\"${SPL_SVC_STOP_FAILED}\"\n"
-	
-	(echo -e "$t" > ${spl_cachedir}/progress) 2>/dev/null
-}
-
-splash_input_begin() {
-	local svc="$1"
-
-	if [[ "$(splash_get_mode)" == "silent" ]] ; then
-		/sbin/splash "verbose"
-		export SPL_SVC_INPUT_SILENT=${svc}
-	fi
-}
-
-splash_input_end() {
-	local svc="$1"
-
-	if [[ ${SPL_SVC_INPUT_SILENT} == "${svc}" ]]; then
-		/sbin/splash "silent"
-		unset SPL_SVC_INPUT_SILENT	
-	fi
-}
-
-splash_svc_start() {
-	local svc="$1"
-
-	splash_update_svc ${svc} "svc_start"
-	/sbin/splash "$svc"
-}
-
-splash_svc_stop() {
-	local svc="$1"
-
-	splash_update_svc ${svc} "svc_stop"
-	/sbin/splash "$svc"
-}
-
-splash_init_svclist() {
-	arg="$1"
-	
-	if [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
-		for i in `dolisting "${svcdir}/started/" | sed -e "s#${svcdir}/started/##g"`; do
-			splash_update_svc ${i} "svc_inactive_stop"
-		done
-	elif [[ ${RUNLEVEL} == "S" ]]; then
-		local svcs=$(splash_svclist_get start)
-		
-		if [[ ${arg} == "sysinit" ]]; then
-			for i in ${svcs} ; do
-				splash_update_svc ${i} "svc_inactive_start"
-			done
-		fi
-	fi
 }
 
 # vim:ts=4
