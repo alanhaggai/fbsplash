@@ -1,4 +1,6 @@
 - clean up the code
+- clean up the mutexes
+- fix handling of redrawing the inter boxes
 - animations handling:
   - move code to correct places
   - add more comments

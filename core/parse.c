@@ -24,7 +24,7 @@ struct config_opt {
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
 		t_anim,
 #endif
-#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)
+#if WANT_TTF
 		t_text,	
 #endif
 	} type;
@@ -110,7 +110,7 @@ struct config_opt opts[] =
 		.type = t_anim,
 		.val = NULL		},
 #endif
-#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)
+#if WANT_TTF
 	{	.name = "text_x",
 		.type = t_int,
 		.val = &cf.text_x	},
@@ -762,7 +762,7 @@ char *parse_quoted_string(char *t, u8 keepvar)
 	return out;
 }
 
-#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)
+#if WANT_TTF
 void parse_text(char *t)
 {
 	char *p, *fontname = NULL, *fpath = NULL;
@@ -1034,7 +1034,7 @@ int parse_cfg(char *cfgfile)
 					parse_anim(t);
 					break;
 #endif
-#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)
+#if WANT_TTF
 				case t_text:
 					parse_text(t);
 					break;

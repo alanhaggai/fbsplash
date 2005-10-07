@@ -35,7 +35,9 @@
 #define max(a,b)		((a) > (b) ? (a) : (b))
 #define CLAMP(x) 		((x) > 255 ? 255 : (x))
 #define DEBUG(x...)
-						    
+
+#define WANT_TTF	((defined(CONFIG_TTF_KERNEL) && defined(TARGET_KERNEL)) || (defined(CONFIG_TTF) && !defined(TARGET_KERNEL)))
+
 /* ************************************************************************
  * 				Lists 
  * ************************************************************************ */
@@ -119,6 +121,7 @@ typedef struct {
 } anim;
 #endif	/* CONFIG_MNG */
 
+#if WANT_TTF
 #define F_TXT_SILENT  	1
 #define F_TXT_VERBOSE	2
 #define F_TXT_EXEC 	4
@@ -135,7 +138,6 @@ typedef struct {
 #define F_HS_HMIDDLE	2
 #define F_HS_RIGHT	4
 
-#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || defined(CONFIG_TTF)
 #include "ttf.h"
 typedef struct {
 	char *file;
@@ -152,6 +154,9 @@ typedef struct {
 	char *val;
 	font_e *font;
 } text;
+
+void text_get_xy(text *ct, int *x, int *y);
+
 #endif /* TTF */
 
 typedef struct {

@@ -425,40 +425,28 @@ void prep_bgnds(u8 *target, u8 *bgnd, char mode)
 
 			prep_bgnd(target, bgnd, c->x, c->y, c->img->w, c->img->h); 
 		}
-#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || (defined(CONFIG_TTF) && !defined(TARGET_KERNEL))
+#if WANT_TTF
 		else if (o->type == o_text) {
 			text *ct = (text*)o->p;
-			int x, y, t;
+			int x, y;
 
 			if (mode == 's' && !(ct->flags & F_TXT_SILENT))
 				continue;
 
 			if (mode == 'v' && !(ct->flags & F_TXT_VERBOSE))
 				continue;
-		
+
+			/* FIXME: this shouldn't even be in the list! */
 			if (!ct->font || !ct->font->font)
 				continue;
-		
-			x = ct->x;
-			y = ct->y;
-			t = ct->hotspot & F_HS_HORIZ_MASK;
-			if (t == F_HS_HMIDDLE)
-				x -= ct->last_width/2;
-			else if (t == F_HS_RIGHT)
-				x -= ct->last_width;
 
-			t = ct->hotspot & F_HS_VERT_MASK;
-			if (t == F_HS_VMIDDLE)
-				y -= ct->font->font->height/2;
-			else if (t == F_HS_BOTTOM)
-				y -= ct->font->font->height;
-
+			text_get_xy(ct, &x, &y);
 			prep_bgnd(target, bgnd, x, y, ct->last_width, ct->font->font->height);
 		}
 #endif
 	}
 
-#if (defined(CONFIG_TTF_KERNEL) && defined(TARGET_KERNEL)) || (!defined(TARGET_KERNEL) && defined(CONFIG_TTF))
+#if WANT_TTF
 	if (mode == 's') {
 		prep_bgnd(target, bgnd, cf.text_x, cf.text_y, boot_msg_width, global_font->height);
 	}
@@ -558,8 +546,7 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 		}
 #endif /* CONFIG_MNG */
 #endif
-
-#if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || (defined(CONFIG_TTF) && !defined(TARGET_KERNEL))
+#if WANT_TTF
 		else if (o->type == o_text) {
 
 			text *ct = (text*)o->p;
@@ -593,7 +580,7 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 #endif /* TTF */
 	}
 
-#if (defined(CONFIG_TTF_KERNEL) && defined(TARGET_KERNEL)) || (!defined(TARGET_KERNEL) && defined(CONFIG_TTF))
+#if WANT_TTF
 	if (mode == 's') {
 		if (!boot_message)
 			TTF_Render(target, DEFAULT_MESSAGE, global_font, 

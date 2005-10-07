@@ -215,14 +215,8 @@ exit_silent() {
 }
 
 demo_theme_silent() {
-	local has_text="no"
 	check_silent "${theme}" "${res}"
 	
-	# Set text_* variables based on settings from the theme config file
-	eval `cat ${themedir}/${theme}/${res}.cfg | grep "^text_[a-z]\+="`
-		
-	[[ -n "${text_x}" && -n "${text_y}" && -n "${text_size}" ]] && has_text="yes"
-		
 	set_silent	
 
 	# Try to configure an event input device so that F2 can work both ways.
@@ -241,13 +235,10 @@ demo_theme_silent() {
 	for ((i=0;i<65536;i=$i+$step)) ; do
 		spl_comm "progress $i"
 		spl_comm "paint"	
-		[ ${has_text} == "yes" ] && spl_comm "paint rect ${text_x} ${text_y} ${xres} $(($text_y+5*$text_size))"
 		sleep ${delay}
 	done
 	spl_comm "progress 65535"
 	spl_comm "paint"	
-	[ ${has_text} == "yes" ] && spl_comm "paint rect ${text_x} ${text_y} ${xres} $(($text_y+5*$text_size))"
-
 	exit_silent
 }
 

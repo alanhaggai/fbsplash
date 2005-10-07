@@ -691,54 +691,69 @@ int cmd_set_notify(void **args)
 	return 0;
 }
 
-void do_paint_rect(u8 *dst, u8 *src, rect *re)
+void inline do_paint_rect2(u8 *dst, u8 *src, int x1, int y1, int x2, int y2)
 {
 	u8 *to;
 	int y, j;
 
-	j = (re->x2 - re->x1 + 1) * bytespp;
-	for (y = re->y1; y <= re->y2; y++) {
-		to = dst + y * fb_fix.line_length + re->x1 * bytespp;
-		memcpy(to, src + (y * fb_var.xres + re->x1) * bytespp, j);
+	j = (x2 - x1 + 1) * bytespp;
+	for (y = y1; y <= y2; y++) {
+		to = dst + y * fb_fix.line_length + x1 * bytespp;
+		memcpy(to, src + (y * fb_var.xres + x1) * bytespp, j);
 	}			
+}
+
+void do_paint_rect(u8 *dst, u8 *src, rect *re)
+{
+	do_paint_rect2(dst, src, re->x1, re->y1, re->x2, re->y2);
 }
 
 void do_paint(u8 *dst, u8 *src)
 {
-	u8 *to;
-	int j, y;
-	obj *o;
-	box *b;
 	item *ti;
-	rect *re;
 
 	for (ti = rects.head ; ti != NULL; ti = ti->next) {
+		rect *re;
 		re = (rect*)ti->p;
 		do_paint_rect(dst, src, re);
 	}
 
 	for (ti = objs.head; ti != NULL; ti = ti->next) {
+		obj *o;
 		o = (obj*)ti->p;
-			
-		if (o->type != o_box)
+		
+		switch (o->type) {
+		case o_box:
+		{
+			box *b = (box*)o->p;
+			if (!(b->attr & BOX_INTER) || ti->next == NULL)
+				continue;
+
+			if (((obj*)ti->next->p)->type != o_box) 
+				continue;
+
+			b = (box*)((obj*)ti->next->p)->p;
+			do_paint_rect2(dst, src, b->x1, b->y1, b->x2, b->y2);
+			break;
+		}	
+#if WANT_TTF
+		case o_text:
+		{
+			int x, y;
+			text *t = (text*)o->p;
+			text_get_xy(t, &x, &y);
+			do_paint_rect2(dst, src, x, y, x + t->last_width, y + t->font->font->height);
+			break;
+		}
+#endif
+		default:
 			continue;
-
-		b = (box*)o->p;
-	
-		if (!(b->attr & BOX_INTER) || ti->next == NULL)
-			continue;
-
-		if (((obj*)ti->next->p)->type != o_box) 
-			continue;
-
-		b = (box*)((obj*)ti->next->p)->p;
-
-		j = (b->x2 - b->x1 + 1) * bytespp;
-		for (y = b->y1; y <= b->y2; y++) {
-			to = dst + y * fb_fix.line_length + b->x1 * bytespp;
-			memcpy(to, src + (y * fb_var.xres + b->x1) * bytespp, j); 
-		}			
+		}
 	}
+
+#if WANT_TTF
+	do_paint_rect2(dst, src, cf.text_x, cf.text_y, cf.text_x + boot_msg_width, cf.text_y + global_font->height);
+#endif
 }
 
 int cmd_paint(void **args)

@@ -153,7 +153,6 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 					*(u16*)pic = h;
 					pic += 2;
 				} else if (bytespp == 3) {
-					
 					if (endianess == little) { 
 						*(u16*)pic = h & 0xffff;
 						pic[2] = (h >> 16) & 0xff;

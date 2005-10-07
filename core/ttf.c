@@ -717,3 +717,22 @@ int free_fonts(void)
 	return 0;
 }
 
+void text_get_xy(text *ct, int *x, int *y)
+{
+	int t;
+	*x = ct->x;
+	*y = ct->y;
+	t = ct->hotspot & F_HS_HORIZ_MASK;
+	if (t == F_HS_HMIDDLE)
+		*x -= ct->last_width/2;
+	else if (t == F_HS_RIGHT)
+		*x -= ct->last_width;
+
+	t = ct->hotspot & F_HS_VERT_MASK;
+	if (t == F_HS_VMIDDLE)
+		*y -= ct->font->font->height/2;
+	else if (t == F_HS_BOTTOM)
+		*y -= ct->font->font->height;
+	return;
+}
+
