@@ -36,6 +36,17 @@ int boot_msg_width = 0;
 #define DEFAULT_PTSIZE  18
 #define NUM_GRAYS       256
 
+#ifdef TARGET_KERNEL
+int ceil(float a)
+{
+	int h = (int)a;
+	if (a - h >= 0.5)
+		return h+1;
+	else
+		return h;
+}
+#endif
+
 static void Flush_Glyph(c_glyph* glyph)
 {
 	glyph->stored = 0;
@@ -67,16 +78,198 @@ static void Flush_Cache(TTF_Font* font)
 	}
 }       
 
-#ifdef TARGET_KERNEL
-int ceil(float a)
+static FT_Error Load_Glyph(TTF_Font* font, unsigned short ch, c_glyph* cached, int want)
 {
-	int h = (int)a;
-	if (a - h >= 0.5)
-		return h+1;
-	else
-		return h;
+	FT_Face face;
+	FT_Error error;
+	FT_GlyphSlot glyph;
+	FT_Glyph_Metrics* metrics;
+	FT_Outline* outline;
+			      
+	assert(font);
+	assert(font->face);
+
+	face = font->face;
+
+	/* Load the glyph */
+	if (! cached->index) {
+		cached->index = FT_Get_Char_Index(face, ch);
+	}
+	error = FT_Load_Glyph(face, cached->index, FT_LOAD_DEFAULT);
+	if(error) {
+		return error;
+	}
+	/* Get our glyph shortcuts */
+	glyph = face->glyph;
+	metrics = &glyph->metrics;
+	outline = &glyph->outline;
+
+	/* Get the glyph metrics if desired */
+	if ((want & CACHED_METRICS) && !(cached->stored & CACHED_METRICS)) {
+		/* Get the bounding box */
+		cached->minx = FT_FLOOR(metrics->horiBearingX);
+		cached->maxx = cached->minx + FT_CEIL(metrics->width);
+		cached->maxy = FT_FLOOR(metrics->horiBearingY);
+		cached->miny = cached->maxy - FT_CEIL(metrics->height);
+		cached->yoffset = font->ascent - cached->maxy;
+		cached->advance = FT_CEIL(metrics->horiAdvance);
+
+		/* Adjust for bold and italic text */
+		if(font->style & TTF_STYLE_BOLD) {
+			cached->maxx += font->glyph_overhang;
+		}
+		if(font->style & TTF_STYLE_ITALIC) {
+			cached->maxx += (int)ceil(font->glyph_italics);
+		}
+		cached->stored |= CACHED_METRICS;
+	}
+
+	if (((want & CACHED_BITMAP) && !(cached->stored & CACHED_BITMAP)) ||
+	     ((want & CACHED_PIXMAP) && !(cached->stored & CACHED_PIXMAP))) {
+		int mono = (want & CACHED_BITMAP);
+		int i;
+		FT_Bitmap* src;
+		FT_Bitmap* dst;
+
+		/* Handle the italic style */
+		if(font->style & TTF_STYLE_ITALIC) {
+			FT_Matrix shear;
+
+			shear.xx = 1 << 16;
+			shear.xy = (int) (font->glyph_italics * (1 << 16))/ font->height;
+			shear.yx = 0;
+			shear.yy = 1 << 16;
+
+			FT_Outline_Transform(outline, &shear);
+		}
+
+		/* Render the glyph */
+		if (mono) {
+			error = FT_Render_Glyph(glyph, ft_render_mode_mono);
+		} else {
+			error = FT_Render_Glyph(glyph, ft_render_mode_normal);
+		}
+		if(error) {
+			return error;
+		}
+
+		/* Copy over information to cache */
+		src = &glyph->bitmap;
+		if (mono) {
+			dst = &cached->bitmap;
+		} else {
+			dst = &cached->pixmap;
+		}
+		memcpy(dst, src, sizeof(*dst));
+		if (mono) {
+			dst->pitch *= 8;
+		}
+
+		/* Adjust for bold and italic text */
+		if(font->style & TTF_STYLE_BOLD) {
+			int bump = font->glyph_overhang;
+			dst->pitch += bump;
+			dst->width += bump;
+		}
+		if(font->style & TTF_STYLE_ITALIC) {
+			int bump = (int)ceil(font->glyph_italics);
+			dst->pitch += bump;
+			dst->width += bump;
+		}
+
+		if (dst->rows != 0) {
+			dst->buffer = malloc(dst->pitch * dst->rows);
+			if(!dst->buffer) {
+				return FT_Err_Out_Of_Memory;
+			}
+			memset(dst->buffer, 0, dst->pitch * dst->rows);
+
+			for(i = 0; i < src->rows; i++) {
+				int soffset = i * src->pitch;
+				int doffset = i * dst->pitch;
+				if (mono) {
+					unsigned char *srcp = src->buffer + soffset;
+					unsigned char *dstp = dst->buffer + doffset;
+					int j;
+					for (j = 0; j < src->width; j += 8) {
+						unsigned char ch = *srcp++;
+						*dstp++ = (ch&0x80) >> 7;
+						ch <<= 1;
+						*dstp++ = (ch&0x80) >> 7;
+						ch <<= 1;
+						*dstp++ = (ch&0x80) >> 7;
+						ch <<= 1;
+						*dstp++ = (ch&0x80) >> 7;
+						ch <<= 1;
+						*dstp++ = (ch&0x80) >> 7;
+						ch <<= 1;
+						*dstp++ = (ch&0x80) >> 7;
+						ch <<= 1;
+						*dstp++ = (ch&0x80) >> 7;
+						ch <<= 1;
+						*dstp++ = (ch&0x80) >> 7;
+					}
+				} else {
+					memcpy(dst->buffer+doffset,
+					       src->buffer+soffset,src->pitch);
+				}
+			}
+		}
+		
+		/* Handle the bold style */
+		if (font->style & TTF_STYLE_BOLD) {
+			int row;
+			int col;
+			int offset;
+			int pixel;
+			unsigned char* pixmap;
+
+			/* The pixmap is a little hard, we have to add and clamp */
+			for(row = dst->rows - 1; row >= 0; --row) {
+				pixmap = (unsigned char*) dst->buffer + row * dst->pitch;
+				for(offset=1; offset <= font->glyph_overhang; ++offset) {
+					for(col = dst->width - 1; col > 0; --col) {
+						pixel = (pixmap[col] + pixmap[col-1]);
+						if(pixel > NUM_GRAYS - 1) {
+							pixel = NUM_GRAYS - 1;
+						}
+						pixmap[col] = (unsigned char) pixel;
+					}
+				}
+			}
+		}
+		
+		/* Mark that we rendered this format */
+		if (mono) {
+			cached->stored |= CACHED_BITMAP;
+		} else {
+			cached->stored |= CACHED_PIXMAP;
+		}
+	}
+	
+	/* We're done, mark this glyph cached */
+	cached->cached = ch;
+
+	return 0;
 }
-#endif
+
+static FT_Error Find_Glyph(TTF_Font* font, unsigned short ch, int want)
+{
+	int retval = 0;
+
+	if(ch < 256) {
+		font->current = &font->cache[ch];
+	} else {
+		if (font->scratch.cached != ch) {
+			Flush_Glyph(&font->scratch);
+		}
+		font->current = &font->scratch;
+	}
+	if ((font->current->stored & want) != want) {
+		retval = Load_Glyph(font, ch, font->current, want);
+	}
+	return retval;
+}
 
 static unsigned short *UTF8_to_UNICODE(unsigned short *unicode, const char *utf8, int len)
 {
@@ -466,199 +659,6 @@ TTF_Font* TTF_OpenFont(const char *file, int ptsize)
 	}
 	
 	return a;
-}
-
-static FT_Error Load_Glyph(TTF_Font* font, unsigned short ch, c_glyph* cached, int want)
-{
-	FT_Face face;
-	FT_Error error;
-	FT_GlyphSlot glyph;
-	FT_Glyph_Metrics* metrics;
-	FT_Outline* outline;
-			      
-	assert(font);
-	assert(font->face);
-
-	face = font->face;
-
-	/* Load the glyph */
-	if (! cached->index) {
-		cached->index = FT_Get_Char_Index(face, ch);
-	}
-	error = FT_Load_Glyph(face, cached->index, FT_LOAD_DEFAULT);
-	if(error) {
-		return error;
-	}
-	/* Get our glyph shortcuts */
-	glyph = face->glyph;
-	metrics = &glyph->metrics;
-	outline = &glyph->outline;
-
-	/* Get the glyph metrics if desired */
-	if ((want & CACHED_METRICS) && !(cached->stored & CACHED_METRICS)) {
-		/* Get the bounding box */
-		cached->minx = FT_FLOOR(metrics->horiBearingX);
-		cached->maxx = cached->minx + FT_CEIL(metrics->width);
-		cached->maxy = FT_FLOOR(metrics->horiBearingY);
-		cached->miny = cached->maxy - FT_CEIL(metrics->height);
-		cached->yoffset = font->ascent - cached->maxy;
-		cached->advance = FT_CEIL(metrics->horiAdvance);
-
-		/* Adjust for bold and italic text */
-		if(font->style & TTF_STYLE_BOLD) {
-			cached->maxx += font->glyph_overhang;
-		}
-		if(font->style & TTF_STYLE_ITALIC) {
-			cached->maxx += (int)ceil(font->glyph_italics);
-		}
-		cached->stored |= CACHED_METRICS;
-	}
-
-	if (((want & CACHED_BITMAP) && !(cached->stored & CACHED_BITMAP)) ||
-	     ((want & CACHED_PIXMAP) && !(cached->stored & CACHED_PIXMAP))) {
-		int mono = (want & CACHED_BITMAP);
-		int i;
-		FT_Bitmap* src;
-		FT_Bitmap* dst;
-
-		/* Handle the italic style */
-		if(font->style & TTF_STYLE_ITALIC) {
-			FT_Matrix shear;
-
-			shear.xx = 1 << 16;
-			shear.xy = (int) (font->glyph_italics * (1 << 16))/ font->height;
-			shear.yx = 0;
-			shear.yy = 1 << 16;
-
-			FT_Outline_Transform(outline, &shear);
-		}
-
-		/* Render the glyph */
-		if (mono) {
-			error = FT_Render_Glyph(glyph, ft_render_mode_mono);
-		} else {
-			error = FT_Render_Glyph(glyph, ft_render_mode_normal);
-		}
-		if(error) {
-			return error;
-		}
-
-		/* Copy over information to cache */
-		src = &glyph->bitmap;
-		if (mono) {
-			dst = &cached->bitmap;
-		} else {
-			dst = &cached->pixmap;
-		}
-		memcpy(dst, src, sizeof(*dst));
-		if (mono) {
-			dst->pitch *= 8;
-		}
-
-		/* Adjust for bold and italic text */
-		if(font->style & TTF_STYLE_BOLD) {
-			int bump = font->glyph_overhang;
-			dst->pitch += bump;
-			dst->width += bump;
-		}
-		if(font->style & TTF_STYLE_ITALIC) {
-			int bump = (int)ceil(font->glyph_italics);
-			dst->pitch += bump;
-			dst->width += bump;
-		}
-
-		if (dst->rows != 0) {
-			dst->buffer = malloc(dst->pitch * dst->rows);
-			if(!dst->buffer) {
-				return FT_Err_Out_Of_Memory;
-			}
-			memset(dst->buffer, 0, dst->pitch * dst->rows);
-
-			for(i = 0; i < src->rows; i++) {
-				int soffset = i * src->pitch;
-				int doffset = i * dst->pitch;
-				if (mono) {
-					unsigned char *srcp = src->buffer + soffset;
-					unsigned char *dstp = dst->buffer + doffset;
-					int j;
-					for (j = 0; j < src->width; j += 8) {
-						unsigned char ch = *srcp++;
-						*dstp++ = (ch&0x80) >> 7;
-						ch <<= 1;
-						*dstp++ = (ch&0x80) >> 7;
-						ch <<= 1;
-						*dstp++ = (ch&0x80) >> 7;
-						ch <<= 1;
-						*dstp++ = (ch&0x80) >> 7;
-						ch <<= 1;
-						*dstp++ = (ch&0x80) >> 7;
-						ch <<= 1;
-						*dstp++ = (ch&0x80) >> 7;
-						ch <<= 1;
-						*dstp++ = (ch&0x80) >> 7;
-						ch <<= 1;
-						*dstp++ = (ch&0x80) >> 7;
-					}
-				} else {
-					memcpy(dst->buffer+doffset,
-					       src->buffer+soffset,src->pitch);
-				}
-			}
-		}
-		
-		/* Handle the bold style */
-		if (font->style & TTF_STYLE_BOLD) {
-			int row;
-			int col;
-			int offset;
-			int pixel;
-			unsigned char* pixmap;
-
-			/* The pixmap is a little hard, we have to add and clamp */
-			for(row = dst->rows - 1; row >= 0; --row) {
-				pixmap = (unsigned char*) dst->buffer + row * dst->pitch;
-				for(offset=1; offset <= font->glyph_overhang; ++offset) {
-					for(col = dst->width - 1; col > 0; --col) {
-						pixel = (pixmap[col] + pixmap[col-1]);
-						if(pixel > NUM_GRAYS - 1) {
-							pixel = NUM_GRAYS - 1;
-						}
-						pixmap[col] = (unsigned char) pixel;
-					}
-				}
-			}
-		}
-		
-		/* Mark that we rendered this format */
-		if (mono) {
-			cached->stored |= CACHED_BITMAP;
-		} else {
-			cached->stored |= CACHED_PIXMAP;
-		}
-	}
-	
-	/* We're done, mark this glyph cached */
-	cached->cached = ch;
-
-	return 0;
-}
-
-static FT_Error Find_Glyph(TTF_Font* font, unsigned short ch, int want)
-{
-	int retval = 0;
-
-	if(ch < 256) {
-		font->current = &font->cache[ch];
-	} else {
-		if (font->scratch.cached != ch) {
-			Flush_Glyph(&font->scratch);
-		}
-		font->current = &font->scratch;
-	}
-	if ((font->current->stored & want) != want) {
-		retval = Load_Glyph(font, ch, font->current, want);
-	}
-	return retval;
 }
 
 int TTF_Render(u8 *target, char *text, TTF_Font *font, int style, int x, 

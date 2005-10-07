@@ -444,13 +444,13 @@ void prep_bgnds(u8 *target, u8 *bgnd, char mode)
 			t = ct->hotspot & F_HS_HORIZ_MASK;
 			if (t == F_HS_HMIDDLE)
 				x -= ct->last_width/2;
-			else if (i == F_HS_RIGHT)
+			else if (t == F_HS_RIGHT)
 				x -= ct->last_width;
 
 			t = ct->hotspot & F_HS_VERT_MASK;
 			if (t == F_HS_VMIDDLE)
 				y -= ct->font->font->height/2;
-			else if (i == F_HS_BOTTOM)
+			else if (t == F_HS_BOTTOM)
 				y -= ct->font->font->height;
 
 			prep_bgnd(target, bgnd, x, y, ct->last_width, ct->font->font->height);
