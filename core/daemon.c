@@ -1058,7 +1058,7 @@ void daemon_start()
 	if (fd_tty1 == -1) {
 		fd_tty1 = open(PATH_DEV "/vc/1", O_RDWR);
 		if (fd_tty1 == -1) {
-			fprintf(stderr, "Can't open " PATH_DEV "/tty1.\n");
+			printerr("Can't open " PATH_DEV "/tty1.\n");
 			exit(2);
 		}
 	}
@@ -1077,8 +1077,18 @@ void daemon_start()
 
 	/* Go into background. */
 	i = fork();
-	if (i)
+	if (i) {
+		if (arg_pidfile) {
+			FILE *fp = fopen(arg_pidfile, "w");
+			if (!fp) {
+				printwarn("Failed to open pidfile %s for writing.\n", arg_pidfile);
+			} else {
+				fprintf(fp, "%d\n", i);
+				fclose(fp);
+			}
+		}
 		exit(0);
+	}
 
 #ifdef CONFIG_TTF
 	load_fonts();

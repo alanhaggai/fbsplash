@@ -362,6 +362,18 @@ void prep_bgnd(u8 *target, u8 *src, int x, int y, int w, int h)
 	char *t, *s;
 	int j, i;
 
+	/* Sanity checks */
+	if (!w || !h)
+		return;
+	if (x < 0)
+		x = 0;
+	if (y < 0)
+		y = 0;
+	if (x + w > fb_var.xres)
+		w = fb_var.xres - x;
+	if (y + h > fb_var.yres)
+		h = fb_var.yres - y;
+
 	t = target + (y * fb_var.xres + x) * bytespp;
 	s = src    + (y * fb_var.xres + x) * bytespp;
 	j = w * bytespp;
@@ -416,6 +428,7 @@ void prep_bgnds(u8 *target, u8 *bgnd, char mode)
 #if (defined(CONFIG_TTY_KERNEL) && defined(TARGET_KERNEL)) || (defined(CONFIG_TTF) && !defined(TARGET_KERNEL))
 		else if (o->type == o_text) {
 			text *ct = (text*)o->p;
+			int x, y, t;
 
 			if (mode == 's' && !(ct->flags & F_TXT_SILENT))
 				continue;
@@ -425,15 +438,29 @@ void prep_bgnds(u8 *target, u8 *bgnd, char mode)
 		
 			if (!ct->font || !ct->font->font)
 				continue;
+		
+			x = ct->x;
+			y = ct->y;
+			t = ct->hotspot & F_HS_HORIZ_MASK;
+			if (t == F_HS_HMIDDLE)
+				x -= ct->last_width/2;
+			else if (i == F_HS_RIGHT)
+				x -= ct->last_width;
 
-			prep_bgnd(target, bgnd, ct->x, ct->y, fb_var.xres - ct->x, ct->font->font->height);
+			t = ct->hotspot & F_HS_VERT_MASK;
+			if (t == F_HS_VMIDDLE)
+				y -= ct->font->font->height/2;
+			else if (i == F_HS_BOTTOM)
+				y -= ct->font->font->height;
+
+			prep_bgnd(target, bgnd, x, y, ct->last_width, ct->font->font->height);
 		}
 #endif
 	}
 
 #if (defined(CONFIG_TTF_KERNEL) && defined(TARGET_KERNEL)) || (!defined(TARGET_KERNEL) && defined(CONFIG_TTF))
 	if (mode == 's') {
-		prep_bgnd(target, bgnd, cf.text_x, cf.text_y, fb_var.xres - cf.text_x, global_font->height);
+		prep_bgnd(target, bgnd, cf.text_x, cf.text_y, boot_msg_width, global_font->height);
 	}
 #endif
 }
@@ -558,7 +585,7 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 			if (txt) {
 				TTF_Render(target, txt, ct->font->font, 
 				           ct->style, ct->x, ct->y, ct->col, 
-					   ct->hotspot);
+					   ct->hotspot, &ct->last_width);
 				if ((ct->flags & F_TXT_EXEC) || (ct->flags & F_TXT_EVAL))
 					free(txt);
 			}
@@ -571,13 +598,13 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 		if (!boot_message)
 			TTF_Render(target, DEFAULT_MESSAGE, global_font, 
 				   TTF_STYLE_NORMAL, cf.text_x, cf.text_y,
-				   cf.text_color, F_HS_LEFT | F_HS_TOP);
+				   cf.text_color, F_HS_LEFT | F_HS_TOP, &boot_msg_len);
 		else {
 			char *t;
 			t = eval_text(boot_message);
 			TTF_Render(target, t, global_font, TTF_STYLE_NORMAL,
 				   cf.text_x, cf.text_y, cf.text_color, 
-				   F_HS_LEFT | F_HS_TOP);
+				   F_HS_LEFT | F_HS_TOP, &boot_msg_len);
 			free(t);
 		}
 	}

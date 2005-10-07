@@ -61,15 +61,15 @@ struct _TTF_Font {
 
 typedef struct _TTF_Font TTF_Font;
 
-//#define LUXISRI_SIZE 66372
-//extern char luxisri_ttf[LUXISRI_SIZE];
 extern TTF_Font *global_font;
 extern char *boot_message;
+extern int boot_msg_width;
 
 int TTF_Init(void);
 void TTF_CloseFont(TTF_Font* font);
 TTF_Font* TTF_OpenFont(const char *file, int ptsize);
-int TTF_Render(u8 *target, char *text, TTF_Font *font, int style, int x, int y, color col, u8 hotspot);
+int TTF_Render(u8 *target, char *text, TTF_Font *font, int style, int x, 
+		int y, color col, u8 hotspot, int *width);
 int load_fonts(void);
 int free_fonts(void);
 

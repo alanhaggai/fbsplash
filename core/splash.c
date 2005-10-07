@@ -39,8 +39,9 @@ struct option options[] = {
 #ifdef CONFIG_TTF
 	{ "mesg",	required_argument, NULL, 0x109 },
 #endif
+	{ "pidfile", 	required_argument, NULL, 0x10a },
 	{ "daemon",	no_argument, NULL, 'd'},
-	{ "help",	no_argument, NULL, 'h'}	
+	{ "help",	no_argument, NULL, 'h'}
 };
 
 struct cmd {
@@ -100,6 +101,7 @@ void usage(void)
 #ifdef CONFIG_TTF
 "      --mesg=TEXT     use TEXT as the main splash message\n"
 #endif
+"      --pidfile=FILE  save the PID of the daemon to FILE\n"
 #ifndef CONFIG_FBSPLASH
 "\nThis version of splashutils has been compiled without support for fbsplash.\n"
 #endif
@@ -182,6 +184,10 @@ int main(int argc, char **argv)
 			boot_message = strdup(optarg);
 			break;
 #endif
+		case 0x10a:
+			arg_pidfile = strdup(optarg);
+			break;
+
 		case 'd':
 			arg_task = start_daemon;
 			break;

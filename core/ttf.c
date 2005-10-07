@@ -31,15 +31,25 @@
 
 TTF_Font *global_font;
 char *boot_message = NULL;
+int boot_msg_width = 0;
 
 #define DEFAULT_PTSIZE  18
 #define NUM_GRAYS       256
 
-void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
-	 		      TTF_Font* font, int x, int y, color fcol, u8 hotspot);
-
-
-static void Flush_Glyph(c_glyph* glyph);
+static void Flush_Glyph(c_glyph* glyph)
+{
+	glyph->stored = 0;
+	glyph->index = 0;
+	if(glyph->bitmap.buffer) {
+		free(glyph->bitmap.buffer);
+		glyph->bitmap.buffer = 0;
+	}
+	if(glyph->pixmap.buffer) {
+		free(glyph->pixmap.buffer);
+		glyph->pixmap.buffer = 0;
+	}
+	glyph->cached = 0;
+}
 
 static void Flush_Cache(TTF_Font* font)
 {
@@ -56,25 +66,6 @@ static void Flush_Cache(TTF_Font* font)
 		Flush_Glyph(&font->scratch);
 	}
 }       
-
-/* character conversion */
-
-/* Macro to convert a character to a Unicode value -- assume already Unicode */
-#define UNICODE(c)      c
-
-/*
-static unsigned short *ASCII_to_UNICODE(unsigned short *unicode, const char *text, int len)
-{
-	int i;
-		
-	for (i=0; i < len; ++i) {
-		unicode[i] = ((const unsigned char *)text)[i];
-	}
-	unicode[i] = 0;
-			
-	return unicode;
-}
-*/
 
 #ifdef TARGET_KERNEL
 int ceil(float a)
@@ -145,7 +136,194 @@ void TTF_Quit(void)
 	TTF_initialized = 0;
 }
 
-unsigned char*TTF_RenderText_Shaded(u8 *target, const char *text, TTF_Font *font, int x, int y, color col, u8 hotspot)
+int TTF_SizeUNICODE(TTF_Font *font, const unsigned short *text, int *w, int *h)
+{
+	int status;
+	const unsigned short *ch;
+	int x, z;
+	int minx, maxx;
+	int miny, maxy;
+	c_glyph *glyph;
+	FT_Error error;
+	
+	/* Initialize everything to 0 */
+	if (! TTF_initialized) {
+		return -1;
+	}
+	status = 0;
+	minx = maxx = 0;
+	miny = maxy = 0;
+
+	/* Load each character and sum it's bounding box */
+	x= 0;
+	for (ch=text; *ch; ++ch) {
+		error = Find_Glyph(font, *ch, CACHED_METRICS);
+		if (error) {
+			return -1;
+		}
+		glyph = font->current;
+
+		z = x + glyph->minx;
+		if (minx > z) {
+			minx = z;
+		}
+		if (font->style & TTF_STYLE_BOLD) {
+			x += font->glyph_overhang;
+		}
+		if (glyph->advance > glyph->maxx) {
+			z = x + glyph->advance;
+		} else {
+			z = x + glyph->maxx;
+		}
+		if (maxx < z) {
+			maxx = z;
+		}
+		x += glyph->advance;
+
+		if (glyph->miny < miny) {
+			miny = glyph->miny;
+		}
+		if (glyph->maxy > maxy) {
+			maxy = glyph->maxy;
+		}
+	}
+	
+	/* Fill the bounds rectangle */
+	if (w) {
+		*w = (maxx - minx);
+	}
+	if (h)
+		*h = font->height;
+	
+	return status;
+}
+
+void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
+ 			      TTF_Font* font, int x, int y, color fcol, 
+			      u8 hotspot, int* swidth)
+{
+	int xstart, width, height, i, j, row_underline;
+	unsigned int val;
+	const unsigned short* ch;
+	unsigned char* src;
+	unsigned char* dst;
+	int row, col;
+	c_glyph *glyph;
+	FT_Error error;
+
+	/* Get the dimensions of the text surface */
+	if ((TTF_SizeUNICODE(font, text, &width, NULL) < 0) || !width) {
+		fprintf(stderr,"Text has zero width\n");
+		return;
+	}
+	height = font->height;
+
+	/* Save the width if the pointer is not NULL */
+	if (swidth)
+		*swidth = width;
+
+	i = hotspot & F_HS_HORIZ_MASK;
+	if (i == F_HS_HMIDDLE)
+		x -= width/2;
+	else if (i == F_HS_RIGHT)
+		x -= width;
+
+	i = hotspot & F_HS_VERT_MASK;
+	if (i == F_HS_VMIDDLE)
+		y -= height/2;
+	else if (i == F_HS_BOTTOM)
+		y -= height;
+
+	/* 
+	 * The underline stuff below is a little hackish. The characters
+	 * that are being rendered do not form a continuous rectangle, and
+	 * we want for the underline to be continuous and span below the
+	 * whole text. To achieve that, while rendering each character, 
+	 * we have to not only paint the part of the underline that is 
+	 * directly below it, but also the part that 'links' it to the next
+	 * character. Thus all the (font->style & TTF_STYLE_UNDERLINE) ? .. : ..
+	 * code. 
+	 */
+	row_underline = font->ascent - font->underline_offset - 1;
+	if (row_underline >= height) {
+		row_underline = (height-1) - font->underline_height;
+	}
+	
+	/* Load and render each character */
+	xstart = 0;
+	for(ch = text; *ch; ++ch) {
+		FT_Bitmap* current;
+
+		error = Find_Glyph(font, *ch, CACHED_METRICS|CACHED_PIXMAP);
+		if (error)
+			return;
+		glyph = font->current;
+
+		current = &glyph->pixmap;
+		for(row = 0; row < ((font->style & TTF_STYLE_UNDERLINE) ? height-glyph->yoffset : current->rows); ++row) {
+			int add;
+			u8 *memlimit = target + fb_var.xres * fb_var.yres * bytespp;
+
+			/* Sanity checks.. */
+			i = y + row + glyph->yoffset;
+			j = xstart + glyph->minx + x;			
+			
+			if (i < 0 || i >= fb_var.yres || j >= fb_var.xres)
+				continue;
+					
+			if (j < 0)
+				goto next_glyph;
+
+			if (font->style & TTF_STYLE_UNDERLINE && glyph->minx > 0) {
+				j -= glyph->minx;
+			}
+			
+			dst = (unsigned char *)target + (i * fb_var.xres + j)*bytespp;
+			src = current->buffer + row*current->pitch;
+
+			add = x & 1;
+			add ^= (add ^ (row+y)) & 1 ? 1 : 3;
+		
+			for (col= ((font->style & TTF_STYLE_UNDERLINE && glyph->minx > 0) ? -glyph->minx : 0); 
+			     col < ((font->style & TTF_STYLE_UNDERLINE && *(ch+1)) ? 
+			           current->width + glyph->advance : current->width); col++) {
+			
+				if (col + j >= fb_var.xres-1)
+					continue;
+				
+				if (dst+bytespp-1 > memlimit)
+					break;
+				
+				if (row < current->rows && col < current->width && col >= 0)
+					val=*src++;
+				else
+					val=0;
+
+				/* Handle underline */
+				if (font->style & TTF_STYLE_UNDERLINE && row+glyph->yoffset >= row_underline && 
+				    row+glyph->yoffset < row_underline + font->underline_height) {
+					val = NUM_GRAYS-1;
+				}
+				
+				put_pixel(fcol.a*val/255, fcol.r, fcol.g, fcol.b, dst, dst, add);
+				dst += bytespp;
+				add ^= 3;
+			}
+		}
+		
+next_glyph:	xstart += glyph->advance;
+		if (font->style & TTF_STYLE_BOLD) {
+			xstart += font->glyph_overhang;
+		}
+	}
+	return;
+}
+
+
+
+unsigned char* TTF_RenderText_Shaded(u8 *target, const char *text, 
+				     TTF_Font *font, int x, int y, 
+				     color col, u8 hotspot, int *width)
 {
 	unsigned short *p, *t, *unicode_text;
 	int unicode_len;
@@ -166,14 +344,14 @@ unsigned char*TTF_RenderText_Shaded(u8 *target, const char *text, TTF_Font *font
 		if (*p == '\n') {
 			*p = 0;
 			if (p > t)
-				TTF_RenderUNICODE_Shaded(target, t, font, x, y, col, hotspot);
+				TTF_RenderUNICODE_Shaded(target, t, font, x, y, col, hotspot, width);
 			y += font->height;
 			t = p+1;
 		}
 	}
 
 	if (*t != 0) {
-		TTF_RenderUNICODE_Shaded(target, t, font, x, y, col, hotspot);
+		TTF_RenderUNICODE_Shaded(target, t, font, x, y, col, hotspot, width);
 	}
     
 	/* Free the text buffer and return */
@@ -246,7 +424,8 @@ TTF_Font* TTF_OpenFontIndex(const char *file, int ptsize, long index)
 		TTF_CloseFont(font);
 		return NULL;
 	}
-       /* Set the character size and use default DPI (72) */
+
+	/* Set the character size and use default DPI (72) */
 	error = FT_Set_Char_Size(font->face, 0, ptsize * 64, 0, 0);
 	if (error) {
 		fprintf(stderr, "Couldn't set font size\n");
@@ -287,21 +466,6 @@ TTF_Font* TTF_OpenFont(const char *file, int ptsize)
 	}
 	
 	return a;
-}
-
-static void Flush_Glyph(c_glyph* glyph)
-{
-	glyph->stored = 0;
-	glyph->index = 0;
-	if(glyph->bitmap.buffer) {
-		free(glyph->bitmap.buffer);
-		glyph->bitmap.buffer = 0;
-	}
-	if(glyph->pixmap.buffer) {
-		free(glyph->pixmap.buffer);
-		glyph->pixmap.buffer = 0;
-	}
-	glyph->cached = 0;
 }
 
 static FT_Error Load_Glyph(TTF_Font* font, unsigned short ch, c_glyph* cached, int want)
@@ -497,193 +661,14 @@ static FT_Error Find_Glyph(TTF_Font* font, unsigned short ch, int want)
 	return retval;
 }
 
-int TTF_SizeUNICODE(TTF_Font *font, const unsigned short *text, int *w, int *h)
-{
-	int status;
-	const unsigned short *ch;
-	int x, z;
-	int minx, maxx;
-	int miny, maxy;
-	c_glyph *glyph;
-	FT_Error error;
-	
-	/* Initialize everything to 0 */
-	if (! TTF_initialized) {
-		return -1;
-	}
-	status = 0;
-	minx = maxx = 0;
-	miny = maxy = 0;
-
-	/* Load each character and sum it's bounding box */
-	x= 0;
-	for (ch=text; *ch; ++ch) {
-		error = Find_Glyph(font, *ch, CACHED_METRICS);
-		if (error) {
-			return -1;
-		}
-		glyph = font->current;
-
-		z = x + glyph->minx;
-		if (minx > z) {
-			minx = z;
-		}
-		if (font->style & TTF_STYLE_BOLD) {
-			x += font->glyph_overhang;
-		}
-		if (glyph->advance > glyph->maxx) {
-			z = x + glyph->advance;
-		} else {
-			z = x + glyph->maxx;
-		}
-		if (maxx < z) {
-			maxx = z;
-		}
-		x += glyph->advance;
-
-		if (glyph->miny < miny) {
-			miny = glyph->miny;
-		}
-		if (glyph->maxy > maxy) {
-			maxy = glyph->maxy;
-		}
-	}
-	
-	/* Fill the bounds rectangle */
-	if (w) {
-		*w = (maxx - minx);
-	}
-	if (h)
-		*h = font->height;
-	
-	return status;
-}
-
-
-void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
- 			      TTF_Font* font, int x, int y, color fcol, u8 hotspot)
-{
-	int xstart, width, height, i, j, row_underline;
-	unsigned int val;
-	const unsigned short* ch;
-	unsigned char* src;
-	unsigned char* dst;
-	int row, col;
-	c_glyph *glyph;
-	FT_Error error;
-
-	/* Get the dimensions of the text surface */
-	if ((TTF_SizeUNICODE(font, text, &width, NULL) < 0) || !width) {
-		fprintf(stderr,"Text has zero width\n");
-		return;
-	}
-	height = font->height;
-
-	i = hotspot & F_HS_HORIZ_MASK;
-	if (i == F_HS_HMIDDLE)
-		x -= width/2;
-	else if (i == F_HS_RIGHT)
-		x -= width;
-
-	i = hotspot & F_HS_VERT_MASK;
-	if (i == F_HS_VMIDDLE)
-		y -= height/2;
-	else if (i == F_HS_BOTTOM)
-		y -= height;
-
-	/* 
-	 * The underline stuff below is a little hackish. The characters
-	 * that are being rendered do not form a continuous rectangle, and
-	 * we want for the underline to be continuous and span below the
-	 * whole text. To achieve that, while rendering each character, 
-	 * we have to not only paint the part of the underline that is 
-	 * directly below it, but also the part that 'links' it to the next
-	 * character. Thus all the (font->style & TTF_STYLE_UNDERLINE) ? .. : ..
-	 * code. 
-	 */
-	row_underline = font->ascent - font->underline_offset - 1;
-	if (row_underline >= height) {
-		row_underline = (height-1) - font->underline_height;
-	}
-	
-	/* Load and render each character */
-	xstart = 0;
-	for(ch = text; *ch; ++ch) {
-		FT_Bitmap* current;
-
-		error = Find_Glyph(font, *ch, CACHED_METRICS|CACHED_PIXMAP);
-		if (error)
-			return;
-		glyph = font->current;
-
-		current = &glyph->pixmap;
-		for(row = 0; row < ((font->style & TTF_STYLE_UNDERLINE) ? height-glyph->yoffset : current->rows); ++row) {
-			int add;
-			u8 *memlimit = target + fb_var.xres * fb_var.yres * bytespp;
-
-			/* Sanity checks.. */
-			i = y + row + glyph->yoffset;
-			j = xstart + glyph->minx + x;			
-			
-			if (i < 0 || i >= fb_var.yres || j >= fb_var.xres)
-				continue;
-					
-			if (j < 0)
-				goto next_glyph;
-
-			if (font->style & TTF_STYLE_UNDERLINE && glyph->minx > 0) {
-				j -= glyph->minx;
-			}
-			
-			dst = (unsigned char *)target + (i * fb_var.xres + j)*bytespp;
-			src = current->buffer + row*current->pitch;
-
-			add = x & 1;
-			add ^= (add ^ (row+y)) & 1 ? 1 : 3;
-		
-			for (col= ((font->style & TTF_STYLE_UNDERLINE && glyph->minx > 0) ? -glyph->minx : 0); 
-			     col < ((font->style & TTF_STYLE_UNDERLINE && *(ch+1)) ? 
-			           current->width + glyph->advance : current->width); col++) {
-			
-				if (col + j >= fb_var.xres-1)
-					continue;
-				
-				if (dst+bytespp-1 > memlimit)
-					break;
-				
-				if (row < current->rows && col < current->width && col >= 0)
-					val=*src++;
-				else
-					val=0;
-
-				/* Handle underline */
-				if (font->style & TTF_STYLE_UNDERLINE && row+glyph->yoffset >= row_underline && 
-				    row+glyph->yoffset < row_underline + font->underline_height) {
-					val = NUM_GRAYS-1;
-				}
-				
-				put_pixel(fcol.a*val/255, fcol.r, fcol.g, fcol.b, dst, dst, add);
-				dst += bytespp;
-				add ^= 3;
-			}
-		}
-		
-next_glyph:	xstart += glyph->advance;
-		if (font->style & TTF_STYLE_BOLD) {
-			xstart += font->glyph_overhang;
-		}
-	}
-	return;
-}
-
-
-int TTF_Render(u8 *target, char *text, TTF_Font *font, int style, int x, int y, color col, u8 hotspot)
+int TTF_Render(u8 *target, char *text, TTF_Font *font, int style, int x, 
+	       int y, color col, u8 hotspot, int *width)
 {
 	if (!target || !text || !font)
 		return -1;
 	
 	TTF_SetFontStyle(font, style);
-	TTF_RenderText_Shaded(target, text, font, x, y, col, hotspot);
+	TTF_RenderText_Shaded(target, text, font, x, y, col, hotspot, width);
 
 	return 0;
 }
@@ -730,6 +715,5 @@ int free_fonts(void)
 	}
 
 	return 0;
-
 }
 

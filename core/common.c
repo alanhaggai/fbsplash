@@ -30,16 +30,16 @@ struct fb_fix_screeninfo   fb_fix;
 enum ENDIANESS endianess;
 char *config_file = NULL;
 
-enum TASK arg_task = none; 
-int arg_fb = 0;
-int arg_vc = 0;
-char arg_mode = 'v';
-char *arg_theme = NULL;
-u16 arg_progress = 0;
-u8 arg_kdmode = KD_TEXT;
-
+enum TASK 	arg_task = none; 
+int 		arg_fb = 0;
+int 		arg_vc = 0;
+char 		arg_mode = 'v';
+char 		*arg_theme = NULL;
+char 		*arg_pidfile = NULL;
+u16 		arg_progress = 0;
+u8 		arg_kdmode = KD_TEXT;
 #ifndef TARGET_KERNEL
-char *arg_export = NULL;
+char 		*arg_export = NULL;
 #endif
 
 int bytespp = 4;		/* bytes per pixel */

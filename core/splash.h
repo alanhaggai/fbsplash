@@ -9,9 +9,6 @@
 #endif
 
 /* Adjustable settings */
-#define MAX_RECTS 	32
-#define MAX_BOXES 	256
-#define MAX_ICONS 	512
 #define PATH_DEV	"/dev"
 #define PATH_PROC	"/proc"
 #define PATH_SYS	"/sys"
@@ -147,7 +144,7 @@ typedef struct {
 } font_e;
 
 typedef struct {
-	int x, y;
+	int x, y, last_width;
 	u8 hotspot;
 	color col;
 	u8 flags;
@@ -258,6 +255,7 @@ extern char *cf_silentpic;
 extern char *cf_pic256;
 extern char *cf_silentpic256;
 
+/* common.c */
 extern struct fb_var_screeninfo   fb_var;
 extern struct fb_fix_screeninfo   fb_fix;
 
@@ -266,10 +264,10 @@ extern enum TASK arg_task;
 extern int arg_fb;
 extern int arg_vc;
 extern char *arg_theme;
+extern char *arg_pidfile;
 extern char arg_mode;
 extern u16 arg_progress;
 extern u8 arg_kdmode;
-
 #ifndef TARGET_KERNEL
 extern char *arg_export;
 extern u8 theme_loaded;
