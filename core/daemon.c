@@ -1128,7 +1128,7 @@ void daemon_start()
 
 	/* Check which TTY is active */
 	pthread_mutex_lock(&mtx_ctty);
-	if (ioctl(fd_tty_s, VT_GETSTATE, &vtstat) != -1) {
+	if (ioctl(fd_tty1, VT_GETSTATE, &vtstat) != -1) {
 		if (vtstat.v_active == tty_s) {
 			ctty = CTTY_SILENT;
 		} else {

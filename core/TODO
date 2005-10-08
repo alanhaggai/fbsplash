@@ -8,4 +8,5 @@
 - add effects (fadein/fadeout/blendin) for icon/anim
 - add a dirty tiles/rects system to handle prep_bgnds
   in a more sensible way
-
+- the statically linked version doesn't seem to work
+  - investigate with libmng support disabled
