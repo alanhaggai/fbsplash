@@ -231,7 +231,7 @@ splash_start() {
 			ewarn "which is required for the silent splash to function properly."
 			ewarn "Silent splash will not be enabled. Please create the appropriate"
 			ewarn "device file to avoid this message."
-			exit 1
+			return 1
 		fi
 		umount ${spl_tmpdir}
 	fi
