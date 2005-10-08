@@ -39,7 +39,7 @@ char *notify[2];
 #define CTTY_SILENT 	0
 #define CTTY_VERBOSE	1
 pthread_mutex_t mtx_ctty = PTHREAD_MUTEX_INITIALIZER;
-int ctty;
+int ctty = CTTY_VERBOSE;
 
 char *evdev = NULL;
 
@@ -1125,10 +1125,8 @@ void daemon_start()
 	sigaddset(&sigset, SIGTERM);
 	sigprocmask(SIG_BLOCK, &sigset, NULL);
 	pthread_create(&th_sighandler, NULL, &sighandler, NULL);
-	pthread_create(&th_anim, NULL, &anim_loop, NULL);
 
-	start_tty_handlers(UPD_ALL);
-
+	/* Check which TTY is active */
 	pthread_mutex_lock(&mtx_ctty);
 	if (ioctl(fd_tty_s, VT_GETSTATE, &vtstat) != -1) {
 		if (vtstat.v_active == tty_s) {
@@ -1138,6 +1136,11 @@ void daemon_start()
 		}
 	}
 	pthread_mutex_unlock(&mtx_ctty);
+
+	/* Start the animation thread */
+	pthread_create(&th_anim, NULL, &anim_loop, NULL);
+
+	start_tty_handlers(UPD_ALL);
 
 	daemon_comm();	
 	exit(0);
