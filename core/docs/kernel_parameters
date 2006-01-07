@@ -13,7 +13,7 @@ system configuration files with options passed on the kernel command
 line. All splash options are separated by commas and they should form
 a continuous configuration string. The following options are recognized:
 
- - off        - disables silent and verbose splash
+ - off        - disables silent and verbose splash (default)
  - verbose    - start the system with a verbose splash screen
  - silent     - start the system in the 'silent' mode (all messages from
                 the kernel and from the initscripts are covered by a picture
@@ -31,6 +31,10 @@ A sample splash kernel command line setting:
  
 A sample full kernel command line:
   root=/dev/hda5 video=vesafb:1024x768-32@85 splash=silent,fadein,theme:linuxrocks,tty:12 console=tty1
+
+Please note that the default splash mode is 'off', so you will need to
+explicitly specify 'silent' or 'verbose' on the kernel command line in
+order to get the splash working.
 
 The splash programs recognize the following additional kernel command line
 parameters:
