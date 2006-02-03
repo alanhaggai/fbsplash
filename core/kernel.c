@@ -57,9 +57,9 @@ int handle_init(u8 update)
 #endif
 	arg_mode = ' ';
 
+	/* If possible, make sure that the error messages don't go straight 
+	 * to /dev/null and are displayed on the screen instead. */
 	if (!update) {
-		/* If possible, make sure that the error messages that we print don't
-		 * go straight to /dev/null and are displayed on the screen instead. */
 		prep_io();
 	}
 		
@@ -164,7 +164,7 @@ parse_failure:	if (h == 0)
 		 * but don't activate fbsplash just yet. We'll enable it
 		 * after the silent screen is displayed. */
 		if (do_config(FB_SPLASH_IO_ORIG_USER) || do_getpic(FB_SPLASH_IO_ORIG_USER, 1, 'v')) {
-			fbsplash = 0;
+//			fbsplash = 0;
 		}
 	}	
 #endif
@@ -176,12 +176,12 @@ parse_failure:	if (h == 0)
 			cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
 			return 0;
 		} else {
-			printerr("Failed to get verbose splash image.\n");
+			fprintf(stderr, "Failed to get verbose splash image.\n");
 			return -1;
 		}
 #else
-		printerr("This version of splashutils was compiled without support for fbsplash\n"
-			 "Verbose mode will not be activated\n");
+		fprintf(stderr, "This version of splashutils was compiled without support for fbsplash\n"
+			 	"Verbose mode will not be activated\n");
 		return -1;
 #endif
 	}
@@ -195,7 +195,7 @@ parse_failure:	if (h == 0)
 	sprintf(sys, PATH_SYS "/class/graphics/fb%d/dev", arg_fb);
 
 	if (do_getpic(FB_SPLASH_IO_ORIG_USER, 0, 's')) {
-		printerr("Failed to get silent splash image.\n");
+		fprintf(stderr, "Failed to get silent splash image.\n");
 #ifdef CONFIG_FBSPLASH
 		if (fbsplash)
 			cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
