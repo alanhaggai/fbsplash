@@ -1,4 +1,4 @@
-#define CONFIG_PNG
+//#define CONFIG_PNG
 #define CONFIG_TTF
 #define CONFIG_TTF_KERNEL
 #define CONFIG_FBSPLASH

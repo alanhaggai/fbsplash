@@ -104,10 +104,10 @@ else
 	STRIP = strip --strip-all -R .comment -R .note
 endif
 
-OBJDIR	= $(ROOT)/objs
+OBJDIR	= objs
 KOUT	= $(OBJDIR)/kernel
 dotg    = \e[32;01m*\e[0m
-info	= if [ "${QUIET}" == "true" ] ; then printf "  %-7s %s\n" $(1) $(2); fi
+info	= if [ "${QUIET}" == "true" ] ; then t=`echo $(2) | sed -e 's#$(OBJDIR)##'` ; printf "  %-7s %s\n" $(1) ${t}; fi
 install_script = $(call info,INSTALL,$(1)) ; $(INSTALL_PROG) -D scripts/$(1) $(DESTDIR)$(usrbindir)/$(1) ; \
 		 sed -e 's/%PKG_VERSION%/$(PKG_VERSION)/g' -i $(DESTDIR)$(usrbindir)/$(1)
 
@@ -143,18 +143,22 @@ objdir:
 	fi
 
 zlib:	config.h
-	@cd $(ZLIBSRC) ; \
+	@cd $(OBJDIR); \
+	if [ -d $(ZLIBSRC) ] ; then
+		mkdir "$(ZLIBSRC)" ; \
+	fi ; \
+	cd $(ZLIBSRC) ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,zlib) ; \
 		CC=$(KLCC) CFLAGS="$(K_CFLAGS)" \
-		./configure > $(OUTPUT); \
+		$(ROOT)/$(ZLIBSRC)/configure > $(OUTPUT); \
 		sed -i 's#^CFLAGS=\(.*\)#CFLAGS=\1 $(K_CFLAGS)#' Makefile ; \
 	fi ; \
 	if ! make -q CC=$(KLCC) libz.a; then $(call info,MAKE,zlib) ; fi ; \
 	make CC=$(KLCC) libz.a > $(OUTPUT)
 
 libpng:	zlib config.h
-	@cd $(LPNGSRC) ; \
+	cd $(LPNGSRC) ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,libpng) ; \
 		cp scripts/makefile.linux Makefile > $(OUTPUT); \
@@ -166,11 +170,15 @@ libpng:	zlib config.h
 	make CC=$(KLCC) libpng.a > $(OUTPUT) 
 
 jpeglib:
-	@cd $(JPEGSRC) ; \
+	@cd $(OBJDIR); \
+	if [ -d $(JPEGSRC) ] ; then
+		mkdir "$(JPEGSRC)" ; \
+	fi ; \
+	cd $(JPEGSRC) ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,libjpeg) ; \
 		CC=$(KLCC) CFLAGS="$(K_CFLAGS)" \
-		./configure > $(OUTPUT) ; \
+		$(ROOT)/$(JPEGSRC)/configure > $(OUTPUT) ; \
 		echo "#define NO_GETENV 1" >> jconfig.h ; \
 		sed -i "s#CFLAGS=.*#CFLAGS=$(K_CFLAGS)#" Makefile ; \
 		sed -i "s:#define JMESSAGE.*::" jerror.c ; \
@@ -179,12 +187,16 @@ jpeglib:
 	make CC=$(KLCC) libjpeg.a > $(OUTPUT)
 
 ft2:	config.h
-	@cd $(FT2SRC) ; \
+	@cd $(OBJDIR); \
+	if [ -d $(FT2SRC) ] ; then
+		mkdir "$(FT2SRC)" ; \
+	fi ; \
+	cd $(FT2SRC) ; \
 	if [ ! -e ./config.mk ]; then \
 		$(call info,CONF,freetype2) ; \
 		CC=$(KLCC) CPPFLAGS="-I$(ROOT)/$(ZLIBSRC)" \
 		CFLAGS="$(K_CFLAGS) -include $(ROOT)/klibc_compat.h" \
-		./configure --disable-shared > $(OUTPUT) ; \
+		$(ROOT)/$(FT2SRC)/configure --disable-shared > $(OUTPUT) ; \
 	fi ; \
 	if ! make -q CFLAGS="$(K_CFLAGS)" library; then $(call info,MAKE,freetype2) ; fi ; \
 	make CFLAGS="-c $(K_CFLAGS)" library > $(OUTPUT)
