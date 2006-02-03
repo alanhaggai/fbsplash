@@ -3,3 +3,5 @@ objs
 
 # Link to the kernel tree
 linux
+
+libs/libpng-1.2.8/Makefile

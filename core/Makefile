@@ -10,7 +10,7 @@
 PKG_VERSION	= 1.1.9.10
 DEBUG		= false		# set to true to prevent stripping
 K_SHARED	= false		# set to true if you want to link to a shared klibc
-QUIET		= true
+QUIET	       ?= true
 
 CC		= gcc
 KLCC		= klcc
@@ -59,7 +59,7 @@ PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_S
 	  -DPNG_NO_ERROR_NUMBERS -DPNG_READ_GRAY_TO_RGB_SUPPORTED -DPNG_READ_16_TO_8_SUPPORTED \
 	  -DPNG_READ_STRIP_ALPHA_SUPPORTED -DPNG_NO_INFO_IMAGE -DPNG_NO_READ_TRANSFORMS -DPNG_NO_READ_ANCILLARY_CHUNKS
 	  
-K_LDLIBS = $(JPEGSRC)/libjpeg.a 
+K_LDLIBS = $(OBJDIR)/jpeglib/libjpeg.a 
 K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/dev.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
 	   $(KOUT)/cmd.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o 
 K_DEPS   = 
@@ -87,7 +87,7 @@ ifeq ($(call config_opt,CONFIG_MNG),true)
 endif
 
 ifeq ($(call config_opt,CONFIG_TTF_KERNEL),true)
-	K_LDLIBS += $(FT2SRC)/objs/.libs/libfreetype.a 
+	K_LDLIBS += $(OBJDIR)/freetype2/.libs/libfreetype.a 
 	K_OBJS 	 += $(KOUT)/ttf.o
 	K_DEPS	 += ft2
 endif
@@ -143,22 +143,18 @@ objdir:
 	fi
 
 zlib:	config.h
-	@cd $(OBJDIR) ; \
-	if [ ! -d "zlib" ] ; then \
-		mkdir zlib ; \
-	fi ; \
-	cd zlib ; \
+	@cd $(ZLIBSRC) ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,zlib) ; \
 		CC=$(KLCC) CFLAGS="$(K_CFLAGS)" \
-		$(ROOT)/$(ZLIBSRC)/configure > $(OUTPUT); \
+		configure > $(OUTPUT); \
 		sed -i 's#^CFLAGS=\(.*\)#CFLAGS=\1 $(K_CFLAGS)#' Makefile ; \
 	fi ; \
 	if ! make -q CC=$(KLCC) libz.a; then $(call info,MAKE,zlib) ; fi ; \
 	make CC=$(KLCC) libz.a > $(OUTPUT)
 
 libpng:	zlib config.h
-	cd $(LPNGSRC) ; \
+	@cd $(LPNGSRC) ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,libpng) ; \
 		cp scripts/makefile.linux Makefile > $(OUTPUT); \
@@ -177,10 +173,10 @@ jpeglib:
 	cd jpeglib ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,libjpeg) ; \
-		CC=$(KLCC) CFLAGS="$(K_CFLAGS)" \
+		CC=$(KLCC) CFLAGS="$(K_CFLAGS) -I$(ROOT)/$(OBJDIR)/jpeglib" \
 		$(ROOT)/$(JPEGSRC)/configure > $(OUTPUT) ; \
 		echo "#define NO_GETENV 1" >> jconfig.h ; \
-		sed -i "s#CFLAGS=.*#CFLAGS=$(K_CFLAGS)#" Makefile ; \
+		sed -i "s#CFLAGS=.*#CFLAGS=$(K_CFLAGS) -I$(ROOT)/$(OBJDIR)/jpeglib#" Makefile ; \
 		sed -i "s:#define JMESSAGE.*::" jerror.c ; \
 	fi ; \
 	if ! make -q CC=$(KLCC) libjpeg.a; then $(call info,MAKE,libjpeg) ; fi ; \
