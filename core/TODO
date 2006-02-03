@@ -1,3 +1,6 @@
+- update the README
+- add a DOC on the splash protocol and its use for debugging purposes
+- fix the kernel helper for 2.6.15
 - clean up the code
 - clean up the mutexes
 - fix handling of redrawing the inter boxes

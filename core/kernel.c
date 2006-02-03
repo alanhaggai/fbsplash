@@ -160,7 +160,7 @@ parse_failure:	if (h == 0)
 
 #ifdef CONFIG_FBSPLASH
 	if (!update) {
-		/* Load the configuartion and the verbose background picture
+		/* Load the configuration and the verbose background picture
 		 * but don't activate fbsplash just yet. We'll enable it
 		 * after the silent screen is displayed. */
 		if (do_config(FB_SPLASH_IO_ORIG_USER) || do_getpic(FB_SPLASH_IO_ORIG_USER, 1, 'v')) {
@@ -170,8 +170,8 @@ parse_failure:	if (h == 0)
 #endif
 	if (arg_mode != 's') {
 #ifdef CONFIG_FBSPLASH
-		/* Activate fbsplash on the first tty is the picture and 
-		 * config file were successfully loaded. */
+		/* Activate fbsplash on the first tty if the picture and 
+		 * the config file were successfully loaded. */
 		if (fbsplash) {
 			cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
 			return 0;
