@@ -1,2 +1,5 @@
 # This is where object files go
 objs
+
+# Link to the kernel tree
+linux

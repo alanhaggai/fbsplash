@@ -107,7 +107,7 @@ endif
 OBJDIR	= objs
 KOUT	= $(OBJDIR)/kernel
 dotg    = \e[32;01m*\e[0m
-info	= if [ "${QUIET}" == "true" ] ; then t=`echo $(2) | sed -e 's#$(OBJDIR)##'` ; printf "  %-7s %s\n" $(1) ${t}; fi
+info	= if [ "${QUIET}" == "true" ] ; then printf "  %-7s %s\n" $(1) $(2); fi
 install_script = $(call info,INSTALL,$(1)) ; $(INSTALL_PROG) -D scripts/$(1) $(DESTDIR)$(usrbindir)/$(1) ; \
 		 sed -e 's/%PKG_VERSION%/$(PKG_VERSION)/g' -i $(DESTDIR)$(usrbindir)/$(1)
 
@@ -143,11 +143,11 @@ objdir:
 	fi
 
 zlib:	config.h
-	@cd $(OBJDIR); \
-	if [ -d $(ZLIBSRC) ] ; then
-		mkdir "$(ZLIBSRC)" ; \
+	@cd $(OBJDIR) ; \
+	if [ ! -d "zlib" ] ; then \
+		mkdir zlib ; \
 	fi ; \
-	cd $(ZLIBSRC) ; \
+	cd zlib ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,zlib) ; \
 		CC=$(KLCC) CFLAGS="$(K_CFLAGS)" \
@@ -170,11 +170,11 @@ libpng:	zlib config.h
 	make CC=$(KLCC) libpng.a > $(OUTPUT) 
 
 jpeglib:
-	@cd $(OBJDIR); \
-	if [ -d $(JPEGSRC) ] ; then
-		mkdir "$(JPEGSRC)" ; \
+	@cd $(OBJDIR) ; \
+	if [ ! -d jpeglib ] ; then \
+		mkdir jpeglib ; \
 	fi ; \
-	cd $(JPEGSRC) ; \
+	cd jpeglib ; \
 	if [ ! -e ./Makefile ]; then \
 		$(call info,CONF,libjpeg) ; \
 		CC=$(KLCC) CFLAGS="$(K_CFLAGS)" \
@@ -187,11 +187,11 @@ jpeglib:
 	make CC=$(KLCC) libjpeg.a > $(OUTPUT)
 
 ft2:	config.h
-	@cd $(OBJDIR); \
-	if [ -d $(FT2SRC) ] ; then
-		mkdir "$(FT2SRC)" ; \
+	@cd $(OBJDIR) ; \
+	if [ ! -d freetype2 ] ; then \
+		mkdir freetype2 ; \
 	fi ; \
-	cd $(FT2SRC) ; \
+	cd freetype2 ; \
 	if [ ! -e ./config.mk ]; then \
 		$(call info,CONF,freetype2) ; \
 		CC=$(KLCC) CPPFLAGS="-I$(ROOT)/$(ZLIBSRC)" \
