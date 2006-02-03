@@ -1,19 +1,22 @@
 # Makefile for splashutils
 #
-# Copyright (C) 2004-2005, Michal Januszewski <spock@gentoo.org>
+# Copyright (C) 2004-2006, Michal Januszewski <spock@gentoo.org>
 # 
 # This file is subject to the terms and conditions of the GNU General Public
 # License.  See the file COPYING in the main directory of this archive for
 # more details.
 #
 
-PKG_VERSION = 1.1.9.10
-DEBUG 	 = false		# set to true to prevent stripping
-K_SHARED = false		# set to true if you want to link to a shared klibc
-QUIET    = true
+PKG_VERSION	= 1.1.9.10
+DEBUG		= false		# set to true to prevent stripping
+K_SHARED	= false		# set to true if you want to link to a shared klibc
+QUIET		= true
 
-CC	= gcc
-KLCC	= klcc
+CC		= gcc
+KLCC		= klcc
+
+# These variables can be defined on the command-line when the user
+# builds splashutils against his own versions of the libraries.
 
 JPEGSRC	?= libs/jpeg-6b
 LPNGSRC ?= libs/libpng-1.2.8
@@ -44,9 +47,9 @@ else
 	OUTPUT = /dev/stdout
 endif
 
-ROOT	= $(shell pwd)
+ROOT = $(shell pwd)
 
-# flags for the kernel utils
+# Flags for the kernel utilities
 K_CFLAGS = -w -ffunction-sections -fdata-sections $(MISCINCS) \
 	   -I$(ROOT)/$(ZLIBSRC) -I$(ROOT)/$(FT2SRC)/include -I$(ROOT)/linux/include -I$(ROOT)/linux/include2 \
 	   -DWITH_ERRLIST -DTARGET_KERNEL -DTT_CONFIG_OPTION_BYTECODE_INTERPRETER
@@ -61,23 +64,25 @@ K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/dev.o $(KOUT)/parse.o $(KOUT)/render.o $(KOU
 	   $(KOUT)/cmd.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o 
 K_DEPS   = 
 
-# flags for the user utils
+# Flags for the user utilities
 CFLAGS   = -Wall -g
 LDLIBS   = -ljpeg -lm -lpthread
 LDFLAGS  = 
 INCLUDES = -I$(ROOT)/linux/include -I/usr/include/freetype2
-OBJS     = splash.o parse.o render.o image.o cmd.o common.o daemon.o list.o effects.o
+OBJS     = $(OBJDIR)/splash.o $(OBJDIR)/parse.o $(OBJDIR)/render.o $(OBJDIR)/image.o \
+	   $(OBJDIR)/cmd.o $(OBJDIR)/common.o $(OBJDIR)/daemon.o $(OBJDIR)/list.o \
+	   $(OBJDIR)/effects.o
 
-# checks whether an opton is set in config.h
-config_opt	= $(shell if [[ -n "`egrep '^\#define[[:space:]]+$(1)([[:space:]]+|$$)' config.h`" ]]; then echo true ; fi)
+# Checks whether an option is set in config.h
+config_opt = $(shell if [[ -n "`egrep '^\#define[[:space:]]+$(1)([[:space:]]+|$$)' config.h`" ]]; then echo true ; fi)
 
 ifeq ($(call config_opt,CONFIG_TTF),true)
-	OBJS   += ttf.o
+	OBJS   += $(OBJDIR)/ttf.o
 	LDLIBS += -lfreetype -lz
 endif
 
 ifeq ($(call config_opt,CONFIG_MNG),true)
-	OBJS   += mng_render.o mng_callbacks.o
+	OBJS   += $(OBJDIR)/mng_render.o $(OBJDIR)/mng_callbacks.o
 	LDLIBS += -lmng -llcms -ljpeg -lz
 endif
 
@@ -99,14 +104,15 @@ else
 	STRIP = strip --strip-all -R .comment -R .note
 endif
 
-KOUT	= kernel
+OBJDIR	= $(ROOT)/objs
+KOUT	= $(OBJDIR)/kernel
 dotg    = \e[32;01m*\e[0m
 info	= if [ "${QUIET}" == "true" ] ; then printf "  %-7s %s\n" $(1) $(2); fi
 install_script = $(call info,INSTALL,$(1)) ; $(INSTALL_PROG) -D scripts/$(1) $(DESTDIR)$(usrbindir)/$(1) ; \
 		 sed -e 's/%PKG_VERSION%/$(PKG_VERSION)/g' -i $(DESTDIR)$(usrbindir)/$(1)
 
-SP_HELPER = splash_helper
-SP_UTIL   = splash_util
+SP_HELPER = $(OBJDIR)/splash_helper
+SP_UTIL   = $(OBJDIR)/splash_util
 SP_GIRAM  = splash_geninitramfs
 SP_RESIZE = splash_resize
 SP_CONV	  = bootsplash2fbsplash
@@ -114,7 +120,7 @@ SP_MNGR	  = splash_manager
 
 #### make rules below #####
 
-all:	splash_kern splash_user
+all:	objdir splash_kern splash_user
 
 splash_user: $(SP_UTIL)
 
@@ -128,9 +134,12 @@ linux:
 		ln -s /lib/modules/`uname -r`/source/ "$(ROOT)/linux"; \
 	fi
 
-kdir:
-	@if [ ! -d "$(ROOT)/$(KOUT)" ]; then \
-		mkdir "$(ROOT)/$(KOUT)" ; \
+objdir:	
+	@if [ ! -d "$(OBJDIR)" ]; then \
+		mkdir "$(OBJDIR)" ; \
+	fi
+	@if [ ! -d "$(KOUT)" ]; then \
+		mkdir "$(KOUT)" ; \
 	fi
 
 zlib:	config.h
@@ -180,7 +189,7 @@ ft2:	config.h
 	if ! make -q CFLAGS="$(K_CFLAGS)" library; then $(call info,MAKE,freetype2) ; fi ; \
 	make CFLAGS="-c $(K_CFLAGS)" library > $(OUTPUT)
 	
-splash_kern: linux jpeglib kdir $(K_DEPS) $(SP_HELPER) config.h $(K_LDLIBS)
+splash_kern: linux jpeglib $(K_DEPS) $(SP_HELPER) config.h $(K_LDLIBS)
 
 $(SP_HELPER): $(K_OBJS)
 	@$(call info,LD,$@)
@@ -191,7 +200,7 @@ $(KOUT)/%.o: %.c config.h splash.h
 	@$(call info,CC,$@)
 	$(Q)$(KLCC) $(K_CFLAGS) -I/usr/include -c -o $@ $<
 
-%.o: %.c config.h splash.h
+$(OBJDIR)/%.o: %.c config.h splash.h
 	@$(call info,CC,$@)
 	$(Q)$(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
 
