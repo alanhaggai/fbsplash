@@ -111,8 +111,8 @@ info	= if [ "${QUIET}" == "true" ] ; then printf "  %-7s %s\n" $(1) $(2); fi
 install_script = $(call info,INSTALL,$(1)) ; $(INSTALL_PROG) -D scripts/$(1) $(DESTDIR)$(usrbindir)/$(1) ; \
 		 sed -e 's/%PKG_VERSION%/$(PKG_VERSION)/g' -i $(DESTDIR)$(usrbindir)/$(1)
 
-SP_HELPER = $(OBJDIR)/splash_helper
-SP_UTIL   = $(OBJDIR)/splash_util
+SP_HELPER = splash_helper
+SP_UTIL   = splash_util
 SP_GIRAM  = splash_geninitramfs
 SP_RESIZE = splash_resize
 SP_CONV	  = bootsplash2fbsplash
@@ -122,9 +122,9 @@ SP_MNGR	  = splash_manager
 
 all:	objdir splash_kern splash_user
 
-splash_user: $(SP_UTIL)
+splash_user: $(OBJDIR)/$(SP_UTIL)
 
-$(SP_UTIL): $(OBJS)
+$(OBJDIR)/$(SP_UTIL): $(OBJS)
 	@$(call info,LD,$@)
 	$(Q)$(CC) $+ $(LDLIBS) -o $@
 	$(Q)$(CC) $+ $(LDLIBS) -static -o $@.static
@@ -197,9 +197,9 @@ ft2:	config.h
 	if ! make -q CFLAGS="$(K_CFLAGS)" library; then $(call info,MAKE,freetype2) ; fi ; \
 	make CFLAGS="-c $(K_CFLAGS)" library > $(OUTPUT)
 	
-splash_kern: linux jpeglib $(K_DEPS) $(SP_HELPER) config.h $(K_LDLIBS)
+splash_kern: linux jpeglib $(K_DEPS) $(OBJDIR)/$(SP_HELPER) config.h $(K_LDLIBS)
 
-$(SP_HELPER): $(K_OBJS)
+$(OBJDIR)/$(SP_HELPER): $(K_OBJS)
 	@$(call info,LD,$@)
 	$(Q)$(KLCC) $(K_LDFLAGS) -o $@ $+ $(K_LDLIBS)
 	$(Q)$(STRIP) $@
@@ -255,11 +255,11 @@ clean_ft2:
 
 install: all
 	@$(call info,INSTALL,$(SP_HELPER))
-	$(Q)$(INSTALL_PROG) -D $(SP_HELPER) $(DESTDIR)$(sbindir)/$(SP_HELPER)
+	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_HELPER) $(DESTDIR)$(sbindir)/$(SP_HELPER)
 	@$(call info,INSTALL,$(SP_UTIL))
-	$(Q)$(INSTALL_PROG) -D $(SP_UTIL) $(DESTDIR)$(sbindir)/$(SP_UTIL)
+	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL) $(DESTDIR)$(sbindir)/$(SP_UTIL)
 	@$(call info,INSTALL,$(SP_UTIL).static)
-	$(Q)$(INSTALL_PROG) -D $(SP_UTIL).static $(DESTDIR)$(sbindir)/$(SP_UTIL).static
+	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL).static $(DESTDIR)$(sbindir)/$(SP_UTIL).static
 	$(Q)$(call install_script,$(SP_GIRAM))
 	$(Q)$(call install_script,$(SP_CONV))
 	$(Q)$(call install_script,$(SP_RESIZE))

@@ -62,7 +62,7 @@ int handle_init(u8 update)
 	if (!update) {
 		prep_io();
 	}
-		
+
 	/* Mount the proc filesystem */
 	h = mount("proc", PATH_PROC, "proc", 0, NULL);
 	fd = open(PATH_PROC "/cmdline", O_RDONLY);

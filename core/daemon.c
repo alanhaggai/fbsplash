@@ -259,6 +259,7 @@ void start_tty_handlers(int need_update)
 	}
 }
 
+#ifdef CONFIG_MNG
 void anim_render_frame(anim *a)
 {
 	int ret;
@@ -362,6 +363,7 @@ next:		pthread_mutex_unlock(&mtx_ctty);
 		delay = 10000;
 	}
 }
+#endif /* CONFIG_MNG */
 
 void free_objs()
 {
@@ -482,9 +484,11 @@ int reload_theme(void)
 	item *i;
 	theme_loaded = 0;
 
+#ifdef CONFIG_MNG
 	/* The anim thread will be restarted when we're done
 	 * reloading the theme. */
 	pthread_cancel(th_anim);
+#endif
 
 	if (config_file)
 		free(config_file);
@@ -511,7 +515,9 @@ int reload_theme(void)
 		update_icon_status(ss->svc, ss->state);
 	}
 
+#ifdef CONFIG_MNG
 	pthread_create(&th_anim, NULL, &anim_loop, NULL);
+#endif
 
 	return 0;
 }
@@ -1137,8 +1143,10 @@ void daemon_start()
 	}
 	pthread_mutex_unlock(&mtx_ctty);
 
+#ifdef CONFIG_MNG
 	/* Start the animation thread */
 	pthread_create(&th_anim, NULL, &anim_loop, NULL);
+#endif
 
 	start_tty_handlers(UPD_ALL);
 
