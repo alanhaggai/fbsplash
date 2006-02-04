@@ -164,10 +164,13 @@ parse_failure:	if (h == 0)
 		 * but don't activate fbsplash just yet. We'll enable it
 		 * after the silent screen is displayed. */
 		if (do_config(FB_SPLASH_IO_ORIG_USER) || do_getpic(FB_SPLASH_IO_ORIG_USER, 1, 'v')) {
-//			fbsplash = 0;
+			fbsplash = 0;
 		}
 	}	
 #endif
+	/* Activate verbose mode if it was explicitly requested. If silent mode
+	 * was requested, the verbose background image will be set after the
+	 * switch to the silent tty is complete. */
 	if (arg_mode != 's') {
 #ifdef CONFIG_FBSPLASH
 		/* Activate fbsplash on the first tty if the picture and 
