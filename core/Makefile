@@ -52,6 +52,7 @@ ROOT = $(shell pwd)
 # Flags for the kernel utilities
 K_CFLAGS = -w -ffunction-sections -fdata-sections $(MISCINCS) \
 	   -I$(ROOT)/$(ZLIBSRC) -I$(ROOT)/$(FT2SRC)/include -I$(ROOT)/linux/include -I$(ROOT)/linux/include2 \
+	   -I$(ROOT)/linux/arch/$(ARCH)/include \
 	   -DWITH_ERRLIST -DTARGET_KERNEL -DTT_CONFIG_OPTION_BYTECODE_INTERPRETER
 
 PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_SUPPORTED -DPNG_NO_READ_iTXt \
