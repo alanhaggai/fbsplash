@@ -28,23 +28,6 @@ spl_cachetype="tmpfs"
 spl_fifo="${spl_cachedir}/.splash"
 spl_pidfile="${spl_cachedir}/daemon.pid"
 
-# This is a little tricky. We need depscan.sh to create an updated cache for
-# us, and we need it in our place ($spl_cachedir), and not in $svcdir, since the
-# latter might not be writable at this moment. In order to get what we need, 
-# we trick depscan.sh into thinking $svcdir is $spl_cachedir. 
-#
-# Here is how it works:
-# - $svcdir is defined in /sbin/functions.sh
-# - /sbin/splash-functions.sh is sourced from /sbin/functions.sh, after $svcdir
-#   is defined
-# - /sbin/functions.sh is sourced from /sbin/depscan.sh
-#
-# $spl_cache_depscan is used to prevent breaking things when /sbin/depscan.sh
-# is not run by us.
-if [[ "$0" == "/sbin/depscan.sh" && "${spl_cache_depscan}" == "yes" ]]; then
-	svcdir="${spl_cachedir}"
-fi 
-	
 # This is the main function that handles all events.
 # Accepted parameters:
 #  svc_start <name>
@@ -115,7 +98,7 @@ splash_setup() {
 	export SPLASH_SHUTDOWN_MESSAGE="Shutting down the system (\$progress%)... Press F2 for verbose mode."
 	export SPLASH_REBOOT_MESSAGE="Rebooting the system (\$progress%)... Press F2 for verbose mode."
 
-	[[ -f /etc/conf.d/splash ]] && . /etc/conf.d/splash
+	[[ -f $(add_suffix /etc/conf.d/splash) ]] && source "$(add_suffix /etc/conf.d/splash)"
 		
 	if [[ -f /proc/cmdline ]]; then
 		options=$(grep 'splash=[^ ]*' -o /proc/cmdline)
@@ -465,7 +448,7 @@ splash_cache_prep() {
 	h=$(stat -c '%y' ${spl_cachedir}/deptree 2>/dev/null)
 
 	# Point depscan.sh to our cachedir
-	spl_cache_depscan="yes" /sbin/depscan.sh -u
+	/sbin/depscan.sh --svcdir "${spl_cachedir}"
 
 	if [[ "$1" == "start" ]]; then
 		# Check whether the list of services that will be started during boot
