@@ -10,9 +10,9 @@
 PKG_VERSION	= 1.1.9.10
 DEBUG		= false		# set to true to prevent stripping
 K_SHARED	= false		# set to true if you want to link to a shared klibc
-QUIET	       ?= true
+QUIER      ?= true
 
-CC		= gcc
+CC			= gcc
 KLCC		= klcc
 
 # These variables can be defined on the command-line when the user
@@ -28,7 +28,7 @@ sbindir    = ${prefix}/sbin
 usrbindir  = ${prefix}/usr/bin
 mandir 	   = ${prefix}/usr/share/man
 
-INSTALL 	= /usr/bin/install -c
+INSTALL 		= /usr/bin/install -c
 INSTALL_PROG 	= ${INSTALL}
 INSTALL_DATA 	= ${INSTALL} -m 644
 INSTALL_SCRIPT 	= ${INSTALL_PROG}
@@ -107,8 +107,8 @@ endif
 OBJDIR	= objs
 KOUT	= $(OBJDIR)/kernel
 dotg    = \e[32;01m*\e[0m
-info	= if [ "${QUIET}" == "true" ] ; then printf "  %-7s %s\n" $(1) $(2); fi
-install_script = $(call info,INSTALL,$(1)) ; $(INSTALL_PROG) -D scripts/$(1) $(DESTDIR)$(usrbindir)/$(1) ; \
+infmsg	= if [ "${QUIET}" == "true" ] ; then printf "  %-7s %s\n" $(1) $(2) ; fi
+install_script = $(call infmsg,INSTALL,$(1)) ; $(INSTALL_PROG) -D scripts/$(1) $(DESTDIR)$(usrbindir)/$(1) ; \
 		 sed -e 's/%PKG_VERSION%/$(PKG_VERSION)/g' -i $(DESTDIR)$(usrbindir)/$(1)
 
 SP_HELPER = splash_helper
@@ -125,7 +125,7 @@ all:	objdir splash_kern splash_user
 splash_user: $(OBJDIR)/$(SP_UTIL)
 
 $(OBJDIR)/$(SP_UTIL): $(OBJS)
-	@$(call info,LD,$@)
+	@$(call infmsg,LD,$@)
 	$(Q)$(CC) $+ $(LDLIBS) -o $@
 	$(Q)$(CC) $+ $(LDLIBS) -static -o $@.static
 
@@ -145,24 +145,24 @@ objdir:
 zlib:	config.h
 	@cd $(ZLIBSRC) ; \
 	if [ ! -e ./Makefile ]; then \
-		$(call info,CONF,zlib) ; \
+		$(call infmsg,CONF,zlib) ; \
 		CC=$(KLCC) CFLAGS="$(K_CFLAGS)" \
 		configure > $(OUTPUT); \
 		sed -i 's#^CFLAGS=\(.*\)#CFLAGS=\1 $(K_CFLAGS)#' Makefile ; \
 	fi ; \
-	if ! make -q CC=$(KLCC) libz.a; then $(call info,MAKE,zlib) ; fi ; \
+	if ! make -q CC=$(KLCC) libz.a; then $(call infmsg,MAKE,zlib) ; fi ; \
 	make CC=$(KLCC) libz.a > $(OUTPUT)
 
 libpng:	zlib config.h
 	@cd $(LPNGSRC) ; \
 	if [ ! -e ./Makefile ]; then \
-		$(call info,CONF,libpng) ; \
+		$(call infmsg,CONF,libpng) ; \
 		cp scripts/makefile.linux Makefile > $(OUTPUT); \
 		sed -i -e '/^CFLAGS/ { N ; s#^CFLAGS=.*#CFLAGS=$(K_CFLAGS) $(PNGDEFS)# ; P ; D }' \
 		       -e 's#^ZLIBINC=.*#ZLIBINC=$(ZLIBSRC)#' \
 		       -e 's#^ZLIBLIB=.*#ZLIBLIB=$(ZLIBSRC)#' Makefile ; \
 	fi ; \
-	if ! make -q CC=$(KLCC) libpng.a; then $(call info,MAKE,libpng) ; fi ; \
+	if ! make -q CC=$(KLCC) libpng.a; then $(call infmsg,MAKE,libpng) ; fi ; \
 	make CC=$(KLCC) libpng.a > $(OUTPUT) 
 
 jpeglib:
@@ -172,14 +172,14 @@ jpeglib:
 	fi ; \
 	cd jpeglib ; \
 	if [ ! -e ./Makefile ]; then \
-		$(call info,CONF,libjpeg) ; \
+		$(call infmsg,CONF,libjpeg) ; \
 		CC=$(KLCC) CFLAGS="$(K_CFLAGS) -I$(ROOT)/$(OBJDIR)/jpeglib" \
 		$(ROOT)/$(JPEGSRC)/configure > $(OUTPUT) ; \
 		echo "#define NO_GETENV 1" >> jconfig.h ; \
 		sed -i "s#CFLAGS=.*#CFLAGS=$(K_CFLAGS) -I$(ROOT)/$(OBJDIR)/jpeglib#" Makefile ; \
 		sed -i "s:#define JMESSAGE.*::" jerror.c ; \
 	fi ; \
-	if ! make -q CC=$(KLCC) libjpeg.a; then $(call info,MAKE,libjpeg) ; fi ; \
+	if ! make -q CC=$(KLCC) libjpeg.a; then $(call infmsg,MAKE,libjpeg) ; fi ; \
 	make CC=$(KLCC) libjpeg.a > $(OUTPUT)
 
 ft2:	config.h
@@ -189,33 +189,33 @@ ft2:	config.h
 	fi ; \
 	cd freetype2 ; \
 	if [ ! -e ./config.mk ]; then \
-		$(call info,CONF,freetype2) ; \
+		$(call infmsg,CONF,freetype2) ; \
 		CC=$(KLCC) CPPFLAGS="-I$(ROOT)/$(ZLIBSRC)" \
 		CFLAGS="$(K_CFLAGS) -include $(ROOT)/klibc_compat.h" \
 		$(ROOT)/$(FT2SRC)/configure --disable-shared > $(OUTPUT) ; \
 	fi ; \
-	if ! make -q CFLAGS="$(K_CFLAGS)" library; then $(call info,MAKE,freetype2) ; fi ; \
+	if ! make -q CFLAGS="$(K_CFLAGS)" library; then $(call infmsg,MAKE,freetype2) ; fi ; \
 	make CFLAGS="-c $(K_CFLAGS)" library > $(OUTPUT)
 	
 splash_kern: linux jpeglib $(K_DEPS) $(OBJDIR)/$(SP_HELPER) config.h $(K_LDLIBS)
 
 $(OBJDIR)/$(SP_HELPER): $(K_OBJS)
-	@$(call info,LD,$@)
+	@$(call infmsg,LD,$@)
 	$(Q)$(KLCC) $(K_LDFLAGS) -o $@ $+ $(K_LDLIBS)
 	$(Q)$(STRIP) $@
 
 $(KOUT)/%.o: %.c config.h splash.h
-	@$(call info,CC,$@)
+	@$(call infmsg,CC,$@)
 	$(Q)$(KLCC) $(K_CFLAGS) -I/usr/include -c -o $@ $<
 
 $(OBJDIR)/%.o: %.c config.h splash.h
-	@$(call info,CC,$@)
+	@$(call infmsg,CC,$@)
 	$(Q)$(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
 
 clean:	clean_jpg clean_png clean_zlib clean_ft2 clean_splash
 
 clean_splash:
-	@$(call info,CLEAN,splash)
+	@$(call infmsg,CLEAN,splash)
 	$(Q)rm -f *.o
 	$(Q)rm -f kernel/*.o
 	$(Q)rm -f splash_helper splash_util splash_util.static
@@ -224,7 +224,7 @@ clean_splash:
 clean_jpg:
 	@cd $(JPEGSRC) ; \
 	if [ -e Makefile ]; then \
-		$(call info,CLEAN,libjpeg) ; \
+		$(call infmsg,CLEAN,libjpeg) ; \
 		make clean > $(OUTPUT) ; \
 		rm -f Makefile ; \
 	fi
@@ -232,7 +232,7 @@ clean_jpg:
 clean_png:
 	@cd $(LPNGSRC) ; \
 	if [ -e Makefile ]; then \
-		$(call info,CLEAN,libpng) ; \
+		$(call infmsg,CLEAN,libpng) ; \
 		make clean > $(OUTPUT) ; \
 		rm -f Makefile ; \
 	fi
@@ -240,7 +240,7 @@ clean_png:
 clean_zlib:
 	@cd $(ZLIBSRC) ; \
 	if [ -e Makefile ]; then \
-		$(call info,CLEAN,zlib) ; \
+		$(call infmsg,CLEAN,zlib) ; \
 		make clean > $(OUTPUT) ; \
 		rm -f Makefile ; \
 	fi
@@ -248,17 +248,17 @@ clean_zlib:
 clean_ft2:
 	@cd $(FT2SRC) ; \
 	if [ -e ./config.mk ]; then \
-		$(call info,CLEAN,freetype2) ; \
+		$(call infmsg,CLEAN,freetype2) ; \
 		make clean > $(OUTPUT) ; \
 		rm -f config.mk ; \
 	fi
 
 install: all
-	@$(call info,INSTALL,$(SP_HELPER))
+	@$(call infmsg,INSTALL,$(SP_HELPER))
 	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_HELPER) $(DESTDIR)$(sbindir)/$(SP_HELPER)
-	@$(call info,INSTALL,$(SP_UTIL))
+	@$(call infmsg,INSTALL,$(SP_UTIL))
 	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL) $(DESTDIR)$(sbindir)/$(SP_UTIL)
-	@$(call info,INSTALL,$(SP_UTIL).static)
+	@$(call infmsg,INSTALL,$(SP_UTIL).static)
 	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL).static $(DESTDIR)$(sbindir)/$(SP_UTIL).static
 	$(Q)$(call install_script,$(SP_GIRAM))
 	$(Q)$(call install_script,$(SP_CONV))
@@ -266,18 +266,18 @@ install: all
 	$(Q)$(call install_script,$(SP_MNGR))
 
 uninstall:
-	@$(call info,UNINSTALL,$(SP_HELPER))
+	@$(call infmsg,UNINSTALL,$(SP_HELPER))
 	$(Q)rm -f $(sbindir)/$(SP_HELPER)
-	@$(call info,UNINSTALL,$(SP_UTIL))
+	@$(call infmsg,UNINSTALL,$(SP_UTIL))
 	$(Q)rm -f $(sbindir)/$(SP_UTIL)
-	@$(call info,UNINSTALL,$(SP_UTIL).static)
+	@$(call infmsg,UNINSTALL,$(SP_UTIL).static)
 	$(Q)rm -f $(sbindir)/$(SP_UTIL).static
-	@$(call info,UNINSTALL,$(SP_GIRAM))
+	@$(call infmsg,UNINSTALL,$(SP_GIRAM))
 	$(Q)rm -f $(usrbindir)/$(SP_GIRAM)
-	@$(call info,UNINSTALL,$(SP_CONV))
+	@$(call infmsg,UNINSTALL,$(SP_CONV))
 	$(Q)rm -f $(usrbindir)/$(SP_CONV)
-	@$(call info,UNINSTALL,$(SP_RESIZE))
+	@$(call infmsg,UNINSTALL,$(SP_RESIZE))
 	$(Q)rm -f $(usrbindir)/$(SP_RESIZE)
-	@$(call info,UNINSTALL,$(SP_MNGR))
+	@$(call infmsg,UNINSTALL,$(SP_MNGR))
 	$(Q)rm -f $(usrbindir)/$(SP_MNGR)
 	
