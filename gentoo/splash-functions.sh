@@ -1,4 +1,4 @@
-# Copyright 1999-2005 Gentoo Foundation
+# Copyright 1999-2006 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 # Author:     Michal Januszewski <spock@gentoo.org>
@@ -9,13 +9,13 @@
 # FIXME: handle services order on shutdown..
 
 # ####################################################################
-#    Change any settings ONLY when you are sure what you're doing.
+#    Change any settings ONLY if you are sure what you're doing.
 #    Don't cry if it breaks afterwards.
 # ####################################################################
 
 # The splash scripts need a cache which can be guaranteed to be
 # both readable and writable at all times, even when the root fs
-# is mounted read-only. To that end, a in-RAM fs is used. Valid
+# is mounted read-only. To that end, an in-RAM fs is used. Valid
 # values for spl_cachetype are 'tmpfs' and 'ramfs'. spl_cachesize
 # is a size limit in KB, and it should probably be left with the
 # default value.
@@ -28,7 +28,7 @@ spl_cachetype="tmpfs"
 spl_fifo="${spl_cachedir}/.splash"
 spl_pidfile="${spl_cachedir}/daemon.pid"
 
-# This is the main function that handles all events.
+# This is the main function which handles all events.
 # Accepted parameters:
 #  svc_start <name>
 #  svc_stop <name>
@@ -45,7 +45,7 @@ splash() {
 
 	[[ ${SPLASH_MODE_REQ} == "off" ]] && return
 
-	# Prepare the cache here - rc_init-pre might want to use it
+	# Prepare the cache here -- rc_init-pre might want to use it
 	if [[ ${event} == "rc_init" ]]; then
 		if [[ ${RUNLEVEL} == "S" && "$2" == "sysinit" ]]; then
 			splash_cache_prep 'start' || return
@@ -126,10 +126,15 @@ splash_setup() {
 #
 # System restart/shutdown:
 #   0/6       reboot/shutdown  <none>      all
+
+# args: <internal_runlevel>
+#
+# This function is called when an 'rc_init' event takes place,
+# ie. when the runlevel is changed. 
 splash_init() {
 	arg="$1"
 
-	# Initialize variables - either set the default values or load them from a file
+	# Initialize variables -- either set the default values or load them from a file
 	if [[ ${RUNLEVEL} == "S" && ${arg} == "sysinit" ]] ||
 	   [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
 		spl_count=0
@@ -158,7 +163,13 @@ splash_init() {
 	splash_save_vars
 }
 
-splash_exit() {
+# args: none
+#
+# This function is called when an 'rc_exit' event takes place, 
+# ie. when we're almost done with executing initscripts for a
+# given runlevel.
+splash_exit() 
+	# If we're in sysinit or rebooting, do nothing.
 	if [[ ${RUNLEVEL} == "S" || ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
 		return 0
 	fi
@@ -241,7 +252,8 @@ splash_start() {
 		${spl_util} -c on 2>/dev/null
 	fi
 
-	# Set the input device if it exists
+	# Set the input device if it exists. This will make it possible to use F2 to 
+	# switch from verbose to silent.
 	local t=$(grep -Hsi keyboard /sys/class/input/event*/device/driver/description | grep -o 'event[0-9]\+') 
 	if [[ -z "${t}" ]]; then
 		# Try an alternative method of finding the event device. The idea comes
@@ -282,8 +294,6 @@ splash_update_progress() {
 
 	splash_comm_send "progress ${progress}"
 	splash_save_vars
-	
-	local t=$(splash_get_boot_message)
 	splash_comm_send "paint"
 }
 
@@ -304,6 +314,7 @@ splash_comm_send() {
 	fi
 }
 
+# Returns the current splash mode. 
 splash_get_mode() {
 	local ctty="$(${spl_bindir}/fgconsole)"
 
@@ -318,6 +329,7 @@ splash_get_mode() {
 	fi
 }	
 
+# Switches to verbose mode.
 splash_verbose() {
 	if [[ -x /usr/bin/chvt ]]; then
 		/usr/bin/chvt 1
@@ -326,6 +338,7 @@ splash_verbose() {
 	fi
 }
 
+# Switches to silent mode.
 splash_silent() {
 	splash_comm_send "set mode silent"
 	${spl_util} -c on 2>/dev/null
@@ -382,6 +395,8 @@ splash_svc() {
 }
 
 # args: <svc> <state>
+#
+# Inform the splash daemon about service status changes.
 splash_svc_update() {
 	splash_comm_send "update_svc $1 $2"
 }
@@ -426,7 +441,11 @@ splash_input_end() {
 # Cache
 ###########################################################################
 
+# args: <start|stop>
+#
+# Prepare the splash cache.
 splash_cache_prep() {
+	# Mount an in-RAM filesystem at spl_tmpdir.
 	mount -ns -t "${spl_cachetype}" cachedir "${spl_tmpdir}" \
 		-o rw,mode=0644,size="${spl_cachesize}"k
 
@@ -438,11 +457,12 @@ splash_cache_prep() {
 		return "${retval}"
 	fi
 	
-	# Copy the dependency cache and services lists to our new cache dir. 
+	# Copy the dependency cache and services lists to our new cache dir.
 	# With some luck, we won't have to update it.
 	cp -a ${svcdir}/{depcache,deptree} "${spl_tmpdir}" 2>/dev/null
 	cp -a ${spl_cachedir}/{svcs_start,svcs_stop,levels} "${spl_tmpdir}" 2>/dev/null
 
+	# Now that the data from the old cache is copied, move tmpdir to cachedir.
 	mount -n --move "${spl_tmpdir}" "${spl_cachedir}"
 
 	h=$(stat -c '%y' ${spl_cachedir}/deptree 2>/dev/null)
@@ -474,6 +494,8 @@ splash_cache_prep() {
 	return 0
 }
 
+
+# FIXME -- read-only filesystems
 splash_cache_cleanup() {
 	# Don't try to clean anything up if the cachedir is not mounted.
 	[[ -z "$(grep ${spl_cachedir} /proc/mounts)" ]] && return;
@@ -482,7 +504,7 @@ splash_cache_cleanup() {
 	[[ ! -d "${spl_tmpdir}" ]] && mkdir "${spl_tmpdir}"
 	mount -n --move "${spl_cachedir}" "${spl_tmpdir}"
 
-	# There's no point in saving all this data if we're running off a livecd.
+	# There's no point in saving all the data if we're running off a livecd.
 	if [[ -z "${CDBOOT}" ]]; then
 		cp -a "${spl_tmpdir}"/{envcache,depcache,deptree,svcs_start,svcs_stop} "${spl_cachedir}" 2>/dev/null
 		echo "${BOOTLEVEL}/${DEFAULTLEVEL}" > "${spl_cachedir}/levels"
@@ -498,7 +520,7 @@ splash_cache_cleanup() {
 ###########################################################################
 # Service list
 ###########################################################################
-
+:q
 # args: <internal-runlevel>
 splash_svclist_init() {
 	arg="$1"
