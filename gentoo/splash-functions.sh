@@ -495,37 +495,42 @@ splash_cache_prep() {
 }
 
 
-# FIXME -- read-only filesystems
 splash_cache_cleanup() {
-	# Don't try to clean anything up if the cachedir is not mounted.
-	[[ -z "$(grep ${spl_cachedir} /proc/mounts)" ]] && return;
-	
-	# Create the temp dir if necessary
-	[[ ! -d "${spl_tmpdir}" ]] && mkdir "${spl_tmpdir}"
-	
-	# If the / is not writable, don't update /etc/mtab. If it is 
-	# writable, update it to avoid stale mtab entries (bug #121827).
-	local mntopt=""
-	[[ -w /etc/mtab ]] || mntopt="-n"
-	mount ${mntopt} --move "${spl_cachedir}" "${spl_tmpdir}"
-
-	# There's no point in saving all the data if we're running off a livecd.
-	if [[ -z "${CDBOOT}" ]]; then
-		cp -a "${spl_tmpdir}"/{envcache,depcache,deptree,svcs_start,svcs_stop} "${spl_cachedir}" 2>/dev/null
-		echo "${BOOTLEVEL}/${DEFAULTLEVEL}" > "${spl_cachedir}/levels"
-		echo "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" \
-			 >> "${spl_cachedir}/levels"
-	fi
-
 	# FIXME: Make sure the splash daemon is dead.
 	killall -9 splash_util.static >/dev/null 2>/dev/null
 	umount -l "${spl_tmpdir}" 2>/dev/null
-}
+
+	# There's no point in saving all the data if we're running off a livecd.
+	[[ -n "${CDBOOT}" ]] && return;
+
+	# Don't try to clean anything up if the cachedir is not mounted.
+	[[ -z "$(grep ${spl_cachedir} /proc/mounts)" ]] && return;
+	
+	# Create the temp dir if necessary.
+	if [[ ! -d "${spl_tmpdir}" ]]; then
+		mkdir -p "${spl_tmpdir}" 2>/dev/null
+		[[ "$?" != "0" ]] && return
+	fi
+	
+	# If the /etc is not writable, don't update /etc/mtab. If it is 
+	# writable, update it to avoid stale mtab entries (bug #121827).
+	local mntopt=""
+	[[ -w /etc/mtab ]] || mntopt="-n"
+	mount ${mntopt} --move "${spl_cachedir}" "${spl_tmpdir}" 2>/dev/null
+
+	# Don't try to copy anything is the cachedir is not writable.
+	[[ -w "${spl_cachedir}" ]] || return;
+
+	cp -a "${spl_tmpdir}"/{envcache,depcache,deptree,svcs_start,svcs_stop} "${spl_cachedir}" 2>/dev/null
+	echo "${BOOTLEVEL}/${DEFAULTLEVEL}" > "${spl_cachedir}/levels"
+	echo "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" \
+			 >> "${spl_cachedir}/levels"
+ }
 
 ###########################################################################
 # Service list
 ###########################################################################
-:q
+
 # args: <internal-runlevel>
 splash_svclist_init() {
 	arg="$1"
