@@ -502,7 +502,12 @@ splash_cache_cleanup() {
 	
 	# Create the temp dir if necessary
 	[[ ! -d "${spl_tmpdir}" ]] && mkdir "${spl_tmpdir}"
-	mount -n --move "${spl_cachedir}" "${spl_tmpdir}"
+	
+	# If the / is not writable, don't update /etc/mtab. If it is 
+	# writable, update it to avoid stale mtab entries (bug #121827).
+	local mntopt=""
+	[[ -w /etc/mtab ]] || mntopt="-n"
+	mount ${mntopt} --move "${spl_cachedir}" "${spl_tmpdir}"
 
 	# There's no point in saving all the data if we're running off a livecd.
 	if [[ -z "${CDBOOT}" ]]; then
