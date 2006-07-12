@@ -17,7 +17,7 @@ start() {
 		fi
 	fi
 
-	# only do this if the kernel supports fbsplash
+	# Only do this if the kernel supports fbsplash.
 	if [[ -e /dev/fbsplash && "${SPLASH_MODE_REQ}" != "off" ]]; then
 		ebegin "Setting framebuffer console images"
 		
@@ -36,12 +36,12 @@ start() {
 			fi
 
 			if [[ -x /usr/bin/openvt ]]; then
-				/usr/bin/openvt -c ${TTY} echo -n "" 2>/dev/null
+				/usr/bin/openvt -c ${TTY} -- echo -n "" 2>/dev/null
 			fi
 
-			/sbin/splash_util --tty="${TTY}" -m v -t "${theme}" -c setcfg 2>/dev/null 
+			/sbin/splash_util --tty="${TTY}" -m v -t "${theme}" -c setcfg
 			/sbin/splash_util --tty="${TTY}" -m v -t "${theme}" -c setpic 2>/dev/null
-			/sbin/splash_util --tty="${TTY}" -c on 2>/dev/null
+			/sbin/splash_util --tty="${TTY}" -c on
 		done
 
 		eend $? "Failed to set framebuffer console images"
