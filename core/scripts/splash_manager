@@ -18,6 +18,7 @@
 # - support for 8bpp modes
 
 # System configuration variables
+spl_util=splash_util.static
 spl_fifo=/lib/splash/cache/.splash
 themedir=/etc/splash
 
@@ -138,23 +139,23 @@ set_theme() {
 	
 	theme_sanity_check "${theme}"
 	[ -z "${tty}" ] && tty="${ctty}"
-	splash_util -c setcfg -t "${theme}" --tty="${tty}"
-	[ "${tty}" == "${ctty}" ] && splash_util -c setpic -t "${theme}" --tty="${tty}"
-	splash_util -c on --tty=${tty}
+	${spl_util} -c setcfg -t "${theme}" --tty="${tty}"
+	[ "${tty}" == "${ctty}" ] && ${spl_util} -c setpic -t "${theme}" --tty="${tty}"
+	${spl_util} -c on --tty=${tty}
 }
 
 # void get_theme(int tty)
 #   Prints the name of the theme that is used on a tty.
 get_theme() {
 	local ctty=$1
-	echo $(splash_util --tty=${ctty} -c getcfg | grep theme | awk '{ print $2 }')
+	echo $(${spl_util} --tty=${ctty} -c getcfg | grep theme | awk '{ print $2 }')
 }
 
 # void get_state(int tty)
 #   Prints 'on' or 'off', indicating fbsplash state on a tty.
 get_state() {
 	local ctty=$1
-	echo $(splash_util --tty=${ctty} -c getstate | cut -f2 -d: | tr -d ' ')
+	echo $(${spl_util} --tty=${ctty} -c getstate | cut -f2 -d: | tr -d ' ')
 }
 
 # void check_silent(char *theme, char *res, char *action)
@@ -192,7 +193,7 @@ set_silent() {
 
 	# Make sure the splash daemon is not running
 	killall -9 splash_util 2>/dev/null
-	splash_util -d -t "${theme}"
+	${spl_util} -d -t "${theme}"
 	pid=$(ps -o pid,ppid -C splash_util 2>/dev/null | grep '.* 1$' | awk '{ print $1 }')
 	
 	[ -z "${msg}" ] && msg="Testing the '${theme}' theme (\$progress%)..."
@@ -257,7 +258,7 @@ exit_verbose() {
 	if [ "${cstate}" == "on" ]; then
 		set_theme "${ctheme}" "${tty}"
 	else
-		splash_util --tty=${tty} -c off
+		${spl_util} --tty=${tty} -c off
 	fi
 }
 
