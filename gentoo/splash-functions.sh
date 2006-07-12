@@ -91,6 +91,7 @@ splash_setup() {
 	fi
 	
 	export SPLASH_MODE_REQ="off"
+	export SPLASH_PROFILE="off"
 	export SPLASH_THEME="default"
 	export SPLASH_TTY="16"
 	export SPLASH_KDMODE="TEXT"
@@ -111,6 +112,7 @@ splash_setup() {
 				verbose) 	SPLASH_MODE_REQ="verbose" ;;
 				silent)		SPLASH_MODE_REQ="silent" ;;
 				kdgraphics)	SPLASH_KDMODE="GRAPHICS" ;;
+				profile)	SPLASH_PROFILE="on" ;;
 			esac
 		done
 	fi
@@ -156,6 +158,7 @@ splash_init() {
 
 	if [[ ${RUNLEVEL} == "S" && ${arg} == "sysinit" ]] || 
 	   [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
+		echo -n > ${spl_cachedir}/profile
 		splash_start
 	fi
 	
@@ -165,10 +168,10 @@ splash_init() {
 
 # args: none
 #
-# This function is called when an 'rc_exit' event takes place, 
+# This function is called when an 'rc_exit' event takes place,
 # ie. when we're almost done with executing initscripts for a
 # given runlevel.
-splash_exit() 
+splash_exit() {
 	# If we're in sysinit or rebooting, do nothing.
 	if [[ ${RUNLEVEL} == "S" || ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
 		return 0
@@ -287,7 +290,7 @@ splash_update_progress() {
 	spl_count=$((${spl_count} + 1))
 	
 	if [ "${spl_scripts}" -gt 0 ]; then
-		progress=$(($spl_count * (65535 - $spl_init) / $spl_scripts))
+		progress=$(($spl_count * 65535 / $spl_scripts))
 	else
 		progress=0
 	fi
@@ -308,9 +311,15 @@ splash_comm_send() {
 		return 1
 	fi
 	
+	if [[ ${SPLASH_PROFILE} == "on" ]]; then
+		echo "`cat /proc/uptime | cut -f1 -d' '`: $*" >> ${spl_cachedir}/profile
+	fi
+
 	if [[ -r /proc/$(<${spl_pidfile})/status && 
 		  "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]]; then
 		echo $* > ${spl_fifo} &
+	else
+		echo "Daemon not running!"
 	fi
 }
 
@@ -498,10 +507,12 @@ splash_cache_prep() {
 splash_cache_cleanup() {
 	# FIXME: Make sure the splash daemon is dead.
 	killall -9 splash_util.static >/dev/null 2>/dev/null
-	umount -l "${spl_tmpdir}" 2>/dev/null
 
 	# There's no point in saving all the data if we're running off a livecd.
-	[[ -n "${CDBOOT}" ]] && return;
+	if [[ -n "${CDBOOT}" ]]; then
+		umount -l "${spl_cachedir}" 2>/dev/null
+		return
+	fi
 
 	# Don't try to clean anything up if the cachedir is not mounted.
 	[[ -z "$(grep ${spl_cachedir} /proc/mounts)" ]] && return;
@@ -511,20 +522,22 @@ splash_cache_cleanup() {
 		mkdir -p "${spl_tmpdir}" 2>/dev/null
 		[[ "$?" != "0" ]] && return
 	fi
-	
+
 	# If the /etc is not writable, don't update /etc/mtab. If it is 
 	# writable, update it to avoid stale mtab entries (bug #121827).
 	local mntopt=""
 	[[ -w /etc/mtab ]] || mntopt="-n"
 	mount ${mntopt} --move "${spl_cachedir}" "${spl_tmpdir}" 2>/dev/null
 
-	# Don't try to copy anything is the cachedir is not writable.
+	# Don't try to copy anything if the cachedir is not writable.
 	[[ -w "${spl_cachedir}" ]] || return;
 
-	cp -a "${spl_tmpdir}"/{envcache,depcache,deptree,svcs_start,svcs_stop} "${spl_cachedir}" 2>/dev/null
+	cp -a "${spl_tmpdir}"/{envcache,depcache,deptree,svcs_start,svcs_stop,profile} "${spl_cachedir}" 2>/dev/null
 	echo "${BOOTLEVEL}/${DEFAULTLEVEL}" > "${spl_cachedir}/levels"
 	echo "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" \
 			 >> "${spl_cachedir}/levels"
+	
+	umount -l "${spl_tmpdir}" 2>/dev/null
  }
 
 ###########################################################################
