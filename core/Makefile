@@ -61,7 +61,7 @@ PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_S
 	  
 K_LDLIBS = $(OBJDIR)/jpeglib/libjpeg.a
 K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/dev.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
-	   $(KOUT)/cmd.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o
+		   $(KOUT)/cmd.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o
 K_DEPS   = 
 
 # Flags for the user utilities
@@ -73,8 +73,8 @@ LDFLAGS  =
 # from a kernel thee patched with fbsplash.
 INCLUDES = -I/usr/include/freetype2 -idirafter /usr/lib/klibc/include/linux
 OBJS     = $(OBJDIR)/splash.o $(OBJDIR)/parse.o $(OBJDIR)/render.o $(OBJDIR)/image.o \
-	   $(OBJDIR)/cmd.o $(OBJDIR)/common.o $(OBJDIR)/daemon.o $(OBJDIR)/list.o \
-	   $(OBJDIR)/effects.o
+		   $(OBJDIR)/cmd.o $(OBJDIR)/common.o $(OBJDIR)/daemon.o $(OBJDIR)/daemon_cmd.o \
+	       $(OBJDIR)/list.o $(OBJDIR)/effects.o
 
 # Checks whether an option is set in config.h
 config_opt = $(shell if [[ -n "`egrep '^\#define[[:space:]]+$(1)([[:space:]]+|$$)' config.h`" ]]; then echo true ; fi)
@@ -206,7 +206,7 @@ $(KOUT)/%.o: %.c config.h splash.h
 	@$(call infmsg,CC,$@)
 	$(Q)$(KLCC) $(K_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/%.o: %.c config.h splash.h
+$(OBJDIR)/%.o: %.c config.h splash.h daemon.h
 	@$(call infmsg,CC,$@)
 	$(Q)$(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
 

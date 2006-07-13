@@ -3,7 +3,11 @@
 
 #include "config.h"
 #include <stdio.h>
-#include <linux/types.h>
+#include <sys/types.h>
+#include <sys/vt.h>
+#include <linux/kd.h>
+#include <linux/tty.h>
+#include <linux/input.h>
 
 /*
  * HACK WARNING:
