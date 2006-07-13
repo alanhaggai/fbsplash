@@ -19,7 +19,9 @@
 
 # System configuration variables
 spl_util=splash_util.static
-spl_fifo=/lib/splash/cache/.splash
+spl_dir=/lib/splash
+spl_fifo=${spl_dir}/cache/.splash
+spl_pidfile=${spl_dir}/cache/daemon.pid
 themedir=/etc/splash
 
 cleanup() {
@@ -38,27 +40,30 @@ Commands:
  set     set a splash theme on a specific tty
  shot    take a screenshot of a selected splash theme
  switch  switch a splash theme by changing GRUB/LILO config files
- 
+ replay  replay a complete boot sequence using splash profile data
+
 Options:
  -c, --cmd=CMD      execute CMD
  -h, --help         display this message
- -t, --theme=THEME  [dehs] theme name
-     --steps=N	    [d   ] use N steps when testing the silent splash
-     --delay=N      [d   ] delay each step by N seconds
- -m, --mode=(v|s)   [d h ] specify which mode to use (verbose/silent)
-     --tty=N        [deh ] set the theme on the Nth tty
- -e, --exec=CMD     [  h ] run CMD on the tty where splash is being tested
-     --progress=N   [  h ] set progress to N (0-65535)
-     --msg=MSG	    [d h ] set the main system message to MSG
- 
+ -t, --theme=THEME  [dehsr] theme name
+     --steps=N      [d    ] use N steps when testing the silent splash
+     --delay=N      [d    ] delay each step by N seconds
+ -m, --mode=(v|s)   [d h  ] specify which mode to use (verbose/silent)
+     --tty=N        [deh  ] set the theme on the Nth tty
+ -e, --exec=CMD     [  h  ] run CMD on the tty where splash is being tested
+     --progress=N   [  h  ] set progress to N (0-65535)
+     --msg=MSG      [d h  ] set the main system message to MSG
+     --profile=FILE [    r] read splash profile data from FILE
+
 The letters in the square brackets indicate the commands with which
-specific options can be used: d (demo), e (set), h (shot), s (switch).
+specific options can be used: d (demo), e (set), h (shot), s (switch),
+r (replay).
 
 Examples:
  splash_manager -c switch -t livecd-2005.0
    (switch to the 'livecd-2005.0' theme; the new theme will be used
     after reboot)
- 
+
  splash_manager -c set -t linux --tty=8
    (set the 'linux' theme on the 8th tty)
 
@@ -193,8 +198,8 @@ set_silent() {
 
 	# Make sure the splash daemon is not running
 	killall -9 splash_util 2>/dev/null
-	${spl_util} -d -t "${theme}"
-	pid=$(ps -o pid,ppid -C splash_util 2>/dev/null | grep '.* 1$' | awk '{ print $1 }')
+	${spl_util} -d -t "${theme}" --pidfile ${spl_pidfile}
+	pid=$(cat ${spl_pidfile})
 	
 	[ -z "${msg}" ] && msg="Testing the '${theme}' theme (\$progress%)..."
 	spl_comm "set message ${msg}"
@@ -241,6 +246,72 @@ demo_theme_silent() {
 	spl_comm "progress 65535"
 	spl_comm "paint"	
 	exit_silent
+}
+
+replay() {
+	check_silent "${theme}" "${res}"
+
+	if [[ -z "${profile}" ]]; then
+		err "You have to specify a splash profile file."
+		exit 1
+	fi
+
+	if [[ ! -r "${profile}" ]]; then
+		err "Profile file '${profile}' not found."
+		exit 1
+	fi
+
+	trap "cleanup" EXIT
+
+	ctime=0
+
+	if [[ -e /etc/gentoo-release ]]; then
+		export RUNLEVEL="S"
+		export SOFTLEVEL=""
+		source /sbin/functions.sh
+		splash_setup
+	fi
+
+	export SPLASH_THEME=${theme}
+
+	while read line ; do
+		arr=($line)
+		t=${arr[0]:0:$((${#arr[0]}-1))}
+		tdec=${t##*.}
+		utime=$((${t%.*}*1000 + ${tdec#0*}*10))
+
+		[[ "$ctime" == "0" ]] && ctime=${utime}
+
+		delay=$((${utime} - ${ctime}))
+		${usleep} "${delay}000"
+		ctime=${utime}
+
+		# Start the splash daemon after rc_init/pre.
+		if [[ -z "${pid}" ]]; then
+			if [[ "${arr[1]}" != "pre" || "${arr[2]}" != "rc_init" ]]; then
+				${spl_util} -d -t ${theme} --pidfile ${spl_pidfile}
+				pid=$(cat ${spl_pidfile})
+			fi
+		fi
+
+		case ${arr[1]} in
+			pre)
+				if [[ -x ${themedir}/${theme}/scripts/${arr[2]}-pre ]]; then
+					${themedir}/${theme}/scripts/${arr[2]}-pre ${arr[*]:3}
+				fi
+				;;
+
+			post)
+				if [[ -x ${themedir}/${theme}/scripts/${arr[2]}-post ]]; then
+					${themedir}/${theme}/scripts/${arr[2]}-post ${arr[*]:3}
+				fi
+				;;
+
+			comm)
+				spl_comm "${arr[*]:2}"
+				;;
+		esac
+	done < ${profile}
 }
 
 set_verbose() {
@@ -763,8 +834,9 @@ theme_switch() {
 }
 
 # Set some useful variables that we'll be using in various places
-res=$(/lib/splash/bin/fbres)
-ctty=$(/lib/splash/bin/fgconsole)
+res=$(${spl_dir}/bin/fbres)
+ctty=$(${spl_dir}/bin/fgconsole)
+usleep="${spl_dir}/bin/usleep"
 yres=${res#*x}
 xres=${res%x*}
 
@@ -775,9 +847,10 @@ cexec=''
 progress=''
 msg=''
 pid=''
+profile=''
 
 args="$@"
-temp=`getopt -l help,cmd:,theme:,steps:,delay:,mode:,msg:,tty:,exec:,progress: c:m:t:he: "$@"`
+temp=`getopt -l help,cmd:,theme:,steps:,delay:,mode:,msg:,tty:,exec:,progress:,profile: c:m:t:he: "$@"`
 
 if [ $? != 0 ]; then
 	usage; exit 2
@@ -793,6 +866,7 @@ for i ; do
 		-t|--theme)	theme="$2"; shift; shift;;
 		-e|--exec)	cexec="$2"; shift; shift;;
 		--progress)	progress="$2"; shift; shift;;
+		--profile)  profile="$2"; shift; shift;;
 		--steps)	steps="$2"; shift; shift;;
 		--delay)	delay="$2"; shift; shift;;
 		--tty)		tty="$2"; shift; shift;;
@@ -839,7 +913,12 @@ case "${op}" in
 	'list') 
 		list_themes
 		;;
-		
+
+	'replay')
+		theme_sanity_check "${theme}"
+		replay "${theme}"
+		;;
+
 	*)	err "Unrecognized command"
 		usage
 		;;
