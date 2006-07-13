@@ -1,7 +1,7 @@
 /*
  * splash.c - The core of splash_util
  *
- * Copyright (C) 2004-2005 Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2004-2006 Michal Januszewski <spock@gentoo.org>
  * 
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
@@ -13,7 +13,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <linux/fb.h>
 #include <linux/kd.h>
 #include <linux/vt.h>
 #include <sys/stat.h>
@@ -120,6 +119,13 @@ int main(int argc, char **argv)
 	
 	verbose_img.cmap.red = silent_img.cmap.red = NULL;
 	
+#ifdef CONFIG_TTF
+	if (TTF_Init() < 0) {
+		fprintf(stderr, "Couldn't initialize TTF.\n");
+		return -1;
+	}
+#endif
+
 	while ((c = getopt_long(argc, argv, "c:t:m:p:e:hd", options, NULL)) != EOF) {
 	
 		switch (c) {
@@ -144,7 +150,6 @@ int main(int argc, char **argv)
 		case 0x102:
 		case 'c':
 			for (i = 0; i < sizeof(cmds) / sizeof(struct cmd); i++) {
-			
 				if (!strcmp(optarg, cmds[i].name)) {
 					arg_task = cmds[i].value;
 					break;
@@ -199,19 +204,14 @@ int main(int argc, char **argv)
 		return 0;
 	}
 	
-	get_fb_settings(arg_fb);
+	if (get_fb_settings(arg_fb))
+		return -1;
 	
 	if (arg_theme)
 		config_file = get_cfg_file(arg_theme);
 		
 	if (config_file)
 		parse_cfg(config_file);
-
-#ifdef CONFIG_TTF
-	if (TTF_Init() < 0) {
-		fprintf(stderr, "Couldn't initialize TTF.\n");
-	}
-#endif
 	
 	if (arg_task == start_daemon) {
 		if (load_images('a'))
@@ -220,11 +220,6 @@ int main(int argc, char **argv)
 		/* we never get here */
 	}
 	
-	/* we've got to repaint the whole screen if we have icons to draw */
-/*
-	if (arg_task == paint && cf_icons_cnt > 0)
-		arg_task = repaint;
-*/
 	if (arg_task != setmode && arg_vc == -1)
 		arg_vc = 0;
 	
@@ -342,7 +337,7 @@ setpic_out:	break;
 		if ((c = open(dev, O_RDWR)) == -1) {
 			sprintf(dev, PATH_DEV "/fb/%d", arg_fb);
 			if ((c = open(dev, O_RDWR)) == -1) {
-				printerr("Failed to open " PATH_DEV "/fb%d or "
+				fprintf(stderr, "Failed to open " PATH_DEV "/fb%d or "
 					 PATH_DEV "/fb/%d.\n", arg_fb, arg_fb);
 				break;
 			}
@@ -352,7 +347,7 @@ setpic_out:	break;
 				MAP_SHARED, c, fb_var.yoffset * fb_fix.line_length); 
 	
 		if (out == MAP_FAILED) {
-			printerr("mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
+			fprintf(stderr, "mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
 			close(c);
 			err = -1;
 			break;	

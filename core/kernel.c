@@ -13,7 +13,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <linux/fb.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>

@@ -16,8 +16,6 @@
 #include <stdio.h>
 #include "splash.h"
 
-#include <linux/fb.h>
-
 static int flags = 0;
 
 int create_dev(char *fn, char *sys, int flag)

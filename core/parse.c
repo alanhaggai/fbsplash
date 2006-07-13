@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <linux/fb.h>
 #include <sys/stat.h>
 #include <ctype.h>
 #include "splash.h"

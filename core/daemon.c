@@ -1,7 +1,7 @@
 /*
  * daemon.c - The splash daemon 
  * 
- * Copyright (C) 2005 Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2005-2006 Michal Januszewski <spock@gentoo.org>
  * 
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
@@ -22,7 +22,6 @@
 #include <sys/wait.h>
 #include <sys/vt.h>
 #include <linux/kd.h>
-#include <linux/fb.h>
 #include <linux/tty.h>
 #include <linux/input.h>
 #include <sys/mman.h>
@@ -30,29 +29,44 @@
 #include <errno.h>
 #include "splash.h"
 
-/* Notifiers */
+/* 
+ * Notifiers -- external programs to be run when a specific event 
+ * takes place.
+ */
 #define NOTIFY_REPAINT 	0
 #define NOTIFY_PAINT 	1
 char *notify[2];
 
-/* Current TTY */
+/* 
+ * Current TTY. This effectively identifies the current splash
+ * mode. It needs to be protected by a mutex so that we never paint
+ * silent mode stuff when the verbose tty is displayed and vice versa.
+ */
 #define CTTY_SILENT 	0
 #define CTTY_VERBOSE	1
 pthread_mutex_t mtx_ctty = PTHREAD_MUTEX_INITIALIZER;
 int ctty = CTTY_VERBOSE;
 
-char *evdev = NULL;
-
-/* This mutex protects tty_s, tty_v, fd_tty_s. */
+/* 
+ * Silent and verbose TTYs. We keep a file descriptor for the silent
+ * TTY and for tty1.
+ */
 pthread_mutex_t mtx_tty = PTHREAD_MUTEX_INITIALIZER;
 int tty_s = TTY_SILENT;
 int tty_v = TTY_VERBOSE;
 int fd_tty_s = -1;
 int fd_tty1 = -1;
 
-int fd_fb = -1;
+/*
+ * Event device on which the daemon listens for F2 keypresses.
+ * The proper device has to be detected by an external program and
+ * then enabled by sending an appropriate command to the splash
+ * daemon.
+ */
 int fd_evdev = -1;
+char *evdev = NULL;
 
+int fd_fb = -1;
 u8 *fb_mem = NULL;
 u8 *bg_buffer = NULL;	/* uses the same format as fb_mem */
 pthread_mutex_t mtx_bgbuf = PTHREAD_MUTEX_INITIALIZER;
@@ -154,7 +168,6 @@ void* sighandler(void *unusued)
 		} else if (sig == SIGTERM) {
 			deinit_term_silent();
 			vt_cursor_enable(fd_tty_s);
-			pthread_kill_other_threads_np();
 			pthread_exit(NULL);
 		}
 	}
@@ -162,26 +175,34 @@ void* sighandler(void *unusued)
 
 void* switch_evdev(void *unused)
 {
-	int i, h;
+	int i, h, oldstate;
 	size_t rb; 
 	struct input_event ev[8];
 
-	while ((rb = read(fd_evdev, ev, sizeof(struct input_event)*8)) > 0) {
-    		if (rb < (int) sizeof(struct input_event))
+	while (1) {
+		rb = read(fd_evdev, ev, sizeof(struct input_event)*8);
+    	if (rb < (int) sizeof(struct input_event))
 			continue;
-   	
+
 		for (i = 0; i < (int) (rb / sizeof(struct input_event)); i++) {
 			if (ev[i].type != EV_KEY || ev[i].value != 0 || ev[i].code != KEY_F2)
 				continue;
 
-			pthread_mutex_lock(&mtx_ctty);
+			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
+//			pthread_mutex_lock(&mtx_ctty);
 			if (ctty == CTTY_SILENT) {
 				h = tty_v;
 			} else {
 				h = tty_s;
 			}
-			ioctl(fd_tty1, VT_ACTIVATE, h);
-			pthread_mutex_unlock(&mtx_ctty);
+
+			/* Switch to the new tty. This ioctl has to be done on
+			 * the silent tty. Sometimes init will mess with the 
+			 * settings of the verbose console which will prevent
+			 * console switching from working properly. */
+			ioctl(fd_tty_s, VT_ACTIVATE, h);
+//			pthread_mutex_unlock(&mtx_ctty);
+			pthread_setcancelstate(oldstate, NULL);
 		}
 	}
 
@@ -190,7 +211,7 @@ void* switch_evdev(void *unused)
 
 void* switch_ttymon(void *unused)
 {
-	int flags;
+	int flags, oldstate;
 	
 	flags = fcntl(fd_tty_s, F_GETFL, 0);
 	
@@ -202,6 +223,7 @@ void* switch_ttymon(void *unused)
 		read(fd_tty_s, &ret, 1);
 
 		if (ret == '\x1b') {
+			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 			pthread_mutex_lock(&mtx_tty);
 			fcntl(fd_tty_s, F_SETFL, flags | O_NDELAY);
 			
@@ -210,11 +232,12 @@ void* switch_ttymon(void *unused)
 			    ((endianess == little && t == 0x425b5b) || 
 			     (endianess == big && 0x5b5b4200))) {
 				pthread_mutex_unlock(&mtx_tty);
-				ioctl(fd_tty1, VT_ACTIVATE, tty_v);
-				ioctl(fd_tty1, VT_WAITACTIVE, tty_v);
+				ioctl(fd_tty_s, VT_ACTIVATE, tty_v);
+				ioctl(fd_tty_s, VT_WAITACTIVE, tty_v);
 			} else {
 				pthread_mutex_unlock(&mtx_tty);
 			}
+			pthread_setcancelstate(oldstate, NULL);
 		}
 	}
 
@@ -250,7 +273,7 @@ void start_tty_handlers(int need_update)
 		if (pthread_create(&th_switchmon, NULL, &switch_evdev, NULL)) {
 			fprintf(stderr, "Evdev monitor thread creation failed.\n");
 			exit(3);
-		}	
+		}
 	} else if (fd_evdev == -1 && need_update & UPD_SILENT) {
 		if (pthread_create(&th_switchmon, NULL, &switch_ttymon, NULL)) {
 			fprintf(stderr, "tty monitor thread creation failed.\n");
@@ -423,7 +446,7 @@ int cmd_exit(void **args)
 	}
 
 	pthread_cancel(th_switchmon);
-	pthread_kill(th_sighandler, SIGTERM);	
+	pthread_kill(th_sighandler, SIGTERM);
 	exit(0);
 
 	/* We never get here */
@@ -643,11 +666,12 @@ int cmd_set_tty(void **args)
 	if (!strcmp(args[0], "silent")) {
 		if (tty_s == *(int*)args[1])
 			return 0;
-		
+	
+		pthread_cancel(th_switchmon);
+
 		pthread_mutex_lock(&mtx_tty);
 		tty_s = *(int*)args[1];
 		upd = UPD_SILENT;
-		pthread_cancel(th_switchmon);
 	} else if (!strcmp(args[0], "verbose")) {
 		if (tty_v == *(int*)args[1])
 			return 0;
@@ -1070,7 +1094,7 @@ void daemon_start()
 		      PROT_WRITE | PROT_READ, MAP_SHARED, fd_fb, 0); 
 	
 	if (fb_mem == MAP_FAILED) {
-		printerr("mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
+		fprintf(stderr, "mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
 		close(fd_fb);
 		exit(1);	
 	}
@@ -1079,7 +1103,7 @@ void daemon_start()
 	if (fd_tty1 == -1) {
 		fd_tty1 = open(PATH_DEV "/vc/1", O_RDWR);
 		if (fd_tty1 == -1) {
-			printerr("Can't open " PATH_DEV "/tty1.\n");
+			fprintf(stderr, "Can't open " PATH_DEV "/tty1.\n");
 			exit(2);
 		}
 	}
@@ -1102,7 +1126,7 @@ void daemon_start()
 		if (arg_pidfile) {
 			FILE *fp = fopen(arg_pidfile, "w");
 			if (!fp) {
-				printwarn("Failed to open pidfile %s for writing.\n", arg_pidfile);
+				fprintf(stderr, "Failed to open pidfile %s for writing.\n", arg_pidfile);
 			} else {
 				fprintf(fp, "%d\n", i);
 				fclose(fp);
@@ -1125,11 +1149,11 @@ void daemon_start()
 	signal(SIGINT,  SIG_IGN);
 
 	/* These signals will be handled by the sighandler thread. */
-	sigemptyset(&sigset);
-	sigaddset(&sigset, SIGUSR1);
-	sigaddset(&sigset, SIGUSR2);
-	sigaddset(&sigset, SIGTERM);
-	sigprocmask(SIG_BLOCK, &sigset, NULL);
+	sigfillset(&sigset);
+//	sigaddset(&sigset, SIGUSR1);
+//	sigaddset(&sigset, SIGUSR2);
+//	sigaddset(&sigset, SIGTERM);
+	pthread_sigmask(SIG_BLOCK, &sigset, NULL);
 	pthread_create(&th_sighandler, NULL, &sighandler, NULL);
 
 	/* Check which TTY is active */

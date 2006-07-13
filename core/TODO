@@ -1,6 +1,5 @@
 - update the README
 - add a DOC on the splash protocol and its use for debugging purposes
-- fix the kernel helper for 2.6.15
 - clean up the code
 - clean up the mutexes
 - fix handling of redrawing the inter boxes
@@ -11,5 +10,3 @@
 - add effects (fadein/fadeout/blendin) for icon/anim
 - add a dirty tiles/rects system to handle prep_bgnds
   in a more sensible way
-- the statically linked version doesn't seem to work
-  - investigate with libmng support disabled

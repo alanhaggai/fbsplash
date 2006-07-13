@@ -9,15 +9,10 @@
  *
  */
 
-/* HACK WARNING: 
- * This is necessary to get FD_SET and FD_ZERO on platforms other than x86. */
 #ifdef TARGET_KERNEL
-#define __KERNEL__
 #include <linux/posix_types.h>
-#undef __KERNEL__
 #endif
 
-#include <linux/fb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -359,7 +354,7 @@ char *eval_text(char *txt)
 
 void prep_bgnd(u8 *target, u8 *src, int x, int y, int w, int h)
 {
-	char *t, *s;
+	u8 *t, *s;
 	int j, i;
 
 	/* Sanity checks */

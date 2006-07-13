@@ -11,7 +11,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <linux/fb.h>
 
 #include "config.h"
 
@@ -36,7 +35,7 @@ struct fb_image silent_img;
 
 #ifdef CONFIG_PNG
 #define PALETTE_COLORS 240
-int load_png(char *filename, u8 **data, struct fb_cmap *cmap, int *width, int *height, u8 want_alpha)
+int load_png(char *filename, u8 **data, struct fb_cmap *cmap, unsigned int *width, unsigned int *height, u8 want_alpha)
 {
 	png_structp 	png_ptr;
 	png_infop 	info_ptr;
@@ -163,7 +162,7 @@ int load_png(char *filename, u8 **data, struct fb_cmap *cmap, int *width, int *h
 
 int is_png(char *filename)
 {
-	char header[8];
+	unsigned char header[8];
 	FILE *fp = fopen(filename,"r");
 	
 	if (!fp)
@@ -176,7 +175,7 @@ int is_png(char *filename)
 }
 #endif /* PNG */
 
-int load_jpeg(char *filename, u8 **data, int *width, int *height)
+int load_jpeg(char *filename, u8 **data, unsigned int *width, unsigned int *height)
 {
 	struct jpeg_decompress_struct cinfo;
 	struct jpeg_error_mgr jerr;
