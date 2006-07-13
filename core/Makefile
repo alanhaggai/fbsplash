@@ -10,7 +10,7 @@
 PKG_VERSION	= 1.1.9.10
 DEBUG		= false		# set to true to prevent stripping
 K_SHARED	= false		# set to true if you want to link to a shared klibc
-QUIER      ?= true
+QUIET		?= true
 
 CC			= gcc
 KLCC		= klcc
@@ -51,25 +51,27 @@ ROOT = $(shell pwd)
 
 # Flags for the kernel utilities
 K_CFLAGS = -w -ffunction-sections -fdata-sections $(MISCINCS) \
-	   -I$(ROOT)/$(ZLIBSRC) -I$(ROOT)/$(FT2SRC)/include -I$(ROOT)/linux/include -I$(ROOT)/linux/include2 \
-	   -I$(ROOT)/linux/arch/$(ARCH)/include \
-	   -DWITH_ERRLIST -DTARGET_KERNEL -DTT_CONFIG_OPTION_BYTECODE_INTERPRETER
+		-I$(ROOT)/$(ZLIBSRC) -I$(ROOT)/$(FT2SRC)/include \
+		-DWITH_ERRLIST -DTARGET_KERNEL -DTT_CONFIG_OPTION_BYTECODE_INTERPRETER
 
 PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_SUPPORTED -DPNG_NO_READ_iTXt \
-	  -DPNG_LEGACY_SUPPORTED -DPNG_NO_PROGRESSIVE_READ -DPNG_NO_MNG_FEATURES -DPNG_NO_CONSOLE_IO \
-	  -DPNG_NO_ERROR_NUMBERS -DPNG_READ_GRAY_TO_RGB_SUPPORTED -DPNG_READ_16_TO_8_SUPPORTED \
-	  -DPNG_READ_STRIP_ALPHA_SUPPORTED -DPNG_NO_INFO_IMAGE -DPNG_NO_READ_TRANSFORMS -DPNG_NO_READ_ANCILLARY_CHUNKS
+		-DPNG_LEGACY_SUPPORTED -DPNG_NO_PROGRESSIVE_READ -DPNG_NO_MNG_FEATURES -DPNG_NO_CONSOLE_IO \
+		-DPNG_NO_ERROR_NUMBERS -DPNG_READ_GRAY_TO_RGB_SUPPORTED -DPNG_READ_16_TO_8_SUPPORTED \
+		-DPNG_READ_STRIP_ALPHA_SUPPORTED -DPNG_NO_INFO_IMAGE -DPNG_NO_READ_TRANSFORMS -DPNG_NO_READ_ANCILLARY_CHUNKS
 	  
-K_LDLIBS = $(OBJDIR)/jpeglib/libjpeg.a 
+K_LDLIBS = $(OBJDIR)/jpeglib/libjpeg.a
 K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/dev.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
-	   $(KOUT)/cmd.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o 
+	   $(KOUT)/cmd.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o
 K_DEPS   = 
 
 # Flags for the user utilities
 CFLAGS   = -Wall -g
-LDLIBS   = -ljpeg -lm -lpthread
+LDLIBS   = -ljpeg -lm -pthread
 LDFLAGS  = 
-INCLUDES = -I$(ROOT)/linux/include -I/usr/include/freetype2
+
+# Include the klibc header files so that we can compile against fb.h
+# from a kernel thee patched with fbsplash.
+INCLUDES = -I/usr/include/freetype2 -idirafter /usr/lib/klibc/include/linux
 OBJS     = $(OBJDIR)/splash.o $(OBJDIR)/parse.o $(OBJDIR)/render.o $(OBJDIR)/image.o \
 	   $(OBJDIR)/cmd.o $(OBJDIR)/common.o $(OBJDIR)/daemon.o $(OBJDIR)/list.o \
 	   $(OBJDIR)/effects.o
@@ -130,11 +132,6 @@ $(OBJDIR)/$(SP_UTIL): $(OBJS)
 	$(Q)$(CC) $+ $(LDLIBS) -o $@
 	$(Q)$(CC) $+ $(LDLIBS) -static -o $@.static
 
-linux:
-	@if [ ! -e "$(ROOT)/linux" ]; then \
-		ln -s /lib/modules/`uname -r`/source/ "$(ROOT)/linux"; \
-	fi
-
 objdir:	
 	@if [ ! -d "$(OBJDIR)" ]; then \
 		mkdir "$(OBJDIR)" ; \
@@ -148,7 +145,7 @@ zlib:	config.h
 	if [ ! -e ./Makefile ]; then \
 		$(call infmsg,CONF,zlib) ; \
 		CC=$(KLCC) CFLAGS="$(K_CFLAGS)" \
-		configure > $(OUTPUT); \
+		./configure > $(OUTPUT); \
 		sed -i 's#^CFLAGS=\(.*\)#CFLAGS=\1 $(K_CFLAGS)#' Makefile ; \
 	fi ; \
 	if ! make -q CC=$(KLCC) libz.a; then $(call infmsg,MAKE,zlib) ; fi ; \
@@ -198,7 +195,7 @@ ft2:	config.h
 	if ! make -q CFLAGS="$(K_CFLAGS)" library; then $(call infmsg,MAKE,freetype2) ; fi ; \
 	make CFLAGS="-c $(K_CFLAGS)" library > $(OUTPUT)
 	
-splash_kern: linux jpeglib $(K_DEPS) $(OBJDIR)/$(SP_HELPER) config.h $(K_LDLIBS)
+splash_kern: jpeglib $(K_DEPS) $(OBJDIR)/$(SP_HELPER) config.h $(K_LDLIBS)
 
 $(OBJDIR)/$(SP_HELPER): $(K_OBJS)
 	@$(call infmsg,LD,$@)
@@ -207,23 +204,29 @@ $(OBJDIR)/$(SP_HELPER): $(K_OBJS)
 
 $(KOUT)/%.o: %.c config.h splash.h
 	@$(call infmsg,CC,$@)
-	$(Q)$(KLCC) $(K_CFLAGS) -I/usr/include -c -o $@ $<
+	$(Q)$(KLCC) $(K_CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.o: %.c config.h splash.h
 	@$(call infmsg,CC,$@)
 	$(Q)$(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
 
-clean:	clean_jpg clean_png clean_zlib clean_ft2 clean_splash
+clean:	clean_all
+
+clean_all:	clean_zlib clean_png
+	@$(call infmsg,CLEAN,all)
+	$(Q)rm -rf $(OBJDIR)/*
 
 clean_splash:
 	@$(call infmsg,CLEAN,splash)
-	$(Q)rm -f *.o
-	$(Q)rm -f kernel/*.o
+	$(Q)rm -f $(OBJDIR)/*.o
+	$(Q)rm -f $(OBJDIR)/kernel/*.o
 	$(Q)rm -f splash_helper splash_util splash_util.static
-	$(Q)rm -f linux
 
 clean_jpg:
-	@cd $(JPEGSRC) ; \
+	$(Q)cd $(OBJDIR) ; \
+	if [ -e jpeglib ]; then \
+		cd jpeglib ; \
+	fi ; \
 	if [ -e Makefile ]; then \
 		$(call infmsg,CLEAN,libjpeg) ; \
 		make clean > $(OUTPUT) ; \
@@ -231,7 +234,7 @@ clean_jpg:
 	fi
 
 clean_png:
-	@cd $(LPNGSRC) ; \
+	$(Q)cd $(LPNGSRC) ; \
 	if [ -e Makefile ]; then \
 		$(call infmsg,CLEAN,libpng) ; \
 		make clean > $(OUTPUT) ; \
@@ -239,7 +242,7 @@ clean_png:
 	fi
 
 clean_zlib:
-	@cd $(ZLIBSRC) ; \
+	$(Q)cd $(ZLIBSRC) ; \
 	if [ -e Makefile ]; then \
 		$(call infmsg,CLEAN,zlib) ; \
 		make clean > $(OUTPUT) ; \
@@ -247,7 +250,10 @@ clean_zlib:
 	fi
 
 clean_ft2:
-	@cd $(FT2SRC) ; \
+	$(Q)cd $(OBJDIR) ; \
+	if [ -e freetype2 ]; then \
+		cd freetype2 ; \
+	fi ; \
 	if [ -e ./config.mk ]; then \
 		$(call infmsg,CLEAN,freetype2) ; \
 		make clean > $(OUTPUT) ; \

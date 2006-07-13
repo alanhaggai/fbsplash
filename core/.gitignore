@@ -1,7 +1,6 @@
 # This is where object files go
 objs
 
-# Link to the kernel tree
-linux
-
 libs/libpng-1.2.8/Makefile
+libs/zlib-1.2.3/Makefile
+libs/zlib-1.2.3/zconf.h

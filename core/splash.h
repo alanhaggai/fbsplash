@@ -1,45 +1,81 @@
+#ifndef __SPLASH_H
+#define __SPLASH_H
+
 #include "config.h"
 #include <stdio.h>
-#include <linux/fb.h>
 #include <linux/types.h>
 
-#if !defined(CONFIG_FBSPLASH)
-	#define FB_SPLASH_IO_ORIG_USER 	 0
-	#define FB_SPLASH_IO_ORIG_KERNEL 1
+/*
+ * HACK WARNING:
+ * -------------
+ * Using the trick below we try to make sure that we always compile
+ * against a single set of kernel headers -- the one against which
+ * klibc was compiled. To do that, we skip the 'linux/' part of the
+ * path when compiling the userspace utilities. This ensures that
+ * fb.h and console_splash.h are pulled from /usr/lib/klibc/include/linux
+ * and not /usr/include.
+ */
+#ifdef TARGET_KERNEL
+	#include <linux/fb.h>
+	#include <linux/console_splash.h>
+#else
+	#include <fb.h>
+	#include <console_splash.h>
 #endif
 
-/* Adjustable settings */
+/*
+ * Necessary to avoid compilation errors when fbsplash support is
+ * disabled.
+ */
+#if !defined(CONFIG_FBSPLASH)
+	#define FB_SPLASH_IO_ORIG_USER		0
+	#define FB_SPLASH_IO_ORIG_KERNEL	1
+#endif
+
+/*
+ * Adjustable settings
+ * *******************
+ */
 #define PATH_DEV	"/dev"
 #define PATH_PROC	"/proc"
 #define PATH_SYS	"/sys"
 #define SPLASH_DEV	PATH_DEV "/fbsplash"
 
-#define TTY_SILENT 	8
+/* Default TTYs for silent and verbose modes. */
+#define TTY_SILENT		8
 #define TTY_VERBOSE 	1
 
 #define DEFAULT_MESSAGE "Initializing the kernel..."
 #define DEFAULT_FONT 	"luxisri.ttf"
 #define DEFAULT_THEME	"default"
-#define TTF_DEFAULT	THEME_DIR "/" DEFAULT_FONT
+#define TTF_DEFAULT		THEME_DIR "/" DEFAULT_FONT
 
-/* Settings that shouldn't be changed */
+/*
+ * Settings that shouldn't be changed
+ * **********************************
+ */
 #define PROGRESS_MAX 	0xffff
 
-#define u8 __u8
-#define u16 __u16
-#define u32 __u32
+/* Useful short-named types. */
+typedef u_int8_t	u8;
+typedef u_int16_t	u16;
+typedef u_int32_t	u32;
+typedef int8_t		s8;
+typedef int16_t		s16;
+typedef int32_t		s32;
 
-#define printerr(args...)	fprintf(stderr, ## args);
-#define printwarn(args...)	fprintf(stderr, ## args);
+/* Useful macros. */
 #define min(a,b)		((a) < (b) ? (a) : (b))
 #define max(a,b)		((a) > (b) ? (a) : (b))
-#define CLAMP(x) 		((x) > 255 ? 255 : (x))
+#define printerr(args...)	fprintf(stderr, ## args);
+#define printwarn(args...)	fprintf(stderr, ## args);
+#define CLAMP(x)		((x) > 255 ? 255 : (x))
 #define DEBUG(x...)
 
 #define WANT_TTF	((defined(CONFIG_TTF_KERNEL) && defined(TARGET_KERNEL)) || (defined(CONFIG_TTF) && !defined(TARGET_KERNEL)))
 
 /* ************************************************************************
- * 				Lists 
+ * 				Lists
  * ************************************************************************ */
 typedef struct item {
 	void *p;
@@ -53,7 +89,7 @@ typedef struct {
 #define list_init(list)		{ list.head = list.tail = NULL; }
 
 /* ************************************************************************
- * 				Enums 
+ * 				Enums
  * ************************************************************************ */
 
 enum ENDIANESS { little, big };
@@ -64,12 +100,12 @@ enum ESVC { e_display, e_svc_inact_start, e_svc_inact_stop, e_svc_start,
 	    e_svc_start_failed };
 
 /* ************************************************************************
- * 				Structures 
+ * 				Structures
  * ************************************************************************ */
 
 typedef struct {
 	char *filename;
-	int w, h;
+	unsigned int w, h;
 	u8 *picbuf;
 } icon_img;
 
@@ -105,8 +141,8 @@ typedef struct {
 #define F_ANIM_VERBOSE		2
 
 #define F_ANIM_METHOD_MASK	12
-#define F_ANIM_ONCE		0
-#define F_ANIM_LOOP		4
+#define F_ANIM_ONCE			0
+#define F_ANIM_LOOP			4
 #define F_ANIM_PROPORTIONAL	8
 
 #define F_ANIM_STATUS_DONE 1
@@ -161,8 +197,8 @@ void text_get_xy(text *ct, int *x, int *y);
 
 typedef struct {
 	int x1, x2, y1, y2;
-	struct color c_ul, c_ur, c_ll, c_lr; 	/* upper left, upper right, 
-						   lower left, lower right */
+	struct color c_ul, c_ur, c_ll, c_lr; 	/* upper left, upper right,
+											   lower left, lower right */
 	u8 attr;
 } box;
 
@@ -218,11 +254,11 @@ int remove_dev(char *fn, int flag);
 
 #define open_cr(fd, dev, sysfs, outlabel, flag)	\
 	create_dev(dev, sysfs, flag);		\
-	fd = open(dev, O_RDWR);			\
-	if (fd == -1) {				\
-		remove_dev(dev, flag);		\
-		goto outlabel;			\
-	}					
+	fd = open(dev, O_RDWR);				\
+	if (fd == -1) {						\
+		remove_dev(dev, flag);			\
+		goto outlabel;					\
+	}
 
 #define close_del(fd, dev, flag)		\
 	close(fd);				\
@@ -237,10 +273,10 @@ void rgba2fb (rgbacolor* data, u8* bg, u8* out, int len, int y, u8 alpha);
 int load_images(char mode);
 
 /* cmd.c */
-void cmd_setstate(unsigned int state, unsigned char origin);
-void cmd_setpic(struct fb_image *img, unsigned char origin);
-void cmd_setcfg(unsigned char origin);
-void cmd_getcfg();
+int cmd_setstate(unsigned int state, unsigned char origin);
+int cmd_setpic(struct fb_image *img, unsigned char origin);
+int cmd_setcfg(unsigned char origin);
+int cmd_getcfg();
 
 /* daemon.c */
 void daemon_start();
@@ -298,3 +334,5 @@ extern struct splash_config cf;
 extern u8 fb_opt;
 extern u8 fb_ro, fb_go, fb_bo;
 extern u8 fb_rlen, fb_glen, fb_blen;
+
+#endif /* __SPLASH_H */
