@@ -1,9 +1,13 @@
 SUBDIRS = fbtruetype kbd
 
-all:	fbres
+all:	fbres usleep
 
 fbres:	
-	$(CC) -O2 $@.c -o $@
+	$(CC) $(CFLAGS) $@.c -o $@
+	strip $@
+
+usleep:	
+	$(CC) $(CFLAGS) $@.c -o $@
 	strip $@
 
 %:
@@ -13,8 +17,10 @@ clean:
 	@set -e; for d in $(SUBDIRS); do $(MAKE) -C $$d $@; done
 	rm -f *.o
 	rm -f fbres
+	rm -r usleep
 
 install:
 	install -D fbres $(DESTDIR)/lib/splash/bin/fbres
+	install -D usleep $(DESTDIR)/lib/splash/bin/usleep
 	@set -e; for d in $(SUBDIRS); do $(MAKE) -C $$d $@; done
 
