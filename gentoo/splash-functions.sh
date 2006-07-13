@@ -57,7 +57,9 @@ splash() {
 			fi
 		fi
 	fi
-	
+
+	splash_profile "pre $*"
+
 	# Handle -pre event hooks
 	if [[ -x "/etc/splash/${SPLASH_THEME}/scripts/${event}-pre" ]]; then
 		/etc/splash/${SPLASH_THEME}/scripts/${event}-pre "$2" "$3"
@@ -74,7 +76,9 @@ splash() {
 		rc_exit) 			splash_exit;;
 		critical) 			splash_verbose;;
 	esac
-	
+
+	splash_profile "post $*"
+
 	# Handle -post event hooks
 	if [[ -x "/etc/splash/${SPLASH_THEME}/scripts/${event}-post" ]]; then
 		/etc/splash/${SPLASH_THEME}/scripts/${event}-post "$2" "$3"
@@ -158,7 +162,6 @@ splash_init() {
 
 	if [[ ${RUNLEVEL} == "S" && ${arg} == "sysinit" ]] || 
 	   [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
-		echo -n > ${spl_cachedir}/profile
 		splash_start
 	fi
 	
@@ -310,16 +313,14 @@ splash_comm_send() {
 	if [[ ! -e ${spl_pidfile} ]]; then
 		return 1
 	fi
-	
-	if [[ ${SPLASH_PROFILE} == "on" ]]; then
-		echo "`cat /proc/uptime | cut -f1 -d' '`: $*" >> ${spl_cachedir}/profile
-	fi
+
+	splash_profile "comm $*"
 
 	if [[ -r /proc/$(<${spl_pidfile})/status && 
 		  "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]]; then
 		echo $* > ${spl_fifo} &
 	else
-		echo "Daemon not running!"
+		echo "Splash daemon not running!"
 	fi
 }
 
@@ -367,6 +368,13 @@ splash_save_vars() {
 	t="${t}spl_scripts=${spl_scripts}\n"
 	
 	(echo -e "$t" > ${spl_cachedir}/progress) 2>/dev/null
+}
+
+# Saves profiling information
+splash_profile() {
+	if [[ ${SPLASH_PROFILE} == "on" ]]; then
+		echo "`cat /proc/uptime | cut -f1 -d' '`: $*" >> ${spl_cachedir}/profile
+	fi
 }
 
 ###########################################################################
@@ -498,6 +506,8 @@ splash_cache_prep() {
 				echo $(splash_svclist_update "start") > ${spl_cachedir}/svcs_start
 			fi
 		fi
+
+		echo -n > ${spl_cachedir}/profile
 	fi
 		
 	return 0
