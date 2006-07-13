@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# splash_manager -- a convenience utility to perform various splash related
+# splash_manager -- a convenience utility to perform various splash-related
 #                   tasks in an easy and user-friendly way
 #
 # Copyright (C) 2005, Michal Januszewski <spock@gentoo.org>
@@ -446,7 +446,7 @@ input_number() {
 		n=${n%% *}
 		
 		if [[ -z "${n}" || "${n}" -lt ${min} || "${n}" -gt ${max} ]]; then
-			err "Invalid entry number. Try again. Enter a number in the range: ${min}-${max}}."
+			err "Invalid number. Try again. Enter a number in the range: ${min}-${max}}."
 			echo -n "Your choice: "
 		else
 			done="true"
