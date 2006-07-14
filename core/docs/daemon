@@ -4,6 +4,9 @@ Since 1.1.9, splashutils can be run in two different operating modes. The
 first one is the standard 'call-do_stuff-exit' way known from all previous
 versions of splashutils. The second one is the so-called splash daemon.
 
+Using the first mode to manage the silent splash screen is inefficient
+and should be considered deprecated.
+
 
 2. Starting the splash daemon
 -----------------------------
@@ -12,22 +15,24 @@ The splash daemon can be started with:
 
 Upon startup, the daemon will parse the config file, open a communications
 FIFO (SPLASH_FIFO, default: /lib/splash/cache/.splash) and go into background,
-detaching from the current console. It will also start a child process that
-will monitor the silent tty for key presses. This child process will then 
-switch the screen to verbose mode if a F2 keypress is detected.
+detaching from the current console. It will also start a thread that
+will monitor the silent tty for keypresses. This thread will then switch
+the screen to verbose mode if a F2 keypress is detected. If an event device
+(more info below) is monitored for keypresses, it will be possible to use
+F2 to switch back and forth between the silent and verbose modes.
 
 
 3. Communicating with the splash daemon
 ---------------------------------------
-All communications with the splash daemon are performed via the splash 
+All communications with the splash daemon are performed via the splash
 FIFO. Currently, the following commands are recognized:
 
  - set theme <theme>
-   Sets the current theme to <theme>. This can also be used to force the 
+   Sets the current theme to <theme>. This can also be used to force the
    splash daemon to re-read the config file for the currently used theme.
 
  - set mode <silent|verbose>
-   Sets the splash mode to either verbose or silent. A tty switch is 
+   Sets the splash mode to either verbose or silent. A tty switch is
    performed and, if necessary, the screen is redrawn.
 
  - set tty <silent|verbose> <tty>
@@ -35,9 +40,9 @@ FIFO. Currently, the following commands are recognized:
    1 - MAX_NR_CONSOLES.
 
  - set event dev <evdev>
-   Sets the event device to <evdev> (such as /dev/input/event0). If the 
+   Sets the event device to <evdev> (such as /dev/input/event0). If the
    kernel was configured with CONFIG_INPUT_EVDEV='y' or if the evdev.ko
-   module is loaded, the splash daemon will use the event interface to 
+   module is loaded, the splash daemon will use the event interface to
    detect F2 keypresses, allowing switching back and forth between silent
    and verbose modes.
 
@@ -47,13 +52,13 @@ FIFO. Currently, the following commands are recognized:
 
  - set notify <paint|repaint> <prog>
    Sets the name of the program <prog> that is to be executed whenever the
-   screened is (re)painted. When the background buffer is exported to a file
-   (ie. the splash daemon was started with the '-e file' option), the 
+   screen is (re)painted. When the background buffer is exported to a file
+   (ie. the splash daemon was started with the '-e file' option), the
    notified program can be used to draw additional objects in the buffer.
 
  - paint rect <x0> <y0> <x1> <y1>
-   Paints the specified part of the background buffer on the screen. 
- 
+   Paints the specified part of the background buffer on the screen.
+
  - paint
    Updates the image on screen. Equivalent to 'splash_util -c paint ...'
 
@@ -76,18 +81,18 @@ FIFO. Currently, the following commands are recognized:
       svc_stop_failed
 
  - exit
-   Causes to splash daemon to exit.
- 
+   Causes the splash daemon to exit.
+
 
 4. Exporting the background buffer to a file (EXPERIMENTAL)
 -----------------------------------------------------------
 
 The splash daemon provides an option (-e) to export its background buffer
-to a file by mmaping it. When the background buffer is exported to a file,
+to a file (by mmaping it). When the background buffer is exported to a file,
 the 'set notify' command can be used to run programs whenever the screen is
 being (re)painted. These programs can draw additional objects in the
 background buffer, thus providing support for features not present in the
-core splash utils daemon (such as support for some exotic file format).
+core splash daemon (such as support for some exotic file formats).
 
 Special care has to be taken not to truncate the file with the background
 buffer. Failure to keep the size unchagned might result in unexpected
