@@ -4,32 +4,42 @@ source /devel/common/functions.sh
 . ver-gentoo
 
 TESTING=no
-[[ -z "${*/*--testing*/}" && -n "$*" ]] && TESTING=yes
+t="${*}"
+[[ -z "${t/*--testing*/}" && -n "$t" ]] && TESTING=yes
 
-if [[ "$1" == "minor" ]]; then
+if [[ "$1" == "major" ]]; then
 	major=$(($major+1))
 	minor=0
 	sub=0
 elif [[ "$1" == "minor" ]]; then
 	minor=$(($minor+1))
+	sub=0
 else 
 	sub=$(($sub+1))
 fi
 
+cdir=`pwd`
+
 ebegin Exporting data from repository
-svn export file:///devel/repos/splashutils/gentoo >/dev/null
+tmpdir=`mktemp -d /tmp/splexp.XXXXXXXXXX`
+rmdir ${tmpdir}
+cd ..
+cg-export ${tmpdir}
 eend $?
+cd ${tmpdir}
 
 ver=${major}.${minor}.${sub}
 mv gentoo "splashutils-gentoo-${ver}"
 
 ebegin Creating a tarball
-tar cf - "splashutils-gentoo-${ver}" | bzip2 -f > "splashutils-gentoo-${ver}.tar.bz2"
+tar cf - "splashutils-gentoo-${ver}" | bzip2 -f > "${cdir}/splashutils-gentoo-${ver}.tar.bz2"
 eend $?
 
 ebegin Removing the working copy
-rm -rf "splashutils-gentoo-${ver}"
+rm -rf ${tmpdir}
 eend $?
+
+cd ${cdir}
 
 if [[ "${TESTING}" == "no" ]]; then
 	ebegin Updating version data

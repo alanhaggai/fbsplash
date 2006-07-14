@@ -5,27 +5,35 @@ source /devel/common/functions.sh
 TESTING=no
 [[ -z "${*/*--testing*/}" && -n "$*" ]] && TESTING=yes
 
-ebegin Exporting data from repository
-svn export file:///devel/repos/splashutils/core >/dev/null
-eend $?
+cdir=`pwd`
 
-ver=$(grep "^PKG_VERSION" core/Makefile | grep -o '[0-9]\+\.[0-9]\+..*')
+ebegin Exporting data from repository
+tmpdir=`mktemp -d /tmp/splexp.XXXXXXXXXX`
+rmdir ${tmpdir}
+cd ..
+cg-export ${tmpdir}
+eend $?
+cd ${tmpdir}
+
+ver=$(grep "^PKG_VERSION" core/Makefile | grep -o '[0-9]\+\.[0-9]\+\S*')
 einfo Got version: ${ver}
 
 mv core "splashutils-${ver}"
 
 ebegin "Creating a tarball"
-tar cf - "splashutils-${ver}" | bzip2 -f > "splashutils-${ver}.tar.bz2"
+tar cf - "splashutils-${ver}" | bzip2 -f > "${cdir}/splashutils-${ver}.tar.bz2"
 eend $?
 
 ebegin "Creating a -lite tarball"
 rm -rf splashutils-${ver}/libs/*
-tar cf - "splashutils-${ver}" | bzip2 -f > "splashutils-lite-${ver}.tar.bz2"
+tar cf - "splashutils-${ver}" | bzip2 -f > "${cdir}/splashutils-lite-${ver}.tar.bz2"
 eend $?
 
 ebegin Removing the working copy
-rm -rf "splashutils-${ver}"
+rm -rf ${tmpdir}
 eend $?
+
+cd ${cdir}
 
 if [[ ${TESTING} == "no" ]]; then
 	ebegin Copying the tarballs to dev.gentoo.org
