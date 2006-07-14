@@ -60,6 +60,10 @@ u8 theme_loaded = 0;
 struct termios tios;
 
 #ifdef CONFIG_MNG
+
+/* 
+ * Renders an animation frame directly to the screen. 
+ */
 void anim_render_frame(anim *a)
 {
 	int ret;
@@ -90,14 +94,17 @@ void anim_render_frame(anim *a)
 	}
 }
 
+/*
+ * Display all animations of the type 'once' or 'loop'.
+ */
 void *thf_anim(void *unused)
 {
-	anim *a = NULL;
-	mng_anim *mng;
-	anim *ca;
+	anim *a = NULL, *ca;
 	item *i;
+	mng_anim *mng;
 	int delay = 10000;
 
+	/* Render the first frame of all animations on the screen. */
 	pthread_mutex_lock(&mtx_theme);
 	pthread_mutex_lock(&mtx_ctty);
 	for (i = anims.head; i != NULL; i = i->next) {
@@ -115,6 +122,8 @@ void *thf_anim(void *unused)
 
 	while(1) {
 		pthread_mutex_lock(&mtx_theme);
+
+		/* Find the shortest delay. */
 		for (i = anims.head; i != NULL; i = i->next) {
 			ca = i->p;
 	
@@ -135,12 +144,15 @@ void *thf_anim(void *unused)
 
 		pthread_mutex_lock(&mtx_theme);
 		pthread_mutex_lock(&mtx_ctty);
+	
+		/* Don't paint anything if we aren't in silent mode. */
 		if (ctty != CTTY_SILENT)
 			goto next;
 		
 		if (a) 
 			anim_render_frame(a);
 
+		/* Update the wait time for all relevant animation objects. */
 		for (i = anims.head ; i != NULL; i = i->next) {
 			ca = i->p;
 
@@ -278,7 +290,7 @@ void switch_silent()
 void* thf_sighandler(void *unusued)
 {
 	sigset_t sigset;
-	int sig, i;
+	int sig;
 
 	sigemptyset(&sigset);
 	sigaddset(&sigset, SIGUSR1);
