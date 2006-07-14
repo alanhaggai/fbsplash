@@ -281,6 +281,56 @@ int is_in_svclist(char *svc, char *list)
 	return 0;
 }
 
+int parse_4vec(char **t, rect *r)
+{
+	char *p;
+
+	if (**t != '<')
+		return -1;
+	(*t)++;
+
+	skip_whitespace(t);
+
+	p = *t;
+	r->x1 = strtol(p, t, 0);
+	if (p == *t)
+		return -1;
+	skip_whitespace(t);
+	if (**t != ',')
+		return -1;
+	(*t)++;
+
+	p = *t;
+	r->y1 = strtol(p, t, 0);
+	if (p == *t)
+		return -1;
+	skip_whitespace(t);
+	if (**t != ',')
+		return -1;
+	(*t)++;
+
+	p = *t;
+	r->x2 = strtol(p, t, 0);
+	if (p == *t)
+		return -1;
+	skip_whitespace(t);
+	if (**t != ',')
+		return -1;
+	(*t)++;
+
+	p = *t;
+	r->y2 = strtol(p, t, 0);
+	if (p == *t)
+		return -1;
+
+	skip_whitespace(t);
+	if (**t != '>')
+		return -1;
+
+	(*t)++;
+	return 0;
+}
+
 int parse_svc_state(char *t, enum ESVC *state)
 {
 	if (!strncmp(t, "svc_inactive_start", 18)) {
@@ -337,6 +387,25 @@ void parse_icon(char *t)
 		goto pi_err;
 	
 	t = p; skip_whitespace(&t);
+
+	/* Do we need to crop this icon? */
+	if (!strncmp(t, "crop", 4)) {
+		t += 4;
+		skip_whitespace(&t);
+		
+		if (parse_4vec(&t, &cic->crop_from))
+			goto pi_err;
+
+		skip_whitespace(&t);
+
+		if (parse_4vec(&t, &cic->crop_to))
+			goto pi_err;
+
+		skip_whitespace(&t);
+		cic->crop = 1;
+	} else {
+		cic->crop = 0;
+	}
 
 	i = parse_svc_state(t, &cic->type);
 

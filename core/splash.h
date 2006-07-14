@@ -114,11 +114,17 @@ typedef struct {
 } icon_img;
 
 typedef struct {
+	int x1, x2, y1, y2;
+} rect;
+
+typedef struct {
 	int x, y;
 	icon_img *img;
 	char *svc;
 	enum ESVC type;
 	u8 status;
+	u8 crop;
+	rect crop_from, crop_to;
 } icon;
 
 typedef struct obj {
@@ -133,10 +139,6 @@ typedef struct color {
 struct colorf {
 	float r, g, b, a;
 };
-
-typedef struct {
-	int x1, x2, y1, y2;
-} rect;
 
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
 #include "mng_splash.h"

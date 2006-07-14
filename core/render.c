@@ -47,15 +47,35 @@ void rgba2fb (rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha)
 
 void render_icon(icon *ticon, u8 *target)
 {
-	int y, yi;
+	int y, yi, xi, wi, hi;
 	int bytespp = (fb_var.bits_per_pixel + 7) >> 3;
 	u8 *out = NULL;
 	u8 *in = NULL;
-	
-	for (y = ticon->y, yi = 0; yi < ticon->img->h; yi++, y++) {
-		out = target + (ticon->x + y * fb_var.xres) * bytespp;
-		in = ticon->img->picbuf + yi * ticon->img->w * 4;
-		rgba2fb((rgbacolor*)in, out, out, ticon->img->w, y, 1);
+
+	int h = PROGRESS_MAX - arg_progress;
+	rect rct;
+
+	/* Interpolate a cropping rectangle if necessary. */
+	if (ticon->crop) {
+		rct.x1 = (ticon->crop_from.x1 * h + ticon->crop_to.x1 * arg_progress) / PROGRESS_MAX;
+		rct.x2 = (ticon->crop_from.x2 * h + ticon->crop_to.x2 * arg_progress) / PROGRESS_MAX;
+		rct.y1 = (ticon->crop_from.y1 * h + ticon->crop_to.y1 * arg_progress) / PROGRESS_MAX;
+		rct.y2 = (ticon->crop_from.y2 * h + ticon->crop_to.y2 * arg_progress) / PROGRESS_MAX;
+
+		xi = min(rct.x1, rct.x2);
+		yi = min(rct.y1, rct.y2);
+		wi = abs(rct.x1 - rct.x2) + 1;
+		hi = abs(rct.y1 - rct.y2) + yi + 1;
+	} else {
+		xi = yi = 0;
+		wi = ticon->img->w;
+		hi = ticon->img->h;
+	}
+
+	for (y = ticon->y + yi; yi < hi; yi++, y++) {
+		out = target + (ticon->x + xi + y * fb_var.xres) * bytespp;
+		in = ticon->img->picbuf + (xi + yi * ticon->img->w) * 4;
+		rgba2fb((rgbacolor*)in, out, out, wi, y, 1);
 	}
 }
 

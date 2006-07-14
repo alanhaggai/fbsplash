@@ -20,7 +20,7 @@ o pic256=<path>
   framebuffer modes.
 
   NOTES:
-  - The image can have a maximum of 240 colors. 16 colors are taken by fbcon 
+  - The image can have a maximum of 240 colors. 16 colors are taken by fbcon
     and cannot be used in the picture.
 
 o silentpic256=<path>
@@ -29,16 +29,16 @@ o silentpic256=<path>
 
   NOTES:
   - The image can have a maximum of 256 colors.
- 
+
 o bgcolor=<n>
   Background color that is to be treated as transparent by fbcon. Usually 0.
 
 o tx=<n>
   The x coordinate of the upper left corner of the text window.
-  
+
 o ty=<n>
   The y coordinate of the upper left corner of the text window.
- 
+
 o tw=<n>
   The width of the text window. n cannot be greater than horizontal resolution.
 
@@ -64,7 +64,7 @@ o text_font=<file>
    - an absolute path, starting with '/'
    - a path relative to THEME_DIR (eg. /etc/splash)
    - a path relative to THEME_DIR/<theme_name> (eg. /etc/splash/default)
-   
+
 o text [flags] <font> [style] <size> <x> [left|middle|right] 
   <y> [top|middle|bottom] <color> [exec|eval] "text"
 
@@ -73,25 +73,25 @@ o text [flags] <font> [style] <size> <x> [left|middle|right]
   Flags:
   silent  - The text is rendered only in silent mode.
   verbose - The text is rendered only in verbose mode.
-  
+
   If no flags are specified, the text is rendered in both modes.
-  
-  'font' is the name of the file with a TTF font. The path interpreted in 
+
+  'font' is the name of the file with a TTF font. The path interpreted in
   the same way as in the case of the 'text_font' configuration directive.
-  
+
   'style' can be used to select a bold/italic/underlined form. The style
   selector is formed with the following characters:
-   
+
    'b' - bold
    'i' - italic
    'u' - underlined
 
-  Example: 
+  Example:
    A style selector for a bold italic font: bi
-  
+
   The color can be specified either as #rrggbb or as #rrggbbaa.
- 
-  The x and y coordinates specify the position of the hot spot of the text 
+
+  The x and y coordinates specify the position of the hot spot of the text
   string. The position of the hot stop within the bounding rectangle of the
   text string can be chosen with the 'left', 'middle' and 'right', 'top'
   and 'bottom' flags.
@@ -105,21 +105,21 @@ o text [flags] <font> [style] <size> <x> [left|middle|right]
   |   TT   EE       SS   TT          TT   EE     XXXX    TT     |
   |   TT   EEEEE SSSS    TT          TT   EEEEE XX  XX   TT     |
  (lb)-------------------------(mb)----------------------------(rb)
- 
+
   lt = left/top
   mt = middle/top
   rt = right/top
   lm = left/middle
   ...
- 
+
   The default position of the hot spot is (lt) (left - top).
-  
+
   Before the text is rendered/evaluated, all expressions of the form:
   '\x', where 'x' is any character, are replaced by 'x'.
-  
+
   If the 'exec' flag is set, sh -c 'text' is executed, and the value
   read from stdout is rendered on the screen.
-  
+
   If the 'eval' flag is set, evaluation is performed on the 'text'
   argument. Variables of the form $variablename are replaced by their
   values. Recognized variables:
@@ -148,7 +148,7 @@ o box [flags] <x0> <y0> <x1> <y1> <color1> [color2 color3 color4]
 
   If only color1 is specified, the box is filled with the color.
   If all four colors are specified, then:
-  
+
   color1   is the color of the   upper left    corner of the box,
   color2   is the color of the   upper right   corner of the box,
   color3   is the color of the   lower left    corner of the box,
@@ -156,15 +156,26 @@ o box [flags] <x0> <y0> <x1> <y1> <color1> [color2 color3 color4]
 
   and the box is filled with a gradient formed by these colors.
 
-o icon <path> <x> <y> [state service]
-  Draws an icon (a PNG image) at coordinates x, y based on the current
-  state of the service.
+o icon <path> <x> <y> [crop from to] [state service]
+  Draws an icon (a PNG image) at coordinates x, y in the screen
+  coordinate system, based on the current state of a service.
+
+  If the 'crop' keyword is used, the icon will be cropped by a
+  rectangle interpolated between 'from' and 'to', based on the
+  value of the progress variable. 'from' and 'to' are both
+  rectangles described in the icon coordinate system using the
+  following format:
+
+    <x0, y0, x1, y1>
+
+  In the icon coordinate system, the icon's top left corner
+  is at (0,0).
 
   'state' can be one of the following:
-  svc_inactive_start, 	svc_inactive_stop,
-  svc_started, 		svc_stopped,
-  svc_start_failed, 	svc_stop_failed,
-  svc_start, 		svc_stop,
+  svc_inactive_start,   svc_inactive_stop,
+  svc_started,          svc_stopped,
+  svc_start_failed,     svc_stop_failed,
+  svc_start,            svc_stop,
 
   'service' is (surprise, surprise!) the name of the service.
 
@@ -173,32 +184,44 @@ o icon <path> <x> <y> [state service]
   state or if the state has been set through an appropriate splash
   daemon command. The list of variable names corresponding to the 
   recognized states follows:
-  SPL_SVC_INACTIVE_START	SPL_SVC_INACTIVE_STOP
-  SPL_SVC_STARTED		SPL_SVC_STOPPED
-  SPL_SVC_START_FAILED		SPL_SVC_STOP_FAILED
-  SPL_SVC_START			SPL_SVC_STOP
+  SPL_SVC_INACTIVE_START    SPL_SVC_INACTIVE_STOP
+  SPL_SVC_STARTED           SPL_SVC_STOPPED
+  SPL_SVC_START_FAILED      SPL_SVC_STOP_FAILED
+  SPL_SVC_START             SPL_SVC_STOP
 
   Each of these variables can contain a space-separated list of
   service names.
 
+  Examples:
+
+   1) icon img/logo.png 100 100 crop <0,0,49,0> <0,0,49,199>
+      The image from img/logo.png will be painted at (100,100)
+      (ie. at the 101-th pixel from the left and from the top).
+
+      The image will be cropped. When progress == 0, no part of
+      it will be displayed on the screen (height of the first
+      rectangle is equal to 0). As the progress increases, the
+      image will be extended downward, until it reaches the
+      full size of 50 x 200 pixels.
+
 o rect <attr> <x0> <y0> <x1> <y1>
   Describes a rectangular area on the screen with some special
   attribute 'attr'.
-  
+
   Available attributes:
 
   repaint - causes the area to be repainted every time splash_util
             is called with the 'paint' command (with 'repaint', the
-	    whole screen is repainted)
- 
+            whole screen is repainted)
+
 o anim [verbose|silent] <once|loop|proportional> <path> <x> <y> [state service]
   FIXME
 
-  All animations are displayed on a separate 'layer' that is locate
-  above all other objects. That means that an animation will always
-  cover icons, boxes and other objects.
+  All animations are displayed on a separate 'layer', which is located
+  above all other objects. An animation will always cover icons, boxes,
+  etc.
 
-  Overlapping animations should be avoided, as it may lead to 
+  Overlapping animations should be avoided, as it may lead to
   unexpected results (flickering).
 
 
