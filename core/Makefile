@@ -77,7 +77,7 @@ OBJS     = $(OBJDIR)/splash.o $(OBJDIR)/parse.o $(OBJDIR)/render.o $(OBJDIR)/ima
 	       $(OBJDIR)/list.o $(OBJDIR)/effects.o
 
 # Checks whether an option is set in config.h
-config_opt = $(shell if [[ -n "`egrep '^\#define[[:space:]]+$(1)([[:space:]]+|$$)' config.h`" ]]; then echo true ; fi)
+config_opt = $(shell if [[ -e config.h && -n "`egrep '^\#define[[:space:]]+$(1)([[:space:]]+|$$)' config.h`" ]]; then echo true ; fi)
 
 ifeq ($(call config_opt,CONFIG_TTF),true)
 	OBJS   += $(OBJDIR)/ttf.o
@@ -126,6 +126,14 @@ SP_MNGR	  = splash_manager
 all:	objdir splash_kern splash_user
 
 splash_user: $(OBJDIR)/$(SP_UTIL)
+
+config.h:
+	@echo "Using default configuration." 
+	@if [ ! -e config.h ]; then \
+		./configure --default ; \
+		$(warning "Restart make") \
+		exit 1 ; \
+	fi
 
 $(OBJDIR)/$(SP_UTIL): $(OBJS)
 	@$(call infmsg,LD,$@)
@@ -220,7 +228,8 @@ clean_splash:
 	@$(call infmsg,CLEAN,splash)
 	$(Q)rm -f $(OBJDIR)/*.o
 	$(Q)rm -f $(OBJDIR)/kernel/*.o
-	$(Q)rm -f splash_helper splash_util splash_util.static
+	$(Q)rm -f $(OBJDIR)/splash_helper splash_util splash_util.static 
+	$(Q)rm -r config.h
 
 clean_jpg:
 	$(Q)cd $(OBJDIR) ; \

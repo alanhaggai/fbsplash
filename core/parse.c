@@ -649,7 +649,7 @@ void parse_anim(char *t)
 
 	filename = get_filepath(filename);
 
-	canim->mng = mng_load(filename);
+	canim->mng = mng_load(filename, &canim->w, &canim->h);
 	if (!canim->mng) {
 		free(filename);
 		printerr("Cannot allocate memory for mng (parse_anim)!\n");

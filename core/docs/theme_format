@@ -237,6 +237,13 @@ Silent mode settings
   boxes, etc. Overlapping animations with other objects should currently
   be avoid, as it may lead to unexpected flickering.
 
+  Depending on how the mng file is constructed 'once' and 'proportional'
+  might not work as aspected. When the file is internally looped, the
+  animation will always be displayed in an infinite loop (even when
+  the 'once' flag is used). When the file doesn't contain a frame
+  counter, 'proportional' will not work and only the first frame will
+  be displayed.
+
 Deprecated settings
 -------------------
 * jpeg=<path>

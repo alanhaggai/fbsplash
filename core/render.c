@@ -440,6 +440,26 @@ void prep_bgnds(u8 *target, u8 *bgnd, char mode)
 
 			prep_bgnd(target, bgnd, c->x, c->y, c->img->w, c->img->h); 
 		}
+#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
+		else if (o->type == o_anim) {
+			u8 render_it = 0;
+			anim *a = (anim*)o->p;
+
+			/* We only support animations in the silent mode. */
+			if (mode != 's')
+				continue;
+
+			if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_ONCE &&
+				(a->status == F_ANIM_STATUS_DONE)) {
+				render_it = 1;
+			} else if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL) {
+				render_it = 1;
+			}
+
+			if (render_it)
+				prep_bgnd(target, bgnd, a->x, a->y, a->w, a->h); 
+		}
+#endif /* CONFIG_MNG */
 #if WANT_TTF
 		else if (o->type == o_text) {
 			text *ct = (text*)o->p;
@@ -520,47 +540,32 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 
 			render_icon(c, target);
 		} 
-#if 0 
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
 		else if (o->type == o_anim) {
 			u8 render_it = 0;
 			anim *a = (anim*)o->p;
 
-			if ((a->flags & F_ANIM_SILENT) && mode != 's')
+			/* We only support animations in the silent mode. */
+			if (mode != 's')
 				continue;
 
-			if ((a->flags & F_ANIM_VERBOSE) && mode != 'v')
-				continue;
-			
-			if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_ONCE) {
-				if (a->status != F_ANIM_STATUS_DONE) {
-					switch (mng_render_next(a->mng)) {
-						case MNG_NOERROR:
-							a->status = F_ANIM_STATUS_DONE;
-							break;
-						case MNG_NEEDTIMERWAIT:
-							/* FIXME: we should actually wait in this case */
-							render_it = 1;
-							break;
-					}
-				}
-			} else if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_LOOP) {
-				if (!mng_render_next(a->mng)) {
-					/* FIXME: we should actually wait in this case */
-					mng_display_restart(a->mng);
-					mng_render_next(a->mng);
-				}
+			if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_ONCE &&
+				(a->status == F_ANIM_STATUS_DONE)) {
 				render_it = 1;
-			} else { /* we're F_ANIM_PROPORTIONAL */
-				if (mng_render_proportional(a->mng, arg_progress) == MNG_NEEDTIMERWAIT)
+			} else if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL) {
+				int ret = mng_render_proportional(a->mng, arg_progress);
+				if (ret == MNG_NEEDTIMERWAIT || ret == MNG_NOERROR)
 					render_it = 1;
 			}
 
-			if (render_it)
-				mng_display_next(a->mng, target, a->x, a->y);
+			if (render_it) {
+				if (bgnd)
+					mng_display_buf(a->mng, bgnd, target, a->x, a->y, fb_var.xres * bytespp, fb_var.xres * bytespp);
+				else
+					mng_display_buf(a->mng, target, target, a->x, a->y, fb_var.xres * bytespp, fb_var.xres * bytespp);
+			}
 		}
 #endif /* CONFIG_MNG */
-#endif
 #if WANT_TTF
 		else if (o->type == o_text) {
 

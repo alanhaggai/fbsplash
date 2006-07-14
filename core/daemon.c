@@ -79,6 +79,7 @@ void anim_render_frame(anim *a)
 	memset(mng->canvas, 0, mng->canvas_h * mng->canvas_w * mng->canvas_bytes_pp);
 	ret = mng_render_next(a->mng);
 	if (ret == MNG_NOERROR) {
+		printf("no error!\n");
 		if (a->flags & F_ANIM_ONCE) {
 			a->status = F_ANIM_STATUS_DONE;
 		} else {

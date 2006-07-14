@@ -67,7 +67,7 @@ close_fail:
 	return 0;
 }
 
-mng_handle mng_load(char* filename)
+mng_handle mng_load(char* filename, int *width, int *height)
 {
 	mng_handle mngh;
 	mng_anim *mng;
@@ -104,6 +104,8 @@ mng_handle mng_load(char* filename)
 	}
 
 	mng->num_frames = mng_get_totalframes(mngh);
+	*width = mng->canvas_w;
+	*height = mng->canvas_h;
 
 	return mngh;
 
@@ -149,15 +151,18 @@ mng_retcode mng_render_proportional(mng_handle mngh, int progress)
 	mng_anim *mng = mng_get_userdata(mngh);
 	mng_retcode ret = MNG_NOERROR;
 	int frame_num, current_frame;
-	
-	frame_num = ((progress * mng->num_frames) / PROGRESS_MAX) + 1;
-	if (frame_num > mng->num_frames)
-		frame_num = mng->num_frames;
 
+	frame_num = ((progress * mng->num_frames) / PROGRESS_MAX) + 1;
 	if (!mng->displayed_first) {
 		ret = mng_display(mngh);
 		mng->displayed_first = 1;
 	}
+
+	if (mng->num_frames == 0 && mng->displayed_first)
+		return MNG_NOERROR;
+
+	if (frame_num > mng->num_frames)
+		frame_num = mng->num_frames;
 
 	current_frame = mng_get_currentframe(mngh);
 	if (current_frame == frame_num)

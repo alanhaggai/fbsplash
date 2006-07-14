@@ -156,7 +156,7 @@ struct colorf {
 #define F_ANIM_STATUS_DONE 1
 
 typedef struct {
-	int x, y;
+	int x, y, w, h;
 	mng_handle mng;
 	char *svc;
 	enum ESVC type;

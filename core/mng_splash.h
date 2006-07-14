@@ -20,7 +20,7 @@ typedef struct {
 } mng_anim;
 
 /* mng_render.c */
-extern mng_handle mng_load(char *filename);
+extern mng_handle mng_load(char *filename, int *w, int *h);
 extern void mng_done(mng_handle mngh);
 extern mng_retcode mng_render_next(mng_handle mngh);
 extern int mng_display_buf(mng_handle mngh, u8* bg, u8* dest, int x, int y, int stride, int bgstride);
