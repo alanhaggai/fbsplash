@@ -110,7 +110,7 @@ void *thf_anim(void *unused)
 	for (i = anims.head; i != NULL; i = i->next) {
 		ca = i->p;
 
-		if (!(ca->flags & F_ANIM_SILENT) || (ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL)
+		if ((ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL)
 			continue;
 	
 		mng = mng_get_userdata(ca->mng);
@@ -127,7 +127,7 @@ void *thf_anim(void *unused)
 		for (i = anims.head; i != NULL; i = i->next) {
 			ca = i->p;
 	
-			if (!(ca->flags & F_ANIM_SILENT) || (ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL ||
+			if ((ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL ||
 			    ca->status == F_ANIM_STATUS_DONE)
 				continue;
 		
@@ -156,7 +156,7 @@ void *thf_anim(void *unused)
 		for (i = anims.head ; i != NULL; i = i->next) {
 			ca = i->p;
 
-			if (!(ca->flags & F_ANIM_SILENT) || (ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL ||
+			if ((ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL ||
 			    ca->status == F_ANIM_STATUS_DONE || ca == a)
 				continue;
 

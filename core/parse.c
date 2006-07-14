@@ -587,6 +587,7 @@ void parse_anim(char *t)
 	skip_whitespace(&t);
 	canim->flags = 0;
 
+#if 0
 	while (1) {
 		if (!strncmp(t, "verbose", 7)) {
 			canim->flags |= F_ANIM_VERBOSE;
@@ -604,6 +605,7 @@ void parse_anim(char *t)
 
 	if (canim->flags == 0)
 	    canim->flags = F_ANIM_SILENT | F_ANIM_VERBOSE;
+#endif
 
 	if (!strncmp(t, "once", 4)) {
 		canim->flags |= F_ANIM_ONCE;

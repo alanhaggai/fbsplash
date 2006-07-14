@@ -143,8 +143,10 @@ struct colorf {
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
 #include "mng_splash.h"
 
+#if 0
 #define F_ANIM_SILENT		1
 #define F_ANIM_VERBOSE		2
+#endif
 
 #define F_ANIM_METHOD_MASK	12
 #define F_ANIM_ONCE			0
