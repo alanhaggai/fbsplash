@@ -120,9 +120,9 @@ int cmd_set_theme(void **args)
 
 	arg_theme = strdup(args[0]);
 
-	pthread_mutex_lock(&mtx_theme);
+	pthread_mutex_lock(&mtx_paint);
 	reload_theme();
-	pthread_mutex_unlock(&mtx_theme);
+	pthread_mutex_unlock(&mtx_paint);
 
 	return 0;
 }
@@ -237,15 +237,14 @@ int cmd_paint(void **args)
 {
 	char i = 0, ret = 0;
 
-	pthread_mutex_lock(&mtx_theme);
+	pthread_mutex_lock(&mtx_paint);
 	if (!theme_loaded) {
 		ret = -1;
-		goto out2;
+		goto out;
 	}
 
-	pthread_mutex_lock(&mtx_ctty);
 	if (ctty != CTTY_SILENT)
-		goto out1;
+		goto out;
 
 	if (fd_bg) {
 		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
@@ -256,16 +255,14 @@ int cmd_paint(void **args)
 	render_objs('s', (u8*)bg_buffer, FB_SPLASH_IO_ORIG_USER);		
 */
 	
-	pthread_mutex_lock(&mtx_bgbuf);
 	render_objs((u8*)bg_buffer, (u8*)silent_img.data, 's', FB_SPLASH_IO_ORIG_USER);
 
 	if (notify[NOTIFY_PAINT])
 		system(notify[NOTIFY_PAINT]);
 
 	do_paint(fb_mem, bg_buffer);	
-	pthread_mutex_unlock(&mtx_bgbuf);
-out1:	pthread_mutex_unlock(&mtx_ctty);
-out2:	pthread_mutex_unlock(&mtx_theme);
+out:
+	pthread_mutex_unlock(&mtx_paint);
 	return ret;
 }
 
@@ -278,22 +275,20 @@ int cmd_repaint(void **args)
 {
 	char i = 0, ret = 0;
 
-	pthread_mutex_lock(&mtx_theme);
+	pthread_mutex_lock(&mtx_paint);
 	if (!theme_loaded) {
 		ret = -1;
-		goto out2;
+		goto out;
 	}
 
-	pthread_mutex_lock(&mtx_ctty);
 	if (ctty != CTTY_SILENT)
-		goto out1;
+		goto out;
 	
 	if (fd_bg) {
 		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
 		write(fd_bg, &i, 1);
 	}
 	
-	pthread_mutex_lock(&mtx_bgbuf);
 	memcpy(bg_buffer, silent_img.data, fb_var.xres * fb_var.yres * bytespp);
 	render_objs((u8*)bg_buffer, NULL, 's', FB_SPLASH_IO_ORIG_USER);
 
@@ -301,9 +296,8 @@ int cmd_repaint(void **args)
 		system(notify[NOTIFY_REPAINT]);
 	
 	put_img(fb_mem, bg_buffer);
-	pthread_mutex_unlock(&mtx_bgbuf);
-out1:	pthread_mutex_unlock(&mtx_ctty);
-out2:	pthread_mutex_unlock(&mtx_theme);
+out:
+	pthread_mutex_unlock(&mtx_paint);
 
 	return 0;
 }
@@ -350,14 +344,13 @@ int cmd_paint_rect(void **args)
 	rect re;
 	int t, ret = 0;
 
-	pthread_mutex_lock(&mtx_theme);
+	pthread_mutex_lock(&mtx_paint);
 	if (!theme_loaded) {
 		ret = -1;
-		goto out2;
+		goto out;
 	}
-	pthread_mutex_lock(&mtx_ctty);
 	if (ctty != CTTY_SILENT)
-		goto out1;
+		goto out;
 
 	re.x1 = *(int*)args[0];
 	re.x2 = *(int*)args[2];
@@ -400,11 +393,11 @@ int cmd_paint_rect(void **args)
 	if (re.y2 >= fb_var.yres)
 		re.y2 = fb_var.yres-1;
 
-	pthread_mutex_lock(&mtx_bgbuf);
 	do_paint_rect(fb_mem, bg_buffer, &re);
-	pthread_mutex_unlock(&mtx_bgbuf);
-out1:	pthread_mutex_unlock(&mtx_ctty);
-out2:	pthread_mutex_unlock(&mtx_theme);
+
+out:
+
+	pthread_mutex_unlock(&mtx_paint);
 	return 0;
 }
 

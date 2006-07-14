@@ -17,12 +17,10 @@ void switchmon_start(int update);
 
 /* 
  * Current TTY. This effectively identifies the current splash
- * mode. It needs to be protected by a mutex so that we never paint
- * silent mode stuff when the verbose tty is displayed and vice versa.
+ * mode.
  */
 #define CTTY_SILENT 	0
 #define CTTY_VERBOSE	1
-extern pthread_mutex_t mtx_ctty;
 extern int ctty;
 
 /* 
@@ -53,7 +51,7 @@ extern char *evdev;
 /*
  * Framebuffer device and background buffer.
  */
-extern pthread_mutex_t mtx_bgbuf;
+//extern pthread_mutex_t mtx_bgbuf;
 extern int fd_fb, fd_bg;
 extern u8 *fb_mem, *bg_buffer;
 
@@ -61,6 +59,7 @@ extern u8 *fb_mem, *bg_buffer;
  * Threads
  */
 extern pthread_t th_switchmon, th_sighandler, th_anim;
+extern pthread_mutex_t mtx_paint;
 
 /* 
  * Service state structure. 
@@ -74,13 +73,6 @@ typedef struct {
  * Services list.
  */
 extern list svcs;
-
-
-/*
- * A mutex protecting the current theme.
- */
-extern pthread_mutex_t mtx_theme;
-
 
 /* daemon_cmd.c */
 int cmd_update_svc(void **args);

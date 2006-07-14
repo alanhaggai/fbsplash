@@ -28,9 +28,7 @@
 
 /* Threading structures */
 pthread_mutex_t mtx_tty = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mtx_ctty = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mtx_bgbuf = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mtx_theme = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mtx_paint = PTHREAD_MUTEX_INITIALIZER;
 pthread_t th_switchmon, th_sighandler, th_anim;
 
 int ctty = CTTY_VERBOSE;
@@ -79,7 +77,6 @@ void anim_render_frame(anim *a)
 	memset(mng->canvas, 0, mng->canvas_h * mng->canvas_w * mng->canvas_bytes_pp);
 	ret = mng_render_next(a->mng);
 	if (ret == MNG_NOERROR) {
-		printf("no error!\n");
 		if (a->flags & F_ANIM_ONCE) {
 			a->status = F_ANIM_STATUS_DONE;
 		} else {
@@ -88,10 +85,8 @@ void anim_render_frame(anim *a)
 	}		
 
 	if ((ret == MNG_NOERROR || ret == MNG_NEEDTIMERWAIT) && ctty == CTTY_SILENT) {
-		pthread_mutex_lock(&mtx_bgbuf);
 		mng_display_buf(a->mng, bg_buffer, fb_mem, a->x, a->y, 
 				fb_fix.line_length, fb_var.xres * bytespp);
-		pthread_mutex_unlock(&mtx_bgbuf);
 	}
 }
 
@@ -106,8 +101,7 @@ void *thf_anim(void *unused)
 	int delay = 10000;
 
 	/* Render the first frame of all animations on the screen. */
-	pthread_mutex_lock(&mtx_theme);
-	pthread_mutex_lock(&mtx_ctty);
+	pthread_mutex_lock(&mtx_paint);
 	for (i = anims.head; i != NULL; i = i->next) {
 		ca = i->p;
 
@@ -118,12 +112,11 @@ void *thf_anim(void *unused)
 		if (!mng->displayed_first)
 			anim_render_frame(ca);
 	}
-	pthread_mutex_unlock(&mtx_ctty);
-	pthread_mutex_unlock(&mtx_theme);
+	pthread_mutex_unlock(&mtx_paint);
 
 	while(1) {
-		pthread_mutex_lock(&mtx_theme);
 
+		pthread_mutex_lock(&mtx_paint);
 		/* Find the shortest delay. */
 		for (i = anims.head; i != NULL; i = i->next) {
 			ca = i->p;
@@ -139,13 +132,11 @@ void *thf_anim(void *unused)
 				a = ca;
 			}
 		}
-		pthread_mutex_unlock(&mtx_theme);
+		pthread_mutex_unlock(&mtx_paint);
 
 		usleep(delay * 1000);
 
-		pthread_mutex_lock(&mtx_theme);
-		pthread_mutex_lock(&mtx_ctty);
-	
+		pthread_mutex_lock(&mtx_paint);
 		/* Don't paint anything if we aren't in silent mode. */
 		if (ctty != CTTY_SILENT)
 			goto next;
@@ -169,8 +160,7 @@ void *thf_anim(void *unused)
 			}
 		}
 	
-next:	pthread_mutex_unlock(&mtx_ctty);
-		pthread_mutex_unlock(&mtx_theme);
+next:	pthread_mutex_unlock(&mtx_paint);
 		
 		a = NULL;
 		delay = 10000;
@@ -253,7 +243,7 @@ void switch_silent()
 	if (memcmp(&fb_fix, &old_fix, sizeof(struct fb_fix_screeninfo)) || 
 	    memcmp(&fb_var, &old_var, sizeof(struct fb_var_screeninfo))) {
 
-		pthread_mutex_lock(&mtx_theme);
+		pthread_mutex_lock(&mtx_paint);
 
 		if (reload_theme()) {
 			fprintf(stderr, "Failed to (re-)load the '%s' theme.\n", arg_theme);
@@ -269,13 +259,11 @@ void switch_silent()
 			exit(1);	
 		}
 
-		pthread_mutex_lock(&mtx_bgbuf);
 		if (bg_buffer)
 			free(bg_buffer);
 		bgbuffer_alloc();
-		pthread_mutex_unlock(&mtx_bgbuf);
 
-		pthread_mutex_unlock(&mtx_theme);
+		pthread_mutex_unlock(&mtx_paint);
 	}
 
 	cmd_repaint(NULL);
@@ -303,22 +291,22 @@ void* thf_sighandler(void *unusued)
 
 		/* Switch from silent to verbose. */
 		if (sig == SIGUSR1) {
-			pthread_mutex_lock(&mtx_ctty);
-			ctty = CTTY_VERBOSE;
-			pthread_mutex_unlock(&mtx_ctty);
-			
-			pthread_mutex_trylock(&mtx_tty);
+			pthread_mutex_lock(&mtx_paint);
+			pthread_mutex_lock(&mtx_tty);
 			ioctl(fd_tty_s, VT_RELDISP, 1);
 			pthread_mutex_unlock(&mtx_tty);
+
+			ctty = CTTY_VERBOSE;
+			pthread_mutex_unlock(&mtx_paint);
 		/* Switch back to silent. */
 		} else if (sig == SIGUSR2) {
-			pthread_mutex_trylock(&mtx_tty);
+			pthread_mutex_lock(&mtx_paint);
+			pthread_mutex_lock(&mtx_tty);
 			ioctl(fd_tty_s, VT_RELDISP, 2);
 			pthread_mutex_unlock(&mtx_tty);
 
-			pthread_mutex_lock(&mtx_ctty);
 			ctty = CTTY_SILENT;
-			pthread_mutex_unlock(&mtx_ctty);
+			pthread_mutex_unlock(&mtx_paint);
 	
 			switch_silent();
 		} else if (sig == SIGTERM) {
@@ -349,20 +337,25 @@ void* thf_switch_evdev(void *unused)
 				continue;
 
 			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
-//			pthread_mutex_lock(&mtx_ctty);
+			pthread_mutex_lock(&mtx_paint);
 			if (ctty == CTTY_SILENT) {
 				h = tty_v;
 			} else {
 				h = tty_s;
 			}
+			pthread_mutex_unlock(&mtx_paint);
+			pthread_setcancelstate(oldstate, NULL);
 
 			/* Switch to the new tty. This ioctl has to be done on
 			 * the silent tty. Sometimes init will mess with the 
 			 * settings of the verbose console which will prevent
-			 * console switching from working properly. */
+			 * console switching from working properly. 
+			 *
+			 * Don't worry about fd_tty_s not being protected by a
+			 * mutex -- this thread is always killed before any changes
+			 * are made to fd_tty_s.
+			 */
 			ioctl(fd_tty_s, VT_ACTIVATE, h);
-//			pthread_mutex_unlock(&mtx_ctty);
-			pthread_setcancelstate(oldstate, NULL);
 		}
 	}
 
@@ -373,6 +366,9 @@ void* thf_switch_evdev(void *unused)
  * Silent TTY monitor thread.
  *
  * This thread listens for F2 keypresses on the silent TTY.
+ * We don't have to worry about fd_tty_s not being protected
+ * by the mtx_tty mutex, since this thread is killed before
+ * a new silent tty is opened.
  */
 void* thf_switch_ttymon(void *unused)
 {
@@ -388,21 +384,19 @@ void* thf_switch_ttymon(void *unused)
 		read(fd_tty_s, &ret, 1);
 
 		if (ret == '\x1b') {
-			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
-			pthread_mutex_lock(&mtx_tty);
 			fcntl(fd_tty_s, F_SETFL, flags | O_NDELAY);
 			
 			/* FIXME: is <F2> always 1b5b5b42? */
 			if (read(fd_tty_s, &t, 3) == 3 && 
 			    ((endianess == little && t == 0x425b5b) || 
 			     (endianess == big && 0x5b5b4200))) {
-				pthread_mutex_unlock(&mtx_tty);
+				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
+				pthread_mutex_lock(&mtx_tty);
 				ioctl(fd_tty_s, VT_ACTIVATE, tty_v);
-				ioctl(fd_tty_s, VT_WAITACTIVE, tty_v);
-			} else {
 				pthread_mutex_unlock(&mtx_tty);
+				pthread_setcancelstate(oldstate, NULL);
+//				ioctl(fd_tty_s, VT_WAITACTIVE, tty_v);
 			}
-			pthread_setcancelstate(oldstate, NULL);
 		}
 	}
 
@@ -576,7 +570,6 @@ void bgbuffer_alloc()
 /* 
  * Load a new theme. 
  *
- * Called with mtx_theme held.
  */
 int reload_theme(void)
 {
@@ -702,7 +695,7 @@ void daemon_start()
 	sigaddset(&sigset, SIGUSR2);
 	sigaddset(&sigset, SIGTERM);
 	sigprocmask(SIG_BLOCK, &sigset, NULL);
-	pthread_mutex_lock(&mtx_ctty);
+	pthread_mutex_lock(&mtx_paint);
 	pthread_create(&th_sighandler, NULL, &thf_sighandler, NULL);
 
 	/* Check which TTY is active */
@@ -713,7 +706,7 @@ void daemon_start()
 			ctty = CTTY_VERBOSE;
 		}
 	}
-	pthread_mutex_unlock(&mtx_ctty);
+	pthread_mutex_unlock(&mtx_paint);
 
 #ifdef CONFIG_MNG
 	/* Start the animation thread */
