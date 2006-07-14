@@ -9,52 +9,51 @@ make it possible to use userspace programs very soon after the system starts
 booting. Initramfs is described in detail in:
 <kernel>/Documentation/early-userspace/
 
-An initramfs image is basically a gzipped cpio archive. The contents of 
-this archive are used by the kernel to populate a temporary root filesystem 
+An initramfs image is basically a gzipped cpio archive. The contents of
+this archive are used by the kernel to populate a temporary root filesystem
 which is used before the main root filesystem is mounted.
 
-An initramfs image can be either compiled directly into the kernel, or used 
-as an initrd. 
+An initramfs image can be either compiled directly into the kernel, or used
+as an initrd.
 
-To make your initramfs useful for fbsplash, you need to put two things into 
-it: the splash helper and a theme (config files + pics). The splash helper 
-should be located at /sbin/splash_helper, as usual. You also have to make 
-sure that the appropriate mount points exist in the image (/sys, /dev, 
-/dev/vc). If you want to save some memory and you aren't planning to use 
-all available resolutions, you'd probably want to copy the config file and 
+To make your initramfs useful for fbsplash, you need to put two things into
+it: the splash helper and a theme (config files + pics). The splash helper
+should be located at /sbin/splash_helper, as usual. You also have to make
+sure that the appropriate mount points exist in the image (/sys, /dev).
+If you want to save some memory and you aren't planning to use
+all available resolutions, you'd probably want to copy the config file and
 the background pics only for the one resolution you use.
 
-If you're making your own initramfs images, you already know what to do. If 
-you aren't, splashutils come with a script that will make your life a little
-easier. The script is called splash_geninitramfs. It has options to 
-generate (-g), append (-a) or copy (-c) the necessary files where they should 
-be. Type `splash_geninitramfs --help` for more info. You will usually want 
+If you're making your own initramfs images, you already know what to do. If
+you aren't, splashutils comes with a script that will make your life a little
+easier. The script is called splash_geninitramfs. It has options to
+generate (-g), append (-a) or copy (-c) the necessary files where they should
+be. Type `splash_geninitramfs --help` for more info. You will usually want
 to use it in a way similar to the one presented below:
 
 # splash_geninitramfs -g /boot/initrd-fbsplash -r 1024x768 default
 
 This will generate an initramfs with the theme 'default' for resolution
-1024x768. 
+1024x768.
 
 If you want to use the created initramfs image as an initrd, all you have
 to do then is make sure your kernel gets a initrd=/boot/initrd-fbsplash
 parameter.
 
-If you want to compile the initramfs image into the kernel, you should 
+If you want to compile the initramfs image into the kernel, you should
 place it in /usr/src/<kernel>/usr/initramfs_data.cpio.gz and rebuild
 your kernel (make bzImage). Doing a `touch usr/initramfs_data.cpio.gz`
-before rebuild the bzImage might be sometimes necessary to prevent the
-kernel from overwriting your initramfs image with its own basic default
-image.
+before rebuilding the bzImage might be sometimes necessary to prevent the
+kernel from overwriting your initramfs image with its own default image.
 
 2. What about the good old initrds?
 
-Initrds aren't of much use for fbsplash as their contents aren't directly 
-accessible (ie. mounted) at the time fbcon is initialized. 
+Initrds aren't of much use for fbsplash as their contents aren't directly
+accessible (ie. mounted) at the time fbcon is initialized.
 
 It's theoretically possible to store the theme data in a classical initrd
-and still make use of it, though. You would have to create a wrapper 
-/sbin/splash_helper script/program that would mount initrd.image, copy 
-the theme data to the rootfs and then call the real splash_helper. I
+and still make use of it, though. You would have to create a wrapper
+/sbin/splash_helper script/program that would mount initrd.image, copy
+the theme data to the rootfs and then call the real splash_helper. It
 hasn't been tried so far, but it should work.
 

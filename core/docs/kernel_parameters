@@ -1,4 +1,4 @@
-To make sure the silent mode works correctly with this version of 
+To make sure the silent mode works correctly with this version of
 splashutils, additional kernel command line arguments are required.
 
 It is required that you add either 'quiet CONSOLE=/dev/tty1' or
@@ -8,8 +8,8 @@ It is required that you add either 'quiet CONSOLE=/dev/tty1' or
 'CONSOLE=/dev/tty1' will redirect all initscript messages to tty1.
 'console=tty1' will redirect both kernel and initscript messages to tty1.
 
-It is also possible to override some splash parameters set up in the 
-system configuration files with options passed on the kernel command 
+It is also possible to override some splash parameters set up in the
+system configuration files with options passed on the kernel command
 line. All splash options are separated by commas and they should form
 a continuous configuration string. The following options are recognized:
 
@@ -17,31 +17,43 @@ a continuous configuration string. The following options are recognized:
  - verbose    - start the system with a verbose splash screen
  - silent     - start the system in the 'silent' mode (all messages from
                 the kernel and from the initscripts are covered by a picture
-	        and thus hidden from the user)
+                and thus hidden from the user)
  - fadein     - use a 'fade from black' effect to display the silent image
  - theme:foo  - use theme 'foo'
- - tty:n      - use the n-th tty as the silent tty. Default silent tty is 
+ - tty:n      - use the n-th tty as the silent tty. Default silent tty is
                 tty8
  - kdgraphics - run in KDGRAPHICS mode. Use of this option in discouraged
-                but might be necessary in case of some kernel drivers that
-		display messages on the foreground tty.
+                but might be necessary when some kernel drivers try to
+                display messages on the foreground tty despite the 'quiet'
+                option.
+
+Additionally, the following options may be recognized, if the system
+scripts provide support for them:
+
+ - profile    - save splash profiling information. The data saved in a
+                splash profile file can be used to replay the boot sequence
+                using the splash_manager script.
 
 A sample splash kernel command line setting:
   splash=silent,fadein,theme:linuxrocks,tty:12
- 
+
 A sample full kernel command line:
-  root=/dev/hda5 video=vesafb:1024x768-32@85 splash=silent,fadein,theme:linuxrocks,tty:12 console=tty1
+  root=/dev/hda5 video=vesafb:1024x768-32@85 
+  splash=silent,fadein,theme:linuxrocks,tty:12 console=tty1
 
 Please note that the default splash mode is 'off', so you will need to
 explicitly specify 'silent' or 'verbose' on the kernel command line in
 order to get the splash working.
 
-The splash programs recognize the following additional kernel command line
-parameters:
+The splash helper recognizes the following additional environment
+variables:
 
- BOOT_MSG="message" - use 'message' for the initial greeting (instead of 
+ BOOT_MSG="message" - use 'message' for the initial greeting (instead of
                       'Initializing the kernel...') for the silent splash.
 
+ PROGRESS="xx" - set the initial progress variable to 'xx' instead of '0'.
+
+The BOOT_MSG option can also be given on the kernel command line.
 Note that these additional parameters are never specified as a part of the
 splash= config string. The correct way of using them is:
 

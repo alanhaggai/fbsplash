@@ -1,17 +1,17 @@
 splashutils provide almost complete bootsplash compatibility when it comes to
 the theme files. It's possible to use old bootsplash themes with fbsplash/
-splashutils with little or no work (usually the picture paths will need some 
-adjusting and the config files will have to be renamed). 
+splashutils with little or no work (usually the picture paths will need some
+adjusting and the config files will have to be renamed).
 
 Note that some settings from the old themes are ignored with fbsplash. Please
-have a look at a file describing the splashutils theme format to see which 
-ones are supported.
+have a look at the document describing the splashutils theme format to see
+which ones are supported.
 
-To make the process of converting files easier, a utility script called 
+To make the process of converting files easier, a utility script called
 bootsplash2fbsplash is provided as a part of the splashutils package.
 
 Other parts of the system, for example the /proc/splash interface, have either
-been changed or are completely gone. With some tweaking it should be possible 
+been changed or are completely gone. With some tweaking it should be possible
 to get scripts designed for bootsplash working with splashutils.
 
 The most important things that have changed:
