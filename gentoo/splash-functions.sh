@@ -58,7 +58,11 @@ splash() {
 		fi
 	fi
 
-	splash_profile "pre $*"
+	if [[ ${event} == "rc_init" || ${event} == "rc_exit" ]]; then
+		splash_profile "pre $* ${RUNLEVEL}"
+	else
+		splash_profile "pre $*"
+	fi
 
 	# Handle -pre event hooks
 	if [[ -x "/etc/splash/${SPLASH_THEME}/scripts/${event}-pre" ]]; then
@@ -72,12 +76,16 @@ splash() {
 		svc_stopped)		splash_svc "$2" "$3" "stop";;
 		svc_input_begin)	splash_input_begin "$2";;
 		svc_input_end)		splash_input_end "$2";;
-		rc_init) 			splash_init "$2";;
-		rc_exit) 			splash_exit;;
+		rc_init) 			splash_init "$2" "${RUNLEVEL}";;
+		rc_exit) 			splash_exit "${RUNLEVEL}";;
 		critical) 			splash_verbose;;
 	esac
 
-	splash_profile "post $*"
+	if [[ ${event} == "rc_init" || ${event} == "rc_exit" ]]; then
+		splash_profile "post $* ${RUNLEVEL}"
+	else
+		splash_profile "post $*"
+	fi
 
 	# Handle -post event hooks
 	if [[ -x "/etc/splash/${SPLASH_THEME}/scripts/${event}-post" ]]; then
