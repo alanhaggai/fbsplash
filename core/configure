@@ -1,0 +1,149 @@
+#!/bin/bash
+#
+# ./configure -- A very simple configure script for splashutils.
+#
+# (c) 2006, Michal Januszewski <spock@gentoo.org>
+#
+# In time, it will be replaced by a fully-fledged version.
+#
+
+copt_ttf=CONFIG_TTF
+copt_ttf_desc="Enable support for truetype fonts"
+copt_ttf_type="bool"
+copt_ttf_def=y
+
+copt_ttfkern=CONFIG_TTF_KERNEL
+copt_ttfkern_desc="Enable support for truetype fonts in the kernel helper"
+copt_ttfkern_type="bool"
+copt_ttfkern_def=y
+
+copt_png=CONFIG_PNG
+copt_png_desc="Enable support for PNG images"
+copt_png_type="bool"
+copt_png_def=y
+
+copt_mng=CONFIG_MNG
+copt_mng_desc="Enable support for MNG animations"
+copt_mng_type="bool"
+copt_mng_def=n
+
+copt_fbsplash=CONFIG_FBSPLASH
+copt_fbsplash_desc="Enable support for fbsplash"
+copt_fbsplash_type="bool"
+copt_fbsplash_def=y
+
+copt_themedir=THEME_DIR
+copt_themedir_desc="Specify where to look for the theme files"
+copt_themedir_type="string"
+copt_themedir_def="/etc/splash"
+
+copt_fifo=SPLASH_FIFO
+copt_fifo_desc="Specify where the splash FIFO should be located"
+copt_fifo_type="string"
+copt_fifo_def="/lib/splash/cache/.splash"
+
+options=`set | grep '^copt_' | sed -re 's/copt_([^_=]+)[_=].*/\1/' | uniq`
+
+write_conf()
+{
+	echo -n > config.h
+
+	for i in ${options} ; do
+		eval vval=\$copt_$i\_val
+		eval vtype=\$copt_$i\_type
+		eval vname=\$copt_$i
+
+		if [[ "$vtype" == "bool" ]]; then
+			if [[ "$vval" == "y" ]]; then
+				echo "#define $vname" >> config.h
+			else
+				echo "#undef $vname" >> config.h
+			fi
+		else
+			echo "#define $vname \"$vval\"" >> config.h
+		fi
+	done
+
+	echo "config.h successfully created."
+	echo "You can run \`make\` now."
+}
+
+usage()
+{
+	cat <<EOTB
+splashutils configuration script
+
+Please use the following options to configure splashutils.
+EOTB
+    printf "  %-20s %-s\n\n" --default "Use a default splashutils configuration"
+
+	for i in ${options} ; do
+		eval vtype=\$copt_$i\_type
+		eval vdesc=\$copt_$i\_desc
+		eval vdef=\$copt_$i\_def
+
+		if [[ ${vtype} == "string" ]]; then
+			with="--with-${i}=VAL"
+		else
+			with="--with-${i}"
+		fi
+
+#	if [[ ${vtype} == "bool" ]]; then
+			vdesc="${vdesc} (default: $vdef)"
+#	fi
+
+		printf "  %-20s %-s\n" ${with} "${vdesc}"
+	done
+}
+
+if [[ $# == 0 ]]; then
+	usage
+	exit
+fi
+
+for i in ${options} ; do
+	eval copt_${i}_val="\$copt_${i}_def"
+done
+
+for i in $* ; do
+	if [[ "$i" == "--help" ]]; then
+		usage
+		exit
+	elif [[ "$i" == "--default" ]]; then
+		write_conf
+		exit
+	fi
+
+	j=${i//--with-}
+	if [[ "$j" != "$i" ]]; then
+		with=y
+	else
+		j=${i//--without-}
+		if [[ "$j" != "$i" ]]; then
+			with=n
+		else
+			usage
+			exit
+		fi
+	fi
+
+	optval=${j#*=}
+	optname=${j%=*}
+
+	eval t=\$copt_${optname}_val
+	if [[ "x$t" == "x" ]]; then
+		echo "Unrecognized setting ${optname}." 1>&2
+		exit
+	fi
+
+	eval vtype=\$copt_${optname}_type
+	if [[ "$vtype" == "bool" ]]; then
+		eval copt_${optname}_val=${with}
+	else
+		eval copt_${optname}_val=${optval}
+	fi
+done
+
+write_conf
+exit
+

@@ -1,5 +1,6 @@
 # This is where object files go
 objs
+config.h
 
 libs/libpng-1.2.8/Makefile
 libs/zlib-1.2.3/Makefile

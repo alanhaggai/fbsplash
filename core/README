@@ -1,64 +1,97 @@
 
- splashutils -- userspace utilities for the framebuffer splash
+splashutils -- userspace utilities for the framebuffer splash screen
+--------------------------------------------------------------------
 
- Prerequisities (when building splashutils with fbsplash support):
-  - you have to be running a 2.6 kernel built with CONFIG_FB_SPLASH enabled  
-  - you have to have this kernel's sources available
-  
- Installation:
- 
-  1) Create a symlink 'linux' pointing to your kernel sources. In common
-     cases `ln -s /usr/src/linux linux` should be enough. 
-  2) Choose configuration options. This step is optional, the defaults should be
-     OK as long as you're not making a special config. You can:
-     - disable PNG support (config.h)
-     - disable TTF support (config.h)
-     - change the themes directory (config.h)
-     - dynamically link to klibc (Makefile, K_SHARED) 
-       This is not recommended, the space gain will be minimal and you may
-       create yourself some problems this way. Note that with the current
-       versions of klibc, you have to put the exact same file you used during
-       compile time into the kernel initramfs image. This is means, that if
-       you're using another version of klibc than the one supplied within this
-       package, you'll have to link it in ./libs and change LIBCSRC in the
-       Makefile to point to these sources
-     - enable debugging support (Makefile, DEBUG)
-     - enable verbose output (Makefile, QUIET)
-  3) make
-  4) make install
+This package provides a set of programs and scripts that can be used
+to provide a visually attractive environment during system boot-up,
+reboot and shutdown.
 
- After a successful installation you'll have the following programs installed on
- your system:
+For installation instructions, have a look at the INSTALL file.
 
- /sbin/splash_helper - the kernel helper, it's not meant to be used directly by 
-                       the user
- /sbin/splash_util   - the fbsplash control utility, use this program to control
-                       the fbsplash behaviour; this program is meant to be used
-                       directly by the user and by the system scripts (which
-                       will be the case if your distro's initscripts have
-                       support for a boot-up progressbar, etc).
- /usr/sbin/splash_geninitramfs - an utility to make the process of creating
-                                 initramfs images for fbsplash a little easier
+Here's a short description a provided programs, scripts and documents:
 
- Usage:
+1. Programs
 
- First you will have to get some fbsplash themes and place them in /etc/splash.
- Once you have done that, you can use splash_util to enable fbsplash on some of
- your virtual consoles. For example, to enable fbsplash on the first console
- and make it use the theme 'tux', you should use:
+   splash_util
+   -----------
+   The core application of this package. Provides support for the silent
+   splash mode. Can be used as a command-line tool or run in daemon mode.
 
-  # splash_util --vc=1 --theme=tux --cmd=setcfg
-  # splash_util --vc=1 --theme=tux --cmd=setpic
-  # splash_util --vc=1 --cmd=on
+   splash_helper
+   -------------
+   A simple a small program run directly by the kernel to:
+    - initialize the silent mode during early stages of the boot-up process
+	- provide the kernel with background images and theme configuration
+	  for the verbose splash mode.
 
- For information about themes, making fbsplash work in the early stages of
- boot-up and other topics please refer to files in the docs/ subdirectory.
+   This program is only of any use if the kernel has been patched with
+   the 'fbsplash' patch. The patch can be downloaded from the splashutils
+   webpage.
 
- For technical documentation on the kernel<->userspace fbsplash interface
- please refer to <kernel sources>/Documentation/fb/splash.txt.
+   For technical documentation on the kernel<->userspace fbsplash interface
+   please refer to <kernel sources>/Documentation/fb/splash.txt.
 
- Any comments, suggestions and bug-reports are appreciated.
+2. Scripts
 
-Michal Januszewski
-<spock@gentoo.org>
+   bootsplash2fbsplash
+   -------------------
+   Converts bootsplash theme files to a format acceptable by splashutils.
+   Might not always work correctly and some manual adjustment of the
+   resulting config files might be necessary.
+
+   splash_geninitramfs
+   -------------------
+   Generates initramfs images with data necessary to initialize verbose
+   and silent splash during early boot-up.
+
+   splash_resize
+   -------------
+   Automatically generates theme config files for new resolutions. Might
+   not always work correctly and some manual adjustment of the resulting
+   config files might be necssary.
+
+   splash_manager
+   --------------
+   Performs various splash-related tasks in an user-friendly way. It
+   allows the user to easily set and test themes, take screenshots
+   of silent and verbose splash screens, and to replay recorded boot
+   sequences.
+
+3. Documentation
+
+   docs/bootsplash_compatibility
+   -----------------------------
+   A few notes about this package's compatibility with bootsplash.
+
+   docs/daemon
+   -----------
+   Description of the splash daemon communication protocol. Probably only
+   useful to people developing support scripts for different Linux 
+   distributions.
+
+   docs/early_bootup
+   -----------------
+   A short explanation of the early-userspace concept and some info
+   about creation and usega of splash initramfs images.
+
+   docs/kernel_parameters
+   ----------------------
+   A list of recognized kernel parameters.
+
+   docs/quickstart
+   ---------------
+   A very simplified into to splashutils for people who REALLY don't have
+   time to have a look at the rest of the documentation.
+
+   docs/theme_format
+   -----------------
+   Theme format specification. Useful for theme developers.
+
+Any comments, suggestions and bug-reports are appreciated.
+
+Project homepage:
+  http://dev.gentoo.org/~spock/projects/gensplash/
+
+-- 
+  Michal Januszewski <spock@gentoo.org>
 

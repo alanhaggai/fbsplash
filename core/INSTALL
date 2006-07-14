@@ -1,0 +1,38 @@
+Installation instructions
+-------------------------
+
+Before you begin compiling splashutils, please make sure that klibc
+1.0.14 or newer is installed on your system.
+
+If you have downloaded a 'lite' version of splashutils, you'll have
+to manually download the sourcecode of a few helper libraries and then
+extract it to the 'libs/' subdirectory. Depending on selected supported
+features these will be:
+
+ * jpeglib
+ * png support: zlib, libpng
+ * ttf support: freetype2
+
+After you've made sure that your system is properly configured,
+you can run the ./configure script to select various optional
+featues. Use `./configure --help` to see what options are available.
+Once this is done, you should proceed with:
+
+ # make
+ # make install
+
+The following make options might be useful:
+
+QUIET=false
+ Makes the make output more verbose; especially useful in case 
+ of compilation issues.
+
+JPEGSRC, LPNGSRC, ZLIBSRC, FT22SRC
+ Use these options to specify where the sourcecode for a given
+ library is located (when you're using the 'lite' splashutils 
+ version).
+
+ Example:
+ #  make JPEGSRC=libs/jpeg-6b ZLIBSRC=libs/zlib-1.2.3 \
+         LPNGSRC=libs/libpng-1.2.8
+
