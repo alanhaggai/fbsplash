@@ -1,71 +1,73 @@
 splashutils recognizes the following directives in the config files in
 /etc/splash:
 
-IMPORTANT NOTE: all coordinates are counted from 0 to xres/yres.
+NOTE: Unless otherwise stated, all coordinates are specified in the screen
+coordinate system (ie. the top left pixel is at (0,0)) and are given in
+pixels.
 
-o jpeg=<path>
-  Full path to the JPG background image for verbose mode.
+Verbose mode settings
+---------------------
 
-o pic=<path>
+* pic=<path>
   Full path to the JPG/PNG background image for verbose mode.
 
-o silentjpeg=<path>
-  Full path to the JPG background image for silent mode.
-
-o silentpic=<path>
-  Full path to the JPG/PNG background image for silent mode.
-
-o pic256=<path>
-  Full path to the PNG background image for verbose splash mode and 8bpp
-  framebuffer modes.
+* pic256=<path>
+  Full path to the PNG background image for verbose splash mode and 8 bpp
+  video modes.
 
   NOTES:
   - The image can have a maximum of 240 colors. 16 colors are taken by fbcon
     and cannot be used in the picture.
 
-o silentpic256=<path>
-  Full path to the PNG background image for silent splash mode and 8bpp
-  framebuffer modes.
+* bgcolor=<n>
+  Background color which is to be treated as transparent by fbcon. Usually 0.
+
+* tx=<n>
+  The x coordinate of the upper left corner of the text window.
+
+* ty=<n>
+  The y coordinate of the upper left corner of the text window.
+
+* tw=<n>
+  The width of the text window. n cannot be greater than horizontal resolution.
+ 
+* th=<n>
+  The height of the text window. n cannot be greater than vertical resolution.
+
+Silent mode settings
+--------------------
+
+* silentpic=<path>
+  Full path to the JPG/PNG background image for silent mode.
+
+* silentpic256=<path>
+  Full path to the PNG background image for silent splash mode and 8 bpp
+  video modes.
 
   NOTES:
   - The image can have a maximum of 256 colors.
 
-o bgcolor=<n>
-  Background color that is to be treated as transparent by fbcon. Usually 0.
+* text_x=<n>
+  The x coordinate of the main system message.
 
-o tx=<n>
-  The x coordinate of the upper left corner of the text window.
+* text_y=<n>
+  The y coordinate of the main system message.
 
-o ty=<n>
-  The y coordinate of the upper left corner of the text window.
+* text_size=<n>
+  The size of the font used to render the main system message.
 
-o tw=<n>
-  The width of the text window. n cannot be greater than horizontal resolution.
-
-o th=<n>
-  The height of the text window. n cannot be greater than vertical resolution.
-
-o text_x=<n>
-  The x coordinate of the main text message.
-
-o text_y=<n>
-  The y coordinate of the main text message.
-
-o text_size=<n>
-  The size of the font used to render the main text message.
-
-o text_color=<color>
-  The color of the main text message either in [0x|#]rrggbb or in 
+* text_color=<color>
+  The color of the main system message either in [0x|#]rrggbb or in
   [0x|#]rrggbbaa format.
 
-o text_font=<file>
-  A path to the TTF font with which the main text message will be rendered.
+* text_font=<file>
+  A path to the TTF font with which the main system message will be rendered.
   The path can be either:
-   - an absolute path, starting with '/'
-   - a path relative to THEME_DIR (eg. /etc/splash)
-   - a path relative to THEME_DIR/<theme_name> (eg. /etc/splash/default)
+   - an absolute path, starting with '/',
+   - a path relative to THEME_DIR (eg. /etc/splash),
+   - a path relative to THEME_DIR/<theme_name> (eg. /etc/splash/default),
 
-o text [flags] <font> [style] <size> <x> [left|middle|right] 
+* text [flags] <font> [style] <size> <x> [left|middle|right]
   <y> [top|middle|bottom] <color> [exec|eval] "text"
 
   Draws an UTF8-encoded text string somewhere on the screen.
@@ -76,7 +78,7 @@ o text [flags] <font> [style] <size> <x> [left|middle|right]
 
   If no flags are specified, the text is rendered in both modes.
 
-  'font' is the name of the file with a TTF font. The path interpreted in
+  'font' is the name of the file with a TTF font. The path is interpreted in
   the same way as in the case of the 'text_font' configuration directive.
 
   'style' can be used to select a bold/italic/underlined form. The style
@@ -127,16 +129,16 @@ o text [flags] <font> [style] <size> <x> [left|middle|right]
 
   The 'text' argument has to be enclosed in double quotes.
 
-o box [flags] <x0> <y0> <x1> <y1> <color1> [color2 color3 color4]
-  Draws a box on the image. 
+* box [flags] <x0> <y0> <x1> <y1> <color1> [color2 color3 color4]
+  Draws a box on the screen.
 
   Flags:
-  silent - The box is drawn only in silent mode. If a box doesn't have 
+  silent - The box is drawn only in silent mode. If a box doesn't have
            this flag set, it's drawn only in verbose mode.
-  noover - This stands for no-overpaint. Boxes with this flag set are 
+  noover - This stands for no-overpaint. Boxes with this flag set are
            painted only when progress == 0 or the repaint command is used.
-  inter  - The box will be interpolated with the following one, based 
-           on the value of progress.
+  inter  - The box will be interpolated with the following one, based
+           on the value of the progress variable.
 
   x0, y0 - coordinates of the upper left corner of the box
   x1, y1 - coordinates of the lower right corner of the box
@@ -144,7 +146,7 @@ o box [flags] <x0> <y0> <x1> <y1> <color1> [color2 color3 color4]
   Colors are specified in one of the following formats:
   - #rrggbb
   - #rrggbbaa
-  aa = alpha, 00 - translucent, 255 - solid
+  aa = alpha, 00 - translucent, ff - solid
 
   If only color1 is specified, the box is filled with the color.
   If all four colors are specified, then:
@@ -156,9 +158,9 @@ o box [flags] <x0> <y0> <x1> <y1> <color1> [color2 color3 color4]
 
   and the box is filled with a gradient formed by these colors.
 
-o icon <path> <x> <y> [crop from to] [state service]
-  Draws an icon (a PNG image) at coordinates x, y in the screen
-  coordinate system, based on the current state of a service.
+* icon <path> <x> <y> [crop from to] [state service]
+  Draws an icon (a PNG image) at coordinates x, y, based on
+  the current state of a service.
 
   If the 'crop' keyword is used, the icon will be cropped by a
   rectangle interpolated between 'from' and 'to', based on the
@@ -177,12 +179,12 @@ o icon <path> <x> <y> [crop from to] [state service]
   svc_start_failed,     svc_stop_failed,
   svc_start,            svc_stop,
 
-  'service' is (surprise, surprise!) the name of the service.
+  'service' is the name of the system service.
 
   An icon will be rendered on the screen only if the service name
   is found in a environment variable appropriate for the selected
   state or if the state has been set through an appropriate splash
-  daemon command. The list of variable names corresponding to the 
+  daemon command. The list of variable names corresponding to the
   recognized states follows:
   SPL_SVC_INACTIVE_START    SPL_SVC_INACTIVE_STOP
   SPL_SVC_STARTED           SPL_SVC_STOPPED
@@ -204,7 +206,7 @@ o icon <path> <x> <y> [crop from to] [state service]
       image will be extended downward, until it reaches the
       full size of 50 x 200 pixels.
 
-o rect <attr> <x0> <y0> <x1> <y1>
+* rect <attr> <x0> <y0> <x1> <y1>
   Describes a rectangular area on the screen with some special
   attribute 'attr'.
 
@@ -214,14 +216,35 @@ o rect <attr> <x0> <y0> <x1> <y1>
             is called with the 'paint' command (with 'repaint', the
             whole screen is repainted)
 
-o anim [verbose|silent] <once|loop|proportional> <path> <x> <y> [state service]
-  FIXME
+* anim <once|loop|proportional> <path> <x> <y> [state service]
 
-  All animations are displayed on a separate 'layer', which is located
-  above all other objects. An animation will always cover icons, boxes,
-  etc.
+  Displays a MNG animation on the silent splash screen at (x,y).
 
-  Overlapping animations should be avoided, as it may lead to
-  unexpected results (flickering).
+  'once' -- the animation is displayed only once. After it reaches its
+            last frame, it is displayed just like an icon.
+
+  'loop' -- the animation is displayed in an infinite loop.
+
+  'proportional' -- the animation progress is coupled with the progress
+                    variable. Note that in this case, the animation
+                    isn't smooth and only single frames are displayed.
+
+  WARNING: Animation support in splashutils isn't complete yet and the
+  following is subject to change in future versions of the program.
+
+  Currently, all animations are displayed on a separate 'layer' located
+  above all other objects. An animation object will always cover icons,
+  boxes, etc. Overlapping animations with other objects should currently
+  be avoid, as it may lead to unexpected flickering.
+
+Deprecated settings
+-------------------
+* jpeg=<path>
+  Full path to the JPG background image for verbose mode.
+  (Use pic=<path> instead.)
+
+* silentjpeg=<path>
+  Full path to the JPG background image for silent mode.
+  (Use silentpic=<path> instead.)
 
 
