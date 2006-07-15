@@ -41,13 +41,14 @@ spl_pidfile="${spl_cachedir}/daemon.pid"
 #  critical
 splash() {
 	local event="$1"
+	shift
 	splash_setup
 
 	[[ ${SPLASH_MODE_REQ} == "off" ]] && return
 
 	# Prepare the cache here -- rc_init-pre might want to use it
 	if [[ ${event} == "rc_init" ]]; then
-		if [[ ${RUNLEVEL} == "S" && "$2" == "sysinit" ]]; then
+		if [[ ${RUNLEVEL} == "S" && "$1" == "sysinit" ]]; then
 			splash_cache_prep 'start' || return
 		elif [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
 			# Check if the splash cachedir is mounted readonly. If it is,
@@ -58,38 +59,36 @@ splash() {
 		fi
 	fi
 
+	local args=($@)
+	
 	if [[ ${event} == "rc_init" || ${event} == "rc_exit" ]]; then
-		splash_profile "pre $* ${RUNLEVEL}"
-	else
-		splash_profile "pre $*"
+		args[${#args[*]}]="${RUNLEVEL}"
 	fi
+
+	splash_profile "pre ${event} ${args[*]}"
 
 	# Handle -pre event hooks
 	if [[ -x "/etc/splash/${SPLASH_THEME}/scripts/${event}-pre" ]]; then
-		/etc/splash/${SPLASH_THEME}/scripts/${event}-pre "$2" "$3"
+		/etc/splash/${SPLASH_THEME}/scripts/${event}-pre "${args[@]}"
 	fi
 			
 	case "$event" in
-		svc_start)			splash_svc_start "$2";;
-		svc_stop)			splash_svc_stop "$2";;
-		svc_started) 		splash_svc "$2" "$3" "start";;
-		svc_stopped)		splash_svc "$2" "$3" "stop";;
-		svc_input_begin)	splash_input_begin "$2";;
-		svc_input_end)		splash_input_end "$2";;
-		rc_init) 			splash_init "$2" "${RUNLEVEL}";;
+		svc_start)			splash_svc_start "$1";;
+		svc_stop)			splash_svc_stop "$1";;
+		svc_started) 		splash_svc "$1" "$2" "start";;
+		svc_stopped)		splash_svc "$1" "$2" "stop";;
+		svc_input_begin)	splash_input_begin "$1";;
+		svc_input_end)		splash_input_end "$1";;
+		rc_init) 			splash_init "$1" "${RUNLEVEL}";;
 		rc_exit) 			splash_exit "${RUNLEVEL}";;
 		critical) 			splash_verbose;;
 	esac
 
-	if [[ ${event} == "rc_init" || ${event} == "rc_exit" ]]; then
-		splash_profile "post $* ${RUNLEVEL}"
-	else
-		splash_profile "post $*"
-	fi
+	splash_profile "post ${event} ${args[*]}"
 
 	# Handle -post event hooks
 	if [[ -x "/etc/splash/${SPLASH_THEME}/scripts/${event}-post" ]]; then
-		/etc/splash/${SPLASH_THEME}/scripts/${event}-post "$2" "$3"
+		/etc/splash/${SPLASH_THEME}/scripts/${event}-post "${args[@]}"
 	fi
 	
 	return 0
