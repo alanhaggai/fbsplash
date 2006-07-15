@@ -9,8 +9,15 @@
  *
  */
 
+/* 
+ * HACK WARNING: 
+ * This is necessary to get FD_SET and FD_ZERO on platforms other than x86. 
+ */
+
 #ifdef TARGET_KERNEL
+#define __KERNEL__
 #include <linux/posix_types.h>
+#undef __KERNEL__
 #endif
 
 #include <stdio.h>
