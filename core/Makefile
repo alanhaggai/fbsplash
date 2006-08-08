@@ -183,7 +183,7 @@ jpeglib:
 		$(ROOT)/$(JPEGSRC)/configure > $(OUTPUT) ; \
 		echo "#define NO_GETENV 1" >> jconfig.h ; \
 		sed -i "s#CFLAGS=.*#CFLAGS=$(K_CFLAGS) -I$(ROOT)/$(OBJDIR)/jpeglib#" Makefile ; \
-		[ -e jerror.c ] && sed -i "s:#define JMESSAGE.*::" jerror.c ; \
+		sed -i "s:#define JMESSAGE.*::" $(ROOT)/$(JPEGSRC)/jerror.c ; \
 	fi ; \
 	if ! make -q CC=$(KLCC) libjpeg.a; then $(call infmsg,MAKE,libjpeg) ; fi ; \
 	make CC=$(KLCC) libjpeg.a > $(OUTPUT)
