@@ -15,9 +15,7 @@ usleep:
 
 clean:
 	@set -e; for d in $(SUBDIRS); do $(MAKE) -C $$d $@; done
-	rm -f *.o
-	rm -f fbres
-	rm -r usleep
+	@rm -f *.o fbres usleep
 
 install:
 	install -D fbres $(DESTDIR)/lib/splash/bin/fbres
