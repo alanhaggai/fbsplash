@@ -1,6 +1,3 @@
-- update the README
-- add a DOC on the splash protocol and its use for debugging purposes
-
 - clean up the code
 
 - fix handling of redrawing the inter boxes
@@ -19,3 +16,8 @@
 
 - fix error messages (doubled messages, etc)
   - use log_warn and log_err
+
+New features:
+=============
+
+- separate progress bars for shutdown/bootup
