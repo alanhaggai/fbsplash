@@ -198,6 +198,7 @@ splash_exit() {
 	# in splash_cache_cleanup didn't get executed). This should fix Gentoo
 	# bug #96697.
 	killall -9 splash_util.static >/dev/null 2>/dev/null
+	rm -f "${spl_pidfile}"
 }
 
 splash_start() {
@@ -245,7 +246,8 @@ splash_start() {
 
 	# In the unlikely case that there's a splash daemon running -- kill it.
 	killall -9 ${spl_util##*/} 2>/dev/null
-	
+	rm -f "${spl_pidfile}"
+
 	# Prepare the communications FIFO
 	mkfifo ${spl_fifo}
 
@@ -328,6 +330,7 @@ splash_comm_send() {
 		echo $* > ${spl_fifo} &
 	else
 		echo "Splash daemon not running!"
+		rm -f "${spl_pidfile}"
 	fi
 }
 
@@ -524,6 +527,7 @@ splash_cache_prep() {
 splash_cache_cleanup() {
 	# FIXME: Make sure the splash daemon is dead.
 	killall -9 splash_util.static >/dev/null 2>/dev/null
+	rm -f "${spl_pidfile}"
 
 	# There's no point in saving all the data if we're running off a livecd.
 	if [[ -n "${CDBOOT}" ]]; then
