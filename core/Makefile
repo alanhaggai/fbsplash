@@ -51,7 +51,7 @@ ROOT = $(shell pwd)
 
 # Flags for the kernel utilities
 K_CFLAGS = -w -ffunction-sections -fdata-sections $(MISCINCS) \
-		-I$(ROOT)/$(ZLIBSRC) -I$(ROOT)/$(FT2SRC)/include \
+		-I$(ROOT)/$(ZLIBSRC) -I$(ROOT)/$(FT2SRC)/include -I$(ROOT)/$(OBJDIR)/jpeglib \
 		-DWITH_ERRLIST -DTARGET_KERNEL -DTT_CONFIG_OPTION_BYTECODE_INTERPRETER
 
 PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_SUPPORTED -DPNG_NO_READ_iTXt \
@@ -183,7 +183,7 @@ jpeglib:
 		$(ROOT)/$(JPEGSRC)/configure > $(OUTPUT) ; \
 		echo "#define NO_GETENV 1" >> jconfig.h ; \
 		sed -i "s#CFLAGS=.*#CFLAGS=$(K_CFLAGS) -I$(ROOT)/$(OBJDIR)/jpeglib#" Makefile ; \
-		sed -i "s:#define JMESSAGE.*::" jerror.c ; \
+		[ -e jerror.c ] && sed -i "s:#define JMESSAGE.*::" jerror.c ; \
 	fi ; \
 	if ! make -q CC=$(KLCC) libjpeg.a; then $(call infmsg,MAKE,libjpeg) ; fi ; \
 	make CC=$(KLCC) libjpeg.a > $(OUTPUT)
@@ -220,7 +220,7 @@ $(OBJDIR)/%.o: %.c config.h splash.h daemon.h
 
 clean:	clean_all
 
-clean_all:	clean_zlib clean_png
+clean_all:	clean_zlib clean_png 
 	@$(call infmsg,CLEAN,all)
 	$(Q)rm -rf $(OBJDIR)/*
 

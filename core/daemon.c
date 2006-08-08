@@ -98,9 +98,10 @@ void *thf_anim(void *unused)
 	anim *a = NULL, *ca;
 	item *i;
 	mng_anim *mng;
-	int delay = 10000;
+	int delay = 10000, oldstate;
 
 	/* Render the first frame of all animations on the screen. */
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 	pthread_mutex_lock(&mtx_paint);
 	for (i = anims.head; i != NULL; i = i->next) {
 		ca = i->p;
@@ -113,9 +114,10 @@ void *thf_anim(void *unused)
 			anim_render_frame(ca);
 	}
 	pthread_mutex_unlock(&mtx_paint);
+	pthread_setcancelstate(oldstate, NULL);
 
 	while(1) {
-
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 		pthread_mutex_lock(&mtx_paint);
 		/* Find the shortest delay. */
 		for (i = anims.head; i != NULL; i = i->next) {
@@ -133,9 +135,11 @@ void *thf_anim(void *unused)
 			}
 		}
 		pthread_mutex_unlock(&mtx_paint);
+		pthread_setcancelstate(oldstate, NULL);
 
 		usleep(delay * 1000);
 
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 		pthread_mutex_lock(&mtx_paint);
 		/* Don't paint anything if we aren't in silent mode. */
 		if (ctty != CTTY_SILENT)
@@ -161,6 +165,7 @@ void *thf_anim(void *unused)
 		}
 	
 next:	pthread_mutex_unlock(&mtx_paint);
+		pthread_setcancelstate(oldstate, NULL);
 		
 		a = NULL;
 		delay = 10000;

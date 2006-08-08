@@ -4,10 +4,19 @@
 #include "config.h"
 #include <stdio.h>
 #include <sys/types.h>
-#include <sys/vt.h>
 #include <linux/kd.h>
 #include <linux/tty.h>
 #include <linux/input.h>
+
+/* FIXME:
+ * It should be perfectly OK to include sys/vt.h when building the kernel 
+ * helper, but we don't do that to avoid problems with broken klibc versions.
+ */
+#ifdef TARGET_KERNEL
+	#include <linux/vt.h>
+#else
+	#include <sys/vt.h>
+#endif
 
 /*
  * HACK WARNING:

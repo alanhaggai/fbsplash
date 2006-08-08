@@ -22,6 +22,7 @@
 #include <linux/kd.h>
 #include <linux/tty.h>
 #include <linux/tiocl.h>
+#include <linux/vt.h>
 
 #include "splash.h"
 

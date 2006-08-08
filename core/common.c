@@ -13,14 +13,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>
 #include <sys/ioctl.h>
-#include <sys/vt.h>
-#include <linux/kd.h>
 
 #include "splash.h"
 
