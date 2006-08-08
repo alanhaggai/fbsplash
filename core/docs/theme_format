@@ -244,6 +244,10 @@ Silent mode settings
   counter, 'proportional' will not work and only the first frame will
   be displayed.
 
+  The animations are displayed only when the screen is painted by the
+  splash daemon, they won't work with the kernel helper (ie. the animations
+  won't work from an initrd).
+
 Deprecated settings
 -------------------
 * jpeg=<path>
