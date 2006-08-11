@@ -114,17 +114,23 @@ splash_setup() {
 		
 	if [[ -f /proc/cmdline ]]; then
 		options=$(grep 'splash=[^ ]*' -o /proc/cmdline)
-		options=${options#*=}
 	
-		for i in ${options//,/ } ; do
-			case ${i%:*} in
-				theme)		SPLASH_THEME=${i#*:} ;;
-				tty)		SPLASH_TTY=${i#*:} ;;
-				verbose) 	SPLASH_MODE_REQ="verbose" ;;
-				silent)		SPLASH_MODE_REQ="silent" ;;
-				kdgraphics)	SPLASH_KDMODE="GRAPHICS" ;;
-				profile)	SPLASH_PROFILE="on" ;;
-			esac
+		# Execute this loop over $options so that we can process multiple
+		# splash= arguments on the kernel command line. Useful for adjusting
+		# splash parameters from ISOLINUX.
+		for opt in ${options} ; do
+			options=${opt#*=}
+	
+			for i in ${options//,/ } ; do
+				case ${i%:*} in
+					theme)		SPLASH_THEME=${i#*:} ;;
+					tty)		SPLASH_TTY=${i#*:} ;;
+					verbose) 	SPLASH_MODE_REQ="verbose" ;;
+					silent)		SPLASH_MODE_REQ="silent" ;;
+					kdgraphics)	SPLASH_KDMODE="GRAPHICS" ;;
+					profile)	SPLASH_PROFILE="on" ;;
+				esac
+			done
 		done
 	fi
 }
