@@ -30,10 +30,14 @@
  */
 #ifdef TARGET_KERNEL
 	#include <linux/fb.h>
-	#include <linux/console_splash.h>
+	#ifdef CONFIG_FBSPLASH
+		#include <linux/console_splash.h>
+	#endif
 #else
 	#include <fb.h>
-	#include <console_splash.h>
+	#ifdef CONFIG_FBSPLASH
+		#include <console_splash.h>
+	#endif
 #endif
 
 /*
