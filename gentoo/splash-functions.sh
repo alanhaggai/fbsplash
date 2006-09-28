@@ -237,17 +237,16 @@ splash_start() {
 			return 1
 		fi
 
-		mount --bind / ${spl_tmpdir}
+		mount -n --bind / ${spl_tmpdir}
 		if [[ ! -c "${spl_tmpdir}/dev/tty1" ]]; then
-			umount ${spl_tmpdir}
-			clear
+			umount -n ${spl_tmpdir}
 			ewarn "The filesystem mounted on / doesn't contain the /dev/tty1 device"
 			ewarn "which is required for the silent splash to function properly."
 			ewarn "Silent splash will not be enabled. Please create the appropriate"
-			ewarn "device file to avoid this message."
+			ewarn "device node to avoid this message."
 			return 1
 		fi
-		umount ${spl_tmpdir}
+		umount -n ${spl_tmpdir}
 	fi
 
 	# In the unlikely case that there's a splash daemon running -- kill it.
