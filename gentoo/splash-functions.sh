@@ -60,7 +60,7 @@ splash() {
 	fi
 
 	local args=($@)
-	
+
 	if [[ ${event} == "rc_init" || ${event} == "rc_exit" ]]; then
 		args[${#args[*]}]="${RUNLEVEL}"
 	fi
@@ -71,7 +71,7 @@ splash() {
 	if [[ -x "/etc/splash/${SPLASH_THEME}/scripts/${event}-pre" ]]; then
 		/etc/splash/${SPLASH_THEME}/scripts/${event}-pre "${args[@]}"
 	fi
-			
+
 	case "$event" in
 		svc_start)			splash_svc_start "$1";;
 		svc_stop)			splash_svc_stop "$1";;
@@ -90,17 +90,17 @@ splash() {
 	if [[ -x "/etc/splash/${SPLASH_THEME}/scripts/${event}-post" ]]; then
 		/etc/splash/${SPLASH_THEME}/scripts/${event}-post "${args[@]}"
 	fi
-	
+
 	return 0
 }
- 
+
 splash_setup() {
-	# If it's already set up, let's not waste time on parsing the config 
+	# If it's already set up, let's not waste time on parsing the config
 	# files again
 	if [[ ${SPLASH_THEME} != "" && ${SPLASH_TTY} != "" && "$1" != "force" ]]; then
 		return 0
 	fi
-	
+
 	export SPLASH_MODE_REQ="off"
 	export SPLASH_PROFILE="off"
 	export SPLASH_THEME="default"
@@ -111,16 +111,16 @@ splash_setup() {
 	export SPLASH_REBOOT_MESSAGE="Rebooting the system (\$progress%)... Press F2 for verbose mode."
 
 	[[ -f $(add_suffix /etc/conf.d/splash) ]] && source "$(add_suffix /etc/conf.d/splash)"
-		
+
 	if [[ -f /proc/cmdline ]]; then
 		options=$(grep 'splash=[^ ]*' -o /proc/cmdline)
-	
+
 		# Execute this loop over $options so that we can process multiple
 		# splash= arguments on the kernel command line. Useful for adjusting
 		# splash parameters from ISOLINUX.
 		for opt in ${options} ; do
 			options=${opt#*=}
-	
+
 			for i in ${options//,/ } ; do
 				case ${i%:*} in
 					theme)		SPLASH_THEME=${i#*:} ;;
@@ -149,7 +149,7 @@ splash_setup() {
 # args: <internal_runlevel>
 #
 # This function is called when an 'rc_init' event takes place,
-# ie. when the runlevel is changed. 
+# ie. when the runlevel is changed.
 splash_init() {
 	arg="$1"
 
@@ -164,7 +164,7 @@ splash_init() {
 	fi
 
 	export spl_count spl_scripts spl_execed
-	
+
 	if [[ ${RUNLEVEL} == "S" && ${arg} == "sysinit" ]]; then
 		spl_scripts=$(splash_svclist_get start | tr ' ' '\n' | wc -l)
 		spl_count=0
@@ -173,11 +173,11 @@ splash_init() {
 		spl_scripts=${#spl_started[*]}
 	fi
 
-	if [[ ${RUNLEVEL} == "S" && ${arg} == "sysinit" ]] || 
+	if [[ ${RUNLEVEL} == "S" && ${arg} == "sysinit" ]] ||
 	   [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
 		splash_start
 	fi
-	
+
 	splash_svclist_init "${arg}"
 	splash_save_vars
 }
@@ -210,14 +210,14 @@ splash_exit() {
 splash_start() {
 	# Prepare the communications FIFO
 	rm -f ${spl_fifo} 2>/dev/null
-		
+
 	if [[ ${SPLASH_MODE_REQ} == "verbose" ]]; then
 		${spl_util} -c on 2>/dev/null
-		return 0	
+		return 0
 	elif [[ ${SPLASH_MODE_REQ} != "silent" ]]; then
 		return 0
 	fi
-		
+
 	# Display a warning if the system is not configured to display init messages
 	# on tty1. This can cause a lot of problems if it's not handled correctly, so
 	# we don't allow silent splash to run on incorrectly configured systems.
@@ -258,23 +258,23 @@ splash_start() {
 
 	local options=""
 	[[ ${SPLASH_KDMODE} == "GRAPHICS" ]] && options="--kdgraphics"
-		
+
 	# Start the splash daemon
 	${spl_util} -d --theme=${SPLASH_THEME} --pidfile=${spl_pidfile} ${options}
 
 	# Set the silent TTY and boot message
 	splash_comm_send "set tty silent ${SPLASH_TTY}"
 	splash_comm_send "set message $(splash_get_boot_message)"
-	
+
 	if [[ ${SPLASH_MODE_REQ} == "silent" ]] ; then
 		splash_comm_send "set mode silent"
 		splash_comm_send "repaint"
 		${spl_util} -c on 2>/dev/null
 	fi
 
-	# Set the input device if it exists. This will make it possible to use F2 to 
+	# Set the input device if it exists. This will make it possible to use F2 to
 	# switch from verbose to silent.
-	local t=$(grep -Hsi keyboard /sys/class/input/event*/device/driver/description | grep -o 'event[0-9]\+') 
+	local t=$(grep -Hsi keyboard /sys/class/input/event*/device/driver/description | grep -o 'event[0-9]\+')
 	if [[ -z "${t}" ]]; then
 		# Try an alternative method of finding the event device. The idea comes
 		# from Bombadil <bombadil(at)h3c.de>. We're couting on the keyboard controller
@@ -293,19 +293,19 @@ splash_get_boot_message() {
 		echo ${SPLASH_SHUTDOWN_MESSAGE}
 	else
 		echo ${SPLASH_BOOT_MESSAGE}
-	fi	
+	fi
 }
 
 splash_update_progress() {
 	local srv=$1
-		
+
 	# FIXME
-	splash_load_vars	
+	splash_load_vars
 	[[ -n "${spl_execed}" && -z "${spl_execed//* $srv */}" ]] && return
 	[[ -z "${spl_scripts}" ]] && return
 	spl_execed="${spl_execed} ${srv} "
 	spl_count=$((${spl_count} + 1))
-	
+
 	if [ "${spl_scripts}" -gt 0 ]; then
 		progress=$(($spl_count * 65535 / $spl_scripts))
 	else
@@ -330,7 +330,7 @@ splash_comm_send() {
 
 	splash_profile "comm $*"
 
-	if [[ -r /proc/$(<${spl_pidfile})/status && 
+	if [[ -r /proc/$(<${spl_pidfile})/status &&
 		  "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]]; then
 		echo $* > ${spl_fifo} &
 	else
@@ -339,7 +339,7 @@ splash_comm_send() {
 	fi
 }
 
-# Returns the current splash mode. 
+# Returns the current splash mode.
 splash_get_mode() {
 	local ctty="$(${spl_bindir}/fgconsole)"
 
@@ -350,9 +350,9 @@ splash_get_mode() {
 			echo "verbose"
 		else
 			echo "off"
-		fi	
+		fi
 	fi
-}	
+}
 
 # Switches to verbose mode.
 splash_verbose() {
@@ -377,11 +377,11 @@ splash_save_vars() {
 	if [[ ! -d ${spl_cachedir} || ! -w ${spl_cachedir} ]]; then
 		return
 	fi
-		
+
 	t="spl_execed=\"${spl_execed}\"\n"
 	t="${t}spl_count=${spl_count}\n"
 	t="${t}spl_scripts=${spl_scripts}\n"
-	
+
 	(echo -e "$t" > ${spl_cachedir}/progress) 2>/dev/null
 }
 
@@ -465,7 +465,7 @@ splash_input_end() {
 
 	if [[ ${SPL_SVC_INPUT_SILENT} == "${svc}" ]]; then
 		splash_silent
-		unset SPL_SVC_INPUT_SILENT	
+		unset SPL_SVC_INPUT_SILENT
 	fi
 }
 
@@ -482,13 +482,13 @@ splash_cache_prep() {
 		-o rw,mode=0644,size="${spl_cachesize}"k
 
 	retval=$?
-	
+
 	if [[ ${retval} -ne 0 ]]; then
 		eerror "Unable to create splash cache - switching to verbose."
 		splash_verbose
 		return "${retval}"
 	fi
-	
+
 	# Copy the dependency cache and services lists to our new cache dir.
 	# With some luck, we won't have to update it.
 	cp -a ${svcdir}/{depcache,deptree} "${spl_tmpdir}" 2>/dev/null
@@ -524,7 +524,7 @@ splash_cache_prep() {
 
 		echo -n > ${spl_cachedir}/profile
 	fi
-		
+
 	return 0
 }
 
@@ -542,14 +542,14 @@ splash_cache_cleanup() {
 
 	# Don't try to clean anything up if the cachedir is not mounted.
 	[[ -z "$(grep ${spl_cachedir} /proc/mounts)" ]] && return;
-	
+
 	# Create the temp dir if necessary.
 	if [[ ! -d "${spl_tmpdir}" ]]; then
 		mkdir -p "${spl_tmpdir}" 2>/dev/null
 		[[ "$?" != "0" ]] && return
 	fi
 
-	# If the /etc is not writable, don't update /etc/mtab. If it is 
+	# If the /etc is not writable, don't update /etc/mtab. If it is
 	# writable, update it to avoid stale mtab entries (bug #121827).
 	local mntopt=""
 	[[ -w /etc/mtab ]] || mntopt="-n"
@@ -562,7 +562,7 @@ splash_cache_cleanup() {
 	echo "${BOOTLEVEL}/${DEFAULTLEVEL}" > "${spl_cachedir}/levels"
 	echo "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" \
 			 >> "${spl_cachedir}/levels"
-	
+
 	umount -l "${spl_tmpdir}" 2>/dev/null
  }
 
@@ -573,14 +573,14 @@ splash_cache_cleanup() {
 # args: <internal-runlevel>
 splash_svclist_init() {
 	arg="$1"
-	
+
 	if [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
 		for i in `dolisting "${svcdir}/started/" | sed -e "s#${svcdir}/started/##g"`; do
 			splash_svc_update ${i} "svc_inactive_stop"
 		done
 	elif [[ ${RUNLEVEL} == "S" ]]; then
 		local svcs=$(splash_svclist_get start)
-		
+
 		if [[ ${arg} == "sysinit" ]]; then
 			for i in ${svcs} ; do
 				splash_svc_update ${i} "svc_inactive_start"
@@ -604,12 +604,12 @@ splash_svclist_update() {
 	svcs_started=" "
 	svcs_order=""
 
-	# We're sure our depcache is up-to-date, no need to waste 
+	# We're sure our depcache is up-to-date, no need to waste
 	# time checking mtimes.
-	check_mtime() { 
-		return 0 
+	check_mtime() {
+		return 0
 	}
-	
+
 	is_net_up() {
 		local netcount=0
 
@@ -635,18 +635,18 @@ splash_svclist_update() {
 
 	service_started() {
 		if [[ -z "${svcs_started/* ${1} */}" ]]; then
-			return 0	
+			return 0
 		else
 			return 1
 		fi
 	}
 
-	# This simulates the service startup and has to mimic the behaviour of 
+	# This simulates the service startup and has to mimic the behaviour of
 	# svc_start() from /sbin/runscript.sh and start_service() from rc-functions.sh
 	# as closely as possible.
 	start_service() {
 		local svc="$1"
-	
+
 		if service_started ${svc}; then
 			return
 		fi
