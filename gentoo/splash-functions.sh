@@ -438,7 +438,7 @@ splash_svc_start() {
 	local svc="$1"
 
 	splash_svc_update ${svc} "svc_start"
-	splash_update_progress "${svc}"
+	splash_comm_send "paint"
 }
 
 # args: <svc>
@@ -446,7 +446,7 @@ splash_svc_stop() {
 	local svc="$1"
 
 	splash_svc_update ${svc} "svc_stop"
-	splash_update_progress "${svc}"
+	splash_comm_send "paint"
 }
 
 # args: <svc>
