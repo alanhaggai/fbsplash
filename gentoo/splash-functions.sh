@@ -491,16 +491,10 @@ splash_cache_prep() {
 
 	# Copy the dependency cache and services lists to our new cache dir.
 	# With some luck, we won't have to update it.
-	cp -a ${svcdir}/{depcache,deptree} "${spl_tmpdir}" 2>/dev/null
 	cp -a ${spl_cachedir}/{svcs_start,svcs_stop,levels} "${spl_tmpdir}" 2>/dev/null
 
 	# Now that the data from the old cache is copied, move tmpdir to cachedir.
 	mount -n --move "${spl_tmpdir}" "${spl_cachedir}"
-
-	h=$(stat -c '%y' ${spl_cachedir}/deptree 2>/dev/null)
-
-	# Point depscan.sh to our cachedir
-	/sbin/depscan.sh --svcdir "${spl_cachedir}"
 
 	if [[ "$1" == "start" ]]; then
 		# Check whether the list of services that will be started during boot
@@ -510,16 +504,10 @@ splash_cache_prep() {
 		#  - we're booting with a different boot/default level than the last time
 		#  - one of the runlevel dirs has been modified since the last boot
 		if [[ ! -e ${spl_cachedir}/levels || \
-			  ! -e ${spl_cachedir}/svcs_start ]]; then
+			  ! -e ${spl_cachedir}/svcs_start || \
+			  ${svcdir}/deptree -nt ${spl_cachedir}/svcs_start ]]; then
+			splash_svclist_update "start"
 			echo $(splash_svclist_update "start") > ${spl_cachedir}/svcs_start
-		else
-			local lastlev timestamp
-			{ read lastlev; read timestamp; } < ${spl_cachedir}/levels
-			if [[ "${lastlev}" != "${BOOTLEVEL}/${DEFAULTLEVEL}" || \
-				  "${timestamp}" != "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" || \
-				  "$(stat -c '%y' ${spl_cachedir}/deptree)" != "${h}" ]]; then
-				echo $(splash_svclist_update "start") > ${spl_cachedir}/svcs_start
-			fi
 		fi
 
 		echo -n > ${spl_cachedir}/profile
@@ -558,7 +546,7 @@ splash_cache_cleanup() {
 	# Don't try to copy anything if the cachedir is not writable.
 	[[ -w "${spl_cachedir}" ]] || return;
 
-	cp -a "${spl_tmpdir}"/{envcache,depcache,deptree,svcs_start,svcs_stop,profile} "${spl_cachedir}" 2>/dev/null
+	cp -a "${spl_tmpdir}"/{envcache,svcs_start,svcs_stop,profile} "${spl_cachedir}" 2>/dev/null
 	echo "${BOOTLEVEL}/${DEFAULTLEVEL}" > "${spl_cachedir}/levels"
 	echo "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" \
 			 >> "${spl_cachedir}/levels"
@@ -596,133 +584,32 @@ splash_svclist_get() {
 }
 
 splash_svclist_update() {
-	(
-	# Source our own deptree and required functions
-	source ${spl_cachedir}/deptree
-	[[ ${RC_GOT_SERVICES} != "yes" ]] && source "${svclib}/sh/rc-services.sh"
+	local svcs= order= x= dlvl="${SOFTLEVEL}"
 
-	svcs_started=" "
-	svcs_order=""
-
-	# We're sure our depcache is up-to-date, no need to waste
-	# time checking mtimes.
-	check_mtime() {
-		return 0
-	}
-
-	is_net_up() {
-		local netcount=0
-
-		case "${RC_NET_STRICT_CHECKING}" in
-			lo)
-				netcount="$(echo ${svcs_started} | tr ' ' '\n' | \
-			            egrep -c "\/net\..*$")"
-				;;
-			*)
-				netcount="$(echo ${svcs_started} | tr ' ' '\n' | \
-			            grep -v 'net\.lo' | egrep -c "\/net\..*$")"
-				;;
-		esac
-
-		# Only worry about net.* services if this is the last one running,
-		# or if RC_NET_STRICT_CHECKING is set ...
-		if [[ ${netcount} -lt 1 || ${RC_NET_STRICT_CHECKING} == "yes" ]]; then
-			return 1
+	for x in $(dolisting /etc/runlevels/${BOOTLEVEL}) \
+		$(dolisting ${svcdir}/coldplugged) ; do
+		svcs="${svcs} ${x##*/}"
+		if [[ ${x##*/} == "autoconfig" ]] ; then
+			svcs="${svcs} $(. /etc/init.d/autoconfig; list_services)"
 		fi
-
-		return 0
-	}
-
-	service_started() {
-		if [[ -z "${svcs_started/* ${1} */}" ]]; then
-			return 0
-		else
-			return 1
-		fi
-	}
-
-	# This simulates the service startup and has to mimic the behaviour of
-	# svc_start() from /sbin/runscript.sh and start_service() from rc-functions.sh
-	# as closely as possible.
-	start_service() {
-		local svc="$1"
-
-		if service_started ${svc}; then
-			return
-		fi
-
-		# Prevent recursion..
-		svcs_started="${svcs_started}$1 "
-
-	   	if is_fake_service "${svc}" "${mylevel}"; then
-			svcs_order="${svcs_order} ${svc}"
-			return
-		fi
-		
-		svcs_startup="$(ineed "${svc}") \
-					$(valid_iuse "${svc}") \
-					$(valid_iafter "${svc}")"
-		
-		for x in ${svcs_startup} ; do
-			if [[ ${x} == "net" ]] && [[ ${svc%%.*} != "net" || ${svc##*.} == ${svc} ]] && ! is_net_up ; then
-				local netservices="$(dolisting "/etc/runlevels/${BOOTLEVEL}/net.*") \
-						$(dolisting "/etc/runlevels/${mylevel}/net.*")"
-	
-				for y in ${netservices} ; do
-					mynetservice="${y##*/}"
-					if ! service_started ${mynetservice} ; then
-						start_service "${mynetservice}"
-					fi
-				done
-			else
-				if ! service_started ${x} ; then
-					start_service "${x}"
-				fi
-			fi
-		done 
-	
-		svcs_order="${svcs_order} ${svc}"
-		return
-	}
-
-	# This function should return a list of services that will be started
-	# from /etc/init.d/autoconfig. In order to do that, we source 
-	# /etc/init.d/autoconfig and use its list_services() function.
-	autoconfig_svcs() {
-		[[ -r /etc/init.d/autoconfig ]] || return
-		. /etc/init.d/autoconfig
-		echo "$(list_services)"
-	}
-	
-	as="$(autoconfig_svcs)"
-	[[ -n "${SOFTLEVEL}" ]] && ss="$(dolisting "/etc/runlevels/${SOFTLEVEL}/") "
-	sb="$(dolisting "/etc/runlevels/${BOOTLEVEL}/") "
-	sd="$(dolisting "/etc/runlevels/${DEFAULTLEVEL}/") "
-
-	# If autoconfig is one of the services that will be started,
-	# insert an updated list of services into our list.
-	if [[ -z "${ss/*\/autoconfig */}" ]]; then
-		ss="${ss/\/autoconfig /\/autoconfig $as }"
-	fi
-		
-	if [[ -z "${sb/*\/autoconfig */}" ]]; then
-		sb="${sb/\/autoconfig /\/autoconfig $as }"
-	fi
-
-	if [[ -z "${sd/*\/autoconfig */}" ]]; then
-		sd="${sd/\/autoconfig /\/autoconfig $as }"
-	fi
-	
-	mylevel="${BOOTLEVEL}"
-	for i in ${CRITICAL_SERVICES} ${sb}; do
-		start_service "${i##*/}"
 	done
-	mylevel="${DEFAULTLEVEL}"
-	for i in ${LOGGER_SERVICE} ${sd} ${ss}; do
-		start_service "${i##*/}"
+	order=$(rc-depend -ineed -iuse -iafter ${svcs})
+
+	# We call rc-depend twice so we get the ordering exactly right
+	svcs=
+	if [[ ${SOFTLEVEL} == "${BOOTLEVEL}" ]] ; then
+		dlvl="${DEFAULTLEVEL}"
+	fi
+	for x in $(dolisting /etc/runlevels/"${dlvl}") ; do
+		svcs="${svcs} ${x##*/}"
+		if [[ ${x##*/} == "autoconfig" ]] ; then
+			svcs="${svcs} $(. /etc/init.d/autoconfig; list_services)"
+		fi
 	done
-	echo "${svcs_order}"
-	)
+	order="${order} $(SOFTLEVEL="$dlvl" rc-depend -ineed -iuse -iafter ${svcs})"
+
+	# Only list each service once
+	uniqify ${order}
 }
 
 # vim:ts=4
