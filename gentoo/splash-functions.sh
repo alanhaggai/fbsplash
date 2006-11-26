@@ -506,7 +506,6 @@ splash_cache_prep() {
 		if [[ ! -e ${spl_cachedir}/levels || \
 			  ! -e ${spl_cachedir}/svcs_start || \
 			  ${svcdir}/deptree -nt ${spl_cachedir}/svcs_start ]]; then
-			splash_svclist_update "start"
 			echo $(splash_svclist_update "start") > ${spl_cachedir}/svcs_start
 		fi
 
