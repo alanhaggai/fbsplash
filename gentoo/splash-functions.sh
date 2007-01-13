@@ -489,26 +489,10 @@ splash_cache_prep() {
 		return "${retval}"
 	fi
 
-	# Copy the dependency cache and services lists to our new cache dir.
-	# With some luck, we won't have to update it.
-	cp -a ${spl_cachedir}/{svcs_start,svcs_stop,levels} "${spl_tmpdir}" 2>/dev/null
-
-	# Now that the data from the old cache is copied, move tmpdir to cachedir.
 	mount -n --move "${spl_tmpdir}" "${spl_cachedir}"
 
 	if [[ "$1" == "start" ]]; then
-		# Check whether the list of services that will be started during boot
-		# needs updating. This is generally the case if:
-		#  - one of the caches doesn't exist
-		#  - our deptree was out of date
-		#  - we're booting with a different boot/default level than the last time
-		#  - one of the runlevel dirs has been modified since the last boot
-		if [[ ! -e ${spl_cachedir}/levels || \
-			  ! -e ${spl_cachedir}/svcs_start || \
-			  ${svcdir}/deptree -nt ${spl_cachedir}/svcs_start ]]; then
-			echo $(splash_svclist_update "start") > ${spl_cachedir}/svcs_start
-		fi
-
+		echo $(splash_svclist_update "start") > ${spl_cachedir}/svcs_start
 		echo -n > ${spl_cachedir}/profile
 	fi
 
@@ -540,17 +524,7 @@ splash_cache_cleanup() {
 	# writable, update it to avoid stale mtab entries (bug #121827).
 	local mntopt=""
 	[[ -w /etc/mtab ]] || mntopt="-n"
-	mount ${mntopt} --move "${spl_cachedir}" "${spl_tmpdir}" 2>/dev/null
-
-	# Don't try to copy anything if the cachedir is not writable.
-	[[ -w "${spl_cachedir}" ]] || return;
-
-	cp -a "${spl_tmpdir}"/{envcache,svcs_start,svcs_stop,profile} "${spl_cachedir}" 2>/dev/null
-	echo "${BOOTLEVEL}/${DEFAULTLEVEL}" > "${spl_cachedir}/levels"
-	echo "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" \
-			 >> "${spl_cachedir}/levels"
-
-	umount -l "${spl_tmpdir}" 2>/dev/null
+	umount ${mntopt} -l "${spl_tmpdir}" 2>/dev/null
  }
 
 ###########################################################################
