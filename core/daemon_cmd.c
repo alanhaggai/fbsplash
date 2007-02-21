@@ -90,6 +90,9 @@ void do_paint(u8 *dst, u8 *src)
 int cmd_exit(void **args)
 {
 	item *i, *j;
+
+	pthread_cancel(th_switchmon);
+	pthread_kill(th_sighandler, SIGTERM);
 		
 	free_objs();
 
@@ -100,8 +103,6 @@ int cmd_exit(void **args)
 		i = j;
 	}
 
-	pthread_cancel(th_switchmon);
-	pthread_kill(th_sighandler, SIGTERM);
 	exit(0);
 
 	/* We never get here */
@@ -513,19 +514,21 @@ cmdhandler known_cmds[] =
 int daemon_comm()
 {
 	char buf[1024];
-	FILE *fp_fifo; 
+	FILE *fp_fifo = NULL;
 	int i,j,k;
 
-	while (1) {
-		fp_fifo = fopen(SPLASH_FIFO, "r");
+	while (!fp_fifo) {
+		fp_fifo = fopen(SPLASH_FIFO, "r+");
 		if (!fp_fifo) {
 			if (errno == EINTR)
 				continue;
 			perror("Can't open the splash FIFO (" SPLASH_FIFO ") for reading");
 			return -1;
 		}
+	}
 
-		while (fgets(buf, 1024, fp_fifo)) {
+	while (1) {
+inner:		while (fgets(buf, 1024, fp_fifo)) {
 			char *t;
 			int args_i[4];
 			void *args[4];
@@ -542,7 +545,7 @@ int daemon_comm()
 				for (j = 0; j < known_cmds[i].args; j++) {
 					for (; buf[k] == ' '; buf[k] = 0, k++);
 					if (!buf[k])
-						goto out;
+						goto inner;
 						
 					switch (known_cmds[i].specs[j]) {
 					case 's':
@@ -553,7 +556,7 @@ int daemon_comm()
 					case 'd':
 						args_i[j] = strtol(&(buf[k]), &t, 0);
 						if (t == &(buf[k]))
-							goto out;
+							goto inner;
 												
 						args[j] = &(args_i[j]);
 						k = t - buf;
@@ -563,8 +566,6 @@ int daemon_comm()
 				known_cmds[i].handler(args);
 			}
 		}
-
-out:	fclose(fp_fifo);
 	}
 }
 
