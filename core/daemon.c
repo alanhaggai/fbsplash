@@ -1,8 +1,8 @@
 /*
- * daemon.c - The splash daemon 
- * 
+ * daemon.c - The splash daemon
+ *
  * Copyright (C) 2005-2006 Michal Januszewski <spock@gentoo.org>
- * 
+ *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
  * more details.
@@ -59,8 +59,8 @@ struct termios tios;
 
 #ifdef CONFIG_MNG
 
-/* 
- * Renders an animation frame directly to the screen. 
+/*
+ * Renders an animation frame directly to the screen.
  */
 void anim_render_frame(anim *a)
 {
@@ -82,10 +82,10 @@ void anim_render_frame(anim *a)
 		} else {
 			mng_display_restart(a->mng);
 		}
-	}		
+	}
 
 	if ((ret == MNG_NOERROR || ret == MNG_NEEDTIMERWAIT) && ctty == CTTY_SILENT) {
-		mng_display_buf(a->mng, bg_buffer, fb_mem, a->x, a->y, 
+		mng_display_buf(a->mng, bg_buffer, fb_mem, a->x, a->y,
 				fb_fix.line_length, fb_var.xres * bytespp);
 	}
 }
@@ -108,7 +108,7 @@ void *thf_anim(void *unused)
 
 		if ((ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL)
 			continue;
-	
+
 		mng = mng_get_userdata(ca->mng);
 		if (!mng->displayed_first)
 			anim_render_frame(ca);
@@ -122,13 +122,13 @@ void *thf_anim(void *unused)
 		/* Find the shortest delay. */
 		for (i = anims.head; i != NULL; i = i->next) {
 			ca = i->p;
-	
+
 			if ((ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL ||
 			    ca->status == F_ANIM_STATUS_DONE)
 				continue;
-		
+
 			mng = mng_get_userdata(ca->mng);
-	
+
 			if (mng->wait_msecs < delay && mng->wait_msecs > 0) {
 				delay = mng->wait_msecs;
 				a = ca;
@@ -144,8 +144,8 @@ void *thf_anim(void *unused)
 		/* Don't paint anything if we aren't in silent mode. */
 		if (ctty != CTTY_SILENT)
 			goto next;
-		
-		if (a) 
+
+		if (a)
 			anim_render_frame(a);
 
 		/* Update the wait time for all relevant animation objects. */
@@ -163,17 +163,17 @@ void *thf_anim(void *unused)
 					anim_render_frame(ca);
 			}
 		}
-	
+
 next:	pthread_mutex_unlock(&mtx_paint);
 		pthread_setcancelstate(oldstate, NULL);
-		
+
 		a = NULL;
 		delay = 10000;
 	}
 }
 #endif /* CONFIG_MNG */
 
-/* 
+/*
  * The following two functions are called with
  * mtx_tty held.
  */
@@ -181,7 +181,7 @@ void vt_silent_init(void)
 {
 	struct vt_mode vt;
 	struct termios w;
-	
+
 	ioctl(fd_tty_s, TIOCSCTTY, 0);
 
 	vt.mode   = VT_PROCESS;
@@ -204,7 +204,7 @@ void vt_silent_init(void)
 void vt_silent_cleanup(void)
 {
 	struct vt_mode vt;
-	
+
 	vt.mode   = VT_AUTO;
 	vt.waitv  = 0;
 
@@ -223,11 +223,11 @@ void switch_silent()
 {
 	struct fb_var_screeninfo old_var;
 	struct fb_fix_screeninfo old_fix;
-		
+
 	old_fix = fb_fix;
 	old_var = fb_var;
 
-	/* FIXME: we should use the vc<->fb map here */		
+	/* FIXME: we should use the vc<->fb map here */
 	get_fb_settings(arg_fb);
 
 	/* Set KD_GRAPHICS if necessary. */
@@ -241,11 +241,11 @@ void switch_silent()
 	old_var.yoffset = fb_var.yoffset;
 	old_var.xoffset = fb_var.xoffset;
 
-	/* 
+	/*
 	 * Has the video mode changed? If it has, we'll have to reload
-	 * the theme. 
+	 * the theme.
 	 */
-	if (memcmp(&fb_fix, &old_fix, sizeof(struct fb_fix_screeninfo)) || 
+	if (memcmp(&fb_fix, &old_fix, sizeof(struct fb_fix_screeninfo)) ||
 	    memcmp(&fb_var, &old_var, sizeof(struct fb_var_screeninfo))) {
 
 		pthread_mutex_lock(&mtx_paint);
@@ -257,11 +257,11 @@ void switch_silent()
 
 		munmap(fb_mem, old_fix.line_length * old_var.yres);
 		fb_mem = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
-			      MAP_SHARED, fd_fb, 0); 
-	
+			      MAP_SHARED, fd_fb, 0);
+
 		if (fb_mem == MAP_FAILED) {
 			printerr("mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
-			exit(1);	
+			exit(1);
 		}
 
 		if (bg_buffer)
@@ -277,7 +277,7 @@ void switch_silent()
 /*
  * Signal handler.
  *
- * This thread is reponsible for allowing switches between the 
+ * This thread is reponsible for allowing switches between the
  * silent and verbose ttys, and for cleanup tasks after reception
  * of SIGTERM.
  */
@@ -312,7 +312,7 @@ void* thf_sighandler(void *unusued)
 
 			ctty = CTTY_SILENT;
 			pthread_mutex_unlock(&mtx_paint);
-	
+
 			switch_silent();
 		} else if (sig == SIGTERM) {
 			pthread_mutex_trylock(&mtx_tty);
@@ -329,7 +329,7 @@ void* thf_sighandler(void *unusued)
 void* thf_switch_evdev(void *unused)
 {
 	int i, h, oldstate;
-	size_t rb; 
+	size_t rb;
 	struct input_event ev[8];
 
 	while (1) {
@@ -352,9 +352,9 @@ void* thf_switch_evdev(void *unused)
 			pthread_setcancelstate(oldstate, NULL);
 
 			/* Switch to the new tty. This ioctl has to be done on
-			 * the silent tty. Sometimes init will mess with the 
+			 * the silent tty. Sometimes init will mess with the
 			 * settings of the verbose console which will prevent
-			 * console switching from working properly. 
+			 * console switching from working properly.
 			 *
 			 * Don't worry about fd_tty_s not being protected by a
 			 * mutex -- this thread is always killed before any changes
@@ -367,7 +367,7 @@ void* thf_switch_evdev(void *unused)
 	pthread_exit(NULL);
 }
 
-/* 
+/*
  * Silent TTY monitor thread.
  *
  * This thread listens for F2 keypresses on the silent TTY.
@@ -378,22 +378,22 @@ void* thf_switch_evdev(void *unused)
 void* thf_switch_ttymon(void *unused)
 {
 	int flags, oldstate;
-	
+
 	flags = fcntl(fd_tty_s, F_GETFL, 0);
-	
+
 	while(1) {
 		char ret = 0xff;
 		int t = 0;
-		
+
 		fcntl(fd_tty_s, F_SETFL, flags & (~O_NDELAY));
 		read(fd_tty_s, &ret, 1);
 
 		if (ret == '\x1b') {
 			fcntl(fd_tty_s, F_SETFL, flags | O_NDELAY);
-			
+
 			/* FIXME: is <F2> always 1b5b5b42? */
-			if (read(fd_tty_s, &t, 3) == 3 && 
-			    ((endianess == little && t == 0x425b5b) || 
+			if (read(fd_tty_s, &t, 3) == 3 &&
+			    ((endianess == little && t == 0x425b5b) ||
 			     (endianess == big && 0x5b5b4200))) {
 				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 				pthread_mutex_lock(&mtx_tty);
@@ -414,21 +414,21 @@ void* thf_switch_ttymon(void *unused)
  *
  * When called with UPD_SILENT, mtx_tty should be held.
  */
-void switchmon_start(int update) 
+void switchmon_start(int update)
 {
 	char t[32];
 
 	/* Has the silent TTY changed? */
 	if (update & UPD_SILENT) {
-		/* 
+		/*
 		 * Close the previous silent TTY and restore its
-		 * normal settings. 
+		 * normal settings.
 		 */
-		if (fd_tty_s != -1) { 
+		if (fd_tty_s != -1) {
 			vt_silent_cleanup();
 			close(fd_tty_s);
 		}
-		
+
 		/* Open a new silent TTY and initialize it. */
 		sprintf(t, PATH_DEV "/tty%d", tty_s);
 		fd_tty_s = open(t, O_RDWR);
@@ -457,7 +457,7 @@ void switchmon_start(int update)
 		if (pthread_create(&th_switchmon, NULL, &thf_switch_ttymon, NULL)) {
 			fprintf(stderr, "TTY monitor thread creation failed.\n");
 			exit(3);
-		}	
+		}
 	}
 }
 
@@ -467,20 +467,20 @@ void switchmon_start(int update)
 void free_objs()
 {
 	item *i, *j;
-	
+
 	for (i = objs.head ; i != NULL; ) {
-		j = i->next;	
+		j = i->next;
 		free(i->p);
 		free(i);
-		i = j;	
-	}		
-	
+		i = j;
+	}
+
 	for (i = rects.head; i != NULL ; ) {
 		j = i->next;
 		free(i);
 		i = j;
 	}
-	
+
 	for (i = icons.head; i != NULL; ) {
 		icon_img *ii = (icon_img*) i->p;
 		j = i->next;
@@ -496,7 +496,7 @@ void free_objs()
 	list_init(objs);
 	list_init(icons);
 	list_init(rects);
-	
+
 	if (verbose_img.data)
 		free((u8*)verbose_img.data);
 	if (verbose_img.cmap.red)
@@ -514,19 +514,19 @@ void free_objs()
 void icon_update_status(char *svc, enum ESVC state)
 {
 	item *i;
-	
-	for (i = objs.head; i != NULL; i = i->next) { 
+
+	for (i = objs.head; i != NULL; i = i->next) {
 		icon *ic;
 		obj *o = (obj*)i->p;
-	
+
 		if (o->type != o_icon)
 			continue;
-	
+
 		ic = (icon*)o->p;
-		
+
 		if (!ic->svc || strcmp(ic->svc, svc))
 			continue;
-	
+
 		if (ic->type == state)
 			ic->status = 1;
 		else
@@ -541,7 +541,7 @@ void bgbuffer_alloc()
 {
 	int i = 0;
 
-	/* 
+	/*
 	 * If we're not going to export the memory buffer to a file,
 	 * simply allocate a chunk of memory large enough to hold the
 	 * contents of the screen.
@@ -560,7 +560,7 @@ void bgbuffer_alloc()
 		}
 		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
 		write(fd_bg, &i, 1);
-		
+
 		bg_buffer = mmap(NULL, fb_var.xres * fb_var.yres * bytespp, PROT_WRITE | PROT_READ,
 						 MAP_SHARED, fd_bg, 0);
 
@@ -572,8 +572,8 @@ void bgbuffer_alloc()
 	}
 }
 
-/* 
- * Load a new theme. 
+/*
+ * Load a new theme.
  *
  */
 int reload_theme(void)
@@ -604,7 +604,7 @@ int reload_theme(void)
 	parse_cfg(config_file);
 	if (load_images('a'))
 		return -2;
-	
+
 #ifdef CONFIG_TTF
 	load_fonts();
 #endif
@@ -619,8 +619,8 @@ int reload_theme(void)
 	return 0;
 }
 
-/* 
- * Start the splash daemon. 
+/*
+ * Start the splash daemon.
  */
 void daemon_start()
 {
@@ -635,14 +635,14 @@ void daemon_start()
 		exit(1);
 
 	bgbuffer_alloc();
-	
-	fb_mem = mmap(NULL, fb_fix.line_length * fb_var.yres, 
-		      PROT_WRITE | PROT_READ, MAP_SHARED, fd_fb, 0); 
-	
+
+	fb_mem = mmap(NULL, fb_fix.line_length * fb_var.yres,
+		      PROT_WRITE | PROT_READ, MAP_SHARED, fd_fb, 0);
+
 	if (fb_mem == MAP_FAILED) {
 		fprintf(stderr, "mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
 		close(fd_fb);
-		exit(1);	
+		exit(1);
 	}
 
 	fd_tty1 = open(PATH_DEV "/tty1", O_RDWR);
@@ -684,7 +684,7 @@ void daemon_start()
 #ifdef CONFIG_TTF
 	load_fonts();
 #endif
-	
+
 	/* arg_theme is a reference to argv[x] of the original splash_util
 	 * process. We're freeing arg_theme in cmd_set_theme(), so the strdup()
 	 * call is necessary to make sure things don't break there. */
@@ -722,7 +722,7 @@ void daemon_start()
 	switchmon_start(UPD_ALL);
 	pthread_mutex_unlock(&mtx_tty);
 
-	daemon_comm();	
+	daemon_comm();
 	exit(0);
 }
 

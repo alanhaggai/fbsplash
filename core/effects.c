@@ -2,7 +2,7 @@
  * effects.c - miscellaneous graphical effects for splashutils
  *
  * Copyright (C) 2004-2005, Michal Januszewski <spock@gentoo.org>
- * 
+ *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
  * more details.
@@ -23,7 +23,7 @@ void put_img(u8 *dst, u8 *src)
 {
 	int y, i;
 	u8 *to = dst;
-	
+
 	i = fb_var.xres * bytespp;
 
 	for (y = 0; y < fb_var.yres; y++) {
@@ -38,11 +38,11 @@ void fade_in_directcolor(u8 *dst, u8 *image, int fd)
 	struct fb_cmap cmap;
 
 	len = min(min(fb_var.red.length,fb_var.green.length),fb_var.blue.length);
-	
+
 	cmap.start = 0;
 	cmap.len = (1 << len);
 	cmap.transp = NULL;
-	cmap.red = malloc(2 * 256 * 3); 
+	cmap.red = malloc(2 * 256 * 3);
 	if (!cmap.red)
 		return;
 
@@ -52,7 +52,7 @@ void fade_in_directcolor(u8 *dst, u8 *image, int fd)
 	for (i = 0; i < cmap.len; i++) {
 		cmap.red[i] = cmap.green[i] = cmap.blue[i] = 0;
 	}
-	
+
 	ioctl(fd, FBIOPUTCMAP, &cmap);
 	put_img(dst, image);
 
@@ -73,7 +73,7 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 	int r, g, b, rt, gt, bt;
 	int rl8, gl8, bl8;
 	int clut[256][FADEIN_STEPS];
-	
+
 	rlen = fb_var.red.length;
 	glen = fb_var.green.length;
 	blen = fb_var.blue.length;
@@ -81,7 +81,7 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 	rl8 = 8 - rlen;
 	gl8 = 8 - glen;
 	bl8 = 8 - blen;
-	
+
 	t = malloc(fb_var.xres * fb_var.yres * 3);
 	if (!t) {
 		put_img(dst, image);
@@ -94,7 +94,7 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 	 * takes exatly one byte */
 	for (i = 0; i < fb_var.xres * fb_var.yres; i++) {
 
-		if (bytespp == 2) { 
+		if (bytespp == 2) {
 			h = *(u16*)pic;
 		} else if (bytespp == 3) {
 			h = *(u32*)pic & 0xffffff;
@@ -116,21 +116,21 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 	/* Compute the color look-up table */
 	for (step = 0; step < FADEIN_STEPS; step++) {
 		for (i = 0; i < 256; i++) {
-			clut[i][step] = (step+1) * i / FADEIN_STEPS; 
+			clut[i][step] = (step+1) * i / FADEIN_STEPS;
 		}
 	}
-	
-	memset(dst, 0, fb_var.yres * fb_fix.line_length); 
+
+	memset(dst, 0, fb_var.yres * fb_fix.line_length);
 
 	for (step = 0; step < FADEIN_STEPS; step++) {
 
 		pic = dst;
 		p = t;
-	
+
 		for (y = 0; y < fb_var.yres; y++) {
-	
+
 			for (x = 0; x < fb_var.xres; x++) {
-			
+
 				r = *p; p++;
 				g = *p; p++;
 				b = *p; p++;
@@ -138,13 +138,13 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 				rt = clut[r][step];
 				gt = clut[g][step];
 				bt = clut[b][step];
-							
+
 				if (bytespp == 2) {
 					rt >>= rl8;
 					gt >>= gl8;
 					bt >>= bl8;
 				}
-					
+
 				h = (rt << fb_var.red.offset) |
 				    (gt << fb_var.green.offset) |
 				    (bt << fb_var.blue.offset);
@@ -153,7 +153,7 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 					*(u16*)pic = h;
 					pic += 2;
 				} else if (bytespp == 3) {
-					if (endianess == little) { 
+					if (endianess == little) {
 						*(u16*)pic = h & 0xffff;
 						pic[2] = (h >> 16) & 0xff;
 					} else {
@@ -170,10 +170,10 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 			pic += fb_fix.line_length - fb_var.xres * bytespp;
 		}
 	}
-	
+
 	free(t);
 }
-	
+
 void fade_in(u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd)
 {
 	if (bgnd) {
@@ -186,13 +186,13 @@ void fade_in(u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd)
 		put_img(dst, image);
 		return;
 	}
-	
+
 	if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR) {
 		fade_in_directcolor(dst, image, fd);
 	} else {
 		fade_in_truecolor(dst, image);
 	}
-	
+
 	if (bgnd) {
 		exit(0);
 	}
@@ -206,11 +206,11 @@ void set_directcolor_cmap(int fd)
 	struct fb_cmap cmap;
 
 	len = min(min(fb_var.red.length,fb_var.green.length),fb_var.blue.length);
-	
+
 	cmap.start = 0;
 	cmap.len = (1 << len);
 	cmap.transp = NULL;
-	cmap.red = malloc(2 * 256 * 3); 
+	cmap.red = malloc(2 * 256 * 3);
 	if (!cmap.red)
 		return;
 
@@ -220,7 +220,7 @@ void set_directcolor_cmap(int fd)
 	for (i = 0; i < cmap.len; i++) {
 		cmap.red[i] = cmap.green[i] = cmap.blue[i] = (0xffff * i)/(cmap.len-1);
 	}
-	
+
 	ioctl(fd, FBIOPUTCMAP, &cmap);
 	free(cmap.red);
 }

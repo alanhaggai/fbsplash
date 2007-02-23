@@ -2,16 +2,16 @@
  * render.c - Functions for rendering boxes and icons
  *
  * Copyright (C) 2004-2005, Michal Januszewski <spock@gentoo.org>
- * 
+ *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
  * more details.
  *
  */
 
-/* 
- * HACK WARNING: 
- * This is necessary to get FD_SET and FD_ZERO on platforms other than x86. 
+/*
+ * HACK WARNING:
+ * This is necessary to get FD_SET and FD_ZERO on platforms other than x86.
  */
 
 #ifdef TARGET_KERNEL
@@ -34,7 +34,7 @@ void rgba2fb (rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha)
 {
 	int i, add = 0;
 	rgbcolor* rgb = (rgbcolor*)data;
-	
+
 	add ^= (0 ^ y) & 1 ? 1 : 3;
 
 	for (i = 0; i < len; i++) {
@@ -108,7 +108,7 @@ inline void put_pixel (u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add)
 		u8 tr, tg, tb;
 
 		if (a != 255) {
-			if (fb_var.bits_per_pixel == 16) { 
+			if (fb_var.bits_per_pixel == 16) {
 				i = *(u16*)src;
 			} else if (fb_var.bits_per_pixel == 24) {
 				i = *(u32*)src & 0xffffff;
@@ -118,25 +118,25 @@ inline void put_pixel (u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add)
 				i = *(u32*)src & ((2 << fb_var.bits_per_pixel)-1);
 			}
 
-			tr = (( (i >> fb_var.red.offset & ((1 << fb_rlen)-1)) 
+			tr = (( (i >> fb_var.red.offset & ((1 << fb_rlen)-1))
 			      << (8 - fb_rlen)) * (255 - a) + r * a) / 255;
-			tg = (( (i >> fb_var.green.offset & ((1 << fb_glen)-1)) 
+			tg = (( (i >> fb_var.green.offset & ((1 << fb_glen)-1))
 			      << (8 - fb_glen)) * (255 - a) + g * a) / 255;
-			tb = (( (i >> fb_var.blue.offset & ((1 << fb_blen)-1)) 
+			tb = (( (i >> fb_var.blue.offset & ((1 << fb_blen)-1))
 			      << (8 - fb_blen)) * (255 - a) + b * a) / 255;
 		} else {
 			tr = r;
 			tg = g;
 			tb = b;
 		}
-		
+
 		/* We only need to do dithering if depth is <24bpp */
 		if (fb_var.bits_per_pixel < 24) {
 			tr = CLAMP(tr + add*2 + 1);
 			tg = CLAMP(tg + add);
 			tb = CLAMP(tb + add*2 + 1);
 		}
-	
+
 		tr >>= (8 - fb_rlen);
 		tg >>= (8 - fb_glen);
 		tb >>= (8 - fb_blen);
@@ -148,7 +148,7 @@ inline void put_pixel (u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add)
 		if (fb_var.bits_per_pixel == 16) {
 			*(u16*)dst = i;
 		} else if (fb_var.bits_per_pixel == 24) {
-			if (endianess == little) { 
+			if (endianess == little) {
 				*(u16*)dst = i & 0xffff;
 				dst[2] = (i >> 16) & 0xff;
 			} else {
@@ -167,16 +167,16 @@ void render_box(box *box, u8 *target)
 	int add;
 	u8 *pic;
 	u8 solid = 0;
-	
+
 	int b_width = box->x2 - box->x1 + 1;
 	int b_height = box->y2 - box->y1 + 1;
-	
+
 	if (!memcmp(&box->c_ul, &box->c_ur, sizeof(color)) &&
 	    !memcmp(&box->c_ul, &box->c_ll, sizeof(color)) &&
 	    !memcmp(&box->c_ul, &box->c_lr, sizeof(color))) {
 		solid = 1;
 	}
-	
+
 	for (y = box->y1; y <= box->y2; y++) {
 
 		int r1, r2, g1, g2, b1, b2, a1, a2;
@@ -194,7 +194,7 @@ void render_box(box *box, u8 *target)
 		 */
 		add = (box->x1 & 1);
 		add ^= (add ^ y) & 1 ? 1 : 3;
-		
+
 		if (solid) {
 			r = box->c_ul.r;
 			g = box->c_ul.g;
@@ -204,12 +204,12 @@ void render_box(box *box, u8 *target)
 		} else {
 			h1 = box->y2 - y;
 			h2 = y - box->y1;
-		
+
 			if (b_height > 1)
 				h = b_height -1;
 			else
 				h = 1;
-			
+
 			r1 = (h1 * box->c_ul.r + h2 * box->c_ll.r)/h;
 			r2 = (h1 * box->c_ur.r + h2 * box->c_lr.r)/h;
 
@@ -222,8 +222,8 @@ void render_box(box *box, u8 *target)
 			a1 = (h1 * box->c_ul.a + h2 * box->c_ll.a)/h;
 			a2 = (h1 * box->c_ur.a + h2 * box->c_lr.a)/h;
 
-			if (r1 == r2 && g1 == g2 && b1 == b2 && a1 == a2) { 
-				opt = 1;	
+			if (r1 == r2 && g1 == g2 && b1 == b2 && a1 == a2) {
+				opt = 1;
 			} else {
 				r2 -= r1;
 				g2 -= g1;
@@ -235,20 +235,20 @@ void render_box(box *box, u8 *target)
 				hb = 1.0/b_width * b2;
 				ha = 1.0/b_width * a2;
 			}
-				
+
 			r = r1; fr = (float)r1;
 			g = g1; fg = (float)g1;
 			b = b1; fb = (float)b1;
 			a = a1; fa = (float)a1;
 		}
-			
+
 		for (x = box->x1; x <= box->x2; x++) {
-			if (!opt) { 
+			if (!opt) {
 				fa += ha;
 				fr += hr;
 				fg += hg;
 				fa += hb;
-		
+
 				a = (u8)fa;
 				b = (u8)fb;
 				g = (u8)fg;
@@ -271,7 +271,7 @@ void interpolate_box(box *a, box *b)
 
 	if (arg_progress == 0)
 		return;
-	
+
 #define inter_color(cl1, cl2) 					\
 {								\
 	cl1.r = (cl1.r * h + cl2.r * arg_progress) / PROGRESS_MAX; 	\
@@ -279,7 +279,7 @@ void interpolate_box(box *a, box *b)
 	cl1.b = (cl1.b * h + cl2.b * arg_progress) / PROGRESS_MAX;	\
 	cl1.a = (cl1.a * h + cl2.a * arg_progress) / PROGRESS_MAX; 	\
 }
-	
+
 	a->x1 = (a->x1 * h + b->x1 * arg_progress) / PROGRESS_MAX;
 	a->x2 = (a->x2 * h + b->x2 * arg_progress) / PROGRESS_MAX;
 	a->y1 = (a->y1 * h + b->y1 * arg_progress) / PROGRESS_MAX;
@@ -299,14 +299,14 @@ char *get_program_output(char *prg, unsigned char origin)
 	int pfds[2];
 	pid_t pid;
 	int i;
-	
+
 	if (!buf)
 		return NULL;
 
         pipe(pfds);
 	pid = fork();
 	buf[0] = 0;
-	
+
 	if (pid == 0) {
 		if (origin != FB_SPLASH_IO_ORIG_KERNEL) {
 			/* Only play with stdout if we are NOT the kernel helper.
@@ -323,12 +323,12 @@ char *get_program_output(char *prg, unsigned char origin)
 		tv.tv_sec = 0;
 		tv.tv_usec = 250000;
 		i = select(pfds[0]+1, &rfds, NULL, NULL, &tv);
-		if (i != -1 && i != 0) {	
+		if (i != -1 && i != 0) {
 			i = read(pfds[0], buf, 1024);
-			if (i > 0) 
+			if (i > 0)
 				buf[i] = 0;
 		}
-		
+
 		close(pfds[0]);
 		close(pfds[1]);
 	}
@@ -343,8 +343,8 @@ char *eval_text(char *txt)
 
 	i = len = strlen(txt);
 	p = txt;
-	
-	while ((t = strstr(p, "$progress")) != NULL) { 
+
+	while ((t = strstr(p, "$progress")) != NULL) {
 		len += 3;
 		p = t+1;
 	}
@@ -368,9 +368,9 @@ char *eval_text(char *txt)
 			d++;
 			continue;
 		}
-		
+
 		*d = *p;
-		
+
 		if (!strncmp(p, "$progress", 9)) {
 			d += sprintf(d, "%d", arg_progress * 100 / PROGRESS_MAX);
 			p += 9;
@@ -381,7 +381,7 @@ char *eval_text(char *txt)
 	}
 
 	*d = 0; /* NULL-terminate */
-	
+
 	return ret;
 }
 
@@ -406,7 +406,7 @@ void prep_bgnd(u8 *target, u8 *src, int x, int y, int w, int h)
 	s = src    + (y * fb_var.xres + x) * bytespp;
 	j = w * bytespp;
 	i = fb_var.xres * bytespp;
-	
+
 	for (y = 0; y < h; y++) {
 		memcpy(t, s, j);
 		t += i;
@@ -426,7 +426,7 @@ void prep_bgnds(u8 *target, u8 *bgnd, char mode)
 		if (o->type == o_box) {
 			box *b, *n;
 			b = (box*)o->p;
-				
+
 			if (b->attr & BOX_SILENT && mode != 's')
 				continue;
 
@@ -448,10 +448,10 @@ void prep_bgnds(u8 *target, u8 *bgnd, char mode)
 			if (!c->img || !c->img->picbuf)
 				continue;
 
-			if (c->img->w > fb_var.xres - c->x || c->img->h > fb_var.yres - c->y) 
+			if (c->img->w > fb_var.xres - c->x || c->img->h > fb_var.yres - c->y)
 				continue;
 
-			prep_bgnd(target, bgnd, c->x, c->y, c->img->w, c->img->h); 
+			prep_bgnd(target, bgnd, c->x, c->y, c->img->w, c->img->h);
 		}
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
 		else if (o->type == o_anim) {
@@ -470,7 +470,7 @@ void prep_bgnds(u8 *target, u8 *bgnd, char mode)
 			}
 
 			if (render_it)
-				prep_bgnd(target, bgnd, a->x, a->y, a->w, a->h); 
+				prep_bgnd(target, bgnd, a->x, a->y, a->w, a->h);
 		}
 #endif /* CONFIG_MNG */
 #if WANT_TTF
@@ -510,14 +510,14 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 
 	if (bgnd)
 		prep_bgnds(target, bgnd, mode);
-	
+
 	for (i = objs.head; i != NULL; i = i->next) {
-		obj *o = (obj*)i->p;	
+		obj *o = (obj*)i->p;
 
 		if (o->type == o_box) {
 			box tmp, *b, *n;
 			b = (box*)o->p;
-				
+
 			if ((b->attr & BOX_SILENT) && mode != 's')
 				continue;
 
@@ -545,14 +545,14 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 
 			if (!c->img || !c->img->picbuf)
 				continue;
-			
+
 			if (c->img->w > fb_var.xres - c->x || c->img->h > fb_var.yres - c->y) {
 				printwarn("Icon %s does not fit on the screen - ignoring it.", c->img->filename);
 				continue;
 			}
 
 			render_icon(c, target);
-		} 
+		}
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
 		else if (o->type == o_anim) {
 			u8 render_it = 0;
@@ -590,7 +590,7 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 
 			if (mode == 'v' && !(ct->flags & F_TXT_VERBOSE))
 				continue;
-		
+
 			if (!ct->font || !ct->font->font)
 				continue;
 
@@ -603,8 +603,8 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 			}
 
 			if (txt) {
-				TTF_Render(target, txt, ct->font->font, 
-				           ct->style, ct->x, ct->y, ct->col, 
+				TTF_Render(target, txt, ct->font->font,
+				           ct->style, ct->x, ct->y, ct->col,
 					   ct->hotspot, &ct->last_width);
 				if ((ct->flags & F_TXT_EXEC) || (ct->flags & F_TXT_EVAL))
 					free(txt);
@@ -616,14 +616,14 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 #if WANT_TTF
 	if (mode == 's') {
 		if (!boot_message)
-			TTF_Render(target, DEFAULT_MESSAGE, global_font, 
+			TTF_Render(target, DEFAULT_MESSAGE, global_font,
 				   TTF_STYLE_NORMAL, cf.text_x, cf.text_y,
 				   cf.text_color, F_HS_LEFT | F_HS_TOP, &boot_msg_width);
 		else {
 			char *t;
 			t = eval_text(boot_message);
 			TTF_Render(target, t, global_font, TTF_STYLE_NORMAL,
-				   cf.text_x, cf.text_y, cf.text_color, 
+				   cf.text_x, cf.text_y, cf.text_color,
 				   F_HS_LEFT | F_HS_TOP, &boot_msg_width);
 			free(t);
 		}

@@ -64,19 +64,19 @@ static void Flush_Glyph(c_glyph* glyph)
 
 static void Flush_Cache(TTF_Font* font)
 {
-	int i;  
+	int i;
 	int size = sizeof(font->cache) / sizeof(font->cache[0]);
-	
+
 	for(i = 0; i < size; ++i) {
 		if(font->cache[i].cached) {
 			Flush_Glyph(&font->cache[i]);
 		}
-	
+
 	}
 	if(font->scratch.cached) {
 		Flush_Glyph(&font->scratch);
 	}
-}       
+}
 
 static FT_Error Load_Glyph(TTF_Font* font, unsigned short ch, c_glyph* cached, int want)
 {
@@ -85,7 +85,7 @@ static FT_Error Load_Glyph(TTF_Font* font, unsigned short ch, c_glyph* cached, i
 	FT_GlyphSlot glyph;
 	FT_Glyph_Metrics* metrics;
 	FT_Outline* outline;
-			      
+
 	assert(font);
 	assert(font->face);
 
@@ -215,7 +215,7 @@ static FT_Error Load_Glyph(TTF_Font* font, unsigned short ch, c_glyph* cached, i
 				}
 			}
 		}
-		
+
 		/* Handle the bold style */
 		if (font->style & TTF_STYLE_BOLD) {
 			int row;
@@ -238,7 +238,7 @@ static FT_Error Load_Glyph(TTF_Font* font, unsigned short ch, c_glyph* cached, i
 				}
 			}
 		}
-		
+
 		/* Mark that we rendered this format */
 		if (mono) {
 			cached->stored |= CACHED_BITMAP;
@@ -246,7 +246,7 @@ static FT_Error Load_Glyph(TTF_Font* font, unsigned short ch, c_glyph* cached, i
 			cached->stored |= CACHED_PIXMAP;
 		}
 	}
-	
+
 	/* We're done, mark this glyph cached */
 	cached->cached = ch;
 
@@ -275,7 +275,7 @@ static unsigned short *UTF8_to_UNICODE(unsigned short *unicode, const char *utf8
 {
 	int i, j;
 	unsigned short ch;
-				
+
 	for (i=0, j=0; i < len; ++i, ++j) {
 		ch = ((const unsigned char *)utf8)[i];
 		if (ch >= 0xF0) {
@@ -306,19 +306,19 @@ static FT_Library library;
 static int TTF_initialized = 0;
 
 int TTF_Init(void)
-{   
+{
 	int status;
 	FT_Error error;
-			
+
 	status = 0;
 	error = FT_Init_FreeType(&library);
 	if (error) {
 		fprintf(stderr, "Couldn't init FreeType engine %d\n", error);
-		status = -1;    
+		status = -1;
 	} else {
 		TTF_initialized = 1;
 	}
-	return status;  
+	return status;
 }
 
 void TTF_Quit(void)
@@ -338,7 +338,7 @@ int TTF_SizeUNICODE(TTF_Font *font, const unsigned short *text, int *w, int *h)
 	int miny, maxy;
 	c_glyph *glyph;
 	FT_Error error;
-	
+
 	/* Initialize everything to 0 */
 	if (! TTF_initialized) {
 		return -1;
@@ -380,19 +380,19 @@ int TTF_SizeUNICODE(TTF_Font *font, const unsigned short *text, int *w, int *h)
 			maxy = glyph->maxy;
 		}
 	}
-	
+
 	/* Fill the bounds rectangle */
 	if (w) {
 		*w = (maxx - minx);
 	}
 	if (h)
 		*h = font->height;
-	
+
 	return status;
 }
 
 void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
- 			      TTF_Font* font, int x, int y, color fcol, 
+ 			      TTF_Font* font, int x, int y, color fcol,
 			      u8 hotspot, int* swidth)
 {
 	int xstart, width, height, i, j, row_underline;
@@ -427,21 +427,21 @@ void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 	else if (i == F_HS_BOTTOM)
 		y -= height;
 
-	/* 
+	/*
 	 * The underline stuff below is a little hackish. The characters
 	 * that are being rendered do not form a continuous rectangle, and
 	 * we want for the underline to be continuous and span below the
-	 * whole text. To achieve that, while rendering each character, 
-	 * we have to not only paint the part of the underline that is 
+	 * whole text. To achieve that, while rendering each character,
+	 * we have to not only paint the part of the underline that is
 	 * directly below it, but also the part that 'links' it to the next
 	 * character. Thus all the (font->style & TTF_STYLE_UNDERLINE) ? .. : ..
-	 * code. 
+	 * code.
 	 */
 	row_underline = font->ascent - font->underline_offset - 1;
 	if (row_underline >= height) {
 		row_underline = (height-1) - font->underline_height;
 	}
-	
+
 	/* Load and render each character */
 	xstart = 0;
 	for(ch = text; *ch; ++ch) {
@@ -459,51 +459,51 @@ void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 
 			/* Sanity checks.. */
 			i = y + row + glyph->yoffset;
-			j = xstart + glyph->minx + x;			
-			
+			j = xstart + glyph->minx + x;
+
 			if (i < 0 || i >= fb_var.yres || j >= fb_var.xres)
 				continue;
-					
+
 			if (j < 0)
 				goto next_glyph;
 
 			if (font->style & TTF_STYLE_UNDERLINE && glyph->minx > 0) {
 				j -= glyph->minx;
 			}
-			
+
 			dst = (unsigned char *)target + (i * fb_var.xres + j)*bytespp;
 			src = current->buffer + row*current->pitch;
 
 			add = x & 1;
 			add ^= (add ^ (row+y)) & 1 ? 1 : 3;
-		
-			for (col= ((font->style & TTF_STYLE_UNDERLINE && glyph->minx > 0) ? -glyph->minx : 0); 
-			     col < ((font->style & TTF_STYLE_UNDERLINE && *(ch+1)) ? 
+
+			for (col= ((font->style & TTF_STYLE_UNDERLINE && glyph->minx > 0) ? -glyph->minx : 0);
+			     col < ((font->style & TTF_STYLE_UNDERLINE && *(ch+1)) ?
 			           current->width + glyph->advance : current->width); col++) {
-			
+
 				if (col + j >= fb_var.xres-1)
 					continue;
-				
+
 				if (dst+bytespp-1 > memlimit)
 					break;
-				
+
 				if (row < current->rows && col < current->width && col >= 0)
 					val=*src++;
 				else
 					val=0;
 
 				/* Handle underline */
-				if (font->style & TTF_STYLE_UNDERLINE && row+glyph->yoffset >= row_underline && 
+				if (font->style & TTF_STYLE_UNDERLINE && row+glyph->yoffset >= row_underline &&
 				    row+glyph->yoffset < row_underline + font->underline_height) {
 					val = NUM_GRAYS-1;
 				}
-				
+
 				put_pixel(fcol.a*val/255, fcol.r, fcol.g, fcol.b, dst, dst, add);
 				dst += bytespp;
 				add ^= 3;
 			}
 		}
-		
+
 next_glyph:	xstart += glyph->advance;
 		if (font->style & TTF_STYLE_BOLD) {
 			xstart += font->glyph_overhang;
@@ -514,8 +514,8 @@ next_glyph:	xstart += glyph->advance;
 
 
 
-unsigned char* TTF_RenderText_Shaded(u8 *target, const char *text, 
-				     TTF_Font *font, int x, int y, 
+unsigned char* TTF_RenderText_Shaded(u8 *target, const char *text,
+				     TTF_Font *font, int x, int y,
 				     color col, u8 hotspot, int *width)
 {
 	unsigned short *p, *t, *unicode_text;
@@ -546,7 +546,7 @@ unsigned char* TTF_RenderText_Shaded(u8 *target, const char *text,
 	if (*t != 0) {
 		TTF_RenderUNICODE_Shaded(target, t, font, x, y, col, hotspot, width);
 	}
-    
+
 	/* Free the text buffer and return */
 	free(unicode_text);
 	return NULL;
@@ -557,14 +557,14 @@ void TTF_CloseFont(TTF_Font* font)
 	Flush_Cache(font);
 	FT_Done_Face(font->face);
 	free(font);
-}			     
+}
 
 void TTF_SetFontStyle(TTF_Font* font, int style)
 {
 	font->style = style;
 	Flush_Cache(font);
 }
-    
+
 TTF_Font* TTF_OpenFontIndex(const char *file, int ptsize, long index)
 {
 	TTF_Font* font;
@@ -584,7 +584,7 @@ TTF_Font* TTF_OpenFontIndex(const char *file, int ptsize, long index)
 
 	if (error)
 		error = FT_New_Face(library, TTF_DEFAULT, 0, &font->face);
-	
+
 //	if (error && !strict_font)
 //		error=FT_New_Memory_Face(library, (const FT_Byte*)luxisri_ttf, LUXISRI_SIZE, 0, &font->face);
 
@@ -625,7 +625,7 @@ TTF_Font* TTF_OpenFontIndex(const char *file, int ptsize, long index)
 		TTF_CloseFont(font);
 		return NULL;
 	}
-	
+
 	/* Get the scalable font metrics for this font */
 	scale = face->size->metrics.y_scale;
 	font->ascent  = FT_CEIL(FT_MulFix(face->bbox.yMax, scale));
@@ -651,22 +651,22 @@ TTF_Font* TTF_OpenFontIndex(const char *file, int ptsize, long index)
 TTF_Font* TTF_OpenFont(const char *file, int ptsize)
 {
 	TTF_Font *a;
-	
+
 	a = TTF_OpenFontIndex(file, ptsize, 0);
 
 	if (a == NULL) {
 		fprintf(stderr, "Couldn't load %d pt font from %s\n", ptsize, file);
 	}
-	
+
 	return a;
 }
 
-int TTF_Render(u8 *target, char *text, TTF_Font *font, int style, int x, 
+int TTF_Render(u8 *target, char *text, TTF_Font *font, int style, int x,
 	       int y, color col, u8 hotspot, int *width)
 {
 	if (!target || !text || !font)
 		return -1;
-	
+
 	TTF_SetFontStyle(font, style);
 	TTF_RenderText_Shaded(target, text, font, x, y, col, hotspot, width);
 
@@ -679,7 +679,7 @@ int load_fonts(void)
 
 	if (!global_font)
 		global_font = TTF_OpenFont(cf.text_font, cf.text_size);
-	
+
 	for (i = fonts.head; i != NULL; i = i->next) {
 		font_e *fe = (font_e*) i->p;
 		if (!fe->font) {
@@ -698,7 +698,7 @@ int free_fonts(void)
 		TTF_CloseFont(global_font);
 		global_font = NULL;
 	}
-	
+
 	for (i = fonts.head; i != NULL;) {
 		font_e *fe = (font_e*) i->p;
 		j = i->next;

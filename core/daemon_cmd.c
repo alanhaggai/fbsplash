@@ -1,8 +1,8 @@
 /*
  * daemon_cmd.c -- Code handling the daemon commands.
- * 
+ *
  * Copyright (C) 2005-2006 Michal Januszewski <spock@gentoo.org>
- * 
+ *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
  * more details.
@@ -28,7 +28,7 @@ void inline do_paint_rect2(u8 *dst, u8 *src, int x1, int y1, int x2, int y2)
 	for (y = y1; y <= y2; y++) {
 		to = dst + y * fb_fix.line_length + x1 * bytespp;
 		memcpy(to, src + (y * fb_var.xres + x1) * bytespp, j);
-	}			
+	}
 }
 
 void do_paint_rect(u8 *dst, u8 *src, rect *re)
@@ -49,7 +49,7 @@ void do_paint(u8 *dst, u8 *src)
 	for (ti = objs.head; ti != NULL; ti = ti->next) {
 		obj *o;
 		o = (obj*)ti->p;
-		
+
 		switch (o->type) {
 		case o_box:
 		{
@@ -57,13 +57,13 @@ void do_paint(u8 *dst, u8 *src)
 			if (!(b->attr & BOX_INTER) || ti->next == NULL)
 				continue;
 
-			if (((obj*)ti->next->p)->type != o_box) 
+			if (((obj*)ti->next->p)->type != o_box)
 				continue;
 
 			b = (box*)((obj*)ti->next->p)->p;
 			do_paint_rect2(dst, src, b->x1, b->y1, b->x2, b->y2);
 			break;
-		}	
+		}
 #if WANT_TTF
 		case o_text:
 		{
@@ -93,7 +93,7 @@ int cmd_exit(void **args)
 
 	pthread_cancel(th_switchmon);
 	pthread_kill(th_sighandler, SIGTERM);
-		
+
 	free_objs();
 
 	for (i = svcs.head; i != NULL; ) {
@@ -136,7 +136,7 @@ int cmd_set_theme(void **args)
 int cmd_set_mode(void **args)
 {
 	int n;
-	
+
 	if (!strcmp(args[0], "silent")) {
 		n = tty_s;
 	} else if (!strcmp(args[0], "verbose")) {
@@ -154,31 +154,31 @@ int cmd_set_mode(void **args)
 /*
  * 'set tty' command handlers.
  *
- * Assigns a TTY for verbose/silent splash screen. 
+ * Assigns a TTY for verbose/silent splash screen.
  */
 int cmd_set_tty(void **args)
 {
 	/* Make sure the new tty setting is sane. */
 	if (*(int*)args[1] < 0 || *(int*)args[1] > MAX_NR_CONSOLES)
 		return -1;
-	
+
 	if (!strcmp(args[0], "silent")) {
 		/* Do nothing if the new tty is the same as the old one. */
 		if (tty_s == *(int*)args[1])
 			return 0;
-	
+
 		pthread_cancel(th_switchmon);
 
 		pthread_mutex_lock(&mtx_tty);
 		tty_s = *(int*)args[1];
-		switchmon_start(UPD_SILENT);	
+		switchmon_start(UPD_SILENT);
 		pthread_mutex_unlock(&mtx_tty);
 
 	} else if (!strcmp(args[0], "verbose")) {
 		/* Do nothing if the new tty is the same as the old one. */
 		if (tty_v == *(int*)args[1])
 			return 0;
-	
+
 		pthread_mutex_lock(&mtx_tty);
 		tty_v = *(int*)args[1];
 		pthread_mutex_unlock(&mtx_tty);
@@ -189,7 +189,7 @@ int cmd_set_tty(void **args)
 	return 0;
 }
 
-/* 
+/*
  * 'set event dev' command handler.
  *
  * Sets a new event device to monitor for keypresses.
@@ -199,12 +199,12 @@ int cmd_set_event_dev(void **args)
 	if (evdev)
 		free(evdev);
 	evdev = strdup(args[0]);
-	
+
 	pthread_cancel(th_switchmon);
 
 	fd_evdev = open(evdev, O_RDONLY);
 	switchmon_start(UPD_MON);
-	
+
 	return 0;
 }
 
@@ -225,7 +225,7 @@ int cmd_set_notify(void **args)
 			free(notify[NOTIFY_PAINT]);
 		notify[NOTIFY_PAINT] = strdup(args[1]);
 	}
-	
+
 	return 0;
 }
 
@@ -251,17 +251,17 @@ int cmd_paint(void **args)
 		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
 		write(fd_bg, &i, 1);
 	}
-/*	
+/*
  	memcpy(bg_buffer, silent_img.data, fb_var.xres * fb_var.yres * bytespp);
-	render_objs('s', (u8*)bg_buffer, FB_SPLASH_IO_ORIG_USER);		
+	render_objs('s', (u8*)bg_buffer, FB_SPLASH_IO_ORIG_USER);
 */
-	
+
 	render_objs((u8*)bg_buffer, (u8*)silent_img.data, 's', FB_SPLASH_IO_ORIG_USER);
 
 	if (notify[NOTIFY_PAINT])
 		system(notify[NOTIFY_PAINT]);
 
-	do_paint(fb_mem, bg_buffer);	
+	do_paint(fb_mem, bg_buffer);
 out:
 	pthread_mutex_unlock(&mtx_paint);
 	return ret;
@@ -284,18 +284,18 @@ int cmd_repaint(void **args)
 
 	if (ctty != CTTY_SILENT)
 		goto out;
-	
+
 	if (fd_bg) {
 		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
 		write(fd_bg, &i, 1);
 	}
-	
+
 	memcpy(bg_buffer, silent_img.data, fb_var.xres * fb_var.yres * bytespp);
 	render_objs((u8*)bg_buffer, NULL, 's', FB_SPLASH_IO_ORIG_USER);
 
 	if (notify[NOTIFY_REPAINT])
 		system(notify[NOTIFY_REPAINT]);
-	
+
 	put_img(fb_mem, bg_buffer);
 out:
 	pthread_mutex_unlock(&mtx_paint);
@@ -415,7 +415,7 @@ int cmd_update_svc(void **args)
 
 	if (!parse_svc_state(args[1], &state))
 		return -1;
-	
+
 	for (i = svcs.head ; i != NULL; i = i->next) {
 		ss = (svc_state*)i->p;
 		if (!strcmp(ss->svc, args[0]))
@@ -425,15 +425,15 @@ int cmd_update_svc(void **args)
 	ss = malloc(sizeof(svc_state));
 	ss->svc = strdup(args[0]);
 	list_add(&svcs, ss);
-	
+
 cus_update:
 	ss->state = state;
 	icon_update_status(args[0], state);
-	
+
 	return 0;
 }
 
-cmdhandler known_cmds[] = 
+cmdhandler known_cmds[] =
 {
 	{	.cmd = "set theme",
 		.handler = cmd_set_theme,
@@ -458,31 +458,31 @@ cmdhandler known_cmds[] =
 		.args = 1,
 		.specs = "s"
 	},
-			
+
 	{	.cmd = "set message",
 		.handler = cmd_set_mesg,
 		.args = 1,
 		.specs = "s"
 	},
-	
+
 	{	.cmd = "set notify",
 		.handler = cmd_set_notify,
 		.args = 2,
 		.specs = "ss"
 	},
-		
+
 	{	.cmd = "paint rect",
 		.handler = cmd_paint_rect,
 		.args = 4,
 		.specs = "dddd"
 	},
-	
+
 	{	.cmd = "paint",
 		.handler = cmd_paint,
 		.args = 0,
 		.specs = NULL,
 	},
-	
+
 	{	.cmd = "repaint",
 		.handler = cmd_repaint,
 		.args = 0,
@@ -532,21 +532,21 @@ inner:		while (fgets(buf, 1024, fp_fifo)) {
 			char *t;
 			int args_i[4];
 			void *args[4];
-			
+
 			buf[1023] = 0;
 			buf[strlen(buf)-1] = 0;
-			
+
 			for (i = 0; i < sizeof(known_cmds)/sizeof(known_cmds[0]); i++) {
 				k = strlen(known_cmds[i].cmd);
 
 				if (strncmp(buf, known_cmds[i].cmd, k))
 					continue;
-					
+
 				for (j = 0; j < known_cmds[i].args; j++) {
 					for (; buf[k] == ' '; buf[k] = 0, k++);
 					if (!buf[k])
 						goto inner;
-						
+
 					switch (known_cmds[i].specs[j]) {
 					case 's':
 						args[j] = &(buf[k]);
@@ -557,7 +557,7 @@ inner:		while (fgets(buf, 1024, fp_fifo)) {
 						args_i[j] = strtol(&(buf[k]), &t, 0);
 						if (t == &(buf[k]))
 							goto inner;
-												
+
 						args[j] = &(args_i[j]);
 						k = t - buf;
 						break;

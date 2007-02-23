@@ -2,7 +2,7 @@
  * splash_cmd.c - Functions for handling communication with the kernel
  *
  * Copyright (C) 2004-2005 Michal Januszewski <spock@gentoo.org>
- * 
+ *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
  * more details.
@@ -31,7 +31,7 @@ int cmd_setstate(unsigned int state, unsigned char origin)
 		.origin = origin,
 		.data = &state,
 	};
-	
+
 	fd = open(SPLASH_DEV, O_WRONLY);
 	if (fd == -1) {
 		fprintf(stderr, "Can't open %s\n", SPLASH_DEV);
@@ -57,7 +57,7 @@ int cmd_setpic(struct fb_image *img, unsigned char origin)
 		.origin = origin,
 		.data = img,
 	};
-	
+
 	fd = open(SPLASH_DEV, O_WRONLY);
 	if (fd == -1) {
 		fprintf(stderr, "Can't open %s\n", SPLASH_DEV);
@@ -84,7 +84,7 @@ int cmd_setcfg(unsigned char origin)
 		.origin = origin,
 		.data = &vc_cfg,
 	};
-	
+
 	fd = open(SPLASH_DEV, O_WRONLY);
 	if (fd == -1) {
 		fprintf(stderr, "Can't open %s\n", SPLASH_DEV);
@@ -97,7 +97,7 @@ int cmd_setcfg(unsigned char origin)
 	vc_cfg.theight = cf.th;
 	vc_cfg.bg_color = cf.bg_color;
 	vc_cfg.theme = arg_theme;
-	
+
 	if (ioctl(fd, FBIOSPLASH_SETCFG, &wrapper)) {
 		fprintf(stderr, "FBIOSPLASH_SETCFG failed, error code %d.\n", errno);
 		err = -2;
@@ -136,11 +136,11 @@ int cmd_getcfg()
 		goto out;
 	}
 	close(fd);
-	
+
 	if (vc_cfg.theme[0] == 0) {
 		strcpy(vc_cfg.theme, "<none>");
-	} 
-		
+	}
+
 	printf("Splash config on console %d:\n", arg_vc);
 	printf("tx:       %d\n", vc_cfg.tx);
 	printf("ty:       %d\n", vc_cfg.ty);
@@ -151,7 +151,7 @@ int cmd_getcfg()
 
 out:
 	free(vc_cfg.theme);
-	return err;		
+	return err;
 }
 
 #endif /* CONFIG_FBSPLASH */

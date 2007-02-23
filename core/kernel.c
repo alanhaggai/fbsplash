@@ -2,7 +2,7 @@
  * kernel.c - the core of splash_helper
  *
  * Copyright (C) 2004-2005, Michal Januszewski <spock@gentoo.org>
- * 
+ *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
  * more details.
@@ -44,7 +44,7 @@ void prep_io()
 int handle_init(u8 update)
 {
 	int stty = TTY_SILENT;
-	char sys[128]; 
+	char sys[128];
 	char fn_fb[32];
 	char fn_vc[32];
 	char buf[1024];
@@ -57,7 +57,7 @@ int handle_init(u8 update)
 #endif
 	arg_mode = ' ';
 
-	/* If possible, make sure that the error messages don't go straight 
+	/* If possible, make sure that the error messages don't go straight
 	 * to /dev/null and are displayed on the screen instead. */
 	if (!update) {
 		prep_io();
@@ -73,7 +73,7 @@ int handle_init(u8 update)
 		int i;
 #endif
 		buf[cnt-1] = 0;
-	
+
 #ifdef CONFIG_TTF_KERNEL
 		t = strstr(buf, "BOOT_MSG=\"");
 		if (t) {
@@ -87,7 +87,7 @@ int handle_init(u8 update)
 					quot = 0;
 				}
 			}
-	
+
 			t[i] = 0;
 			boot_message = strdup(t);
 		}
@@ -99,7 +99,7 @@ int handle_init(u8 update)
 		t += 7; p = t;
 		for (p = t; *p != ' ' && *p != 0; p++);
 		*p = 0;
-		
+
 		while ((opt = strsep(&t, ",")) != NULL) {
 			if (!strncmp(opt, "tty:", 4)) {
 				stty = strtol(opt+4, NULL, 0);
@@ -130,7 +130,7 @@ parse_failure:	if (h == 0)
 	if (h == 0)
 		umount(PATH_PROC);
 
-	/* We don't want to use any effects if we're just updating the image. 
+	/* We don't want to use any effects if we're just updating the image.
 	 * Nor do we want to mess with the verbose mode. */
 	if (update) {
 		effects = 0;
@@ -138,12 +138,12 @@ parse_failure:	if (h == 0)
 		fbsplash = 0;
 #endif
 	}
-		
+
 	/* If no mode was specified, we can't make any decisions
 	 * by ourselves. */
 	if (arg_mode == ' ')
-		return 0;	
-	
+		return 0;
+
 #ifdef CONFIG_FBSPLASH
 	if (!update) {
 		create_dev(SPLASH_DEV, PATH_SYS "/class/misc/fbsplash/dev", 0x1);
@@ -152,7 +152,7 @@ parse_failure:	if (h == 0)
 	if (!arg_theme) {
 		arg_theme = strdup(DEFAULT_THEME);
 	}
-	
+
 	config_file = get_cfg_file(arg_theme);
 	if (!config_file)
 		return -1;
@@ -166,14 +166,14 @@ parse_failure:	if (h == 0)
 		if (do_config(FB_SPLASH_IO_ORIG_USER) || do_getpic(FB_SPLASH_IO_ORIG_USER, 1, 'v')) {
 			fbsplash = 0;
 		}
-	}	
+	}
 #endif
 	/* Activate verbose mode if it was explicitly requested. If silent mode
 	 * was requested, the verbose background image will be set after the
 	 * switch to the silent tty is complete. */
 	if (arg_mode != 's') {
 #ifdef CONFIG_FBSPLASH
-		/* Activate fbsplash on the first tty if the picture and 
+		/* Activate fbsplash on the first tty if the picture and
 		 * the config file were successfully loaded. */
 		if (fbsplash) {
 			cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
@@ -188,7 +188,7 @@ parse_failure:	if (h == 0)
 		return -1;
 #endif
 	}
-	
+
 	/* If the user supplied a silent tty number, check whether
 	 * it is valid. */
 	if (stty < 0 || stty > MAX_NR_CONSOLES)
@@ -205,7 +205,7 @@ parse_failure:	if (h == 0)
 #endif
 		return -1;
 	}
-				
+
 	open_cr(fd_fb, fn_fb, sys, out, 0x4);
 
 	sprintf(fn_vc, PATH_DEV "/tty%d", stty);
@@ -213,8 +213,8 @@ parse_failure:	if (h == 0)
 
 	open_cr(fd_vc, fn_vc, sys, out, 0x2);
 	t = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
-		 MAP_SHARED, fd_fb, fb_var.yoffset * fb_fix.line_length); 
-		
+		 MAP_SHARED, fd_fb, fb_var.yoffset * fb_fix.line_length);
+
 	if (t == MAP_FAILED) {
 		goto clean;
 	}
@@ -224,34 +224,34 @@ parse_failure:	if (h == 0)
 	buf[0] = TIOCL_SETKMSGREDIRECT;
 	buf[1] = 1;
 	ioctl(fd_vc, TIOCLINUX, buf);
-	
+
 	tty_set_silent(stty, fd_vc);
-		
-	if (arg_kdmode == KD_GRAPHICS) 
-		ioctl(fd_vc, KDSETMODE, KD_GRAPHICS);	
-	
+
+	if (arg_kdmode == KD_GRAPHICS)
+		ioctl(fd_vc, KDSETMODE, KD_GRAPHICS);
+
 	if (silent_img.cmap.red)
 		ioctl(fd_fb, FBIOPUTCMAP, &silent_img.cmap);
 
-	if (effects & EFF_FADEIN) {		
+	if (effects & EFF_FADEIN) {
 		fade_in(t, silent_img.data, silent_img.cmap, 1, fd_fb);
 	} else {
 		if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR)
 			set_directcolor_cmap(fd_fb);
 
 		put_img(t, silent_img.data);
-	}	
-			
+	}
+
 	munmap(t, fb_fix.line_length * fb_var.yres);
 
 #ifdef CONFIG_FBSPLASH
 	if (fbsplash)
 		cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
 #endif
-	
+
 clean:	close_del(fd_vc, fn_vc, 0x2);
 //	close_del(fd_fb, fn_fb, 0x4);
-	
+
 out:	free(silent_img.data);
 	if (silent_img.cmap.red)
 		free(silent_img.cmap.red);
@@ -278,7 +278,7 @@ int main(int argc, char **argv)
 	}
 
 	arg_task = none;
-	if (argc > 3 && argv[3]) 
+	if (argc > 3 && argv[3])
 		arg_vc = atoi(argv[3]);
 	else
 		arg_vc = 0;
@@ -294,14 +294,14 @@ int main(int argc, char **argv)
 	if (!strcmp(argv[1],"1")) {
 		i = 6;
 	}
-	
+
 	/* On 'init' the theme isn't defined yet, and thus NULL is passed
 	 * instead of any meaningful value. */
-	if (argc > i && argv[i]) 
+	if (argc > i && argv[i])
 		arg_theme = strdup(argv[i]);
 	else
 		arg_theme = NULL;
-	
+
 	if (!mount("sysfs", PATH_SYS, "sysfs", 0, NULL))
 		mounts = 1;
 
@@ -324,7 +324,7 @@ int main(int argc, char **argv)
 	tmpc = getenv("PROGRESS");
 	if (tmpc)
 		arg_progress = atoi(tmpc);
-	
+
 	if (!strcmp(argv[2],"init")) {
 		err = handle_init(0);
 	} else if (!strcmp(argv[2],"repaint")) {
@@ -337,8 +337,8 @@ int main(int argc, char **argv)
 		do_config(FB_SPLASH_IO_ORIG_KERNEL);
 		do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, 'v');
 		cmd_setstate(1, FB_SPLASH_IO_ORIG_KERNEL);
-	} 
-#endif	
+	}
+#endif
 	else {
 		fprintf(stderr, "Unrecognized splash command: %s.\n", argv[2]);
 	}
@@ -348,6 +348,6 @@ out:	if (mounts)
 
 	if (config_file)
 		free(config_file);
-		
+
 	return err;
 }
