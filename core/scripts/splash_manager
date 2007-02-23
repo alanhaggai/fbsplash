@@ -24,8 +24,11 @@ spl_fifo=${spl_dir}/cache/.splash
 spl_pidfile=${spl_dir}/cache/daemon.pid
 themedir=/etc/splash
 
+spl_util_exename="$(basename ${spl_util})"
+spl_util_short="${spl_util_exename:0:15}"
+
 cleanup() {
-	killall splash_util 2>/dev/null
+	killall ${spl_util_exename} 2>/dev/null
 	chvt ${ctty}
 }
 
@@ -197,7 +200,7 @@ set_silent() {
 	trap "cleanup" EXIT
 
 	# Make sure the splash daemon is not running
-	killall -9 splash_util 2>/dev/null
+	killall -9 ${spl_util_exename} 2>/dev/null
 	${spl_util} -d -t "${theme}" --pidfile ${spl_pidfile}
 	pid=$(cat ${spl_pidfile})
 	
@@ -211,7 +214,7 @@ set_silent() {
 exit_silent() {
 	spl_comm "exit"
 	
-	while [[ "$(head -n 1 /proc/${pid}/status 2>/dev/null | cut -f2)" == "splash_util" ]]; do
+	while [[ "$(head -n 1 /proc/${pid}/status 2>/dev/null | cut -f2)" == "${spl_util_short}" ]]; do
 		sleep 0.5
 	done
 	
