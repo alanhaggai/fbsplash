@@ -288,11 +288,11 @@ splash_start() {
 
 splash_get_boot_message() {
 	if [[ ${RUNLEVEL} == "6" ]]; then
-		echo ${SPLASH_REBOOT_MESSAGE}
+		echo "${SPLASH_REBOOT_MESSAGE}"
 	elif [[ ${RUNLEVEL} == "0" ]]; then
-		echo ${SPLASH_SHUTDOWN_MESSAGE}
+		echo "${SPLASH_SHUTDOWN_MESSAGE}"
 	else
-		echo ${SPLASH_BOOT_MESSAGE}
+		echo "${SPLASH_BOOT_MESSAGE}"
 	fi
 }
 
