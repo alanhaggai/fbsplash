@@ -332,7 +332,7 @@ splash_comm_send() {
 
 	if [[ -r /proc/$(<${spl_pidfile})/status &&
 		  "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]]; then
-		echo $* > ${spl_fifo} &
+		echo "$*" > ${spl_fifo} &
 	else
 		echo "Splash daemon not running!"
 		rm -f "${spl_pidfile}"
