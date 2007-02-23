@@ -27,21 +27,21 @@ struct fb_fix_screeninfo   fb_fix;
 enum ENDIANESS endianess;
 char *config_file = NULL;
 
-enum TASK 	arg_task = none; 
-int 		arg_fb = 0;
-int 		arg_vc = 0;
-char 		arg_mode = 'v';
-char 		*arg_theme = NULL;
-char 		*arg_pidfile = NULL;
-u16 		arg_progress = 0;
-u8 		arg_kdmode = KD_TEXT;
+enum TASK	arg_task = none;
+int			arg_fb = 0;
+int			arg_vc = 0;
+char		arg_mode = 'v';
+char		*arg_theme = NULL;
+char		*arg_pidfile = NULL;
+u16			arg_progress = 0;
+u8			arg_kdmode = KD_TEXT;
 #ifndef TARGET_KERNEL
-char 		*arg_export = NULL;
+char		*arg_export = NULL;
 #endif
 
 int bytespp = 4;		/* bytes per pixel */
 u8 fb_opt = 0;			/* can we use optimized 24/32bpp routines? */
-u8 fb_ro, fb_go, fb_bo; 	/* red, green, blue offset */
+u8 fb_ro, fb_go, fb_bo;	/* red, green, blue offset */
 u8 fb_rlen, fb_glen, fb_blen;	/* red, green, blue length */
 
 struct fb_image pic;
@@ -68,14 +68,14 @@ int get_fb_settings(int fb_num)
 	char sys[128];
 #endif
 
-	sprintf(fn, PATH_DEV "/fb/%d", fb_num);	
+	sprintf(fn, PATH_DEV "/fb/%d", fb_num);
 	fb = open(fn, O_WRONLY, 0);
 
 	if (fb == -1) {
 		sprintf(fn, PATH_DEV "/fb%d", fb_num);
 		fb = open(fn, O_WRONLY, 0);
 	}
-	
+
 	if (fb == -1) {
 #ifdef TARGET_KERNEL
 		sprintf(sys, PATH_SYS "/class/graphics/fb%d/dev", fb_num);
@@ -86,12 +86,12 @@ int get_fb_settings(int fb_num)
 		if (fb == -1)
 #endif
 		{
-			printerr("Failed to open " PATH_DEV "/fb%d or " PATH_DEV 
+			printerr("Failed to open " PATH_DEV "/fb%d or " PATH_DEV
 				 "/fb%d for reading.\n", fb_num, fb_num);
 			return 1;
 		}
 	}
-		
+
 	if (ioctl(fb,FBIOGET_VSCREENINFO,&fb_var) == -1) {
 		printerr("Failed to get fb_var info.\n");
 		return 2;
@@ -128,7 +128,7 @@ int get_fb_settings(int fb_num)
 		fb_ro = (fb_var.red.offset >> 3);
 		fb_go = (fb_var.green.offset >> 3);
 		fb_bo = (fb_var.blue.offset >> 3);
-			
+
 		if (endianess == big) {
 			fb_ro = bytespp - 1 - fb_ro;
 			fb_go = bytespp - 1 - fb_go;
@@ -139,34 +139,34 @@ int get_fb_settings(int fb_num)
 	return 0;
 }
 
-char *get_filepath(char *path) 
+char *get_filepath(char *path)
 {
 	char buf[512];
-	
+
 	if (path[0] == '/')
 		return strdup(path);
 
 	snprintf(buf, 512, "%s/%s/%s", THEME_DIR, arg_theme, path);
-	return strdup(buf);	
+	return strdup(buf);
 }
 
-char *get_cfg_file(char *theme) 
+char *get_cfg_file(char *theme)
 {
 	char buf[512];
 
 	snprintf(buf, 512, "%s/%s/%dx%d.cfg", THEME_DIR, theme, fb_var.xres, fb_var.yres);
-	return strdup(buf);	
+	return strdup(buf);
 }
 
 int do_getpic(unsigned char origin, unsigned char do_cmds, char mode)
-{	
+{
 	if (load_images(mode))
 		return -1;
 
 #if (defined(CONFIG_TTF) && !defined(TARGET_KERNEL)) || (defined(CONFIG_TTF_KERNEL) && defined(TARGET_KERNEL))
 	load_fonts();
 #endif
-	
+
 	if (mode == 'v') {
 		render_objs((u8*)verbose_img.data, NULL, mode, origin);
 	} else {
@@ -179,7 +179,7 @@ int do_getpic(unsigned char origin, unsigned char do_cmds, char mode)
 		free((u8*)verbose_img.data);
 		if (verbose_img.cmap.red);
 			free(verbose_img.cmap.red);
-	}	
+	}
 #endif
 	return 0;
 }
@@ -191,9 +191,9 @@ int do_config(unsigned char origin)
 		printerr("No config file.\n");
 		return -1;
 	}
-		
+
 	/* If the user specified invalid values for the text field - correct it.
-	 * Also setup default values (text field coverting the whole screen). */
+	 * Also setup default values (text field covering the whole screen). */
 	if (cf.tx > fb_var.xres)
 		cf.tx = 0;
 
@@ -225,12 +225,12 @@ int open_fb()
 {
 	char dev[32];
 	int c;
-	
+
 	sprintf(dev, PATH_DEV "/fb%d", arg_fb);
 	if ((c = open(dev, O_RDWR)) == -1) {
 		sprintf(dev, PATH_DEV "/fb/%d", arg_fb);
 		if ((c = open(dev, O_RDWR)) == -1) {
-			printerr("Failed to open " PATH_DEV "/fb%d or " 
+			printerr("Failed to open " PATH_DEV "/fb%d or "
 			         PATH_DEV "/fb/%d.\n", arg_fb, arg_fb);
 			return 0;
 		}
@@ -248,7 +248,7 @@ int open_tty(int tty)
 	if ((c = open(dev, O_RDWR)) == -1) {
 		sprintf(dev, PATH_DEV "/vc/%d", tty);
 		if ((c = open(dev, O_RDWR)) == -1) {
-			printerr("Failed to open " PATH_DEV "/tty%d or " 
+			printerr("Failed to open " PATH_DEV "/tty%d or "
 				 PATH_DEV "/vc/%d\n", tty, tty);
 			return 0;
 		}
@@ -260,7 +260,7 @@ int open_tty(int tty)
 int tty_set_silent(int tty, int fd)
 {
 	struct termios w;
-	
+
 	tcgetattr(fd, &w);
 	w.c_lflag &= ~(ICANON|ECHO);
 	w.c_cc[VTIME] = 0;
@@ -276,7 +276,7 @@ int tty_set_silent(int tty, int fd)
 int tty_unset_silent(int fd)
 {
 	struct termios w;
-	
+
 	tcgetattr(fd, &w);
 	w.c_lflag &= (ICANON|ECHO);
 	w.c_cc[VTIME] = 0;

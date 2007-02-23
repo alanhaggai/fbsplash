@@ -524,11 +524,11 @@ unsigned char* TTF_RenderText_Shaded(u8 *target, const char *text,
 	/* Copy the Latin-1 text to a UNICODE text buffer */
 	unicode_len = strlen(text);
 	unicode_text = (unsigned short *)malloc((unicode_len+1)*(sizeof*unicode_text));
-	
+
 	if (unicode_text == NULL) {
 		printf("Out of memory\n");
 		return(NULL);
-	}	       
+	}
 
 	UTF8_to_UNICODE(unicode_text, text, unicode_len);
 //	ASCII_to_UNICODE(unicode_text, text, unicode_len);
