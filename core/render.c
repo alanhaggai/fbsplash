@@ -356,7 +356,13 @@ char *eval_text(char *txt)
 
 	while (*p != 0) {
 		if (*p == '\\') {
+			/* to allow literal "$progress" i.e. \$progress */
 			p++;
+
+			/* might have reached end of string */
+			if (*p == 0)
+				break;
+
 			*d = *p;
 			p++;
 			d++;
@@ -374,7 +380,7 @@ char *eval_text(char *txt)
 		}
 	}
 
-	*d = *p;
+	*d = 0; /* NULL-terminate */
 	
 	return ret;
 }
