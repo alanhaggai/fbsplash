@@ -184,7 +184,7 @@ parse_failure:	if (h == 0)
 		}
 #else
 		fprintf(stderr, "This version of splashutils was compiled without support for fbsplash\n"
-			 	"Verbose mode will not be activated\n");
+						"Verbose mode will not be activated\n");
 		return -1;
 #endif
 	}
@@ -255,6 +255,8 @@ clean:	close_del(fd_vc, fn_vc, 0x2);
 out:	free(silent_img.data);
 	if (silent_img.cmap.red)
 		free(silent_img.cmap.red);
+
+	return 0;
 
 //	remove_dev(SPLASH_DEV, 0x1);
 }
