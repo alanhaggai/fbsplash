@@ -1,7 +1,7 @@
 /*
  * daemon_cmd.c -- Code handling the daemon commands.
  *
- * Copyright (C) 2005-2006 Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2005-2007 Michal Januszewski <spock@gentoo.org>
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 
