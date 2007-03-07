@@ -93,7 +93,8 @@ int cmd_exit(void **args)
 	item *i, *j;
 
 	pthread_cancel(th_switchmon);
-	pthread_kill(th_sighandler, SIGTERM);
+	pthread_kill(th_sighandler, SIGINT);
+	pthread_join(th_sighandler, NULL);
 
 	free_objs();
 

@@ -209,6 +209,7 @@ void vt_silent_cleanup(void)
 	vt.waitv  = 0;
 
 	tcsetattr(fd_tty_s, TCSANOW, &tios);
+	ioctl(fd_tty_s, VT_RELDISP, 1);
 	ioctl(fd_tty_s, KDSETMODE, KD_TEXT);
 	ioctl(fd_tty_s, VT_SETMODE, &vt);
 
@@ -274,6 +275,13 @@ void switch_silent()
 	cmd_repaint(NULL);
 }
 
+static void do_cleanup(void)
+{
+	pthread_mutex_trylock(&mtx_tty);
+	vt_silent_cleanup();
+	vt_cursor_enable(fd_tty_s);
+}
+
 /*
  * Signal handler.
  *
@@ -290,6 +298,7 @@ void* thf_sighandler(void *unusued)
 	sigaddset(&sigset, SIGUSR1);
 	sigaddset(&sigset, SIGUSR2);
 	sigaddset(&sigset, SIGTERM);
+	sigaddset(&sigset, SIGINT);
 
 	while (1) {
 		sigwait(&sigset, &sig);
@@ -314,10 +323,12 @@ void* thf_sighandler(void *unusued)
 			pthread_mutex_unlock(&mtx_paint);
 
 			switch_silent();
+		} else if (sig == SIGINT) {
+			/* internally generated terminate signal */
+			do_cleanup();
+			pthread_exit(NULL);
 		} else if (sig == SIGTERM) {
-			pthread_mutex_trylock(&mtx_tty);
-			vt_silent_cleanup();
-			vt_cursor_enable(fd_tty_s);
+			do_cleanup();
 			exit(0);
 		}
 	}
@@ -692,13 +703,13 @@ void daemon_start()
 	setsid();
 
 	signal(SIGABRT, SIG_IGN);
-	signal(SIGINT,  SIG_IGN);
 
 	/* These signals will be handled by the sighandler thread. */
 	sigemptyset(&sigset);
 	sigaddset(&sigset, SIGUSR1);
 	sigaddset(&sigset, SIGUSR2);
 	sigaddset(&sigset, SIGTERM);
+	sigaddset(&sigset, SIGINT);
 	sigprocmask(SIG_BLOCK, &sigset, NULL);
 	pthread_mutex_lock(&mtx_paint);
 	pthread_create(&th_sighandler, NULL, &thf_sighandler, NULL);
