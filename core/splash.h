@@ -278,7 +278,7 @@ void detect_endianess(void);
 int get_fb_settings(int fb_num);
 char *get_cfg_file(char *theme);
 int do_getpic(unsigned char, unsigned char, char);
-int do_config(unsigned char);
+int cfg_check_sanity(unsigned char mode);
 char *get_filepath(char *path);
 void vt_cursor_enable(int fd);
 void vt_cursor_disable(int fd);

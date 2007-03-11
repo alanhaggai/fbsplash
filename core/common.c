@@ -175,7 +175,8 @@ int do_getpic(unsigned char origin, unsigned char do_cmds, char mode)
 	}
 
 #ifdef CONFIG_FBSPLASH
-	if (do_cmds) {
+	/* Setting the background picture only makes sense in the verbose mode. */
+	if (do_cmds && mode == 'v') {
 		cmd_setpic(&verbose_img, origin);
 		free((u8*)verbose_img.data);
 		if (verbose_img.cmap.red);
@@ -185,11 +186,12 @@ int do_getpic(unsigned char origin, unsigned char do_cmds, char mode)
 	return 0;
 }
 
-#ifdef CONFIG_FBSPLASH
-int do_config(unsigned char origin)
+int cfg_check_sanity(u8 mode)
 {
+	char *pic;
+
 	if (!config_file) {
-		printerr("No config file.\n");
+		iprint(MSG_CRITICAL, "No config file.\n");
 		return -1;
 	}
 
@@ -207,10 +209,24 @@ int do_config(unsigned char origin)
 	if (cf.th > fb_var.yres || cf.th == 0)
 		cf.th = fb_var.yres;
 
-	cmd_setcfg(origin);
+	if (fb_var.bits_per_pixel == 8) {
+		pic = (mode == 'v') ? cf_pic256 : cf_silentpic256;
+
+		if (!pic) {
+			iprint(MSG_ERROR, "No 8bpp %s picture specified in the theme.\n", (mode == 'v') ? "verbose" : "silent");
+			return -2;
+		}
+	} else {
+		pic = (mode == 'v') ? cf_pic : cf_silentpic;
+
+		if (!pic) {
+			iprint(MSG_ERROR, "No %s picture specified in the theme.\n", (mode == 'v') ? "verbose" : "silent");
+			return -2;
+		}
+	}
+
 	return 0;
 }
-#endif
 
 void vt_cursor_disable(int fd)
 {

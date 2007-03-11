@@ -159,13 +159,15 @@ parse_failure:	if (h == 0)
 	parse_cfg(config_file);
 
 #ifdef CONFIG_FBSPLASH
-	if (!update) {
+	if (!update && !cfg_check_sanity('v')) {
 		/* Load the configuration and the verbose background picture
 		 * but don't activate fbsplash just yet. We'll enable it
 		 * after the silent screen is displayed. */
-		if (do_config(FB_SPLASH_IO_ORIG_USER) || do_getpic(FB_SPLASH_IO_ORIG_USER, 1, 'v')) {
+		if (cmd_setcfg(FB_SPLASH_IO_ORIG_USER) || do_getpic(FB_SPLASH_IO_ORIG_USER, 1, 'v')) {
 			fbsplash = 0;
 		}
+	} else {
+		fbsplash = 0;
 	}
 #endif
 	/* Activate verbose mode if it was explicitly requested. If silent mode
@@ -196,6 +198,10 @@ parse_failure:	if (h == 0)
 
 	sprintf(fn_fb, PATH_DEV "/fb%d", arg_fb);
 	sprintf(sys, PATH_SYS "/class/graphics/fb%d/dev", arg_fb);
+
+	h = cfg_check_sanity('s');
+	if (h)
+		return h;
 
 	if (do_getpic(FB_SPLASH_IO_ORIG_USER, 0, 's')) {
 		fprintf(stderr, "Failed to get silent splash image.\n");
@@ -334,11 +340,19 @@ int main(int argc, char **argv)
 	}
 #ifdef CONFIG_FBSPLASH
 	else if (!strcmp(argv[2],"getpic")) {
-		err = do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, 'v');
+		err = cfg_check_sanity('v');
+		if (!err) {
+			err = do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, 'v');
+		}
 	} else if (!strcmp(argv[2],"modechange")) {
-		do_config(FB_SPLASH_IO_ORIG_KERNEL);
-		do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, 'v');
-		cmd_setstate(1, FB_SPLASH_IO_ORIG_KERNEL);
+		/* If we're missing a crucial element in the config file, don't
+		 * try to set the theme. */
+		err = cfg_check_sanity('v');
+		if (!err) {
+			cmd_setcfg(FB_SPLASH_IO_ORIG_KERNEL);
+			do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, 'v');
+			cmd_setstate(1, FB_SPLASH_IO_ORIG_KERNEL);
+		}
 	}
 #endif
 	else {

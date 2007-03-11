@@ -246,10 +246,8 @@ int load_bg_images(char mode)
 	if (fb_var.bits_per_pixel == 8) {
 		pic = (mode == 'v') ? cf_pic256 : cf_silentpic256;
 
-		if (!pic) {
-			iprint(MSG_ERROR, "No 8bpp %s picture specified in the theme config.\n", (mode == 'v') ? "verbose" : "silent" );
+		if (!pic)
 			return -1;
-		}
 
 #ifdef CONFIG_PNG
 		if (!is_png(pic)) {
@@ -291,10 +289,8 @@ int load_bg_images(char mode)
 	} else {
 		pic = (mode == 'v') ? cf_pic : cf_silentpic;
 
-		if (!pic) {
-			iprint(MSG_WARN, "No background picture specified for the requested mode.\n");
+		if (!pic)
 			return -2;
-		}
 
 #ifdef CONFIG_PNG
 		if (is_png(cf_pic)) {

@@ -251,6 +251,10 @@ int main(int argc, char **argv)
 	{
 		struct vt_stat stat;
 
+		/* Setpic only makes sense in verbose mode. */
+		if (arg_mode != 'v')
+			break;
+
 		if ((fp = open(PATH_DEV "/tty", O_NOCTTY)) != -1) {
 			if (ioctl(fp, VT_GETSTATE, &stat) != -1) {
 				if (arg_vc != stat.v_active - 1)
@@ -258,6 +262,10 @@ int main(int argc, char **argv)
 			}
 			close(fp);
 		}
+
+		err = cfg_check_sanity('v');
+		if (err)
+			break;
 
 		err = do_getpic(FB_SPLASH_IO_ORIG_USER, 1, arg_mode);
 setpic_out:	break;
@@ -268,7 +276,10 @@ setpic_out:	break;
 		break;
 
 	case setcfg:
-		err = do_config(FB_SPLASH_IO_ORIG_USER);
+		err = cfg_check_sanity('v');
+		if (err)
+			break;
+		err = cmd_setcfg(FB_SPLASH_IO_ORIG_USER);
 		break;
 
 	case getstate:
@@ -366,6 +377,11 @@ setpic_out:	break;
 			err = -1;
 			break;
 		}
+
+		/* Make sure the config file contains sane settings. */
+		err = cfg_check_sanity(arg_mode);
+		if (err)
+			break;
 
 		if (do_getpic(FB_SPLASH_IO_ORIG_USER, 0, arg_mode)) {
 			err = -1;
