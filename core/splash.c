@@ -227,11 +227,11 @@ int main(int argc, char **argv)
 
 #ifdef CONFIG_FBSPLASH
 	case on:
-		cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
+		err = cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
 		break;
 
 	case off:
-		cmd_setstate(0, FB_SPLASH_IO_ORIG_USER);
+		err = cmd_setstate(0, FB_SPLASH_IO_ORIG_USER);
 		break;
 
 	case setpic:
@@ -246,16 +246,16 @@ int main(int argc, char **argv)
 			close(fp);
 		}
 
-		do_getpic(FB_SPLASH_IO_ORIG_USER, 1, arg_mode);
+		err = do_getpic(FB_SPLASH_IO_ORIG_USER, 1, arg_mode);
 setpic_out:	break;
 	}
 
 	case getcfg:
-		cmd_getcfg(FB_SPLASH_IO_ORIG_USER);
+		err = cmd_getcfg(FB_SPLASH_IO_ORIG_USER);
 		break;
 
 	case setcfg:
-		do_config(FB_SPLASH_IO_ORIG_USER);
+		err = do_config(FB_SPLASH_IO_ORIG_USER);
 		break;
 
 	case getstate:

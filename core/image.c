@@ -291,6 +291,10 @@ int load_bg_images(char mode)
 	} else {
 		pic = (mode == 'v') ? cf_pic : cf_silentpic;
 
+		/* FIXME: Display an error message here if running in verbose mode. */
+		if (!pic)
+			return -2;
+
 #ifdef CONFIG_PNG
 		if (is_png(cf_pic)) {
 			i = load_png(pic, (u8**)&img->data, NULL, &img->width, &img->height, 0);
