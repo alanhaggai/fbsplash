@@ -585,4 +585,15 @@ splash_svclist_update() {
 	uniqify ${order}
 }
 
+###########################################################################
+# Other
+###########################################################################
+
+# Override sulogin calls from baselayout so that we can attempt to remove
+# the splash screen
+sulogin() {
+       splash "critical" > /dev/null 2>&1 &
+       /sbin/sulogin $*
+}
+
 # vim:ts=4
