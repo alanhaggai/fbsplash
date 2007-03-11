@@ -613,7 +613,7 @@ int reload_theme(void)
 
 	/* Parse a new config file. */
 	parse_cfg(config_file);
-	if (load_images('a'))
+	if (load_images('s'))
 		return -2;
 
 #ifdef CONFIG_TTF

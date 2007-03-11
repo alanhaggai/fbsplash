@@ -227,7 +227,7 @@ int main(int argc, char **argv)
 		parse_cfg(config_file);
 
 	if (arg_task == start_daemon) {
-		if (load_images('a'))
+		if (load_images('s'))
 			return -1;
 		daemon_start();
 		/* we never get here */
