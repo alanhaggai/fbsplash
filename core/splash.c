@@ -130,7 +130,7 @@ int main(int argc, char **argv)
 	}
 #endif
 
-	while ((c = getopt_long(argc, argv, "c:t:m:p:e:hd", options, NULL)) != EOF) {
+	while ((c = getopt_long(argc, argv, "c:t:m:p:e:hdvq", options, NULL)) != EOF) {
 
 		switch (c) {
 
