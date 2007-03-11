@@ -7,6 +7,21 @@ depend() {
 	use localmount
 }
 
+set_theme()
+{
+	local theme=$1
+	local tty=$2
+
+	/sbin/splash_util --tty="${tty}" -m v -t "${theme}" -c setcfg
+	[[ $? -ne 0 ]] && return 1;
+	/sbin/splash_util --tty="${tty}" -m v -t "${theme}" -c setpic
+	[[ $? -ne 0 ]] && return 1;
+	/sbin/splash_util --tty="${tty}" -c on
+	[[ $? -ne 0 ]] && return 1;
+
+	return 0
+}
+
 start() {
 	splash_setup
 
@@ -18,6 +33,8 @@ start() {
 		fi
 	fi
 
+	err=0
+	
 	# Only do this if the kernel supports fbsplash.
 	if [[ -e /dev/fbsplash && "${SPLASH_MODE_REQ}" != "off" ]]; then
 		ebegin "Setting framebuffer console images"
@@ -40,11 +57,12 @@ start() {
 				/usr/bin/openvt -c ${TTY} -- echo -n "" 2>/dev/null
 			fi
 
-			/sbin/splash_util --tty="${TTY}" -m v -t "${theme}" -c setcfg
-			/sbin/splash_util --tty="${TTY}" -m v -t "${theme}" -c setpic 2>/dev/null
-			/sbin/splash_util --tty="${TTY}" -c on
+			set_theme "${theme}" "${TTY}"
+			if [[ $? -ne 0 ]]; then
+				err=1
+				break
+			fi
 		done
-
-		eend $? "Failed to set framebuffer console images"
+		eend $err "Failed to set background image on tty${TTY}"
 	fi
 }
