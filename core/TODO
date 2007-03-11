@@ -1,3 +1,5 @@
+- convert all printerr/printwarn to iprint
+
 - clean up the code
 
 - fix handling of redrawing the inter boxes

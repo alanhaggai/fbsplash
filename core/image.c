@@ -37,12 +37,12 @@ struct fb_image silent_img;
 #define PALETTE_COLORS 240
 int load_png(char *filename, u8 **data, struct fb_cmap *cmap, unsigned int *width, unsigned int *height, u8 want_alpha)
 {
-	png_structp 	png_ptr;
-	png_infop 	info_ptr;
-	png_bytep 	row_pointer;
-	png_colorp 	palette;
-	int 		rowbytes, num_palette;
-	int 		i, j, bytespp = (fb_var.bits_per_pixel + 7) >> 3;
+	png_structp	png_ptr;
+	png_infop	info_ptr;
+	png_bytep	row_pointer;
+	png_colorp	palette;
+	int			rowbytes, num_palette;
+	int			i, j, bytespp = (fb_var.bits_per_pixel + 7) >> 3;
 	u8 *buf = NULL;
 	u8 *t;
 
@@ -96,7 +96,7 @@ int load_png(char *filename, u8 **data, struct fb_cmap *cmap, unsigned int *widt
 	rowbytes = png_get_rowbytes(png_ptr, info_ptr);
 
 	if ((width && *width && info_ptr->width != *width) || (height && *height && info_ptr->height != *height)) {
-		printerr("Image size mismatch: %s.\n", filename);
+		iprint(MSG_ERROR, "Image size mismatch: %s.\n", filename);
 		return -2;
 	} else {
 		*width = info_ptr->width;
@@ -105,13 +105,13 @@ int load_png(char *filename, u8 **data, struct fb_cmap *cmap, unsigned int *widt
 
 	*data = malloc(fb_var.xres * fb_var.yres * bytespp);
 	if (!*data) {
-		printerr("Failed to allocate memory for image: %s.\n", filename);
+		iprint(MSG_CRITICAL, "Failed to allocate memory for image: %s.\n", filename);
 		return -4;
 	}
 
 	buf = malloc(rowbytes);
 	if (!buf) {
-		printerr("Failed to allocate memory for image line buffer.\n");
+		iprint(MSG_CRITICAL, "Failed to allocate memory for image line buffer.\n");
 		free(*data);
 		return -4;
 	}
@@ -188,7 +188,7 @@ int load_jpeg(char *filename, u8 **data, unsigned int *width, unsigned int *heig
 	jpeg_create_decompress(&cinfo);
 
 	if ((injpeg = fopen(filename,"r")) == NULL) {
-		printerr("Can't open file %s!\n", filename);
+		iprint(MSG_ERROR, "Can't open file %s!\n", filename);
 		return -1;
 	}
 
@@ -197,7 +197,7 @@ int load_jpeg(char *filename, u8 **data, unsigned int *width, unsigned int *heig
 	jpeg_start_decompress(&cinfo);
 
 	if ((width && cinfo.output_width != *width) || (height && cinfo.output_height != *height)) {
-		printerr("Image size mismatch: %s.\n", filename);
+		iprint(MSG_ERROR, "Image size mismatch: %s.\n", filename);
 		return -2;
 	} else {
 		*width = cinfo.output_width;
@@ -206,13 +206,13 @@ int load_jpeg(char *filename, u8 **data, unsigned int *width, unsigned int *heig
 
 	buf = malloc(cinfo.output_width * cinfo.output_components * sizeof(char));
 	if (!buf) {
-		printerr("Failed to allocate JPEG decompression buffer.\n");
+		iprint(MSG_ERROR, "Failed to allocate JPEG decompression buffer.\n");
 		return -1;
 	}
 
 	*data = malloc(cinfo.output_width * cinfo.output_height * bytespp);
 	if (!*data) {
-		printerr("Failed to allocate memory for image: %s.\n", filename);
+		iprint(MSG_ERROR, "Failed to allocate memory for image: %s.\n", filename);
 		return -4;
 	}
 
@@ -247,13 +247,13 @@ int load_bg_images(char mode)
 		pic = (mode == 'v') ? cf_pic256 : cf_silentpic256;
 
 		if (!pic) {
-			printerr("No 8bpp %s picture specified in the theme config.\n", (mode == 'v') ? "verbose" : "silent" );
+			iprint(MSG_ERROR, "No 8bpp %s picture specified in the theme config.\n", (mode == 'v') ? "verbose" : "silent" );
 			return -1;
 		}
 
 #ifdef CONFIG_PNG
 		if (!is_png(pic)) {
-			printerr("Unrecognized format of the verbose 8bpp background image.\n");
+			iprint(MSG_ERROR, "Unrecognized format of the verbose 8bpp background image.\n");
 			return -1;
 		}
 
@@ -271,7 +271,7 @@ int load_bg_images(char mode)
 		img->cmap.red = malloc(i * 3 * 2);
 
 		if (!img->cmap.red) {
-			printerr("Failed to allocate memory for the image palette.\n");
+			iprint(MSG_ERROR, "Failed to allocate memory for the image palette.\n");
 			return -4;
 		}
 
@@ -280,20 +280,21 @@ int load_bg_images(char mode)
 		img->cmap.len = i;
 
 		if (load_png(pic, (u8**)&img->data, &img->cmap, &img->width, &img->height, 0)) {
-			printerr("Failed to load PNG file %s.\n", pic);
+			iprint(MSG_ERROR, "Failed to load PNG file %s.\n", pic);
 			return -1;
 		}
 #else
-		printerr("This version of splashutils has been compiled without support for 8bpp modes.\n");
+		iprint(MSG_WARN, "This version of splashutils has been compiled without support for 8bpp modes.\n");
 		return -1;
 #endif
 	/* Deal with 15, 16, 24 and 32bpp modes */
 	} else {
 		pic = (mode == 'v') ? cf_pic : cf_silentpic;
 
-		/* FIXME: Display an error message here if running in verbose mode. */
-		if (!pic)
+		if (!pic) {
+			iprint(MSG_WARN, "No background picture specified for the requested mode.\n");
 			return -2;
+		}
 
 #ifdef CONFIG_PNG
 		if (is_png(cf_pic)) {
@@ -305,7 +306,7 @@ int load_bg_images(char mode)
 		}
 
 		if (i) {
-			printerr("Failed to load image %s.\n", pic);
+			iprint(MSG_ERROR, "Failed to load image %s.\n", pic);
 			return -1;
 		}
 	}
@@ -319,7 +320,7 @@ int load_images(char mode)
 	item *i;
 
 	if (!config_file) {
-		printerr("No config file specified.\n");
+		iprint(MSG_ERROR, "No config file specified.\n");
 		return -1;
 	}
 
@@ -337,12 +338,12 @@ int load_images(char mode)
 			ii->w = ii->h = 0;
 
 			if (!is_png(ii->filename)) {
-				printerr("Icon %s is not a PNG file.\n", ii->filename);
+				iprint(MSG_ERROR, "Icon %s is not a PNG file.\n", ii->filename);
 				continue;
 			}
 
 			if (load_png(ii->filename, &ii->picbuf, NULL, &ii->w, &ii->h, 1)) {
-				printerr("Failed to load icon %s.\n", ii->filename);
+				iprint(MSG_ERROR, "Failed to load icon %s.\n", ii->filename);
 				ii->picbuf = NULL;
 				ii->w = ii->h = 0;
 				continue;

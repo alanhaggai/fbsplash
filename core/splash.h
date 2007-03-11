@@ -71,7 +71,7 @@
  * Settings that shouldn't be changed
  * **********************************
  */
-#define PROGRESS_MAX 	0xffff
+#define PROGRESS_MAX	0xffff
 
 /* Useful short-named types. */
 typedef u_int8_t	u8;
@@ -81,18 +81,40 @@ typedef int8_t		s8;
 typedef int16_t		s16;
 typedef int32_t		s32;
 
+/* Verbosity levels */
+#define VERB_QUIET		0
+#define VERB_NORMAL		1
+#define VERB_HIGH	    2
+
+#define MSG_CRITICAL	0
+#define MSG_ERROR		1
+#define MSG_WARN		2
+#define MSG_INFO		3
+
 /* Useful macros. */
 #define min(a,b)		((a) < (b) ? (a) : (b))
 #define max(a,b)		((a) > (b) ? (a) : (b))
 #define printerr(args...)	fprintf(stderr, ## args);
 #define printwarn(args...)	fprintf(stderr, ## args);
+
+#define iprint(type, args...) do {				\
+	if (arg_verbosity == VERB_QUIET)			\
+		break;									\
+												\
+	if (type <= MSG_ERROR) {					\
+		fprintf(stderr, ## args);				\
+	} else if (arg_verbosity == VERB_HIGH) {	\
+		fprintf(stdout, ## args);				\
+	}											\
+} while (0);
+
 #define CLAMP(x)		((x) > 255 ? 255 : (x))
 #define DEBUG(x...)
 
 #define WANT_TTF	((defined(CONFIG_TTF_KERNEL) && defined(TARGET_KERNEL)) || (defined(CONFIG_TTF) && !defined(TARGET_KERNEL)))
 
 /* ************************************************************************
- * 				Lists
+ *				Lists
  * ************************************************************************ */
 typedef struct item {
 	void *p;
@@ -328,6 +350,7 @@ extern int arg_vc;
 extern char *arg_theme;
 extern char *arg_pidfile;
 extern char arg_mode;
+extern char arg_verbosity;
 extern u16 arg_progress;
 extern u8 arg_kdmode;
 #ifndef TARGET_KERNEL

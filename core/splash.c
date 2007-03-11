@@ -26,21 +26,23 @@
 #include "splash.h"
 
 struct option options[] = {
-	{ "fb", 	required_argument, NULL, 0x100 },
-	{ "vc", 	required_argument, NULL, 0x101 },
-	{ "cmd", 	required_argument, NULL, 0x102 },
-	{ "theme", 	required_argument, NULL, 0x103 },
-	{ "mode", 	required_argument, NULL, 0x104 },
-	{ "progress", 	required_argument, NULL, 0x105 },
+	{ "fb",		required_argument, NULL, 0x100 },
+	{ "vc",		required_argument, NULL, 0x101 },
+	{ "cmd",	required_argument, NULL, 0x102 },
+	{ "theme",	required_argument, NULL, 0x103 },
+	{ "mode",	required_argument, NULL, 0x104 },
+	{ "progress",required_argument, NULL, 0x105 },
 	{ "tty",	required_argument, NULL, 0x106 },
 	{ "export",	required_argument, NULL, 0x107 },
 	{ "kdgraphics", no_argument, NULL, 0x108 },
 #ifdef CONFIG_TTF
 	{ "mesg",	required_argument, NULL, 0x109 },
 #endif
-	{ "pidfile", 	required_argument, NULL, 0x10a },
+	{ "pidfile",required_argument, NULL, 0x10a },
 	{ "daemon",	no_argument, NULL, 'd'},
-	{ "help",	no_argument, NULL, 'h'}
+	{ "help",	no_argument, NULL, 'h'},
+	{ "verbose", no_argument, NULL, 'v'},
+	{ "quiet",  no_argument, NULL, 'q'},
 };
 
 struct cmd {
@@ -49,16 +51,16 @@ struct cmd {
 };
 
 struct cmd cmds[] = {
-	{ "on",		on },
-	{ "off",	off },
-	{ "setcfg", 	setcfg },
-	{ "getcfg", 	getcfg },
-	{ "setpic", 	setpic },
-	{ "paint", 	paint },
+	{ "on",			on },
+	{ "off",		off },
+	{ "setcfg",		setcfg },
+	{ "getcfg",		getcfg },
+	{ "setpic",		setpic },
+	{ "paint",		paint },
 	{ "repaint",	repaint },
-	{ "setmode", 	setmode },
-	{ "getmode", 	getmode },
-	{ "getstate", 	getstate },
+	{ "setmode",	setmode },
+	{ "getmode",	getmode },
+	{ "getstate",	getstate },
 };
 
 void usage(void)
@@ -97,6 +99,8 @@ void usage(void)
 "                      running in daemon mode\n"
 "      --kdgraphics    use KD_GRAPHICS mode for the silent splash\n"
 "                      when splash_util is running in daemon mode\n"
+"  -v, --verbose       display verbose error messages\n"
+"  -q, --quiet         don't display any messages\n"
 #ifdef CONFIG_TTF
 "      --mesg=TEXT     use TEXT as the main splash message\n"
 #endif
@@ -195,6 +199,15 @@ int main(int argc, char **argv)
 
 		case 'd':
 			arg_task = start_daemon;
+			break;
+
+		/* Verbosity level adjustment. */
+		case 'q':
+			arg_verbosity = VERB_QUIET;
+			break;
+
+		case 'v':
+			arg_verbosity = VERB_HIGH;
 			break;
 		}
 	}

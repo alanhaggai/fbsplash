@@ -30,6 +30,7 @@ char *config_file = NULL;
 enum TASK	arg_task = none;
 int			arg_fb = 0;
 int			arg_vc = 0;
+char		arg_verbosity = VERB_NORMAL;
 char		arg_mode = 'v';
 char		*arg_theme = NULL;
 char		*arg_pidfile = NULL;
