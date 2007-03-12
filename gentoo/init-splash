@@ -14,8 +14,7 @@ set_theme()
 
 	/sbin/splash_util --tty="${tty}" -m v -t "${theme}" -c setcfg
 	[[ $? -ne 0 ]] && return 1;
-	/sbin/splash_util --tty="${tty}" -m v -t "${theme}" -c setpic
-	[[ $? -ne 0 ]] && return 1;
+	/sbin/splash_util --tty="${tty}" -m v -t "${theme}" -c setpic -q
 	/sbin/splash_util --tty="${tty}" -c on
 	[[ $? -ne 0 ]] && return 1;
 
