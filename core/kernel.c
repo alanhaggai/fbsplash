@@ -117,7 +117,7 @@ int handle_init(u8 update)
 		}
 	} else {
 		/* If we can't parse the command line, we can't
-		 * make any assuptions as to in which mode splash
+		 * make any assumptions as to in which mode splash
 		 * is to be started -- so we just quit. */
 parse_failure:	if (h == 0)
 			umount(PATH_PROC);

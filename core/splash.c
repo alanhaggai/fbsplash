@@ -122,6 +122,7 @@ int main(int argc, char **argv)
 	arg_vc = -1;
 
 	verbose_img.cmap.red = silent_img.cmap.red = NULL;
+	boot_message = getenv("BOOT_MSG");
 
 #ifdef CONFIG_TTF
 	if (TTF_Init() < 0) {
