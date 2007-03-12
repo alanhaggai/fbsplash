@@ -1,5 +1,7 @@
 - convert all printerr/printwarn to iprint
 
+- handle con2fb_map properly
+
 - clean up the code
 
 - fix handling of redrawing the inter boxes

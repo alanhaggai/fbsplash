@@ -34,12 +34,12 @@ int cmd_setstate(unsigned int state, unsigned char origin)
 
 	fd = open(SPLASH_DEV, O_WRONLY);
 	if (fd == -1) {
-		fprintf(stderr, "Can't open %s\n", SPLASH_DEV);
+		iprint(MSG_ERROR, "Can't open %s\n", SPLASH_DEV);
 		return -1;
 	}
 
 	if (ioctl(fd, FBIOSPLASH_SETSTATE, &wrapper)) {
-		fprintf(stderr, "FBIOSPLASH_SETSTATE failed, error code %d.\n", errno);
+		iprint(MSG_ERROR, "FBIOSPLASH_SETSTATE failed, error code %d.\n", errno);
 		err = -2;
 		goto out;
 	}
@@ -60,13 +60,13 @@ int cmd_setpic(struct fb_image *img, unsigned char origin)
 
 	fd = open(SPLASH_DEV, O_WRONLY);
 	if (fd == -1) {
-		fprintf(stderr, "Can't open %s\n", SPLASH_DEV);
+		iprint(MSG_ERROR, "Can't open %s\n", SPLASH_DEV);
 		return -1;
 	}
 
 	if (ioctl(fd, FBIOSPLASH_SETPIC, &wrapper)) {
-		fprintf(stderr, "FBIOSPLASH_SETPIC failed, error code %d.\n", errno);
-		fprintf(stderr, "Hint: are you calling 'setpic' for the current virtual console?\n");
+		iprint(MSG_ERROR, "FBIOSPLASH_SETPIC failed, error code %d.\n", errno);
+		iprint(MSG_ERROR, "Hint: are you calling 'setpic' for the current virtual console?\n");
 		err = -2;
 		goto out;
 	}
@@ -87,7 +87,7 @@ int cmd_setcfg(unsigned char origin)
 
 	fd = open(SPLASH_DEV, O_WRONLY);
 	if (fd == -1) {
-		fprintf(stderr, "Can't open %s\n", SPLASH_DEV);
+		iprint(MSG_ERROR, "Can't open %s\n", SPLASH_DEV);
 		return -1;
 	}
 
@@ -99,7 +99,7 @@ int cmd_setcfg(unsigned char origin)
 	vc_cfg.theme = arg_theme;
 
 	if (ioctl(fd, FBIOSPLASH_SETCFG, &wrapper)) {
-		fprintf(stderr, "FBIOSPLASH_SETCFG failed, error code %d.\n", errno);
+		iprint(MSG_ERROR, "FBIOSPLASH_SETCFG failed, error code %d.\n", errno);
 		err = -2;
 		goto out;
 	}
@@ -124,13 +124,13 @@ int cmd_getcfg()
 
 	fd = open(SPLASH_DEV, O_WRONLY);
 	if (fd == -1) {
-		fprintf(stderr, "Can't open %s\n", SPLASH_DEV);
+		iprint(MSG_ERROR, "Can't open %s\n", SPLASH_DEV);
 		err = -1;
 		goto out;
 	}
 
 	if (ioctl(fd, FBIOSPLASH_GETCFG, &wrapper)) {
-		fprintf(stderr, "FBIOSPLASH_GETCFG failed, error code %d.\n", errno);
+		iprint(MSG_ERROR, "FBIOSPLASH_GETCFG failed, error code %d.\n", errno);
 		err = -2;
 		close(fd);
 		goto out;
