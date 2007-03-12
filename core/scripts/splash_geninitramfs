@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# splash_geninitramfs -- an utility to create initramfs images for use with fbsplash 
+# splash_geninitramfs -- an utility to create initramfs images for use with fbsplash
 #
 # Copyright (C) 2004-2005, Michal Januszewski <spock@gentoo.org>
 #
@@ -31,7 +31,7 @@ Main operation modes:
   -h, --help          show this help message
 
 Options:
-  -r, --res=RES   copy data for specific resolutions only; RES is a 
+  -r, --res=RES   copy data for specific resolutions only; RES is a
                   comma-separated list of the resolutions for which the images
 		  are to be copied
   -v, --verbose   verbose output
@@ -51,7 +51,7 @@ printv()
 put_item()
 {
 	item="$1"
-	
+
 	if [ "${item:0:1}" == "/" ]; then
 		cp -pRH --parents "${item}" "${imgdir}"
 	else
@@ -88,8 +88,8 @@ for i ; do
 		-v|--verbose)	verbose=$(($verbose + 1)); shift;;
 		--no8bpp)	no8bpp=1; shift;;
 		--)		shift; break;;
-		--all)		
-				shift; 
+		--all)
+				shift;
 				for i in ${themedir}/* ; do
 					if [ ! -d "$i" ] ; then
 						continue
@@ -124,7 +124,7 @@ else
 	if [ "$mode" == "a" ] && [ ! -e $img ]; then
 		echo "Specified image file does not exist." 1>&2 ; exit 4
 	fi
-	
+
 	workdir=${TMPDIR-/tmp}/splash.$$.$RANDOM
 
 	if (umask 077 && mkdir $workdir); then
@@ -166,15 +166,15 @@ res=${res//,/ }
 printv "o Copying themes.."
 for (( i=0 ; i < index ; i++ )) ; do
 	theme=${themes[$i]}
-	
+
 	printv "  - ${theme}"
-	
+
 	# check if the user specified which resolutions are accepted
 	# (default: all res)
-	if [ -z "$res" ]; then 
+	if [ -z "$res" ]; then
 		res=$(cd ${themedir}/${theme} ; ls *cfg | sed -e 's/.cfg//g')
 	fi
-	
+
 	for j in $res ; do
 		if [ ! -e "${themedir}/${theme}/${j}.cfg" ]; then
 			echo "Warning: config file for theme '${theme}', resolution ${j} does not exist!" 1>&2
@@ -188,7 +188,7 @@ for (( i=0 ; i < index ; i++ )) ; do
 		else
 			t=""
 		fi
-		
+
 		# config file parsing
 		pics=`cat "${themedir}/${theme}/${j}.cfg" | \
 		      sed -r -e "/(^(silent)?jpeg=)|(^(silent)?pic${t}*=)/! d" \
@@ -220,8 +220,8 @@ for (( i=0 ; i < index ; i++ )) ; do
 done
 
 printv "o Creating initramfs image.."
-if [ "$mode" == "g" ] || [ "$mode" == "a" ]; then	
-	(cd "${imgdir}" ; find . | cpio --quiet --dereference -o -H newc | gzip -9 >../img.cpio.gz)
+if [ "$mode" == "g" ] || [ "$mode" == "a" ]; then
+	(cd "${imgdir}" ; find . | cpio --quiet -o -H newc | gzip -9 >../img.cpio.gz)
 	mv "${workdir}/img.cpio.gz" "${img}"
 fi
 
