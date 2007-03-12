@@ -35,7 +35,7 @@ INSTALL_SCRIPT 	= ${INSTALL_PROG}
 
 ifeq ($(strip $(K_SHARED)),true)
 	K_LDFLAGS = -shared
-else 
+else
 	K_LDFLAGS = -static
 endif
 
@@ -58,16 +58,16 @@ PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_S
 		-DPNG_LEGACY_SUPPORTED -DPNG_NO_PROGRESSIVE_READ -DPNG_NO_MNG_FEATURES -DPNG_NO_CONSOLE_IO \
 		-DPNG_NO_ERROR_NUMBERS -DPNG_READ_GRAY_TO_RGB_SUPPORTED -DPNG_READ_16_TO_8_SUPPORTED \
 		-DPNG_READ_STRIP_ALPHA_SUPPORTED -DPNG_NO_INFO_IMAGE -DPNG_NO_READ_TRANSFORMS -DPNG_NO_READ_ANCILLARY_CHUNKS
-	  
+
 K_LDLIBS = $(OBJDIR)/jpeglib/libjpeg.a
 K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/dev.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
 		   $(KOUT)/cmd.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o
-K_DEPS   = 
+K_DEPS   =
 
 # Flags for the user utilities
 CFLAGS   = -Wall -g
 LDLIBS   = -ljpeg -lm -pthread
-LDFLAGS  = 
+LDFLAGS  =
 
 # Include the klibc header files so that we can compile against fb.h
 # from a kernel thee patched with fbsplash.
@@ -77,7 +77,7 @@ OBJS     = $(OBJDIR)/splash.o $(OBJDIR)/parse.o $(OBJDIR)/render.o $(OBJDIR)/ima
 	       $(OBJDIR)/list.o $(OBJDIR)/effects.o
 
 # Checks whether an option is set in config.h
-config_opt = $(shell if [[ -e config.h && -n "`egrep '^\#define[[:space:]]+$(1)([[:space:]]+|$$)' config.h`" ]]; then echo true ; fi)
+config_opt = $(shell if [ -e config.h -a -n "`egrep '^\#define[[:space:]]+$(1)([[:space:]]+|$$)' config.h`" ]; then echo true ; fi)
 
 ifeq ($(call config_opt,CONFIG_TTF),true)
 	OBJS   += $(OBJDIR)/ttf.o
@@ -90,27 +90,27 @@ ifeq ($(call config_opt,CONFIG_MNG),true)
 endif
 
 ifeq ($(call config_opt,CONFIG_TTF_KERNEL),true)
-	K_LDLIBS += $(OBJDIR)/freetype2/.libs/libfreetype.a 
+	K_LDLIBS += $(OBJDIR)/freetype2/.libs/libfreetype.a
 	K_OBJS 	 += $(KOUT)/ttf.o
 	K_DEPS	 += ft2
 endif
 
 ifeq ($(call config_opt,CONFIG_PNG),true)
-	K_LDLIBS += $(LPNGSRC)/libpng.a $(ZLIBSRC)/libz.a 
+	K_LDLIBS += $(LPNGSRC)/libpng.a $(ZLIBSRC)/libz.a
 	K_DEPS	 += libpng
 	LDLIBS	 += -lpng -lz -lm
-endif	
+endif
 
 ifeq ($(strip $(DEBUG)),true)
 	STRIP = true
-else	
+else
 	STRIP = strip --strip-all -R .comment -R .note
 endif
 
 OBJDIR	= objs
 KOUT	= $(OBJDIR)/kernel
 dotg    = \e[32;01m*\e[0m
-infmsg	= if [ "${QUIET}" == "true" ] ; then printf "  %-7s %s\n" $(1) $(2) ; fi
+infmsg	= if [ "${QUIET}" = "true" ] ; then printf "  %-7s %s\n" $(1) $(2) ; fi
 install_script = $(call infmsg,INSTALL,$(1)) ; $(INSTALL_PROG) -D scripts/$(1) $(DESTDIR)$(usrbindir)/$(1) ; \
 		 sed -e 's/%PKG_VERSION%/$(PKG_VERSION)/g' -i $(DESTDIR)$(usrbindir)/$(1)
 
@@ -128,7 +128,7 @@ all:	objdir splash_kern splash_user
 splash_user: $(OBJDIR)/$(SP_UTIL)
 
 config.h:
-	@echo "Using default configuration." 
+	@echo "Using default configuration."
 	@if [ ! -e config.h ]; then \
 		./configure --default ; \
 		$(warning "Restart make") \
@@ -140,7 +140,7 @@ $(OBJDIR)/$(SP_UTIL): $(OBJS)
 	$(Q)$(CC) $+ $(LDLIBS) -o $@
 	$(Q)$(CC) $+ $(LDLIBS) -L/usr/lib/nptl -static -o $@.static
 
-objdir:	
+objdir:
 	@if [ ! -d "$(OBJDIR)" ]; then \
 		mkdir "$(OBJDIR)" ; \
 	fi
@@ -169,7 +169,7 @@ libpng:	zlib config.h
 		       -e 's#^ZLIBLIB=.*#ZLIBLIB=$(ZLIBSRC)#' Makefile ; \
 	fi ; \
 	if ! make -q CC=$(KLCC) libpng.a; then $(call infmsg,MAKE,libpng) ; fi ; \
-	make CC=$(KLCC) libpng.a > $(OUTPUT) 
+	make CC=$(KLCC) libpng.a > $(OUTPUT)
 
 jpeglib:
 	@cd $(OBJDIR) ; \
@@ -202,7 +202,7 @@ ft2:	config.h
 	fi ; \
 	if ! make -q CFLAGS="$(K_CFLAGS)" library; then $(call infmsg,MAKE,freetype2) ; fi ; \
 	make CFLAGS="-c $(K_CFLAGS)" library > $(OUTPUT)
-	
+
 splash_kern: jpeglib $(K_DEPS) $(OBJDIR)/$(SP_HELPER) config.h $(K_LDLIBS)
 
 $(OBJDIR)/$(SP_HELPER): $(K_OBJS)
@@ -220,7 +220,7 @@ $(OBJDIR)/%.o: %.c config.h splash.h daemon.h
 
 clean:	clean_all
 
-clean_all:	clean_zlib clean_png 
+clean_all:	clean_zlib clean_png
 	@$(call infmsg,CLEAN,all)
 	$(Q)rm -rf $(OBJDIR)/*
 
@@ -228,7 +228,7 @@ clean_splash:
 	@$(call infmsg,CLEAN,splash)
 	$(Q)rm -f $(OBJDIR)/*.o
 	$(Q)rm -f $(OBJDIR)/kernel/*.o
-	$(Q)rm -f $(OBJDIR)/splash_helper splash_util splash_util.static 
+	$(Q)rm -f $(OBJDIR)/splash_helper splash_util splash_util.static
 	$(Q)rm -r config.h
 
 clean_jpg:
@@ -296,4 +296,4 @@ uninstall:
 	$(Q)rm -f $(usrbindir)/$(SP_RESIZE)
 	@$(call infmsg,UNINSTALL,$(SP_MNGR))
 	$(Q)rm -f $(usrbindir)/$(SP_MNGR)
-	
+
