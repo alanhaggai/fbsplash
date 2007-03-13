@@ -260,11 +260,10 @@ splash_start() {
 	[[ ${SPLASH_KDMODE} == "GRAPHICS" ]] && options="--kdgraphics"
 
 	# Start the splash daemon
-	${spl_util} -d --theme=${SPLASH_THEME} --pidfile=${spl_pidfile} ${options}
+	BOOT_MSG="$(splash_get_boot_message)" ${spl_util} -d --theme=${SPLASH_THEME} --pidfile=${spl_pidfile} ${options}
 
 	# Set the silent TTY and boot message
 	splash_comm_send "set tty silent ${SPLASH_TTY}"
-	splash_comm_send "set message $(splash_get_boot_message)"
 
 	if [[ ${SPLASH_MODE_REQ} == "silent" ]] ; then
 		splash_comm_send "set mode silent"
