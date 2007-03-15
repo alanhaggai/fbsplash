@@ -523,7 +523,13 @@ splash_cache_cleanup() {
 	# writable, update it to avoid stale mtab entries (bug #121827).
 	local mntopt=""
 	[[ -w /etc/mtab ]] || mntopt="-n"
-	umount ${mntopt} -l "${spl_tmpdir}" 2>/dev/null
+	mount ${mntopt} --move "${spl_cachedir}" "${spl_tmpdir}" 2>/dev/null
+
+	# Don't try to copy anything if the cachedir is not writable.
+	[[ -w "${spl_cachedir}" ]] || return;
+
+	cp -a "${spl_tmpdir}"/profile "${spl_cachedir}" 2>/dev/null
+	umount -l "${spl_tmpdir}" 2>/dev/null
  }
 
 ###########################################################################
