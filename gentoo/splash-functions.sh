@@ -28,6 +28,9 @@ spl_cachetype="tmpfs"
 spl_fifo="${spl_cachedir}/.splash"
 spl_pidfile="${spl_cachedir}/daemon.pid"
 
+. /etc/init.d/functions.sh
+splash_setup
+
 # This is the main function which handles all events.
 # Accepted parameters:
 #  svc_start <name>
@@ -42,54 +45,14 @@ spl_pidfile="${spl_cachedir}/daemon.pid"
 splash() {
 	local event="$1"
 	shift
-	splash_setup
 
-	[[ ${SPLASH_MODE_REQ} == "off" ]] && return
-
-	# Prepare the cache here -- rc_init-pre might want to use it
-	if [[ ${event} == "rc_init" ]]; then
-		if [[ ${RUNLEVEL} == "S" && "$1" == "sysinit" ]]; then
-			splash_cache_prep 'start' || return
-		elif [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
-			# Check if the splash cachedir is mounted readonly. If it is,
-			# we need to mount a tmpfs over it.
-			if ! touch ${spl_cachedir}/message 2>/dev/null ; then
-				splash_cache_prep 'stop' || return
-			fi
-		fi
-	fi
-
-	local args=($@)
-
-	if [[ ${event} == "rc_init" || ${event} == "rc_exit" ]]; then
-		args[${#args[*]}]="${RUNLEVEL}"
-	fi
-
-	splash_profile "pre ${event} ${args[*]}"
-
-	# Handle -pre event hooks
-	if [[ -x "/etc/splash/${SPLASH_THEME}/scripts/${event}-pre" ]]; then
-		/etc/splash/${SPLASH_THEME}/scripts/${event}-pre "${args[@]}"
-	fi
+	[ ${SPLASH_MODE_REQ} == "off" ] && return
 
 	case "$event" in
-		svc_start)			splash_svc_start "$1";;
-		svc_stop)			splash_svc_stop "$1";;
-		svc_started) 		splash_svc "$1" "$2" "start";;
-		svc_stopped)		splash_svc "$1" "$2" "stop";;
 		svc_input_begin)	splash_input_begin "$1";;
 		svc_input_end)		splash_input_end "$1";;
-		rc_init) 			splash_init "$1" "${RUNLEVEL}";;
-		rc_exit) 			splash_exit "${RUNLEVEL}";;
 		critical) 			splash_verbose;;
 	esac
-
-	splash_profile "post ${event} ${args[*]}"
-
-	# Handle -post event hooks
-	if [[ -x "/etc/splash/${SPLASH_THEME}/scripts/${event}-post" ]]; then
-		/etc/splash/${SPLASH_THEME}/scripts/${event}-post "${args[@]}"
-	fi
 
 	return 0
 }
@@ -97,7 +60,7 @@ splash() {
 splash_setup() {
 	# If it's already set up, let's not waste time on parsing the config
 	# files again
-	if [[ ${SPLASH_THEME} != "" && ${SPLASH_TTY} != "" && "$1" != "force" ]]; then
+	if [ ${SPLASH_THEME} != "" -a ${SPLASH_TTY} != "" -a "$1" != "force" ]; then
 		return 0
 	fi
 
@@ -110,9 +73,9 @@ splash_setup() {
 	export SPLASH_SHUTDOWN_MESSAGE="Shutting down the system (\$progress%)... Press F2 for verbose mode."
 	export SPLASH_REBOOT_MESSAGE="Rebooting the system (\$progress%)... Press F2 for verbose mode."
 
-	[[ -f $(add_suffix /etc/conf.d/splash) ]] && source "$(add_suffix /etc/conf.d/splash)"
+	[ -f /etc/conf.d/splash ] && . /etc/conf.d/splash
 
-	if [[ -f /proc/cmdline ]]; then
+	if [ -f /proc/cmdline ]; then
 		options=$(grep 'splash=[^ ]*' -o /proc/cmdline)
 
 		# Execute this loop over $options so that we can process multiple
@@ -146,84 +109,15 @@ splash_setup() {
 # System restart/shutdown:
 #   0/6       reboot/shutdown  <none>      all
 
-# args: <internal_runlevel>
-#
-# This function is called when an 'rc_init' event takes place,
-# ie. when the runlevel is changed.
-splash_init() {
-	arg="$1"
-
-	# Initialize variables -- either set the default values or load them from a file
-	if [[ ${RUNLEVEL} == "S" && ${arg} == "sysinit" ]] ||
-	   [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
-		spl_count=0
-		spl_scripts=0
-		spl_execed=""
- 	else
-		splash_load_vars
-	fi
-
-	export spl_count spl_scripts spl_execed
-
-	if [[ ${RUNLEVEL} == "S" && ${arg} == "sysinit" ]]; then
-		spl_scripts=$(splash_svclist_get start | tr ' ' '\n' | wc -l)
-		spl_count=0
-	elif [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
-		spl_started=($(dolisting "${svcdir}/started/"))
-		spl_scripts=${#spl_started[*]}
-	fi
-
-	if [[ ${RUNLEVEL} == "S" && ${arg} == "sysinit" ]] ||
-	   [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
-		splash_start
-	fi
-
-	splash_svclist_init "${arg}"
-	splash_save_vars
-}
-
-# args: none
-#
-# This function is called when an 'rc_exit' event takes place,
-# ie. when we're almost done with executing initscripts for a
-# given runlevel.
-splash_exit() {
-	# If we're in sysinit or rebooting, do nothing.
-	if [[ ${RUNLEVEL} == "S" || ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
-		return 0
-	fi
-
-	if [[ "$(splash_get_mode)" == "silent" ]] ; then
-		splash_verbose
-	fi
-
-	splash_comm_send "exit"
-	splash_cache_cleanup
-
-	# Make sure the splash daemon is really dead (just in case the killall
-	# in splash_cache_cleanup didn't get executed). This should fix Gentoo
-	# bug #96697.
-	killall -9 splash_util.static >/dev/null 2>/dev/null
-	rm -f "${spl_pidfile}"
-}
+# Start the splash daemon.
 
 splash_start() {
-	# Prepare the communications FIFO
-	rm -f ${spl_fifo} 2>/dev/null
-
-	if [[ ${SPLASH_MODE_REQ} == "verbose" ]]; then
-		${spl_util} -c on 2>/dev/null
-		return 0
-	elif [[ ${SPLASH_MODE_REQ} != "silent" ]]; then
-		return 0
-	fi
-
 	# Display a warning if the system is not configured to display init messages
 	# on tty1. This can cause a lot of problems if it's not handled correctly, so
 	# we don't allow silent splash to run on incorrectly configured systems.
-	if [[ ${SPLASH_MODE_REQ} == "silent" ]]; then
-		if [[ -z "`grep -E '(^| )CONSOLE=/dev/tty1( |$)' /proc/cmdline`" &&
-			  -z "`grep -E '(^| )console=tty1( |$)' /proc/cmdline`" ]]; then
+	if [ ${SPLASH_MODE_REQ} == "silent" ]; then
+		if [ -z "`grep -E '(^| )CONSOLE=/dev/tty1( |$)' /proc/cmdline`" -a
+			 -z "`grep -E '(^| )console=tty1( |$)' /proc/cmdline`" ]; then
 			clear
 			ewarn "You don't appear to have a correct console= setting on your kernel"
 			ewarn "command line. Silent splash will not be enabled. Please add"
@@ -238,7 +132,7 @@ splash_start() {
 		fi
 
 		mount -n --bind / ${spl_tmpdir}
-		if [[ ! -c "${spl_tmpdir}/dev/tty1" ]]; then
+		if [ ! -c "${spl_tmpdir}/dev/tty1" ]; then
 			umount -n ${spl_tmpdir}
 			ewarn "The filesystem mounted on / doesn't contain the /dev/tty1 device"
 			ewarn "which is required for the silent splash to function properly."
@@ -254,34 +148,16 @@ splash_start() {
 	rm -f "${spl_pidfile}"
 
 	# Prepare the communications FIFO
-	mkfifo ${spl_fifo}
+	if [ ! -p "${spl_fifo}" ]; then
+		rm -f "${spl_fifo}" 2>/dev/null
+		mkfifo "${spl_fifo}"
+	fi
 
 	local options=""
 	[[ ${SPLASH_KDMODE} == "GRAPHICS" ]] && options="--kdgraphics"
 
 	# Start the splash daemon
 	BOOT_MSG="$(splash_get_boot_message)" ${spl_util} -d --theme=${SPLASH_THEME} --pidfile=${spl_pidfile} ${options}
-
-	# Set the silent TTY and boot message
-	splash_comm_send "set tty silent ${SPLASH_TTY}"
-
-	if [[ ${SPLASH_MODE_REQ} == "silent" ]] ; then
-		splash_comm_send "set mode silent"
-		splash_comm_send "repaint"
-		${spl_util} -c on 2>/dev/null
-	fi
-
-	# Set the input device if it exists. This will make it possible to use F2 to
-	# switch from verbose to silent.
-	local t=$(grep -Hsi keyboard /sys/class/input/event*/device/driver/description | grep -o 'event[0-9]\+')
-	if [[ -z "${t}" ]]; then
-		# Try an alternative method of finding the event device. The idea comes
-		# from Bombadil <bombadil(at)h3c.de>. We're couting on the keyboard controller
-		# being the first device handled by kbd listed in input/devices.
-		t=$(/bin/grep -s -m 1 '^H: Handlers=kbd' /proc/bus/input/devices | grep -o 'event[0-9]*')
-	fi
-	[[ -n "${t}" ]] && splash_comm_send "set event dev /dev/input/${t}"
-
 	return 0
 }
 
@@ -295,27 +171,6 @@ splash_get_boot_message() {
 	fi
 }
 
-splash_update_progress() {
-	local srv=$1
-
-	# FIXME
-	splash_load_vars
-	[[ -n "${spl_execed}" && -z "${spl_execed//* $srv */}" ]] && return
-	[[ -z "${spl_scripts}" ]] && return
-	spl_execed="${spl_execed} ${srv} "
-	spl_count=$((${spl_count} + 1))
-
-	if [ "${spl_scripts}" -gt 0 ]; then
-		progress=$(($spl_count * 65535 / $spl_scripts))
-	else
-		progress=0
-	fi
-
-	splash_comm_send "progress ${progress}"
-	splash_save_vars
-	splash_comm_send "paint"
-}
-
 ###########################################################################
 # Common functions
 ###########################################################################
@@ -323,14 +178,14 @@ splash_update_progress() {
 # Sends data to the splash FIFO after making sure there's someone
 # alive on other end to receive it.
 splash_comm_send() {
-	if [[ ! -e ${spl_pidfile} ]]; then
+	if [ ! -e ${spl_pidfile} ]; then
 		return 1
 	fi
 
 	splash_profile "comm $*"
 
-	if [[ -r /proc/$(<${spl_pidfile})/status &&
-		  "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]]; then
+	if [ -r /proc/$(<${spl_pidfile})/status -a
+		  "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]; then
 		echo "$*" > ${spl_fifo} &
 	else
 		echo "Splash daemon not running!"
@@ -342,10 +197,10 @@ splash_comm_send() {
 splash_get_mode() {
 	local ctty="$(${spl_bindir}/fgconsole)"
 
-	if [[ ${ctty} == "${SPLASH_TTY}" ]]; then
+	if [ ${ctty} == "${SPLASH_TTY}" ]; then
 		echo "silent"
 	else
-		if [[ -z "$(${spl_util} -c getstate --vc=$(($ctty-1)) 2>/dev/null | grep off)" ]]; then
+		if [ -z "$(${spl_util} -c getstate --vc=$(($ctty-1)) 2>/dev/null | grep off)" ]; then
 			echo "verbose"
 		else
 			echo "off"
@@ -355,7 +210,7 @@ splash_get_mode() {
 
 # Switches to verbose mode.
 splash_verbose() {
-	if [[ -x /usr/bin/chvt ]]; then
+	if [ -x /usr/bin/chvt ]; then
 		/usr/bin/chvt 1
 	else
 		splash_comm_send "set mode verbose"
@@ -368,22 +223,6 @@ splash_silent() {
 	${spl_util} -c on 2>/dev/null
 }
 
-splash_load_vars() {
-	[[ -e ${spl_cachedir}/progress ]] && source ${spl_cachedir}/progress
-}
-
-splash_save_vars() {
-	if [[ ! -d ${spl_cachedir} || ! -w ${spl_cachedir} ]]; then
-		return
-	fi
-
-	t="spl_execed=\"${spl_execed}\"\n"
-	t="${t}spl_count=${spl_count}\n"
-	t="${t}spl_scripts=${spl_scripts}\n"
-
-	(echo -e "$t" > ${spl_cachedir}/progress) 2>/dev/null
-}
-
 # Saves profiling information
 splash_profile() {
 	if [[ ${SPLASH_PROFILE} == "on" ]]; then
@@ -394,59 +233,6 @@ splash_profile() {
 ###########################################################################
 # Service
 ###########################################################################
-
-# args: <svc> <error-code> <action>
-splash_svc() {
-	local srv="$1"
-	local err="$2"
-	local act="$3"
-
-	# We ignore the serial initscript since it's known to return bogus error codes
-	# while not printing any error messages. This only confuses the users.
-	if [[ ${err} -ne 0 && ${SPLASH_VERBOSE_ON_ERRORS} == "yes" && "${srv}" != "serial" ]]; then
-		splash_verbose
-		return 1
-	fi
-
-	if [[ ${act} == "start" ]]; then
-		if [[ ${err} -eq 0 ]]; then
-			splash_svc_update ${srv} "svc_started"
-		else
-			splash_svc_update ${srv} "svc_start_failed"
-		fi
-	else
-		if [[ ${err} -eq 0 ]]; then
-			splash_svc_update ${srv} "svc_stopped"
-		else
-			splash_svc_update ${srv} "svc_stop_failed"
-		fi
-	fi
-
-	splash_update_progress "$srv"
-}
-
-# args: <svc> <state>
-#
-# Inform the splash daemon about service status changes.
-splash_svc_update() {
-	splash_comm_send "update_svc $1 $2"
-}
-
-# args: <svc>
-splash_svc_start() {
-	local svc="$1"
-
-	splash_svc_update ${svc} "svc_start"
-	splash_comm_send "paint"
-}
-
-# args: <svc>
-splash_svc_stop() {
-	local svc="$1"
-
-	splash_svc_update ${svc} "svc_stop"
-	splash_comm_send "paint"
-}
 
 # args: <svc>
 splash_input_begin() {
@@ -498,35 +284,31 @@ splash_cache_prep() {
 	return 0
 }
 
-
 splash_cache_cleanup() {
-	# FIXME: Make sure the splash daemon is dead.
-	killall -9 splash_util.static >/dev/null 2>/dev/null
-	rm -f "${spl_pidfile}"
-
-	# There's no point in saving all the data if we're running off a livecd.
-	if [[ -n "${CDBOOT}" ]]; then
+	# If we don't care about the splash profiling data, or if
+	# we're running off a livecd, simply ymount the splash cache.
+	if [ -n "${CDBOOT}" -o "${SPLASH_PROFILE}" != "on" ]; then
 		umount -l "${spl_cachedir}" 2>/dev/null
 		return
 	fi
 
 	# Don't try to clean anything up if the cachedir is not mounted.
-	[[ -z "$(grep ${spl_cachedir} /proc/mounts)" ]] && return;
+	[ -z "$(grep ${spl_cachedir} /proc/mounts)" ] && return;
 
 	# Create the temp dir if necessary.
-	if [[ ! -d "${spl_tmpdir}" ]]; then
+	if [ ! -d "${spl_tmpdir}" ]; then
 		mkdir -p "${spl_tmpdir}" 2>/dev/null
-		[[ "$?" != "0" ]] && return
+		[ "$?" != "0" ] && return
 	fi
 
 	# If the /etc is not writable, don't update /etc/mtab. If it is
 	# writable, update it to avoid stale mtab entries (bug #121827).
 	local mntopt=""
-	[[ -w /etc/mtab ]] || mntopt="-n"
-	mount ${mntopt} --move "${spl_cachedir}" "${spl_tmpdir}" 2>/dev/null
+	[ -w /etc/mtab ] || mntopt="-n"
+	mount "${mntopt}" --move "${spl_cachedir}" "${spl_tmpdir}" 2>/dev/null
 
 	# Don't try to copy anything if the cachedir is not writable.
-	[[ -w "${spl_cachedir}" ]] || return;
+	[ -w "${spl_cachedir}" ] || return;
 
 	cp -a "${spl_tmpdir}"/profile "${spl_cachedir}" 2>/dev/null
 	umount -l "${spl_tmpdir}" 2>/dev/null
