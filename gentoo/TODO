@@ -1,0 +1,4 @@
+* save the scvs to svcs_stop like it's done with svcs_start
+* do not run the splash code when called from runscript by the user
+* add support for splash profiling
+* the initial switch to silent doesn't work (and switch to verbose too)

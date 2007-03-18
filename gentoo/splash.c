@@ -50,15 +50,15 @@ static scfg_t	config;
 static pid_t	pid_daemon = 0;
 static FILE*	fp_fifo = NULL;
 
-static int strlist_merge(char **dest, char **src)
+static char** strlist_merge(char **dest, char **src)
 {
 	int i = 0;
 
 	for (i = 0; src && src[i]; i++) {
-		rc_strlist_add(dest, src[i]);
+		dest = rc_strlist_add(dest, src[i]);
 	}
 
-	return 0;
+	return dest;
 }
 
 static int list_count(char **list)
@@ -136,8 +136,6 @@ static int splash_call(const char *cmd, const char *arg1, const char *arg2)
 	if (!cmd || !soft)
 		return -1;
 
-	einfo("splash_call(): %s %s %s", cmd, arg1, arg2);
-
 	l = strlen(SPLASH_CMD) + strlen(soft) + strlen(cmd);
 	if (arg1)
 		l += strlen(arg1);
@@ -185,7 +183,6 @@ int splash_theme_hook(const char *name, const char *type, const char *arg1)
 static int splash_send(char *cmd)
 {
 	if (!fp_fifo) {
-		int flags, t;
 		fp_fifo = fopen(SPLASH_FIFO, "a");
 		if (!fp_fifo);
 			return -1;
@@ -237,12 +234,14 @@ static int splash_init(bool start)
 		svcs_done = rc_services_in_state(rc_service_started);
 
 		tmp = rc_services_in_state(rc_service_inactive);
-		strlist_merge(svcs_done, tmp);
+		svcs_done = strlist_merge(svcs_done, tmp);
 		rc_strlist_free(tmp);
+		tmp = NULL;
 
 		tmp = rc_services_in_state(rc_service_failed);
-		strlist_merge(svcs_done, tmp);
+		svcs_done = strlist_merge(svcs_done, tmp);
 		rc_strlist_free(tmp);
+		tmp = NULL;
 	/* .. or rebooting? */
 	} else {
 		svcs = rc_services_in_state(rc_service_started);
