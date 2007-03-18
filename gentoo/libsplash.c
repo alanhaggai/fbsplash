@@ -35,6 +35,12 @@ int splash_parse_kcmdline(scfg_t *cfg)
 	fgets(buf, 1024, fp);
 	fclose(fp);
 
+	/* Remove the newline character so that it doesn't get
+	 * included in the theme name. */
+	if (t[strlen(t)-1] == '\n') {
+		t[strlen(t)-1] = 0;
+	}
+
 	/* FIXME: add support for multiple splash= settings */
 	t = strstr(buf, "splash=");
 	if (!t)
