@@ -29,7 +29,6 @@ spl_fifo="${spl_cachedir}/.splash"
 spl_pidfile="${spl_cachedir}/daemon.pid"
 
 . /etc/init.d/functions.sh
-splash_setup
 
 # This is the main function which handles all events.
 # Accepted parameters:
@@ -60,7 +59,7 @@ splash() {
 splash_setup() {
 	# If it's already set up, let's not waste time on parsing the config
 	# files again
-	if [ ${SPLASH_THEME} != "" -a ${SPLASH_TTY} != "" -a "$1" != "force" ]; then
+	if [ "${SPLASH_THEME}" != "" -a "${SPLASH_TTY}" != "" -a "$1" != "force" ]; then
 		return 0
 	fi
 
@@ -109,15 +108,14 @@ splash_setup() {
 # System restart/shutdown:
 #   0/6       reboot/shutdown  <none>      all
 
-# Start the splash daemon.
+# Start the splash daemon. 
 
 splash_start() {
 	# Display a warning if the system is not configured to display init messages
 	# on tty1. This can cause a lot of problems if it's not handled correctly, so
 	# we don't allow silent splash to run on incorrectly configured systems.
 	if [ ${SPLASH_MODE_REQ} == "silent" ]; then
-		if [ -z "`grep -E '(^| )CONSOLE=/dev/tty1( |$)' /proc/cmdline`" -a
-			 -z "`grep -E '(^| )console=tty1( |$)' /proc/cmdline`" ]; then
+		if [ -z "`grep -E '(^| )CONSOLE=/dev/tty1( |$)' /proc/cmdline`" -a -z "`grep -E '(^| )console=tty1( |$)' /proc/cmdline`" ]; then
 			clear
 			ewarn "You don't appear to have a correct console= setting on your kernel"
 			ewarn "command line. Silent splash will not be enabled. Please add"
@@ -276,7 +274,7 @@ splash_cache_prep() {
 
 	mount -n --move "${spl_tmpdir}" "${spl_cachedir}"
 
-	if [[ "$1" == "start" ]]; then
+	if [ "$1" == "start" ]; then
 		echo $(splash_svclist_update "start") > ${spl_cachedir}/svcs_start
 		echo -n > ${spl_cachedir}/profile
 	fi
@@ -285,6 +283,7 @@ splash_cache_prep() {
 }
 
 splash_cache_cleanup() {
+
 	# If we don't care about the splash profiling data, or if
 	# we're running off a livecd, simply ymount the splash cache.
 	if [ -n "${CDBOOT}" -o "${SPLASH_PROFILE}" != "on" ]; then
@@ -346,6 +345,9 @@ splash_svclist_get() {
 splash_svclist_update() {
 	local svcs= order= x= dlvl="${SOFTLEVEL}"
 
+	# Make sure we don't get junk in the service list.
+	export RC_QUIET="yes"
+
 	for x in $(dolisting /etc/runlevels/${BOOTLEVEL}) \
 		$(dolisting ${svcdir}/coldplugged) ; do
 		svcs="${svcs} ${x##*/}"
@@ -357,9 +359,10 @@ splash_svclist_update() {
 
 	# We call rc-depend twice so we get the ordering exactly right
 	svcs=
-	if [[ ${SOFTLEVEL} == "${BOOTLEVEL}" ]] ; then
+	if [ ${SOFTLEVEL} == "${BOOTLEVEL}" -o ${SOFTLEVEL} == "sysinit" ] ; then
 		dlvl="${DEFAULTLEVEL}"
 	fi
+
 	for x in $(dolisting /etc/runlevels/"${dlvl}") ; do
 		svcs="${svcs} ${x##*/}"
 		if [[ ${x##*/} == "autoconfig" ]] ; then
@@ -382,5 +385,7 @@ sulogin() {
        splash "critical" > /dev/null 2>&1 &
        /sbin/sulogin $*
 }
+
+splash_setup
 
 # vim:ts=4
