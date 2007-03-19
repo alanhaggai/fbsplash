@@ -37,8 +37,8 @@ int splash_parse_kcmdline(scfg_t *cfg)
 
 	/* Remove the newline character so that it doesn't get
 	 * included in the theme name. */
-	if (t[strlen(t)-1] == '\n') {
-		t[strlen(t)-1] = 0;
+	if (buf[strlen(buf)-1] == '\n') {
+		buf[strlen(buf)-1] = 0;
 	}
 
 	/* FIXME: add support for multiple splash= settings */

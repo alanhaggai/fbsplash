@@ -262,6 +262,8 @@ static int splash_init(bool start)
 		err = -1;
 	}
 
+	/* FIXME: check if the splash daemon is actually running */
+
 	fclose(fp);
 	return err;
 }
@@ -386,8 +388,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		splash_parse_kcmdline(&config);
 	}
 
-	/* If we're not starting in silent mode, then we don't start
-	 * the splash daemon. */
+	/* Don't do anything if we're not running in silent mode. */
 	if (config.reqmode != 's')
 		return 0;
 
