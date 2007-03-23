@@ -1,5 +1,3 @@
-* check if the splash daemon is really running when reading the PID file
-  - read of /proc/<pid>/stat, tokenize by ' ', should get (splash_util)
 * writing to the splash FIFO should never block!
 * save the scvs to svcs_stop like it's done with svcs_start
 * do not run the splash code when called from runscript by the user

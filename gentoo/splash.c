@@ -81,7 +81,7 @@ static int list_has(char **list, const char *item)
 	return false;
 }
 
-char **get_list(char **list, const char *file)
+static char **get_list(char **list, const char *file)
 {
 	FILE *fp;
 	char buffer[512];
@@ -154,7 +154,7 @@ static int splash_call(const char *cmd, const char *arg1, const char *arg2)
 	return l;
 }
 
-int splash_theme_hook(const char *name, const char *type, const char *arg1)
+static int splash_theme_hook(const char *name, const char *type, const char *arg1)
 {
 	char *buf;
 	int l = 256;
@@ -219,10 +219,44 @@ static int splash_svc_state(const char *name, const char *state, bool paint)
 	return 0;
 }
 
+static int splash_daemon_check()
+{
+	int err = 0;
+	FILE *fp;
+	char buf[64];
+
+	fp = fopen(SPLASH_PIDFILE, "r");
+	if (!fp) {
+		eerror("Failed to open "SPLASH_PIDFILE);
+		return -1;
+	}
+
+	if (fscanf(fp, "%d", &pid_daemon) != 1) {
+		eerror("Failed to get the PID of the splash daemon.");
+		fclose(fp);
+		return -1;
+	}
+	fclose(fp);
+
+	sprintf(buf, "/proc/%d/stat", pid_daemon);
+	fp = fopen(buf, "r");
+	if (!fp)
+		goto stale;
+
+	if (fscanf(fp, "%*d (%s)", buf) != 1 || strncmp(buf, DAEMON_NAME, strlen(DAEMON_NAME)))
+		goto stale;
+
+out:
+	fclose(fp);
+	return err;
+stale:
+	err = -1;
+	eerror("Stale pidfile. Splash daemon not running.");
+	goto out;
+}
+
 static int splash_init(bool start)
 {
-	FILE *fp;
-	int err = 0;
 	char **tmp;
 
 	if (svcs)
@@ -251,21 +285,10 @@ static int splash_init(bool start)
 	svcs_cnt = list_count(svcs);
 	svcs_done_cnt = list_count(svcs_done);
 
-	fp = fopen(SPLASH_PIDFILE, "r");
-	if (!fp) {
-		eerror("Failed to open "SPLASH_PIDFILE);
+	if (splash_daemon_check())
 		return -1;
-	}
 
-	if (fscanf(fp, "%d", &pid_daemon) != 1) {
-		eerror("Failed to get the PID of the splash daemon.");
-		err = -1;
-	}
-
-	/* FIXME: check if the splash daemon is actually running */
-
-	fclose(fp);
-	return err;
+	return 0;
 }
 
 static int splash_svc_handle(const char *name, const char *state)

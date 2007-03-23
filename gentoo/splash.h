@@ -6,6 +6,8 @@
 
 #define DEFAULT_THEME	"default"
 
+#define DAEMON_NAME		"splash_util"
+
 typedef struct
 {
 	char reqmode;	/* requested splash mode */
