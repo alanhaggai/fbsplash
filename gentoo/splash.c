@@ -184,16 +184,16 @@ static int splash_send(char *cmd)
 {
 	if (!fp_fifo) {
 		fp_fifo = fopen(SPLASH_FIFO, "a");
-		if (!fp_fifo);
+		if (!fp_fifo)
 			return -1;
-
+		setbuf(fp_fifo, NULL);
 /*		t = fileno(fp_fifo);
 		flags = fcntl(t, F_GETFL);
 		fcntl(t, F_SETFL, flags | O_NONBLOCK);
 */	}
-
 	/* FIXME: this is risky, because we could be getting a SIGPIPE..
 	 * needs to be fixed. */
+
 	fprintf(fp_fifo, cmd);
 	return 0;
 }
@@ -260,7 +260,7 @@ static int splash_init(bool start)
 	char **tmp;
 
 	if (svcs)
-		ewarn("we already have a svcs list!");
+		ewarn("splash_init: We already have a svcs list!");
 
 	/* Booting.. */
 	if (start) {
