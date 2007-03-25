@@ -147,8 +147,15 @@ int cmd_set_mode(void **args)
 		return -1;
 	}
 
-	ioctl(fd_tty1, VT_ACTIVATE, n);
-	ioctl(fd_tty1, VT_WAITACTIVE, n);
+	if (ioctl(fd_tty0, VT_ACTIVATE, n) == -1) {
+		iprint(MSG_ERROR, "Switch to tty%d failed with: %d '%s'\n", n, errno, strerror(errno));
+		return -1;
+	}
+
+	if (ioctl(fd_tty0, VT_WAITACTIVE, n) == -1) {
+		iprint(MSG_ERROR, "Wait for tty%d failed with: %d '%s'\n", n, errno, strerror(errno));
+		return -1;
+	}
 
 	return 0;
 }

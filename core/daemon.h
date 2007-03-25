@@ -37,7 +37,7 @@ extern char *notify[];
  */
 extern pthread_mutex_t mtx_tty;
 extern int tty_s, tty_v;
-extern int fd_tty_s, fd_tty1;
+extern int fd_tty_s, fd_tty1, fd_tty0;
 
 /*
  * Event device on which the daemon listens for F2 keypresses.

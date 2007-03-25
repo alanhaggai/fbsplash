@@ -38,6 +38,7 @@ int tty_v = TTY_VERBOSE;
 /* File descriptors */
 int fd_tty_s = -1;
 int fd_tty1 = -1;
+int fd_tty0 = -1;
 int fd_evdev = -1;
 int fd_fb = -1;
 int fd_bg = -1;
@@ -651,30 +652,41 @@ void daemon_start()
 		      PROT_WRITE | PROT_READ, MAP_SHARED, fd_fb, 0);
 
 	if (fb_mem == MAP_FAILED) {
-		fprintf(stderr, "mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
+		iprint(MSG_ERROR, "mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
 		close(fd_fb);
 		exit(1);
+	}
+
+	/* Create the splash FIFO if it's not already in place. */
+	if (stat(SPLASH_FIFO, &mystat) == -1 || !S_ISFIFO(mystat.st_mode)) {
+		unlink(SPLASH_FIFO);
+		if (mkfifo(SPLASH_FIFO, 0700)) {
+			iprint(MSG_ERROR, "mkfifo("SPLASH_FIFO") failed.\n");
+			exit(3);
+		}
+	}
+
+	/* No one is being notified about anything by default. */
+	for (i = 0; i < 2; i++) {
+		notify[i] = NULL;
+	}
+
+	fd_tty0 = open(PATH_DEV "/tty0", O_RDWR);
+	if (fd_tty0 == -1) {
+		fd_tty0 = open(PATH_DEV "/vc/0", O_RDWR);
+		if (fd_tty0 == -1) {
+			iprint(MSG_ERROR, "Can't open " PATH_DEV "/tty1.\n");
+			exit(2);
+		}
 	}
 
 	fd_tty1 = open(PATH_DEV "/tty1", O_RDWR);
 	if (fd_tty1 == -1) {
 		fd_tty1 = open(PATH_DEV "/vc/1", O_RDWR);
 		if (fd_tty1 == -1) {
-			fprintf(stderr, "Can't open " PATH_DEV "/tty1.\n");
+			iprint(MSG_ERROR, "Can't open " PATH_DEV "/tty1.\n");
 			exit(2);
 		}
-	}
-
-	/* Create the splash FIFO if it's not already in place. */
-	if (stat(SPLASH_FIFO, &mystat) == -1 || !S_ISFIFO(mystat.st_mode)) {
-		unlink(SPLASH_FIFO);
-		if (mkfifo(SPLASH_FIFO, 0700))
-			exit(3);
-	}
-
-	/* No one is being notified about anything by default. */
-	for (i = 0; i < 2; i++) {
-		notify[i] = NULL;
 	}
 
 	/* Go into background. */
@@ -683,7 +695,7 @@ void daemon_start()
 		if (arg_pidfile) {
 			FILE *fp = fopen(arg_pidfile, "w");
 			if (!fp) {
-				fprintf(stderr, "Failed to open pidfile %s for writing.\n", arg_pidfile);
+				iprint(MSG_ERROR, "Failed to open pidfile %s for writing.\n", arg_pidfile);
 			} else {
 				fprintf(fp, "%d\n", i);
 				fclose(fp);
@@ -692,15 +704,24 @@ void daemon_start()
 		exit(0);
 	}
 
-#ifdef CONFIG_TTF
-	load_fonts();
-#endif
+	setsid();
+	chdir("/");
+
+	/* Make /dev/null stdin, and /dev/console stdout/stderr */
+	i=open("/dev/null", O_RDWR);
+	dup2(i, 0);
+	i=open("/dev/console", O_RDWR);
+	dup2(i, 1);
+	dup2(i, 2);
 
 	/* arg_theme is a reference to argv[x] of the original splash_util
 	 * process. We're freeing arg_theme in cmd_set_theme(), so the strdup()
 	 * call is necessary to make sure things don't break there. */
 	arg_theme = strdup(arg_theme);
-	setsid();
+
+#ifdef CONFIG_TTF
+	load_fonts();
+#endif
 
 	signal(SIGABRT, SIG_IGN);
 
@@ -715,7 +736,7 @@ void daemon_start()
 	pthread_create(&th_sighandler, NULL, &thf_sighandler, NULL);
 
 	/* Check which TTY is active */
-	if (ioctl(fd_tty1, VT_GETSTATE, &vtstat) != -1) {
+	if (ioctl(fd_tty0, VT_GETSTATE, &vtstat) != -1) {
 		if (vtstat.v_active == tty_s) {
 			ctty = CTTY_SILENT;
 		} else {
