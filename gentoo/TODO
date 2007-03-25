@@ -1,2 +1,1 @@
 * writing to the splash FIFO should never block!
-* add support for splash profiling

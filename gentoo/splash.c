@@ -13,13 +13,9 @@
    fi
    */
 
-/* FIXME:
- * add support for splash profiling
- *
- */
-
 #include <errno.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -36,6 +32,7 @@
 #define SPLASH_CACHEDIR		"/"LIBDIR"/splash/cache"
 #define SPLASH_FIFO			SPLASH_CACHEDIR"/.splash"
 #define SPLASH_PIDFILE		SPLASH_CACHEDIR"/daemon.pid"
+#define SPLASH_PROFILE		SPLASH_CACHEDIR"/profile"
 
 #define SPLASH_CMD "bash -c 'export SOFTLEVEL='%s'; export BOOTLEVEL="RC_LEVEL_BOOT";" \
 				   "export DEFAULTLEVEL="RC_LEVEL_DEFAULT"; export svcdir=${RC_SVCDIR};" \
@@ -177,10 +174,42 @@ static int splash_call(const char *cmd, const char *arg1, const char *arg2)
 	return l;
 }
 
+static int splash_profile(const char *fmt, ...)
+{
+	va_list ap;
+	FILE *fp;
+	float uptime;
+
+	if (!config.profile)
+		return 0;
+
+	fp = fopen("/proc/uptime", "r");
+	if (!fp)
+		return -1;
+	fscanf(fp, "%f", &uptime);
+	fclose(fp);
+
+	fp = fopen(SPLASH_PROFILE, "a");
+	if (!fp)
+		return -1;
+	va_start(ap, fmt);
+	fprintf(fp, "%.2f: ", uptime);
+	vfprintf(fp, fmt, ap);
+	fclose(fp);
+	va_end(ap);
+	return 0;
+}
+
+
 static int splash_theme_hook(const char *name, const char *type, const char *arg1)
 {
 	char *buf;
 	int l = 256;
+
+	if (arg1)
+		splash_profile("%s %s %s\n", type, name, arg1);
+	else
+		splash_profile("%s %s\n", type, name);
 
 	l += strlen(name);
 	l += strlen(config.theme);
@@ -218,6 +247,7 @@ static int splash_send(char *cmd)
 	 * needs to be fixed. */
 
 	fprintf(fp_fifo, cmd);
+	splash_profile("comm %s", cmd);
 	return 0;
 }
 
@@ -231,13 +261,12 @@ static int splash_svc_state(const char *name, const char *state, bool paint)
 
 	l = snprintf(buf, 512, "update_svc %s %s\n", name, state);
 
-	if (paint)
-		snprintf(buf + l, 512 - l, "paint\n");
-
 	splash_send(buf);
 
-	if (paint)
+	if (paint) {
+		splash_send("paint\n");
 		splash_theme_hook(state, "post", name);
+	}
 
 	return 0;
 }
@@ -349,8 +378,9 @@ static int splash_svc_handle(const char *name, const char *state)
 
 	splash_theme_hook(state, "pre", name);
 	splash_svc_state(name, state, 0);
-	snprintf(buf, 512, "progress %d\npaint\n", progress);
+	snprintf(buf, 512, "progress %d\n", progress);
 	splash_send(buf);
+	splash_send("paint\n");
 	splash_theme_hook(state, "post", name);
 
 	return 0;
@@ -434,8 +464,10 @@ static int splash_start(const char *runlevel)
 		splash_svc_state(svcs[i], start ? "svc_inactive_start" : "svc_inactive_stop", 0);
 	}
 
-	snprintf(buf, 128, "set tty silent %d\nset mode silent\nrepaint\n", config.tty_s);
+	snprintf(buf, 128, "set tty silent %d\n", config.tty_s);
 	splash_send(buf);
+	splash_send("set mode silent\n");
+	splash_send("repaint\n");
 	return err;
 }
 
@@ -444,7 +476,8 @@ static int splash_stop(const char *runlevel)
 	char buf[128];
 	int cnt = 0;
 
-	splash_send("set mode verbose\nexit\n");
+	splash_send("set mode verbose\n");
+	splash_send("exit\n");
 	snprintf(buf, 128, "/proc/%d", pid_daemon);
 
 	/* Wait up to 0.5s for the splash daemon to exit. */
