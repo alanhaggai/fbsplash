@@ -415,6 +415,20 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	if (config.reqmode != 's')
 		return 0;
 
+	/* Don't do anything if we're starting/stopping a service, but
+	 * we aren't in the middle of a runlevel switch. */
+	switch (hook) {
+	case rc_hook_service_start_in:
+	case rc_hook_service_stop_in:
+	case rc_hook_service_start_out:
+	case rc_hook_service_stop_out:
+		if (!rc_runlevel_starting() && !rc_runlevel_stopping())
+			return 0;
+
+	default:
+		break;
+	}
+
 	switch (hook) {
 
 	case rc_hook_runlevel_stop_in:
