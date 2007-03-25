@@ -50,12 +50,35 @@ static scfg_t	config;
 static pid_t	pid_daemon = 0;
 static FILE*	fp_fifo = NULL;
 
+static char** strlist_diff(char **a, char **b)
+{
+	char **res = NULL;
+	int i, j;
+
+	if (!a)
+		return NULL;
+
+	if (!b)
+		return a;
+
+	for (i = 0, j = 0; a[i]; i++) {
+		if (b[j] && !strcmp(a[i], b[j])) {
+			j++;
+			continue;
+		} else {
+			res = rc_strlist_add(res, a[i]);
+		}
+	}
+
+	return res;
+}
+
 static char** strlist_merge(char **dest, char **src)
 {
 	int i = 0;
 
 	for (i = 0; src && src[i]; i++) {
-		dest = rc_strlist_add(dest, src[i]);
+		dest = rc_strlist_addsort(dest, src[i]);
 	}
 
 	return dest;
@@ -257,7 +280,7 @@ stale:
 
 static int splash_init(bool start)
 {
-	char **tmp;
+	char **tmp, **tmp2;
 
 	if (svcs)
 		ewarn("splash_init: We already have a svcs list!");
@@ -278,8 +301,23 @@ static int splash_init(bool start)
 		tmp = NULL;
 	/* .. or rebooting? */
 	} else {
-		svcs = rc_services_in_state(rc_service_started);
-		svcs_done = NULL;
+		svcs = get_list(NULL, SPLASH_CACHEDIR"/svcs_stop");
+
+		tmp = rc_services_in_state(rc_service_started);
+
+		tmp2 = rc_services_in_state(rc_service_inactive);
+		tmp = strlist_merge(tmp, tmp2);
+		rc_strlist_free(tmp2);
+		tmp2 = NULL;
+
+		tmp2 = rc_services_in_state(rc_service_stopping);
+		tmp = strlist_merge(tmp, tmp2);
+		rc_strlist_free(tmp2);
+		tmp2 = NULL;
+
+		svcs_done = strlist_diff(svcs, tmp);
+		rc_strlist_free(tmp);
+		tmp = NULL;
 	}
 
 	svcs_cnt = list_count(svcs);
@@ -306,18 +344,48 @@ static int splash_svc_handle(const char *name, const char *state)
 	rc_strlist_add(svcs_done, name);
 	svcs_done_cnt++;
 
-//	einfo("cnt: %d / done: %d | %s", svcs_cnt, svcs_done_cnt, name);
-
 	/* Recalculate progress */
 	progress = svcs_done_cnt * 65535 / svcs_cnt;
 
 	splash_theme_hook(state, "pre", name);
 	splash_svc_state(name, state, 0);
-	snprintf(buf, 512, "progress %d\n", progress);
+	snprintf(buf, 512, "progress %d\npaint\n", progress);
 	splash_send(buf);
-	splash_send("paint\n");
 	splash_theme_hook(state, "post", name);
 
+	return 0;
+}
+
+int splash_svcs_stop()
+{
+	char **tmp = NULL, **tmp2 = NULL;
+	char *s;
+	int i;
+	FILE *fp;
+
+	tmp = rc_services_in_state(rc_service_started);
+	tmp2 = rc_services_in_state(rc_service_inactive);
+	tmp = strlist_merge(tmp, tmp2);
+	rc_strlist_free(tmp2);
+
+	fp = fopen(SPLASH_CACHEDIR"/svcs_stop", "w");
+	if (!fp) {
+		ewarn("splash_svcs_stop `%s': %s", SPLASH_CACHEDIR"/svcs_stop", strerror(errno));
+		return -1;
+	}
+
+	i = 0;
+	if (tmp && tmp[0])
+		while ((s = tmp[i++])) {
+			if (i > 0) {
+				fprintf(fp, " ");
+			fprintf(fp, "%s", s);
+		}
+	}
+
+	rc_strlist_free(tmp);
+
+	fclose(fp);
 	return 0;
 }
 
@@ -340,6 +408,7 @@ static int splash_start(const char *runlevel)
 	if (!strcmp(runlevel, RC_LEVEL_SHUTDOWN) || !strcmp(runlevel, RC_LEVEL_REBOOT)) {
 		splash_call("splash_cache_prep", "stop", NULL);
 		start = false;
+		splash_svcs_stop();
 	/* We're booting. A list of services that will be started is
 	 * prepared for us by splash_cache_prep(). */
 	} else {
@@ -365,11 +434,8 @@ static int splash_start(const char *runlevel)
 		splash_svc_state(svcs[i], start ? "svc_inactive_start" : "svc_inactive_stop", 0);
 	}
 
-	snprintf(buf, 128, "set tty silent %d\n", config.tty_s);
+	snprintf(buf, 128, "set tty silent %d\nset mode silent\nrepaint\n", config.tty_s);
 	splash_send(buf);
-	splash_send("set mode silent\n");
-	splash_send("repaint\n");
-
 	return err;
 }
 
@@ -378,8 +444,7 @@ static int splash_stop(const char *runlevel)
 	char buf[128];
 	int cnt = 0;
 
-	splash_send("set mode verbose\n");
-	splash_send("exit\n");
+	splash_send("set mode verbose\nexit\n");
 	snprintf(buf, 128, "/proc/%d", pid_daemon);
 
 	/* Wait up to 0.5s for the splash daemon to exit. */
@@ -433,7 +498,9 @@ int _splash_hook (rc_hook_t hook, const char *name)
 
 	case rc_hook_runlevel_stop_in:
 
-		einfo("stop_in: %s", name);
+		/* Ignore the sysinit runlevel. */
+		if (!strcmp(name, RC_LEVEL_SYSINIT))
+			break;
 
 		/* Start the splash daemon on reboot. The theme hook is called
 		 * from splash_start(). */
@@ -448,7 +515,6 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		break;
 
 	case rc_hook_runlevel_start_in:
-		einfo("start_in: %s", name);
 		/* If we are here and it's not sysinit, then we had a runlevel
 		 * switch during boot and we have to reinitialize our internal
 		 * variables. */

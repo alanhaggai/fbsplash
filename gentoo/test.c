@@ -13,7 +13,8 @@ int main(int argc, char **argv)
 	void *f = dlsym(h, "_splash_hook");
 
 	spf = f;
-	spf(rc_hook_runlevel_start_out, "sysinit");
+	spf(rc_hook_runlevel_stop_in, "reboot");
+	spf(rc_hook_service_stop_in, "keymaps");
 /*	spf(rc_hook_runlevel_start_in, "boot");
 	spf(rc_hook_service_start_in, "keymaps");
 	spf(rc_hook_service_start_out, "keymaps");

@@ -1,3 +1,2 @@
 * writing to the splash FIFO should never block!
-* save the scvs to svcs_stop like it's done with svcs_start
 * add support for splash profiling
