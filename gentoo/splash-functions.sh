@@ -6,8 +6,6 @@
 
 # This file is a part of splashutils.
 
-# FIXME: handle services order on shutdown..
-
 # ####################################################################
 #    Change any settings ONLY if you are sure what you're doing.
 #    Don't cry if it breaks afterwards.
@@ -29,32 +27,6 @@ spl_fifo="${spl_cachedir}/.splash"
 spl_pidfile="${spl_cachedir}/daemon.pid"
 
 . /etc/init.d/functions.sh
-
-# This is the main function which handles all events.
-# Accepted parameters:
-#  svc_start <name>
-#  svc_stop <name>
-#  svc_started <name> <errcode>
-#  svc_stopped <name> <errcode>
-#  svc_input_begin <name>
-#  svc_input_end <name>
-#  rc_init <internal_runlevel> - used to distinguish between 'boot' and 'sysinit'
-#  rc_exit
-#  critical
-splash() {
-	local event="$1"
-	shift
-
-	[ ${SPLASH_MODE_REQ} == "off" ] && return
-
-	case "$event" in
-		svc_input_begin)	splash_input_begin "$1";;
-		svc_input_end)		splash_input_end "$1";;
-		critical) 			splash_verbose;;
-	esac
-
-	return 0
-}
 
 splash_setup() {
 	# If it's already set up, let's not waste time on parsing the config
@@ -174,13 +146,11 @@ splash_get_boot_message() {
 ###########################################################################
 
 # Sends data to the splash FIFO after making sure there's someone
-# alive on other end to receive it.
+# alive on the other end to receive it.
 splash_comm_send() {
 	if [ ! -e ${spl_pidfile} ]; then
 		return 1
 	fi
-
-	splash_profile "comm $*"
 
 	if [ -r /proc/$(<${spl_pidfile})/status -a
 		  "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]; then
@@ -221,36 +191,6 @@ splash_silent() {
 	${spl_util} -c on 2>/dev/null
 }
 
-# Saves profiling information
-splash_profile() {
-	if [[ ${SPLASH_PROFILE} == "on" ]]; then
-		echo "`cat /proc/uptime | cut -f1 -d' '`: $*" >> ${spl_cachedir}/profile
-	fi
-}
-
-###########################################################################
-# Service
-###########################################################################
-
-# args: <svc>
-splash_input_begin() {
-	local svc="$1"
-
-	if [[ "$(splash_get_mode)" == "silent" ]] ; then
-		splash_verbose
-		export SPL_SVC_INPUT_SILENT=${svc}
-	fi
-}
-
-# args: <svc>
-splash_input_end() {
-	local svc="$1"
-
-	if [[ ${SPL_SVC_INPUT_SILENT} == "${svc}" ]]; then
-		splash_silent
-		unset SPL_SVC_INPUT_SILENT
-	fi
-}
 
 ###########################################################################
 # Cache
@@ -317,25 +257,6 @@ splash_cache_cleanup() {
 # Service list
 ###########################################################################
 
-# args: <internal-runlevel>
-splash_svclist_init() {
-	arg="$1"
-
-	if [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
-		for i in `dolisting "${svcdir}/started/" | sed -e "s#${svcdir}/started/##g"`; do
-			splash_svc_update ${i} "svc_inactive_stop"
-		done
-	elif [[ ${RUNLEVEL} == "S" ]]; then
-		local svcs=$(splash_svclist_get start)
-
-		if [[ ${arg} == "sysinit" ]]; then
-			for i in ${svcs} ; do
-				splash_svc_update ${i} "svc_inactive_start"
-			done
-		fi
-	fi
-}
-
 splash_svclist_get() {
 	if [[ "$1" == "start" ]]; then
 		cat ${spl_cachedir}/svcs_start
@@ -373,17 +294,6 @@ splash_svclist_update() {
 
 	# Only list each service once
 	uniqify ${order}
-}
-
-###########################################################################
-# Other
-###########################################################################
-
-# Override sulogin calls from baselayout so that we can attempt to remove
-# the splash screen
-sulogin() {
-       splash "critical" > /dev/null 2>&1 &
-       /sbin/sulogin $*
 }
 
 splash_setup
