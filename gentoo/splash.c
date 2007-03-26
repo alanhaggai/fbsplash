@@ -235,16 +235,22 @@ static int splash_theme_hook(const char *name, const char *type, const char *arg
 static int splash_send(char *cmd)
 {
 	if (!fp_fifo) {
-		fp_fifo = fopen(SPLASH_FIFO, "a");
-		if (!fp_fifo)
+		int fd;
+
+		fd = open(SPLASH_FIFO, O_WRONLY | O_NONBLOCK);
+		if (fd == -1) {
+			eerror("Failed to open "SPLASH_FIFO": %s %s",
+					strerror(errno), (errno == ENXIO) ? "(is the splash daemon running?)" : "");
 			return -1;
+		}
+
+		fp_fifo = fdopen(fd, "w");
+		if (!fp_fifo) {
+			eerror("Failed to fdopen "SPLASH_FIFO": %s", strerror(errno));
+			return -1;
+		}
 		setbuf(fp_fifo, NULL);
-/*		t = fileno(fp_fifo);
-		flags = fcntl(t, F_GETFL);
-		fcntl(t, F_SETFL, flags | O_NONBLOCK);
-*/	}
-	/* FIXME: this is risky, because we could be getting a SIGPIPE..
-	 * needs to be fixed. */
+	}
 
 	fprintf(fp_fifo, cmd);
 	splash_profile("comm %s", cmd);
