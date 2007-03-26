@@ -1,3 +1,9 @@
+- documentation update
+
+- (daemon) add gpm client code
+
+- monitor /dev/tty0 for keypresses (?)
+
 - convert all printerr/printwarn to iprint
 
 - handle con2fb_map properly
@@ -25,3 +31,5 @@ New features:
 =============
 
 - separate progress bars for shutdown/bootup
+
+- automatic theme resizing

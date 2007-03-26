@@ -522,7 +522,7 @@ cmdhandler known_cmds[] =
  */
 int daemon_comm()
 {
-	char buf[1024];
+	char buf[PIPE_BUF];
 	FILE *fp_fifo = NULL;
 	int i,j,k;
 
