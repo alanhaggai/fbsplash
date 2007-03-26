@@ -114,6 +114,7 @@ void usage(void)
 int main(int argc, char **argv)
 {
 	char dev[16];
+	char *msg;
 	unsigned int c, i;
 	int fp, err = 0;
 
@@ -124,7 +125,9 @@ int main(int argc, char **argv)
 	verbose_img.cmap.red = silent_img.cmap.red = NULL;
 
 #ifdef CONFIG_TTF
-	boot_message = strdup(getenv("BOOT_MSG"));
+	msg = getenv("BOOT_MSG");
+	if (msg)
+		boot_message = strdup(msg);
 
 	if (TTF_Init() < 0) {
 		fprintf(stderr, "Couldn't initialize TTF.\n");
