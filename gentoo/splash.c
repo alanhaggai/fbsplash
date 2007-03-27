@@ -21,6 +21,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include <sys/wait.h>
+#include <sys/types.h>
+
+#include <linux/kd.h>
+
 #include <einfo.h>
 #include <rc.h>
 #include "splash.h"
@@ -33,6 +38,7 @@
 #define SPLASH_FIFO			SPLASH_CACHEDIR"/.splash"
 #define SPLASH_PIDFILE		SPLASH_CACHEDIR"/daemon.pid"
 #define SPLASH_PROFILE		SPLASH_CACHEDIR"/profile"
+#define SPLASH_EXEC			"/sbin/splash_util.static"
 
 #define SPLASH_CMD "bash -c 'export SOFTLEVEL='%s'; export BOOTLEVEL="RC_LEVEL_BOOT";" \
 				   "export DEFAULTLEVEL="RC_LEVEL_DEFAULT"; export svcdir=${RC_SVCDIR};" \
@@ -138,6 +144,116 @@ static char **get_list(char **list, const char *file)
 	fclose(fp);
 
 	return list;
+}
+
+static int splash_sanity_check()
+{
+	FILE *fp;
+	char buf[128];
+
+	fp = popen("/bin/grep -E -e '(^| )CONSOLE=/dev/tty1( |$)' -e '(^| )console=tty1( |$)' /proc/cmdline", "r");
+	if (!fp)
+		goto err;
+
+	buf[0] = 0;
+	fgets(buf, 128, fp);
+	if (strlen(buf) == 0) {
+		pclose(fp);
+		goto err;
+	}
+	pclose(fp);
+	return 0;
+
+err:
+	/* Clear display. */
+	printf("\e[H\e[2J");
+	fflush(stdout);
+
+	ewarn("You don't appear to have a correct console= setting on your kernel");
+	ewarn("command line. Silent splash will not be enabled. Please add");
+	ewarn("console=tty1 or CONSOLE=/dev/tty1 to your kernel command line");
+	ewarn("to avoid this message.");
+	return -1;
+}
+
+static int splash_config_gentoo(scfg_t *cfg, stype_t type)
+{
+	char **confd;
+	char *t;
+
+	confd = rc_get_config(NULL, "/etc/conf.d/splash");
+
+	t = rc_get_config_entry(confd, "SPLASH_KDMODE");
+	if (t) {
+		if (!strcasecmp(t, "graphics")) {
+			cfg->kdmode = KD_GRAPHICS;
+		} else if (!strcasecmp(t, "text")) {
+			cfg->kdmode = KD_TEXT;
+		}
+	}
+
+	t = rc_get_config_entry(confd, "SPLASH_PROFILE");
+	if (t) {
+		if (!strcasecmp(t, "on"))
+			cfg->profile = true;
+	}
+
+	t = rc_get_config_entry(confd, "SPLASH_TTY");
+	if (t) {
+		int i;
+		if (sscanf(t, "%d", &i) == 1 && i > 0) {
+			cfg->tty_s = i;
+		}
+	}
+
+	t = rc_get_config_entry(confd, "SPLASH_THEME");
+	if (t) {
+		if (cfg->theme)
+			free(cfg->theme);
+		cfg->theme = strdup(t);
+	}
+
+	t = rc_get_config_entry(confd, "SPLASH_MODE_REQ");
+	if (t) {
+		if (!strcasecmp(t, "verbose")) {
+			cfg->reqmode = 'v';
+		} else if (!strcasecmp(t, "silent")) {
+			cfg->reqmode = 's';
+		}
+	}
+
+	switch(type) {
+	case reboot:
+		t = rc_get_config_entry(confd, "SPLASH_REBOOT_MESSAGE");
+		if (t) {
+			if (cfg->message)
+				free(cfg->message);
+			cfg->message = strdup(t);
+		}
+		break;
+
+	case shutdown:
+		t = rc_get_config_entry(confd, "SPLASH_SHUTDOWN_MESSAGE");
+		if (t) {
+			if (cfg->message)
+				free(cfg->message);
+			cfg->message = strdup(t);
+		}
+		break;
+
+	case bootup:
+	default:
+		t = rc_get_config_entry(confd, "SPLASH_BOOT_MESSAGE");
+		if (t) {
+			if (cfg->message)
+				free(cfg->message);
+			cfg->message = strdup(t);
+		}
+		break;
+	}
+
+	rc_strlist_free(confd);
+	return 0;
 }
 
 /*
@@ -435,7 +551,7 @@ static int splash_start(const char *runlevel)
 {
 	bool start;
 	int i, err = 0;
-	char buf[128];
+	char buf[2048];
 	char buf2[128];
 	FILE *fp;
 
@@ -461,13 +577,19 @@ static int splash_start(const char *runlevel)
 	}
 
 	splash_theme_hook("rc_init", "pre", runlevel);
-	splash_call("splash_start", NULL, NULL);
-	/* TODO:
-	 * check if the env is sane (tty1, etc)
-	 * prepare the FIFO
-	 * get the boot message
-	 * start the splash daemon
-	 */
+	err = splash_sanity_check();
+	if (err)
+		return err;
+
+	/* Start the splash daemon */
+	snprintf(buf, 2048, "BOOT_MSG='%s' " SPLASH_EXEC " -d --theme=\"%s\" --pidfile=" SPLASH_PIDFILE " %s",
+			 config.message, config.theme, (config.kdmode == KD_GRAPHICS) ? "--kdgraphics" : "");
+
+	err = system(buf);
+	if (err == -1 || WEXITSTATUS(err) != 0) {
+		eerror("Failed to splash the splash daemon, error code %d", err);
+		return err;
+	}
 
 	err = splash_init(start);
 	if (err)
@@ -534,13 +656,22 @@ static int splash_stop(const char *runlevel)
 int _splash_hook (rc_hook_t hook, const char *name)
 {
 	int i = 0;
+	stype_t type = bootup;
+	char *t;
+
+	t = rc_get_runlevel();
+	if (!strcmp(t, RC_LEVEL_REBOOT))
+		type = reboot;
+	else if (!strcmp(t, RC_LEVEL_SHUTDOWN))
+		type = shutdown;
 
 	/* Do nothing if we are at a very early stage of booting-up. */
 	if (hook == rc_hook_runlevel_start_in && !strcmp(name, RC_LEVEL_SYSINIT))
 		return 0;
 
 	if (!config.theme) {
-		splash_config_init(&config);
+		splash_config_init(&config, type);
+		splash_config_gentoo(&config, type);
 		splash_parse_kcmdline(&config);
 	}
 

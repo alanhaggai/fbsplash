@@ -5,7 +5,7 @@
 
 #include "splash.h"
 
-int splash_config_init(scfg_t *cfg)
+int splash_config_init(scfg_t *cfg, stype_t type)
 {
 	cfg->tty_s = TTY_SILENT;
 	cfg->tty_v = TTY_VERBOSE;
@@ -13,6 +13,21 @@ int splash_config_init(scfg_t *cfg)
 	cfg->kdmode = KD_TEXT;
 	cfg->profile = 0;
 	cfg->reqmode = 'o';
+
+	switch (type) {
+		case reboot:
+			cfg->message = strdup(SYSMSG_REBOOT);
+			break;
+
+		case shutdown:
+			cfg->message = strdup(SYSMSG_SHUTDOWN);
+			break;
+
+		case bootup:
+		default:
+			cfg->message = strdup(SYSMSG_BOOTUP);
+			break;
+	}
 
 	return 0;
 }
