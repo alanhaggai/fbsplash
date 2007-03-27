@@ -577,9 +577,13 @@ static int splash_start(const char *runlevel)
 	}
 
 	splash_theme_hook("rc_init", "pre", runlevel);
-	err = splash_sanity_check();
-	if (err)
-		return err;
+
+	/* Perform sanity checks (console=, CONSOLE=). */
+	if (!config.insane) {
+		err = splash_sanity_check();
+		if (err)
+			return err;
+	}
 
 	/* Start the splash daemon */
 	snprintf(buf, 2048, "BOOT_MSG='%s' " SPLASH_EXEC " -d --theme=\"%s\" --pidfile=" SPLASH_PIDFILE " %s",

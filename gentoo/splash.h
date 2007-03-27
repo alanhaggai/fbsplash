@@ -22,6 +22,7 @@ typedef struct
 	int tty_s;		/* silent tty */
 	int tty_v;		/* verbose tty */
 	bool profile;	/* enable profiling? */
+	bool insane;	/* skip sanity checks? */
 } scfg_t;
 
 int splash_config_init(scfg_t *cfg, stype_t type);

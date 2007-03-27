@@ -11,7 +11,8 @@ int splash_config_init(scfg_t *cfg, stype_t type)
 	cfg->tty_v = TTY_VERBOSE;
 	cfg->theme = strdup(DEFAULT_THEME);
 	cfg->kdmode = KD_TEXT;
-	cfg->profile = 0;
+	cfg->insane = false;
+	cfg->profile = false;
 	cfg->reqmode = 'o';
 
 	switch (type) {
@@ -77,6 +78,8 @@ int splash_parse_kcmdline(scfg_t *cfg)
 			cfg->reqmode = 's';
 		} else if (!strncmp(opt, "off", 3)) {
 			cfg->reqmode = 'o';
+		} else if (!strncmp(opt, "insane", 6)) {
+			cfg->insane = true;
 		} else if (!strncmp(opt, "theme:", 6)) {
 			if (cfg->theme)
 				free(cfg->theme);
