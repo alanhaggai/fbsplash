@@ -520,29 +520,18 @@ cmdhandler known_cmds[] =
 /*
  * FIFO communication handler.
  */
-int daemon_comm()
+int daemon_comm(FILE *fp_fifo)
 {
 	char buf[PIPE_BUF];
-	FILE *fp_fifo = NULL;
 	int i,j,k;
 
-	while (!fp_fifo) {
-		fp_fifo = fopen(SPLASH_FIFO, "r+");
-		if (!fp_fifo) {
-			if (errno == EINTR)
-				continue;
-			perror("Can't open the splash FIFO (" SPLASH_FIFO ") for reading");
-			return -1;
-		}
-	}
-
 	while (1) {
-inner:		while (fgets(buf, 1024, fp_fifo)) {
+inner:		while (fgets(buf, PIPE_BUF, fp_fifo)) {
 			char *t;
 			int args_i[4];
 			void *args[4];
 
-			buf[1023] = 0;
+			buf[PIPE_BUF-1] = 0;
 			buf[strlen(buf)-1] = 0;
 
 			for (i = 0; i < sizeof(known_cmds)/sizeof(known_cmds[0]); i++) {

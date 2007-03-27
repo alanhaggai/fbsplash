@@ -303,7 +303,7 @@ char *get_program_output(char *prg, unsigned char origin)
 	if (!buf)
 		return NULL;
 
-        pipe(pfds);
+	pipe(pfds);
 	pid = fork();
 	buf[0] = 0;
 

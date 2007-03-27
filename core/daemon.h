@@ -10,28 +10,28 @@ void bgbuffer_alloc(void);
 void free_objs(void);
 int reload_theme(void);
 
-#define UPD_SILENT 	0x01
+#define UPD_SILENT	0x01
 #define UPD_MON		0x02
 #define UPD_ALL		(UPD_SILENT | UPD_MON)
 void switchmon_start(int update);
 
-/* 
+/*
  * Current TTY. This effectively identifies the current splash
  * mode.
  */
-#define CTTY_SILENT 	0
+#define CTTY_SILENT		0
 #define CTTY_VERBOSE	1
 extern int ctty;
 
-/* 
- * Notifiers -- external programs to be run when a specific event 
+/*
+ * Notifiers -- external programs to be run when a specific event
  * takes place.
  */
-#define NOTIFY_REPAINT 	0
-#define NOTIFY_PAINT 	1
+#define NOTIFY_REPAINT	0
+#define NOTIFY_PAINT	1
 extern char *notify[];
 
-/* 
+/*
  * Silent and verbose TTYs. We keep a file descriptor for the silent
  * TTY and for tty1.
  */
@@ -61,8 +61,8 @@ extern u8 *fb_mem, *bg_buffer;
 extern pthread_t th_switchmon, th_sighandler, th_anim;
 extern pthread_mutex_t mtx_paint;
 
-/* 
- * Service state structure. 
+/*
+ * Service state structure.
  */
 typedef struct {
 	char *svc;
@@ -87,7 +87,7 @@ int cmd_repaint(void **args);
 int cmd_paint_rect(void **args);
 int cmd_progress(void **args);
 int cmd_exit(void **args);
-int daemon_comm(void);
+int daemon_comm(FILE *fp);
 
 typedef struct {
 	const char *cmd;

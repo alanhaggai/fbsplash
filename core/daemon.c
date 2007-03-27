@@ -637,6 +637,7 @@ int reload_theme(void)
 void daemon_start()
 {
 	int i = 0;
+	FILE *fp_fifo;
 	struct stat mystat;
 	struct vt_stat vtstat;
 	sigset_t sigset;
@@ -655,15 +656,6 @@ void daemon_start()
 		iprint(MSG_ERROR, "mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
 		close(fd_fb);
 		exit(1);
-	}
-
-	/* Create the splash FIFO if it's not already in place. */
-	if (stat(SPLASH_FIFO, &mystat) == -1 || !S_ISFIFO(mystat.st_mode)) {
-		unlink(SPLASH_FIFO);
-		if (mkfifo(SPLASH_FIFO, 0700)) {
-			iprint(MSG_ERROR, "mkfifo("SPLASH_FIFO") failed.\n");
-			exit(3);
-		}
 	}
 
 	/* No one is being notified about anything by default. */
@@ -686,6 +678,25 @@ void daemon_start()
 		if (fd_tty1 == -1) {
 			iprint(MSG_ERROR, "Can't open " PATH_DEV "/tty1.\n");
 			exit(2);
+		}
+	}
+
+	/* Create the splash FIFO if it's not already in place. */
+	if (stat(SPLASH_FIFO, &mystat) == -1 || !S_ISFIFO(mystat.st_mode)) {
+		unlink(SPLASH_FIFO);
+		if (mkfifo(SPLASH_FIFO, 0700)) {
+			iprint(MSG_ERROR, "mkfifo("SPLASH_FIFO") failed.\n");
+			exit(3);
+		}
+	}
+
+	while (!fp_fifo) {
+		fp_fifo = fopen(SPLASH_FIFO, "r+");
+		if (!fp_fifo) {
+			if (errno == EINTR)
+				continue;
+			iprint(MSG_ERROR, "Can't open the splash FIFO (" SPLASH_FIFO ") for reading: %s", strerror(errno));
+			exit(4);
 		}
 	}
 
@@ -754,7 +765,7 @@ void daemon_start()
 	switchmon_start(UPD_ALL);
 	pthread_mutex_unlock(&mtx_tty);
 
-	daemon_comm();
+	daemon_comm(fp_fifo);
 	exit(0);
 }
 
