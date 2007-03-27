@@ -2,6 +2,13 @@
 
 - (daemon) add gpm client code
 
+- (daemon) don't start if another instance is running
+           (use FIFO for that?)
+
+- (manager) fix splash_manager replay
+
+- use popen to get program output (?)
+
 - convert all printerr/printwarn to iprint
 
 - handle con2fb_map properly

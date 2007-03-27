@@ -526,7 +526,8 @@ int daemon_comm(FILE *fp_fifo)
 	int i,j,k;
 
 	while (1) {
-inner:		while (fgets(buf, PIPE_BUF, fp_fifo)) {
+inner:
+		while (fgets(buf, PIPE_BUF, fp_fifo)) {
 			char *t;
 			int args_i[4];
 			void *args[4];

@@ -636,7 +636,7 @@ int reload_theme(void)
 void daemon_start()
 {
 	int i = 0;
-	FILE *fp_fifo;
+	FILE *fp_fifo = NULL;
 	struct stat mystat;
 	struct vt_stat vtstat;
 	sigset_t sigset;
@@ -666,7 +666,7 @@ void daemon_start()
 	if (fd_tty0 == -1) {
 		fd_tty0 = open(PATH_DEV "/vc/0", O_RDWR);
 		if (fd_tty0 == -1) {
-			iprint(MSG_ERROR, "Can't open " PATH_DEV "/tty1.\n");
+			iprint(MSG_ERROR, "Can't open " PATH_DEV "/tty0.\n");
 			exit(2);
 		}
 	}
