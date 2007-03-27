@@ -69,68 +69,6 @@ splash_setup() {
 	fi
 }
 
-# ----------------------------------------------------------------------
-# RUNLEVEL   SOFTLEVEL         INTERNAL    SVCS
-# ----------------------------------------------------------------------
-# System boot-up:
-#    S        <none>           sysinit     CRITICAL_SERVICES
-#    S        boot             <none>	   boot_serv - CRITICAL_SERVICES
-#    3        default          <none>      std
-#
-# System restart/shutdown:
-#   0/6       reboot/shutdown  <none>      all
-
-# Start the splash daemon. 
-
-splash_start() {
-	# Display a warning if the system is not configured to display init messages
-	# on tty1. This can cause a lot of problems if it's not handled correctly, so
-	# we don't allow silent splash to run on incorrectly configured systems.
-	if [ ${SPLASH_MODE_REQ} == "silent" ]; then
-		if [ -z "`grep -E '(^| )CONSOLE=/dev/tty1( |$)' /proc/cmdline`" -a -z "`grep -E '(^| )console=tty1( |$)' /proc/cmdline`" ]; then
-			clear
-			ewarn "You don't appear to have a correct console= setting on your kernel"
-			ewarn "command line. Silent splash will not be enabled. Please add"
-			ewarn "console=tty1 or CONSOLE=/dev/tty1 to your kernel command line"
-			ewarn "to avoid this message."
-			if [[ -n "`grep 'CONSOLE=/dev/tty1' /proc/cmdline`" ||
-				  -n "`grep 'console=tty1' /proc/cmdline`" ]]; then
-				ewarn "Note that CONSOLE=/dev/tty1 and console=tty1 are general parameters and"
-				ewarn "not splash= settings."
-			fi
-			return 1
-		fi
-
-		mount -n --bind / ${spl_tmpdir}
-		if [ ! -c "${spl_tmpdir}/dev/tty1" ]; then
-			umount -n ${spl_tmpdir}
-			ewarn "The filesystem mounted on / doesn't contain the /dev/tty1 device"
-			ewarn "which is required for the silent splash to function properly."
-			ewarn "Silent splash will not be enabled. Please create the appropriate"
-			ewarn "device node to avoid this message."
-			return 1
-		fi
-		umount -n ${spl_tmpdir}
-	fi
-
-	# In the unlikely case that there's a splash daemon running -- kill it.
-	killall -9 ${spl_util##*/} 2>/dev/null
-	rm -f "${spl_pidfile}"
-
-	# Prepare the communications FIFO
-	if [ ! -p "${spl_fifo}" ]; then
-		rm -f "${spl_fifo}" 2>/dev/null
-		mkfifo "${spl_fifo}"
-	fi
-
-	local options=""
-	[[ ${SPLASH_KDMODE} == "GRAPHICS" ]] && options="--kdgraphics"
-
-	# Start the splash daemon
-	BOOT_MSG="$(splash_get_boot_message)" ${spl_util} -d --theme=${SPLASH_THEME} --pidfile=${spl_pidfile} ${options}
-	return 0
-}
-
 splash_get_boot_message() {
 	if [[ ${RUNLEVEL} == "6" ]]; then
 		echo "${SPLASH_REBOOT_MESSAGE}"
