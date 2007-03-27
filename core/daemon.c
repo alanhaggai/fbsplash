@@ -409,10 +409,9 @@ void* thf_switch_ttymon(void *unused)
 			     (endianess == big && 0x5b5b4200))) {
 				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 				pthread_mutex_lock(&mtx_tty);
-				ioctl(fd_tty_s, VT_ACTIVATE, tty_v);
+				ioctl(fd_tty0, VT_ACTIVATE, tty_v);
 				pthread_mutex_unlock(&mtx_tty);
 				pthread_setcancelstate(oldstate, NULL);
-//				ioctl(fd_tty_s, VT_WAITACTIVE, tty_v);
 			}
 		}
 	}
