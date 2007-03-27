@@ -436,6 +436,14 @@ static int splash_start(const char *runlevel)
 	bool start;
 	int i, err = 0;
 	char buf[128];
+	char buf2[128];
+	FILE *fp;
+
+	char *evdev_cmds[] = {
+		"/bin/grep -Hsi keyboard /sys/class/input/event*/device/driver/description | /bin/grep -o 'event[0-9]\\+'",
+		"/bin/grep -s -m 1 '^H: Handlers=kbd' /proc/bus/input/devices | grep -o 'event[0-9]\\+'"
+	};
+
 
 	/* Get a list of services that we'll have to handle. */
 
@@ -468,6 +476,27 @@ static int splash_start(const char *runlevel)
 	/* Set the initial state of all services. */
 	for (i = 0; svcs && svcs[i]; i++) {
 		splash_svc_state(svcs[i], start ? "svc_inactive_start" : "svc_inactive_stop", 0);
+	}
+
+	/* Try to activate the event device interface so that F2 can
+	 * be used to switch from verbose to silent. */
+	buf2[0] = 0;
+	for (i = 0; i < sizeof(evdev_cmds)/sizeof(char*); i++) {
+		fp = popen(evdev_cmds[i], "r");
+		if (fp) {
+			fgets(buf2, 128, fp);
+			if (strlen(buf2) > 0) {
+				if (buf2[strlen(buf2)-1] == '\n')
+					buf2[strlen(buf2)-1] = 0;
+				break;
+			}
+			pclose(fp);
+		}
+	}
+
+	if (buf2[0] != 0) {
+		snprintf(buf, 128, "set event dev /dev/input/%s\n", buf2);
+		splash_send(buf);
 	}
 
 	snprintf(buf, 128, "set tty silent %d\n", config.tty_s);
