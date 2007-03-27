@@ -58,6 +58,11 @@
 #define PATH_SYS	"/sys"
 #define SPLASH_DEV	PATH_DEV "/fbsplash"
 
+#if defined(TARGET_KERNEL)
+	#define PATH_SYS	"/splash/sys"
+	#define PATH_PROC	"/splash/proc"
+#endif
+
 /* Default TTYs for silent and verbose modes. */
 #define TTY_SILENT		8
 #define TTY_VERBOSE 	1
