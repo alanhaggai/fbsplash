@@ -39,7 +39,6 @@ splash() {
 			elif [ -x /bin/busybox ]; then
 				/bin/busybox chvt 1
 			fi
-			echo "verbose"
 			;;
 	esac
 }

@@ -1,0 +1,4 @@
+- implement cache functions in C
+- implement get_svcslist in C
+  - fix services order
+- add debug option (kernel command line)
