@@ -280,6 +280,8 @@ install: all
 	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL) $(DESTDIR)$(sbindir)/$(SP_UTIL)
 	@$(call infmsg,INSTALL,$(SP_UTIL).static)
 	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL).static $(DESTDIR)$(sbindir)/$(SP_UTIL).static
+	@$(call infmsg,INSTALL,splash-functions.sh)
+	$(Q)$(INSTALL_PROG) -D scripts/splash-functions.sh $(DESTDIR)$(sbindir)/splash-functions.sh
 	$(Q)$(call install_script,$(SP_GIRAM))
 	$(Q)$(call install_script,$(SP_CONV))
 	$(Q)$(call install_script,$(SP_RESIZE))
@@ -292,6 +294,8 @@ uninstall:
 	$(Q)rm -f $(sbindir)/$(SP_UTIL)
 	@$(call infmsg,UNINSTALL,$(SP_UTIL).static)
 	$(Q)rm -f $(sbindir)/$(SP_UTIL).static
+	@$(call infmsg,UNINSTALL,splash-functions.sh)
+	$(Q)rm -f $(sbindir)/splash-functions.sh
 	@$(call infmsg,UNINSTALL,$(SP_GIRAM))
 	$(Q)rm -f $(usrbindir)/$(SP_GIRAM)
 	@$(call infmsg,UNINSTALL,$(SP_CONV))
