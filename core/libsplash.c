@@ -25,6 +25,27 @@
 
 static int fd_tty0 = -1;
 
+scfg_t		config;
+sendian_t	endianess;
+
+static void detect_endianess(sendian_t *end)
+{
+	u16 t = 0x1122;
+
+	if (*(u8*)&t == 0x22) {
+		*end = little;
+	} else {
+		*end = big;
+	}
+}
+
+int splash_init()
+{
+	detect_endianess(&endianess);
+	splash_config_init(&config, undef);
+	return 0;
+}
+
 int splash_config_init(scfg_t *cfg, stype_t type)
 {
 	cfg->tty_s = TTY_SILENT;

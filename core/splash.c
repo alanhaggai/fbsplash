@@ -120,7 +120,8 @@ int main(int argc, char **argv)
 	unsigned int c, i;
 	int fp, err = 0;
 
-	detect_endianess();
+	splash_init();
+
 	arg_task = none;
 	arg_vc = -1;
 
@@ -155,7 +156,7 @@ int main(int argc, char **argv)
 
 		case 0x103:
 		case 't':
-			arg_theme = optarg;
+			config.theme = strdup(optarg);
 			break;
 
 		case 0x102:
@@ -193,7 +194,7 @@ int main(int argc, char **argv)
 			break;
 
 		case 0x108:
-			arg_kdmode = KD_GRAPHICS;
+			config.kdmode = KD_GRAPHICS;
 			break;
 #ifdef CONFIG_TTF
 		case 0x109:
@@ -205,7 +206,7 @@ int main(int argc, char **argv)
 			break;
 
 		case 0x10b:
-			arg_minstances = true;
+			config.minstances = true;
 			break;
 
 		case 'd':
@@ -214,11 +215,11 @@ int main(int argc, char **argv)
 
 		/* Verbosity level adjustment. */
 		case 'q':
-			arg_verbosity = VERB_QUIET;
+			config.verbosity = VERB_QUIET;
 			break;
 
 		case 'v':
-			arg_verbosity = VERB_HIGH;
+			config.verbosity = VERB_HIGH;
 			break;
 		}
 	}
@@ -231,8 +232,8 @@ int main(int argc, char **argv)
 	if (get_fb_settings(arg_fb))
 		return -1;
 
-	if (arg_theme)
-		config_file = get_cfg_file(arg_theme);
+	if (config.theme)
+		config_file = get_cfg_file(config.theme);
 
 	if (config_file)
 		parse_cfg(config_file);

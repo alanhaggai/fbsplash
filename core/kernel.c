@@ -110,9 +110,9 @@ int handle_init(u8 update)
 			} else if (!strncmp(opt, "silent", 6)) {
 				arg_mode = 's';
 			} else if (!strncmp(opt, "theme:", 6)) {
-				arg_theme = strdup(opt+6);
+				config.theme = strdup(opt+6);
 			} else if (!strncmp(opt, "kdgraphics", 10)) {
-				arg_kdmode = KD_GRAPHICS;
+				config.kdmode = KD_GRAPHICS;
 			}
 		}
 	} else {
@@ -149,11 +149,11 @@ parse_failure:	if (h == 0)
 		create_dev(SPLASH_DEV, PATH_SYS "/class/misc/fbsplash/dev", 0x1);
 	}
 #endif
-	if (!arg_theme) {
-		arg_theme = strdup(DEFAULT_THEME);
+	if (!config.theme) {
+		config.theme = strdup(DEFAULT_THEME);
 	}
 
-	config_file = get_cfg_file(arg_theme);
+	config_file = get_cfg_file(config.theme);
 	if (!config_file)
 		return -1;
 	parse_cfg(config_file);
@@ -233,7 +233,7 @@ parse_failure:	if (h == 0)
 
 	tty_silent_set(stty, fd_vc);
 
-	if (arg_kdmode == KD_GRAPHICS)
+	if (config.kdmode == KD_GRAPHICS)
 		ioctl(fd_vc, KDSETMODE, KD_GRAPHICS);
 
 	if (silent_img.cmap.red)
@@ -273,10 +273,10 @@ int main(int argc, char **argv)
 	int err = 0, i = 5;
 	u8 mounts = 0;
 
-	detect_endianess();
-
 	if (argc < 3)
 		goto out;
+
+	splash_init();
 
 	if (strcmp(argv[1],"2") && strcmp(argv[1], "1")) {
 		fprintf(stderr, "Splash protocol mismatch: %s\n", argv[1]);
@@ -306,17 +306,17 @@ int main(int argc, char **argv)
 	/* On 'init' the theme isn't defined yet, and thus NULL is passed
 	 * instead of any meaningful value. */
 	if (argc > i && argv[i])
-		arg_theme = strdup(argv[i]);
+		config.theme = strdup(argv[i]);
 	else
-		arg_theme = NULL;
+		config.theme = NULL;
 
 	if (!mount("sysfs", PATH_SYS, "sysfs", 0, NULL))
 		mounts = 1;
 
 	get_fb_settings(arg_fb);
 
-	if (arg_theme) {
-		config_file = get_cfg_file(arg_theme);
+	if (config.theme) {
+		config_file = get_cfg_file(config.theme);
 		if (!config_file)
 			goto out;
 		parse_cfg(config_file);

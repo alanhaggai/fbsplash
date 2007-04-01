@@ -189,7 +189,7 @@ char *get_fontpath(char *t)
 		return strdup(t);
 	}
 		
-	snprintf(buf, 512, "%s/%s/%s", THEME_DIR, arg_theme, t);
+	snprintf(buf, 512, "%s/%s/%s", THEME_DIR, config.theme, t);
 	snprintf(buf2, 512, "%s/%s", THEME_DIR, t);
 	
 	stat(buf, &st1);

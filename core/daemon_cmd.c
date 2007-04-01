@@ -118,10 +118,10 @@ int cmd_exit(void **args)
  */
 int cmd_set_theme(void **args)
 {
-	if (arg_theme)
-		free(arg_theme);
+	if (config.theme)
+		free(config.theme);
 
-	arg_theme = strdup(args[0]);
+	config.theme = strdup(args[0]);
 
 	pthread_mutex_lock(&mtx_paint);
 	reload_theme();

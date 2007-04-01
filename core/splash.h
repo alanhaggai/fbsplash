@@ -49,6 +49,7 @@
 #define PROGRESS_MAX	0xffff
 
 typedef enum sp_type { undef, bootup, reboot, shutdown } stype_t;
+typedef enum endianess { little, big } sendian_t;
 
 typedef struct
 {
@@ -72,6 +73,10 @@ typedef struct
 
 } scfg_t;
 
+extern scfg_t config;
+extern sendian_t endianess;
+
+int splash_init(void);
 int splash_config_init(scfg_t *cfg, stype_t type);
 int splash_parse_kcmdline(scfg_t *cfg);
 int splash_verbose(scfg_t *cfg);
@@ -117,12 +122,12 @@ typedef int32_t		s32;
 #define max(a,b)		((a) > (b) ? (a) : (b))
 
 #define iprint(type, args...) do {				\
-	if (arg_verbosity == VERB_QUIET)			\
+	if (config.verbosity == VERB_QUIET)			\
 		break;									\
 												\
 	if (type <= MSG_ERROR) {					\
 		fprintf(stderr, ## args);				\
-	} else if (arg_verbosity == VERB_HIGH) {	\
+	} else if (config.verbosity == VERB_HIGH) {	\
 		fprintf(stdout, ## args);				\
 	}											\
 } while (0);

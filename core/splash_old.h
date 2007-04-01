@@ -68,7 +68,6 @@ typedef struct {
  * 				Enums
  * ************************************************************************ */
 
-enum ENDIANESS { little, big };
 enum TASK { setpic, init, on, off, setcfg, getcfg, getstate, none, paint, 
 	    setmode, getmode, repaint, start_daemon };
 enum ESVC { e_display, e_svc_inact_start, e_svc_inact_stop, e_svc_start, 
@@ -211,7 +210,6 @@ struct splash_config {
  * ************************************************************************ */
 
 /* common.c */
-void detect_endianess(void);
 int get_fb_settings(int fb_num);
 char *get_cfg_file(char *theme);
 int do_getpic(unsigned char, unsigned char, char);
@@ -276,17 +274,12 @@ extern char *cf_silentpic256;
 extern struct fb_var_screeninfo   fb_var;
 extern struct fb_fix_screeninfo   fb_fix;
 
-extern enum ENDIANESS endianess;
 extern enum TASK arg_task;
 extern int arg_fb;
 extern int arg_vc;
-extern char *arg_theme;
 extern char *arg_pidfile;
 extern char arg_mode;
-extern char arg_verbosity;
 extern u16 arg_progress;
-extern u8 arg_kdmode;
-extern bool arg_minstances;
 #ifndef TARGET_KERNEL
 extern char *arg_export;
 extern u8 theme_loaded;

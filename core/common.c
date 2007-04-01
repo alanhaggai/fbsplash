@@ -24,19 +24,14 @@
 struct fb_var_screeninfo   fb_var;
 struct fb_fix_screeninfo   fb_fix;
 
-enum ENDIANESS endianess;
 char *config_file = NULL;
 
 enum TASK	arg_task = none;
 int			arg_fb = 0;
 int			arg_vc = 0;
-char		arg_verbosity = VERB_NORMAL;
 char		arg_mode = 'v';
-char		*arg_theme = NULL;
 char		*arg_pidfile = NULL;
 u16			arg_progress = 0;
-u8			arg_kdmode = KD_TEXT;
-bool		arg_minstances = false;
 #ifndef TARGET_KERNEL
 char		*arg_export = NULL;
 #endif
@@ -48,19 +43,6 @@ u8 fb_rlen, fb_glen, fb_blen;	/* red, green, blue length */
 
 struct fb_image pic;
 char *pic_file = NULL;
-
-void detect_endianess(void)
-{
-	u16 t = 0x1122;
-
-	if (*(u8*)&t == 0x22) {
-		endianess = little;
-	} else {
-		endianess = big;
-	}
-
-	DEBUG("This system is %s-endian.\n", (endianess == little) ? "little" : "big");
-}
 
 int get_fb_settings(int fb_num)
 {
@@ -148,7 +130,7 @@ char *get_filepath(char *path)
 	if (path[0] == '/')
 		return strdup(path);
 
-	snprintf(buf, 512, "%s/%s/%s", THEME_DIR, arg_theme, path);
+	snprintf(buf, 512, "%s/%s/%s", THEME_DIR, config.theme, path);
 	return strdup(buf);
 }
 
