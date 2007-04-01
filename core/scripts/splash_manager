@@ -108,7 +108,16 @@ ewarn() {
 # void spl_comm(char *msg)
 #   Sends 'msg' to the splash fifo.
 spl_comm() {
-	echo "$*" > ${spl_fifo}
+	if [ ! -e ${spl_pidfile} ]; then
+		return 1
+	fi
+
+	if [ "$(pgrep ${spl_util_short})" == "$(<${spl_pidfile})" ]; then
+		echo "$*" > ${spl_fifo} &
+	else
+		err "Splash daemon not running!"
+		rm -f "${spl_pidfile}"
+	fi
 }
 
 # void chvt(int n)
@@ -122,6 +131,7 @@ chvt() {
 		echo -en "\e[12;${ntty}]"
 	fi
 }
+
 
 # void theme_sanity_check(char *theme)
 #   Performs a theme sanity check -- checks whether a theme exists.
@@ -238,6 +248,10 @@ demo_theme_silent() {
 		spl_comm "set event dev /dev/input/${t}"
 	fi
 
+	if [[ -n "$(pgrep gpm)" ]]; then
+		spl_comm "set gpm"
+	fi
+
 	[ -z "${delay}" ] && delay=0.05
 	step=$((65535/$steps))
 
@@ -271,9 +285,10 @@ replay() {
 	if [[ -e /etc/gentoo-release ]]; then
 		export RUNLEVEL="S"
 		export SOFTLEVEL=""
-		source /sbin/functions.sh
-		splash_setup
 	fi
+
+	source /sbin/splash-functions.sh
+	splash_setup
 
 	export SPLASH_THEME=${theme}
 
@@ -292,7 +307,7 @@ replay() {
 		# Start the splash daemon after rc_init/pre.
 		if [[ -z "${pid}" ]]; then
 			if [[ "${arr[1]}" != "pre" || "${arr[2]}" != "rc_init" ]]; then
-				${spl_util} -d -t ${theme} --pidfile ${spl_pidfile}
+				BOOT_MSG="$(splash_get_boot_message)" ${spl_util} -d -t ${theme} --pidfile ${spl_pidfile}
 				pid=$(cat ${spl_pidfile})
 			fi
 		fi
