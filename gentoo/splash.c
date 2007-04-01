@@ -1,17 +1,16 @@
 /*
-   splash.c
-
-   Splash plugin for the Gentoo RC system.
-
-   (c) 2007, by Michal Januszewski <spock@gentoo.org>
-
-   For any themes that use scripts, such as the live-cd theme,
-   they will have to source /sbin/splash-functions.sh themselves like so
-
-   if ! type splash >/dev/null 2>/dev/null ; then
-      . /sbin/splash-functions.sh
-   fi
-   */
+ * splash.c - Splash plugin for the Gentoo RC system.
+ *
+ * Copyright (c) 2007, Michal Januszewski <spock@gentoo.org>
+ *
+ * Original splash plugin compatible with baselayout-1's splash-functions.sh
+ * written by Roy Marples <uberlord@gentoo.org>.
+ *
+ * This file is subject to the terms and conditions of the GNU General Public
+ * License v2.  See the file COPYING in the main directory of this archive for
+ * more details.
+ *
+ */
 
 #include <errno.h>
 #include <stdio.h>
