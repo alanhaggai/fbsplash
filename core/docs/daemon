@@ -56,6 +56,10 @@ FIFO. Currently, the following commands are recognized:
    (ie. the splash daemon was started with the '-e file' option), the
    notified program can be used to draw additional objects in the buffer.
 
+ - set gpm
+   Makes the splash daemon a GPM client for the silent tty. This provides
+   a good way to prevent the mouse cursor from messing the silent splash.
+
  - paint rect <x0> <y0> <x1> <y1>
    Paints the specified part of the background buffer on the screen.
 

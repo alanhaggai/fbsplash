@@ -893,8 +893,14 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		/* Start the splash daemon on reboot. The theme hook is called
 		 * from splash_start(). */
 		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
-			if ((i = splash_start(name)))
+			if ((i = splash_start(name))) {
 				splash_verbose(&config);
+			} else {
+				if (rc_service_state("gpm", rc_service_started)) {
+					splash_send("set gpm\n");
+					splash_send("repaint\n");
+				}
+			}
 			splash_theme_hook("rc_init", "post", name);
 			return i;
 		} else {
@@ -939,7 +945,24 @@ int _splash_hook (rc_hook_t hook, const char *name)
 
 	case rc_hook_service_start_out:
 		if (rc_service_state(name, rc_service_started)) {
+			bool gpm = false;
+
+			if (!strcmp(name, "gpm")) {
+				int cnt = 0;
+				gpm = true;
+				/* Wait up to 0.25s for the GPM socket to appear. */
+				while (rc_exists("/dev/gpmctl") && cnt < 25) {
+					usleep(10000);
+					cnt++;
+				}
+				splash_send("set gpm\n");
+			}
+
 			i = splash_svc_state(name, "svc_started", 1);
+
+			if (gpm) {
+				splash_send("repaint\n");
+			}
 		} else {
 			i = splash_svc_state(name, "svc_start_failed", 1);
 			if (config.vonerr) {

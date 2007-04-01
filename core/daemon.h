@@ -48,6 +48,11 @@ extern int fd_tty_s, fd_tty1, fd_tty0;
 extern int fd_evdev;
 extern char *evdev;
 
+#ifdef CONFIG_GPM
+#include <gpm.h>
+extern int fd_gpm;
+#endif
+
 /*
  * Framebuffer device and background buffer.
  */

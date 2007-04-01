@@ -101,6 +101,10 @@ ifeq ($(call config_opt,CONFIG_PNG),true)
 	LDLIBS	 += -lpng -lz -lm
 endif
 
+ifeq ($(call config_opt,CONFIG_GPM),true)
+	LDLIBS	 += -lgpm
+endif
+
 ifeq ($(strip $(DEBUG)),true)
 	STRIP = true
 else

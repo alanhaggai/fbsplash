@@ -42,6 +42,9 @@ int fd_tty0 = -1;
 int fd_evdev = -1;
 int fd_fb = -1;
 int fd_bg = -1;
+#ifdef CONFIG_GPM
+int fd_gpm = -1;
+#endif
 
 /* In-memory buffers */
 u8 *fb_mem = NULL;
@@ -279,6 +282,11 @@ void switch_silent()
 static void do_cleanup(void)
 {
 	pthread_mutex_trylock(&mtx_tty);
+#ifdef CONFIG_GPM
+	if (fd_gpm >= 0) {
+		Gpm_Close();
+	}
+#endif
 	vt_silent_cleanup();
 	vt_cursor_enable(fd_tty_s);
 }

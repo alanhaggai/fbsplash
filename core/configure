@@ -2,7 +2,7 @@
 #
 # ./configure -- A very simple configure script for splashutils.
 #
-# (c) 2006, Michal Januszewski <spock@gentoo.org>
+# (c) 2006-2007, Michal Januszewski <spock@gentoo.org>
 #
 # In time, it will be replaced by a fully-fledged version.
 #
@@ -41,6 +41,11 @@ copt_fifo=SPLASH_FIFO
 copt_fifo_desc="Specify where the splash FIFO should be located"
 copt_fifo_type="string"
 copt_fifo_def="/lib/splash/cache/.splash"
+
+copt_gpm=CONFIG_GPM
+copt_gpm_desc="Enable support for GPM"
+copt_gpm_type="bool"
+copt_gpm_def=y
 
 options=`set | grep '^copt_' | sed -re 's/copt_([^_=]+)[_=].*/\1/' | uniq`
 

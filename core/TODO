@@ -1,7 +1,5 @@
 - documentation update
 
-- (daemon) add gpm client code
-
 - (daemon) don't start if another instance is running
            (use FIFO for that?)
 

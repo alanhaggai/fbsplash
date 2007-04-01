@@ -161,6 +161,29 @@ int cmd_set_mode(void **args)
 }
 
 /*
+ * 'set gpm' command handler.
+ *
+ * Creates a GPM client for the silent tty.
+ */
+int cmd_set_gpm(void **args)
+{
+#ifdef CONFIG_GPM
+	Gpm_Connect conn;
+
+	conn.eventMask = 0;
+	conn.defaultMask = 0;
+	conn.minMod = 0;
+	conn.maxMod = ~0;
+	pthread_mutex_lock(&mtx_tty);
+	fd_gpm = Gpm_Open(&conn, tty_s);
+	pthread_mutex_unlock(&mtx_tty);
+	return fd_gpm;
+#else
+	return 0;
+#endif
+}
+
+/*
  * 'set tty' command handlers.
  *
  * Assigns a TTY for verbose/silent splash screen.
@@ -182,7 +205,12 @@ int cmd_set_tty(void **args)
 		tty_s = *(int*)args[1];
 		switchmon_start(UPD_SILENT);
 		pthread_mutex_unlock(&mtx_tty);
-
+#ifdef CONFIG_GPM
+		if (fd_gpm > 0) {
+			Gpm_Close();
+			cmd_set_gpm(NULL);
+		}
+#endif
 	} else if (!strcmp(args[0], "verbose")) {
 		/* Do nothing if the new tty is the same as the old one. */
 		if (tty_v == *(int*)args[1])
@@ -478,6 +506,12 @@ cmdhandler known_cmds[] =
 		.handler = cmd_set_notify,
 		.args = 2,
 		.specs = "ss"
+	},
+
+	{	.cmd = "set gpm",
+		.handler = cmd_set_gpm,
+		.args = 0,
+		.specs = NULL,
 	},
 
 	{	.cmd = "paint rect",
