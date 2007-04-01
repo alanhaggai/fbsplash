@@ -23,10 +23,12 @@ typedef struct
 	int tty_v;		/* verbose tty */
 	bool profile;	/* enable profiling? */
 	bool insane;	/* skip sanity checks? */
+	bool vonerr;	/* switch to verbose on errors? */
 } scfg_t;
 
 int splash_config_init(scfg_t *cfg, stype_t type);
 int splash_parse_kcmdline(scfg_t *cfg);
+int splash_verbose(scfg_t *cfg);
 
 enum sp_states { st_display, st_svc_inact_start, st_svc_inact_stop, st_svc_start,
 				 st_svc_started, st_svc_stop, st_svc_stopped, st_svc_stop_failed,

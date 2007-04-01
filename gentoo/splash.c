@@ -209,7 +209,7 @@ static int splash_config_gentoo(scfg_t *cfg, stype_t type)
 
 	t = rc_get_config_entry(confd, "SPLASH_PROFILE");
 	if (t) {
-		if (!strcasecmp(t, "on"))
+		if (!strcasecmp(t, "on") || !strcasecmp(t, "yes"))
 			cfg->profile = true;
 	}
 
@@ -234,6 +234,13 @@ static int splash_config_gentoo(scfg_t *cfg, stype_t type)
 			cfg->reqmode = 'v';
 		} else if (!strcasecmp(t, "silent")) {
 			cfg->reqmode = 's';
+		}
+	}
+
+	t = rc_get_config_entry(confd, "SPLASH_VERBOSE_ON_ERRORS");
+	if (t) {
+		if (!strcasecmp(t, "on") || !strcasecmp(t, "yes")) {
+			cfg->vonerr = true;
 		}
 	}
 
@@ -528,7 +535,6 @@ int splash_cache_prep(bool start)
 {
 	if (mount("cachedir", SPLASH_CACHEDIR, "tmpfs", MS_MGC_VAL, "mode=0644,size=4096k")) {
 		eerror("Unable to create splash cache: %s", strerror(errno));
-		/* FIXME: switch to verbose here? */
 		return -1;
 	}
 
@@ -887,7 +893,8 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		/* Start the splash daemon on reboot. The theme hook is called
 		 * from splash_start(). */
 		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
-			i = splash_start(name);
+			if ((i = splash_start(name)))
+				splash_verbose(&config);
 			splash_theme_hook("rc_init", "post", name);
 			return i;
 		} else {
@@ -902,7 +909,8 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		 * reasons, we simulate a full sysinit cycle here for the theme
 		 * scripts. */
 		if (strcmp(name, RC_LEVEL_BOOT) == 0) {
-			i = splash_start(RC_LEVEL_SYSINIT);
+			if ((i = splash_start(RC_LEVEL_SYSINIT)))
+				splash_verbose(&config);
 			splash_theme_hook("rc_init", "post", RC_LEVEL_SYSINIT);
 			splash_theme_hook("rc_exit", "pre", RC_LEVEL_SYSINIT);
 			splash_theme_hook("rc_exit", "post", RC_LEVEL_SYSINIT);
@@ -934,7 +942,10 @@ int _splash_hook (rc_hook_t hook, const char *name)
 			i = splash_svc_state(name, "svc_started", 1);
 		} else {
 			i = splash_svc_state(name, "svc_start_failed", 1);
-			/* FIXME: switch to verbose if verbose_on_errors */
+			if (config.vonerr) {
+				ewarn("splash: service %s failed, switching to verbose mode", name);
+				splash_verbose(&config);
+			}
 		}
 		break;
 
@@ -971,11 +982,15 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		break;
 
 	case rc_hook_service_stop_out:
-		if (rc_service_state(name, rc_service_stopped))
+		if (rc_service_state(name, rc_service_stopped)) {
 			i = splash_svc_state(name, "svc_stopped", 1);
-		else
+		} else {
 			i = splash_svc_state(name, "svc_stop_failed", 1);
-			/* FIXME: switch to verbose if verbose_on_errors */
+			if (config.vonerr) {
+				ewarn("splash: service %s failed, switching to verbose mode", name);
+				splash_verbose(&config);
+			}
+		}
 		break;
 
 	default:

@@ -10,9 +10,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <fcntl.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+
 #include <linux/kd.h>
+#include <linux/vt.h>
 
 #include "splash.h"
+
+static int fd_tty0 = -1;
 
 int splash_config_init(scfg_t *cfg, stype_t type)
 {
@@ -22,6 +31,7 @@ int splash_config_init(scfg_t *cfg, stype_t type)
 	cfg->kdmode = KD_TEXT;
 	cfg->insane = false;
 	cfg->profile = false;
+	cfg->vonerr = false;
 	cfg->reqmode = 'o';
 
 	switch (type) {
@@ -37,6 +47,10 @@ int splash_config_init(scfg_t *cfg, stype_t type)
 		default:
 			cfg->message = strdup(SYSMSG_BOOTUP);
 			break;
+	}
+
+	if (fd_tty0 == -1) {
+		fd_tty0 = open("/dev/tty0", O_RDWR);
 	}
 
 	return 0;
@@ -107,5 +121,13 @@ out:
 fail:
 	err = -1;
 	goto out;
+}
+
+/* Switch to verbose mode */
+int splash_verbose(scfg_t *cfg)
+{
+	if (fd_tty0 == -1)
+		return -1;
+	return ioctl(fd_tty0, VT_ACTIVATE, cfg->tty_v);
 }
 
