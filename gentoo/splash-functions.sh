@@ -153,7 +153,6 @@ splash_cache_prep() {
 	mount -n --move "${spl_tmpdir}" "${spl_cachedir}"
 
 	if [ "$1" == "start" ]; then
-		echo $(splash_svclist_update "start") > ${spl_cachedir}/svcs_start
 		echo -n > ${spl_cachedir}/profile
 	fi
 
@@ -199,39 +198,6 @@ splash_svclist_get() {
 	if [[ "$1" == "start" ]]; then
 		cat ${spl_cachedir}/svcs_start
 	fi
-}
-
-splash_svclist_update() {
-	local svcs= order= x= dlvl="${SOFTLEVEL}"
-
-	# Make sure we don't get junk in the service list.
-	export RC_QUIET="yes"
-
-	for x in $(dolisting /etc/runlevels/${BOOTLEVEL}) \
-		$(dolisting ${svcdir}/coldplugged) ; do
-		svcs="${svcs} ${x##*/}"
-		if [[ ${x##*/} == "autoconfig" ]] ; then
-			svcs="${svcs} $(. /etc/init.d/autoconfig; list_services)"
-		fi
-	done
-	order=$(rc-depend -ineed -iuse -iafter ${svcs})
-
-	# We call rc-depend twice so we get the ordering exactly right
-	svcs=
-	if [ ${SOFTLEVEL} == "${BOOTLEVEL}" -o ${SOFTLEVEL} == "sysinit" ] ; then
-		dlvl="${DEFAULTLEVEL}"
-	fi
-
-	for x in $(dolisting /etc/runlevels/"${dlvl}") ; do
-		svcs="${svcs} ${x##*/}"
-		if [[ ${x##*/} == "autoconfig" ]] ; then
-			svcs="${svcs} $(. /etc/init.d/autoconfig; list_services)"
-		fi
-	done
-	order="${order} $(SOFTLEVEL="$dlvl" rc-depend -ineed -iuse -iafter ${svcs})"
-
-	# Only list each service once
-	uniqify ${order}
 }
 
 splash_setup

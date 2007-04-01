@@ -61,9 +61,6 @@ static char** strlist_diff(char **a, char **b)
 	if (!a)
 		return NULL;
 
-	if (!b)
-		return a;
-
 	for (i = 0, j = 0; a[i]; i++) {
 		if (b[j] && !strcmp(a[i], b[j])) {
 			j++;
@@ -77,6 +74,17 @@ static char** strlist_diff(char **a, char **b)
 }
 
 static char** strlist_merge(char **dest, char **src)
+{
+	int i = 0;
+
+	for (i = 0; src && src[i]; i++) {
+		dest = rc_strlist_add(dest, src[i]);
+	}
+
+	return dest;
+}
+
+static char** strlist_merge_sort(char **dest, char **src)
 {
 	int i = 0;
 
@@ -442,12 +450,12 @@ static int splash_init(bool start)
 		svcs_done = rc_services_in_state(rc_service_started);
 
 		tmp = rc_services_in_state(rc_service_inactive);
-		svcs_done = strlist_merge(svcs_done, tmp);
+		svcs_done = strlist_merge_sort(svcs_done, tmp);
 		rc_strlist_free(tmp);
 		tmp = NULL;
 
 		tmp = rc_services_in_state(rc_service_failed);
-		svcs_done = strlist_merge(svcs_done, tmp);
+		svcs_done = strlist_merge_sort(svcs_done, tmp);
 		rc_strlist_free(tmp);
 		tmp = NULL;
 	/* .. or rebooting? */
@@ -457,16 +465,17 @@ static int splash_init(bool start)
 		tmp = rc_services_in_state(rc_service_started);
 
 		tmp2 = rc_services_in_state(rc_service_inactive);
-		tmp = strlist_merge(tmp, tmp2);
+		tmp = strlist_merge_sort(tmp, tmp2);
 		rc_strlist_free(tmp2);
 		tmp2 = NULL;
 
 		tmp2 = rc_services_in_state(rc_service_stopping);
-		tmp = strlist_merge(tmp, tmp2);
+		tmp = strlist_merge_sort(tmp, tmp2);
 		rc_strlist_free(tmp2);
 		tmp2 = NULL;
 
 		svcs_done = strlist_diff(svcs, tmp);
+
 		rc_strlist_free(tmp);
 		tmp = NULL;
 	}
@@ -517,8 +526,13 @@ int splash_svcs_stop()
 
 	tmp = rc_services_in_state(rc_service_started);
 	tmp2 = rc_services_in_state(rc_service_inactive);
-	tmp = strlist_merge(tmp, tmp2);
+	tmp = strlist_merge_sort(tmp, tmp2);
 	rc_strlist_free(tmp2);
+
+	/* FIXME:
+	 *  - merge starting services
+	 *  - calculate correct order
+	 */
 
 	fp = fopen(SPLASH_CACHEDIR"/svcs_stop", "w");
 	if (!fp) {
@@ -527,9 +541,9 @@ int splash_svcs_stop()
 	}
 
 	i = 0;
-	if (tmp && tmp[0])
+	if (tmp && tmp[0]) {
 		while ((s = tmp[i++])) {
-			if (i > 0) {
+			if (i > 1) 
 				fprintf(fp, " ");
 			fprintf(fp, "%s", s);
 		}
@@ -538,6 +552,118 @@ int splash_svcs_stop()
 	rc_strlist_free(tmp);
 
 	fclose(fp);
+	return 0;
+}
+
+int splash_svcs_start()
+{
+	rc_depinfo_t *deptree = NULL;
+	FILE *fp;
+	char **t1, **t2, **t3, **deporder, **types, *r, *s, *runlevel = NULL;
+	int i, j;
+
+	/* FIXME: handle ksoftlevel */
+
+	if ((deptree = rc_load_deptree()) == NULL) {
+		eerror("splash_svcs_start: failed to load deptree");
+		return -1;
+	}
+
+	fp = fopen(SPLASH_CACHEDIR"/svcs_start", "w");
+	if (!fp) {
+		ewarn("splash_svcs_start `%s': %s", SPLASH_CACHEDIR"/svcs_start", strerror(errno));
+		return -1;
+	}
+
+	/*
+	 * This part is a little tricky, because we have to follow
+	 * exactly what happens in /sbin/rc.
+	 *
+	 * First we get the order of services that are started in the
+	 * boot runlevel and that have been coldplugged.
+	 *
+	 * When this code is called, we actually are in the boot runlevel
+	 * so things go smoothly here.
+	 *
+	 */
+	t1 = rc_services_in_state(rc_service_coldplugged);
+	t2 = rc_services_in_runlevel(RC_LEVEL_BOOT);
+	t1 = strlist_merge_sort(t1, t2);
+	rc_strlist_free(t2);
+
+	/* Get the services in correct order. */
+	types = rc_strlist_add(NULL, "ineed");
+	types = rc_strlist_add(types, "iuse");
+	types = rc_strlist_add(types, "iafter");
+
+	deporder = rc_get_depends(deptree, types, t1, RC_DEP_TRACE | RC_DEP_STRICT);
+
+	/* Save what we've got so far to the svcs_start. */
+	i = 0;
+	if (deporder && deporder[0]) {
+		while ((s = deporder[i++])) {
+			if (i > 1)
+				fprintf(fp, " ");
+			fprintf(fp, "%s", s);
+		}
+	}
+
+	t3 = deporder;
+	rc_strlist_free(t1);
+
+	/*
+	 * This part is responsible for getting a list of the remaining
+	 * services. We build a big list from boot, default and coldplugged
+	 * services. We then trick RC to think it's already in the default
+	 * level and we get the services correctly ordered. After that, the
+	 * real runlevel is restored.
+	 */
+	t1 = rc_services_in_runlevel(RC_LEVEL_BOOT);
+	t2 = rc_services_in_state(rc_service_coldplugged);
+	t1 = strlist_merge(t1, t2);
+	rc_strlist_free(t2);
+	t2 = rc_services_in_runlevel(RC_LEVEL_DEFAULT);
+	t1 = strlist_merge(t1, t2);
+	rc_strlist_free(t2);
+
+	/* Temporarily pretend that we're already in the 'default' runlevel. */
+	s = rc_get_runlevel();
+	if (s) {
+		runlevel = strdup(s);
+	} else {
+		runlevel = strdup(RC_LEVEL_BOOT);
+	}
+	rc_set_runlevel(RC_LEVEL_DEFAULT);
+
+	deporder = rc_get_depends(deptree, types, t1, RC_DEP_TRACE | RC_DEP_STRICT);
+
+	/* Restore the real runlevel. */
+	rc_set_runlevel(runlevel);
+
+	/* Print the new services and skip ones that have already been started
+	 * in the 'boot' runlevel. */
+	i = 0;
+	if (deporder && deporder[0]) {
+		while ((s = deporder[i])) {
+			j = 0;
+			while ((r = t3[j++])) {
+				if (!strcmp(deporder[i], r))
+					 goto next;
+			}
+			fprintf(fp, " %s", s);
+next:		i++;
+		}
+	}
+
+	fclose(fp);
+
+	rc_strlist_free(t3);
+	rc_strlist_free(deporder);
+	rc_strlist_free(t1);
+
+	rc_strlist_free(types);
+	rc_free_deptree(deptree);
+
 	return 0;
 }
 
@@ -567,15 +693,15 @@ static int splash_start(const char *runlevel)
 	 * have been started. */
 	if (!strcmp(runlevel, RC_LEVEL_SHUTDOWN) || !strcmp(runlevel, RC_LEVEL_REBOOT)) {
 		splash_call("splash_cache_prep", "stop", NULL);
-		start = false;
 		splash_svcs_stop();
+		start = false;
 	/* We're booting. A list of services that will be started is
 	 * prepared for us by splash_cache_prep(). */
 	} else {
 		splash_call("splash_cache_prep", "start", NULL);
+		splash_svcs_start();
 		start = true;
 	}
-
 	splash_theme_hook("rc_init", "pre", runlevel);
 
 	/* Perform sanity checks (console=, CONSOLE=). */
@@ -670,8 +796,14 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		type = shutdown;
 
 	/* Do nothing if we are at a very early stage of booting-up. */
-	if (hook == rc_hook_runlevel_start_in && !strcmp(name, RC_LEVEL_SYSINIT))
-		return 0;
+	switch (hook) {
+	case rc_hook_runlevel_start_in:
+	case rc_hook_runlevel_start_out:
+	case rc_hook_runlevel_stop_in:
+	case rc_hook_runlevel_stop_out:
+		if (!strcmp(name, RC_LEVEL_SYSINIT))
+			return 0;
+	}
 
 	if (!config.theme) {
 		splash_config_init(&config, type);
@@ -718,24 +850,26 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		break;
 
 	case rc_hook_runlevel_start_in:
-		/* If we are here and it's not sysinit, then we had a runlevel
-		 * switch during boot and we have to reinitialize our internal
-		 * variables. */
-		if (strcmp(name, RC_LEVEL_SYSINIT)) {
-			if (splash_init(true))
-				return -1;
+		/* Start the splash daemon during boot right after we finish
+		 * sysinit and are entering the boot runlevel. Due to historical
+		 * reasons, we simulate a full sysinit cycle here for the theme
+		 * scripts. */
+		if (strcmp(name, RC_LEVEL_BOOT) == 0) {
+			ewarn("starting the splash daemon\n");
+			i = splash_start(RC_LEVEL_SYSINIT);
+			splash_theme_hook("rc_init", "post", RC_LEVEL_SYSINIT);
+			splash_theme_hook("rc_exit", "pre", RC_LEVEL_SYSINIT);
+			splash_theme_hook("rc_exit", "post", RC_LEVEL_SYSINIT);
+		} else if (strcmp(name, RC_LEVEL_SYSINIT)) {
+			splash_theme_hook("rc_init", "pre", name);
+			splash_theme_hook("rc_init", "post", name);
 		}
 		break;
 
 	case rc_hook_runlevel_start_out:
-		/* Start the splash daemon during boot right after we finish
-		 * sysinit. */
-		if (strcmp(name, RC_LEVEL_SYSINIT) == 0) {
-			i = splash_start(name);
-			splash_theme_hook("rc_init", "post", name);
-		}
+
 		/* Stop the splash daemon after boot-up is finished. */
-		else if (strcmp(name, RC_LEVEL_BOOT)) {
+		if (strcmp(name, RC_LEVEL_BOOT)) {
 			splash_theme_hook("rc_exit", "pre", name);
 			i = splash_stop(name);
 			splash_theme_hook("rc_exit", "post", name);
