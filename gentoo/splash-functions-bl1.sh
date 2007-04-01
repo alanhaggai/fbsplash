@@ -413,6 +413,10 @@ splash_svc() {
 	if [[ ${act} == "start" ]]; then
 		if [[ ${err} -eq 0 ]]; then
 			splash_svc_update ${srv} "svc_started"
+			if [[ ${srv} == "gpm" ]]; then
+				splash_comm_send "set gpm"
+				splash_comm_send "repaint"
+			fi
 		else
 			splash_svc_update ${srv} "svc_start_failed"
 		fi
