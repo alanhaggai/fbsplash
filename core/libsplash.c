@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
+#include <termios.h>
+#include <unistd.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -129,5 +131,48 @@ int splash_verbose(scfg_t *cfg)
 	if (fd_tty0 == -1)
 		return -1;
 	return ioctl(fd_tty0, VT_ACTIVATE, cfg->tty_v);
+}
+
+void vt_cursor_disable(int fd)
+{
+	write(fd, "\e[?25l\e[?1c",11);
+}
+
+void vt_cursor_enable(int fd)
+{
+	write(fd, "\e[?25h\e[?0c",11);
+}
+
+/* FIXME: merge this with the functions from the daemon code. */
+
+int tty_silent_set(int tty, int fd)
+{
+	struct termios w;
+
+	tcgetattr(fd, &w);
+	w.c_lflag &= ~(ICANON|ECHO);
+	w.c_cc[VTIME] = 0;
+	w.c_cc[VMIN] = 1;
+	tcsetattr(fd, TCSANOW, &w);
+	vt_cursor_disable(fd);
+
+	ioctl(fd, VT_ACTIVATE, tty);
+	ioctl(fd, VT_WAITACTIVE, tty);
+
+	return 0;
+}
+
+int tty_silent_unset(int fd)
+{
+	struct termios w;
+
+	tcgetattr(fd, &w);
+	w.c_lflag &= (ICANON|ECHO);
+	w.c_cc[VTIME] = 0;
+	w.c_cc[VMIN] = 1;
+	tcsetattr(fd, TCSANOW, &w);
+	vt_cursor_enable(fd);
+
+	return 0;
 }
 

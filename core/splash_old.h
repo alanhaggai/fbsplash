@@ -1,5 +1,5 @@
-#ifndef __SPLASH_H
-#define __SPLASH_H
+#ifndef __SPLASH_OLD_H
+#define __SPLASH_OLD_H
 
 #include "config.h"
 #include <stdio.h>
@@ -41,78 +41,9 @@
 	#endif
 #endif
 
-/*
- * Necessary to avoid compilation errors when fbsplash support is
- * disabled.
- */
-#if !defined(CONFIG_FBSPLASH)
-	#define FB_SPLASH_IO_ORIG_USER		0
-	#define FB_SPLASH_IO_ORIG_KERNEL	1
-#endif
-
-/*
- * Adjustable settings
- * *******************
- */
-#define PATH_DEV	"/dev"
-#define PATH_PROC	"/proc"
-#define PATH_SYS	"/sys"
-#define SPLASH_DEV	PATH_DEV "/fbsplash"
-
-#if defined(TARGET_KERNEL)
-	#define PATH_SYS	"/splash/sys"
-	#define PATH_PROC	"/splash/proc"
-#endif
-
-/* Default TTYs for silent and verbose modes. */
-#define TTY_SILENT		8
-#define TTY_VERBOSE 	1
-
-#define DEFAULT_MESSAGE "Initializing the kernel..."
-#define DEFAULT_FONT 	"luxisri.ttf"
-#define DEFAULT_THEME	"default"
-#define TTF_DEFAULT		THEME_DIR "/" DEFAULT_FONT
-
-/*
- * Settings that shouldn't be changed
- * **********************************
- */
-#define PROGRESS_MAX	0xffff
-
-/* Useful short-named types. */
-typedef u_int8_t	u8;
-typedef u_int16_t	u16;
-typedef u_int32_t	u32;
-typedef int8_t		s8;
-typedef int16_t		s16;
-typedef int32_t		s32;
-
-/* Verbosity levels */
-#define VERB_QUIET		0
-#define VERB_NORMAL		1
-#define VERB_HIGH	    2
-
-#define MSG_CRITICAL	0
-#define MSG_ERROR		1
-#define MSG_WARN		2
-#define MSG_INFO		3
-
 /* Useful macros. */
-#define min(a,b)		((a) < (b) ? (a) : (b))
-#define max(a,b)		((a) > (b) ? (a) : (b))
 #define printerr(args...)	fprintf(stderr, ## args);
 #define printwarn(args...)	fprintf(stderr, ## args);
-
-#define iprint(type, args...) do {				\
-	if (arg_verbosity == VERB_QUIET)			\
-		break;									\
-												\
-	if (type <= MSG_ERROR) {					\
-		fprintf(stderr, ## args);				\
-	} else if (arg_verbosity == VERB_HIGH) {	\
-		fprintf(stdout, ## args);				\
-	}											\
-} while (0);
 
 #define CLAMP(x)		((x) > 255 ? 255 : (x))
 #define DEBUG(x...)
@@ -286,12 +217,8 @@ char *get_cfg_file(char *theme);
 int do_getpic(unsigned char, unsigned char, char);
 int cfg_check_sanity(unsigned char mode);
 char *get_filepath(char *path);
-void vt_cursor_enable(int fd);
-void vt_cursor_disable(int fd);
 int open_fb();
 int open_tty(int);
-int tty_unset_silent(int fd);
-int tty_set_silent(int tty, int fd);
 
 /* parse.c */
 int parse_cfg(char *cfgfile);
@@ -386,4 +313,4 @@ extern u8 fb_opt;
 extern u8 fb_ro, fb_go, fb_bo;
 extern u8 fb_rlen, fb_glen, fb_blen;
 
-#endif /* __SPLASH_H */
+#endif /* __SPLASH_OLD_H */

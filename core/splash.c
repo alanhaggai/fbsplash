@@ -330,7 +330,7 @@ setpic_out:	break;
 			break;
 
 		if (arg_mode == 's') {
-			tty_set_silent(t, fp);
+			tty_silent_set(t, fp);
 		} else {
 			ioctl(fp, VT_ACTIVATE, t);
 			ioctl(fp, VT_WAITACTIVE, t);
@@ -338,7 +338,7 @@ setpic_out:	break;
 			fp = open_tty(TTY_SILENT);
 			if (fp < 0)
 				break;
-			tty_unset_silent(fp);
+			tty_silent_unset(fp);
 		}
 
 		close(fp);

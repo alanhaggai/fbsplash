@@ -34,7 +34,7 @@
 
 #include <einfo.h>
 #include <rc.h>
-#include "splash.h"
+#include "../core/splash.h"
 
 #define SPLASH_CMD "bash -c 'export SOFTLEVEL='%s'; export BOOTLEVEL="RC_LEVEL_BOOT";" \
 				   "export DEFAULTLEVEL="RC_LEVEL_DEFAULT"; export svcdir=${RC_SVCDIR};" \

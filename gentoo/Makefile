@@ -3,7 +3,7 @@
 
 CFLAGS += -fPIC -g -Wall
 
-splash.so: splash.o libsplash.o
+splash.so: splash.o ../core/libsplash.o
 	$(CC) -fPIC -shared -Wl,-soname,$@ -o $@ -leinfo $+
 
 test: test.o

@@ -231,7 +231,7 @@ parse_failure:	if (h == 0)
 	buf[1] = 1;
 	ioctl(fd_vc, TIOCLINUX, buf);
 
-	tty_set_silent(stty, fd_vc);
+	tty_silent_set(stty, fd_vc);
 
 	if (arg_kdmode == KD_GRAPHICS)
 		ioctl(fd_vc, KDSETMODE, KD_GRAPHICS);

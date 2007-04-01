@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
+#include "config.h"
+
 /* Adjustable settings */
 #define PATH_DEV	"/dev"
 #define PATH_PROC	"/proc"
@@ -21,10 +23,13 @@
 
 #define SPLASH_CACHEDIR		"/"LIBDIR"/splash/cache"
 #define SPLASH_TMPDIR		"/"LIBDIR"/splash/tmp"
-#define SPLASH_FIFO			SPLASH_CACHEDIR"/.splash"
 #define SPLASH_PIDFILE		SPLASH_CACHEDIR"/daemon.pid"
 #define SPLASH_PROFILE		SPLASH_CACHEDIR"/profile"
 #define SPLASH_EXEC			"/sbin/splash_util.static"
+
+#ifndef SPLASH_FIFO
+	#define SPLASH_FIFO			SPLASH_CACHEDIR"/.splash"
+#endif
 
 /* Default TTYs for silent and verbose modes. */
 #define TTY_SILENT		8
@@ -74,9 +79,8 @@ int splash_verbose(scfg_t *cfg);
 void vt_cursor_enable(int fd);
 void vt_cursor_disable(int fd);
 
-int tty_set_silent(int tty, int fd);
-int tty_unset_silent(int fd);
-
+int tty_silent_set(int tty, int fd);
+int tty_silent_unset(int fd);
 
 enum sp_states { st_display, st_svc_inact_start, st_svc_inact_stop, st_svc_start,
 				 st_svc_started, st_svc_stop, st_svc_stopped, st_svc_stop_failed,
@@ -122,5 +126,7 @@ typedef int32_t		s32;
 		fprintf(stdout, ## args);				\
 	}											\
 } while (0);
+
+#include "splash_old.h"
 
 #endif /* __SPLASH_H */
