@@ -36,6 +36,7 @@ char		*arg_theme = NULL;
 char		*arg_pidfile = NULL;
 u16			arg_progress = 0;
 u8			arg_kdmode = KD_TEXT;
+bool		arg_minstances = false;
 #ifndef TARGET_KERNEL
 char		*arg_export = NULL;
 #endif

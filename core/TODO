@@ -1,8 +1,5 @@
 - documentation update
 
-- (daemon) don't start if another instance is running
-           (use FIFO for that?)
-
 - use popen to get program output (?)
 
 - convert all printerr/printwarn to iprint

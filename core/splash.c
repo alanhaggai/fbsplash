@@ -39,6 +39,7 @@ struct option options[] = {
 	{ "mesg",	required_argument, NULL, 0x109 },
 #endif
 	{ "pidfile",required_argument, NULL, 0x10a },
+	{ "minstances", no_argument, NULL, 0x10b },
 	{ "daemon",	no_argument, NULL, 'd'},
 	{ "help",	no_argument, NULL, 'h'},
 	{ "verbose", no_argument, NULL, 'v'},
@@ -105,6 +106,7 @@ void usage(void)
 "      --mesg=TEXT     use TEXT as the main splash message\n"
 #endif
 "      --pidfile=FILE  save the PID of the daemon to FILE\n"
+"      --minstances    allow multiple instances of the splash daemon\n"
 #ifndef CONFIG_FBSPLASH
 "\nThis version of splashutils has been compiled without support for fbsplash.\n"
 #endif
@@ -200,6 +202,10 @@ int main(int argc, char **argv)
 #endif
 		case 0x10a:
 			arg_pidfile = strdup(optarg);
+			break;
+
+		case 0x10b:
+			arg_minstances = true;
 			break;
 
 		case 'd':

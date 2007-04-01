@@ -22,6 +22,8 @@
 #include <sys/mman.h>
 #include <pthread.h>
 #include <errno.h>
+#include <dirent.h>
+
 
 #include "splash.h"
 #include "daemon.h"
@@ -62,7 +64,6 @@ u8 theme_loaded = 0;
 struct termios tios;
 
 #ifdef CONFIG_MNG
-
 /*
  * Renders an animation frame directly to the screen.
  */
@@ -638,6 +639,46 @@ int reload_theme(void)
 	return 0;
 }
 
+static int dcr_filter(const struct dirent *dre)
+{
+	int pid;
+
+	if (sscanf(dre->d_name, "%d", &pid) == 1)
+		return 1;
+	else
+		return 0;
+}
+
+static int daemon_check_running(const char *pname)
+{
+	struct dirent **namelist;
+	FILE *fp;
+	char name[128];
+	char buf[128];
+	int n, pid, fpid = 0, mpid = getpid();
+	int l = min(strlen(pname), 15);
+
+	n = scandir("/proc", &namelist, dcr_filter, alphasort);
+	if (n < 0)
+		perror("blah");
+	else {
+		while(n--) {
+			snprintf(name, 128, "/proc/%s/stat", namelist[n]->d_name);
+			if ((fp = fopen(name, "r")) != NULL) {
+				if ((fscanf(fp, "%d (%s)", &pid, buf) == 2) && mpid != pid && !strncmp(buf, pname, l)) {
+					fpid = pid;
+				}
+				fclose(fp);
+			}
+
+			free(namelist[n]);
+		}
+		free(namelist);
+	}
+
+	return fpid;
+}
+
 /*
  * Start the splash daemon.
  */
@@ -648,6 +689,12 @@ void daemon_start()
 	struct stat mystat;
 	struct vt_stat vtstat;
 	sigset_t sigset;
+
+	if (!arg_minstances && (i = daemon_check_running("splash_util"))) {
+		iprint(MSG_ERROR, "It looks like there's another instance of the splash daemon running (pid %d).\n", i);
+		iprint(MSG_ERROR, "Stop it first or run this program with `--minstances'.\n");
+		exit(1);
+	}
 
 	/* Create a mmap of the framebuffer */
 	fd_fb = open_fb();

@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include <stdio.h>
+#include <stdbool.h>
 #include <sys/types.h>
 #include <linux/kd.h>
 #include <linux/tty.h>
@@ -358,6 +359,7 @@ extern char arg_mode;
 extern char arg_verbosity;
 extern u16 arg_progress;
 extern u8 arg_kdmode;
+extern bool arg_minstances;
 #ifndef TARGET_KERNEL
 extern char *arg_export;
 extern u8 theme_loaded;
