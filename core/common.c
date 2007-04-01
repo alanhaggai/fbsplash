@@ -229,16 +229,6 @@ int cfg_check_sanity(u8 mode)
 	return 0;
 }
 
-void vt_cursor_disable(int fd)
-{
-	write(fd, "\e[?25l\e[?1c",11);
-}
-
-void vt_cursor_enable(int fd)
-{
-	write(fd, "\e[?25h\e[?0c",11);
-}
-
 int open_fb()
 {
 	char dev[32];
@@ -275,32 +265,3 @@ int open_tty(int tty)
 	return c;
 }
 
-int tty_set_silent(int tty, int fd)
-{
-	struct termios w;
-
-	tcgetattr(fd, &w);
-	w.c_lflag &= ~(ICANON|ECHO);
-	w.c_cc[VTIME] = 0;
-	w.c_cc[VMIN] = 1;
-	tcsetattr(fd, TCSANOW, &w);
-	vt_cursor_disable(fd);
-	ioctl(fd, VT_ACTIVATE, tty);
-	ioctl(fd, VT_WAITACTIVE, tty);
-
-	return 0;
-}
-
-int tty_unset_silent(int fd)
-{
-	struct termios w;
-
-	tcgetattr(fd, &w);
-	w.c_lflag &= (ICANON|ECHO);
-	w.c_cc[VTIME] = 0;
-	w.c_cc[VMIN] = 1;
-	tcsetattr(fd, TCSANOW, &w);
-	vt_cursor_enable(fd);
-
-	return 0;
-}

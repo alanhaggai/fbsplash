@@ -36,17 +36,6 @@
 #include <rc.h>
 #include "splash.h"
 
-#ifndef LIBDIR
-	#define LIBDIR "lib"
-#endif
-
-#define SPLASH_CACHEDIR		"/"LIBDIR"/splash/cache"
-#define SPLASH_TMPDIR		"/"LIBDIR"/splash/tmp"
-#define SPLASH_FIFO			SPLASH_CACHEDIR"/.splash"
-#define SPLASH_PIDFILE		SPLASH_CACHEDIR"/daemon.pid"
-#define SPLASH_PROFILE		SPLASH_CACHEDIR"/profile"
-#define SPLASH_EXEC			"/sbin/splash_util.static"
-
 #define SPLASH_CMD "bash -c 'export SOFTLEVEL='%s'; export BOOTLEVEL="RC_LEVEL_BOOT";" \
 				   "export DEFAULTLEVEL="RC_LEVEL_DEFAULT"; export svcdir=${RC_SVCDIR};" \
 				   ". /sbin/splash-functions.sh; %s %s %s'"
