@@ -129,74 +129,13 @@ splash_silent() {
 	${spl_util} -c on 2>/dev/null
 }
 
-
-###########################################################################
-# Cache
-###########################################################################
-
-# args: <start|stop>
-#
-# Prepare the splash cache.
-splash_cache_prep() {
-	# Mount an in-RAM filesystem at spl_tmpdir.
-	mount -ns -t "${spl_cachetype}" cachedir "${spl_tmpdir}" \
-		-o rw,mode=0644,size="${spl_cachesize}"k
-
-	retval=$?
-
-	if [[ ${retval} -ne 0 ]]; then
-		eerror "Unable to create splash cache - switching to verbose."
-		splash_verbose
-		return "${retval}"
-	fi
-
-	mount -n --move "${spl_tmpdir}" "${spl_cachedir}"
-
-	if [ "$1" == "start" ]; then
-		echo -n > ${spl_cachedir}/profile
-	fi
-
-	return 0
-}
-
-splash_cache_cleanup() {
-
-	# If we don't care about the splash profiling data, or if
-	# we're running off a livecd, simply ymount the splash cache.
-	if [ -n "${CDBOOT}" -o "${SPLASH_PROFILE}" != "on" ]; then
-		umount -l "${spl_cachedir}" 2>/dev/null
-		return
-	fi
-
-	# Don't try to clean anything up if the cachedir is not mounted.
-	[ -z "$(grep ${spl_cachedir} /proc/mounts)" ] && return;
-
-	# Create the temp dir if necessary.
-	if [ ! -d "${spl_tmpdir}" ]; then
-		mkdir -p "${spl_tmpdir}" 2>/dev/null
-		[ "$?" != "0" ] && return
-	fi
-
-	# If the /etc is not writable, don't update /etc/mtab. If it is
-	# writable, update it to avoid stale mtab entries (bug #121827).
-	local mntopt=""
-	[ -w /etc/mtab ] || mntopt="-n"
-	mount "${mntopt}" --move "${spl_cachedir}" "${spl_tmpdir}" 2>/dev/null
-
-	# Don't try to copy anything if the cachedir is not writable.
-	[ -w "${spl_cachedir}" ] || return;
-
-	cp -a "${spl_tmpdir}"/profile "${spl_cachedir}" 2>/dev/null
-	umount -l "${spl_tmpdir}" 2>/dev/null
- }
-
 ###########################################################################
 # Service list
 ###########################################################################
 
 splash_svclist_get() {
-	if [[ "$1" == "start" ]]; then
-		cat ${spl_cachedir}/svcs_start
+	if [ "$1" == "start" -a -r "${spl_cachedir}/svcs_start" ]; then
+		cat "${spl_cachedir}/svcs_start"
 	fi
 }
 

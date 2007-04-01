@@ -23,8 +23,15 @@
 
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <sys/mount.h>
+#include <sys/stat.h>
 
 #include <linux/kd.h>
+#include <linux/fs.h>
+
+#if !defined(MNT_DETACH)
+	#define MNT_DETACH 2
+#endif
 
 #include <einfo.h>
 #include <rc.h>
@@ -35,6 +42,7 @@
 #endif
 
 #define SPLASH_CACHEDIR		"/"LIBDIR"/splash/cache"
+#define SPLASH_TMPDIR		"/"LIBDIR"/splash/tmp"
 #define SPLASH_FIFO			SPLASH_CACHEDIR"/.splash"
 #define SPLASH_PIDFILE		SPLASH_CACHEDIR"/daemon.pid"
 #define SPLASH_PROFILE		SPLASH_CACHEDIR"/profile"
@@ -517,6 +525,49 @@ static int splash_svc_handle(const char *name, const char *state)
 	return 0;
 }
 
+int splash_cache_prep(bool start)
+{
+	if (mount("cachedir", SPLASH_CACHEDIR, "tmpfs", MS_MGC_VAL, "mode=0644,size=4096k")) {
+		eerror("Unable to create splash cache: %s", strerror(errno));
+		/* FIXME: switch to verbose here? */
+		return -1;
+	}
+
+	return 0;
+}
+
+int splash_cache_cleanup()
+{
+	int err = 0;
+	char *what = SPLASH_CACHEDIR;
+
+	if (!config.profile)
+		goto nosave;
+
+	if (!rc_is_dir(SPLASH_TMPDIR)) {
+		unlink(SPLASH_TMPDIR);
+		if ((err = mkdir(SPLASH_TMPDIR, 0700))) {
+			eerror("Failed to create " SPLASH_TMPDIR": %s", strerror(errno));
+			goto nosave;
+		}
+	}
+
+	if ((err = mount(SPLASH_CACHEDIR, SPLASH_TMPDIR, NULL, MS_MOVE, NULL))) {
+		eerror("Failed to move splash cache: %s", strerror(errno));
+		goto nosave;
+	}
+
+	err = system("/bin/mv "SPLASH_TMPDIR"/profile "SPLASH_CACHEDIR"/profile");
+	what = SPLASH_TMPDIR;
+
+nosave:
+	/* Clear a stale mtab entry created by /etc/init.d/checkroot */
+	system("/bin/sed -i -e '\\#"SPLASH_CACHEDIR"# d' /etc/mtab");
+
+	umount2(what, MNT_DETACH);
+	return err;
+}
+
 int splash_svcs_stop()
 {
 	char **tmp = NULL, **tmp2 = NULL;
@@ -692,13 +743,15 @@ static int splash_start(const char *runlevel)
 	/* We're rebooting/shutting down. Just get a list of services that
 	 * have been started. */
 	if (!strcmp(runlevel, RC_LEVEL_SHUTDOWN) || !strcmp(runlevel, RC_LEVEL_REBOOT)) {
-		splash_call("splash_cache_prep", "stop", NULL);
+		if ((err = splash_cache_prep(false)))
+			return err;
 		splash_svcs_stop();
 		start = false;
 	/* We're booting. A list of services that will be started is
 	 * prepared for us by splash_cache_prep(). */
 	} else {
-		splash_call("splash_cache_prep", "start", NULL);
+		if ((err = splash_cache_prep(true)))
+			return err;
 		splash_svcs_start();
 		start = true;
 	}
@@ -773,14 +826,12 @@ static int splash_stop(const char *runlevel)
 		cnt++;
 	}
 
-	splash_call("splash_cache_cleanup", NULL, NULL);
+	return splash_cache_cleanup();
 
 	/* TODO:
 	 * switch to verbose if running in silent mode. 
 	 * kill it the hard way
 	 */
-
-	return 0;
 }
 
 int _splash_hook (rc_hook_t hook, const char *name)
@@ -803,6 +854,8 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	case rc_hook_runlevel_stop_out:
 		if (!strcmp(name, RC_LEVEL_SYSINIT))
 			return 0;
+	default:
+		break;
 	}
 
 	if (!config.theme) {
@@ -832,21 +885,16 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	switch (hook) {
 
 	case rc_hook_runlevel_stop_in:
-
-		/* Ignore the sysinit runlevel. */
-		if (!strcmp(name, RC_LEVEL_SYSINIT))
-			break;
-
 		/* Start the splash daemon on reboot. The theme hook is called
 		 * from splash_start(). */
-		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0)
+		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
 			i = splash_start(name);
-		else
-			splash_theme_hook("rc_init", "pre", name);
-		if (i)
+			splash_theme_hook("rc_init", "post", name);
 			return i;
-
-		splash_theme_hook("rc_init", "post", name);
+		} else {
+			splash_theme_hook("rc_exit", "pre", name);
+			splash_theme_hook("rc_exit", "post", name);
+		}
 		break;
 
 	case rc_hook_runlevel_start_in:
@@ -855,15 +903,13 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		 * reasons, we simulate a full sysinit cycle here for the theme
 		 * scripts. */
 		if (strcmp(name, RC_LEVEL_BOOT) == 0) {
-			ewarn("starting the splash daemon\n");
 			i = splash_start(RC_LEVEL_SYSINIT);
 			splash_theme_hook("rc_init", "post", RC_LEVEL_SYSINIT);
 			splash_theme_hook("rc_exit", "pre", RC_LEVEL_SYSINIT);
 			splash_theme_hook("rc_exit", "post", RC_LEVEL_SYSINIT);
-		} else if (strcmp(name, RC_LEVEL_SYSINIT)) {
-			splash_theme_hook("rc_init", "pre", name);
-			splash_theme_hook("rc_init", "post", name);
 		}
+		splash_theme_hook("rc_init", "pre", name);
+		splash_theme_hook("rc_init", "post", name);
 		break;
 
 	case rc_hook_runlevel_start_out:
