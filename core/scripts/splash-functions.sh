@@ -44,7 +44,7 @@ splash_setup() {
 	[ -f /etc/conf.d/splash ] && . /etc/conf.d/splash
 
 	if [ -f /proc/cmdline ]; then
-		options=$(grep 'splash=[^ ]*' -o /proc/cmdline)
+		options=$(grep -o 'splash=[^ ]*' /proc/cmdline)
 
 		# Execute this loop over $options so that we can process multiple
 		# splash= arguments on the kernel command line. Useful for adjusting
