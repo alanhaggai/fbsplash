@@ -19,8 +19,8 @@ Here's a short description a provided programs, scripts and documents:
 
    splash_helper
    -------------
-   A simple a small program run directly by the kernel to:
-    - initialize the silent mode during early stages of the boot-up process
+   A simple small program run directly by the kernel to:
+    - initialize the silent mode during early stages of the boot-up process,
 	- provide the kernel with background images and theme configuration
 	  for the verbose splash mode.
 
@@ -48,7 +48,7 @@ Here's a short description a provided programs, scripts and documents:
    -------------
    Automatically generates theme config files for new resolutions. Might
    not always work correctly and some manual adjustment of the resulting
-   config files might be necssary.
+   config files might be necessary.
 
    splash_manager
    --------------
@@ -66,13 +66,13 @@ Here's a short description a provided programs, scripts and documents:
    docs/daemon
    -----------
    Description of the splash daemon communication protocol. Probably only
-   useful to people developing support scripts for different Linux 
+   useful to people developing support scripts for different Linux
    distributions.
 
    docs/early_bootup
    -----------------
    A short explanation of the early-userspace concept and some info
-   about creation and usega of splash initramfs images.
+   about creation and usage of splash initramfs images.
 
    docs/kernel_parameters
    ----------------------
@@ -80,7 +80,7 @@ Here's a short description a provided programs, scripts and documents:
 
    docs/quickstart
    ---------------
-   A very simplified into to splashutils for people who REALLY don't have
+   A very simplified intro to splashutils for people who REALLY don't have
    time to have a look at the rest of the documentation.
 
    docs/theme_format

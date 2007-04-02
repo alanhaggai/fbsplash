@@ -2,7 +2,7 @@
 ---------------
 Since 1.1.9, splashutils can be run in two different operating modes. The
 first one is the standard 'call-do_stuff-exit' way known from all previous
-versions of splashutils. The second one is the so-called splash daemon.
+versions of splashutils. The second one is the so-called splash daemon mode.
 
 Using the first mode to manage the silent splash screen is inefficient
 and should be considered deprecated.
@@ -70,7 +70,7 @@ FIFO. Currently, the following commands are recognized:
    Repaints the whole screen.
 
  - progress <num>
-   Sets the progress to <num>, where <num> has to be in range 0 - 65535.
+   Sets the progress to <num>, where <num> has to be in the range 0 - 65535.
 
  - update_svc <service> <state>
    Updates the service <service> state to <state>. <state> can be one

@@ -1,5 +1,5 @@
 In order for fbsplash to be activated during early stages of the boot-up
-process, the kernel has to get access to the splash_helper program and 
+process, the kernel has to get access to the splash_helper program and
 theme data files. There are several ways to make this happen.
 
 1. Initramfs
@@ -54,6 +54,9 @@ accessible (ie. mounted) at the time fbcon is initialized.
 It's theoretically possible to store the theme data in a classical initrd
 and still make use of it, though. You would have to create a wrapper
 /sbin/splash_helper script/program that would mount initrd.image, copy
-the theme data to the rootfs and then call the real splash_helper. It
-hasn't been tried so far, but it should work.
+the theme data to the rootfs and then call the real splash_helper. As far
+as I know, it has never been tried so far.
+
+--
+  Written by Michal Januszewski <spock@gentoo.org>
 

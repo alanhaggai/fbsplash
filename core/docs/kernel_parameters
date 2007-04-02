@@ -1,28 +1,26 @@
-To make sure the silent mode works correctly with this version of
-splashutils, additional kernel command line arguments are required.
+To make sure that the silent mode works correctly with this version of
+splashutils, it is required that you add either
+'quiet CONSOLE=/dev/tty1' or 'console=tty1' to your kernel command line.
 
-It is required that you add either 'quiet CONSOLE=/dev/tty1' or
-'console=tty1' to your kernel command line. 
-
-'quiet' will prevent most initial kernel messages from being displayed.
+'quiet' will prevent most of the initial kernel messages from being displayed.
 'CONSOLE=/dev/tty1' will redirect all initscript messages to tty1.
 'console=tty1' will redirect both kernel and initscript messages to tty1.
 
-It is also possible to override some splash parameters set up in the
+It is also possible to override some splash parameters defined in the
 system configuration files with options passed on the kernel command
 line. All splash options are separated by commas and they should form
 a continuous configuration string. The following options are recognized:
 
- - off        - disables silent and verbose splash (default)
- - verbose    - start the system with a verbose splash screen
- - silent     - start the system in the 'silent' mode (all messages from
+ - off        - Disable silent and verbose splash (default).
+ - verbose    - Start the system with a verbose splash screen.
+ - silent     - Start the system in the 'silent' mode. (all messages from
                 the kernel and from the initscripts are covered by a picture
                 and thus hidden from the user)
- - fadein     - use a 'fade from black' effect to display the silent image
- - theme:foo  - use theme 'foo'
- - tty:n      - use the n-th tty as the silent tty. Default silent tty is
-                tty8
- - kdgraphics - run in KDGRAPHICS mode. Use of this option in discouraged
+ - fadein     - Use a 'fade from black' effect to display the silent image.
+ - theme:foo  - Use theme 'foo'.
+ - tty:n      - Sse the n-th tty as the silent tty. Default silent tty is
+                tty8.
+ - kdgraphics - Run in KDGRAPHICS mode. Use of this option is discouraged
                 but might be necessary when some kernel drivers try to
                 display messages on the foreground tty despite the 'quiet'
                 option.
@@ -30,20 +28,21 @@ a continuous configuration string. The following options are recognized:
 Additionally, the following options may be recognized, if the system
 scripts provide support for them:
 
- - profile    - save splash profiling information. The data saved in a
+ - profile    - Save splash profiling information. The data saved in a
                 splash profile file can be used to replay the boot sequence
                 using the splash_manager script.
+ - insane     - Skip sanity checks.
 
 A sample splash kernel command line setting:
   splash=silent,fadein,theme:linuxrocks,tty:12
 
 A sample full kernel command line:
-  root=/dev/hda5 video=vesafb:1024x768-32@85 
+  root=/dev/hda5 video=vesafb:1024x768-32@85
   splash=silent,fadein,theme:linuxrocks,tty:12 console=tty1
 
-Please note that the default splash mode is 'off', so you will need to
-explicitly specify 'silent' or 'verbose' on the kernel command line in
-order to get the splash working.
+Please note that the default splash mode is 'off'. You have to explicitly
+specify 'silent' or 'verbose' on the kernel command line in order to get
+the splash working.
 
 The splash helper recognizes the following additional environment
 variables:
