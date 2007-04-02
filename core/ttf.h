@@ -62,7 +62,6 @@ struct _TTF_Font {
 typedef struct _TTF_Font TTF_Font;
 
 extern TTF_Font *global_font;
-extern char *boot_message;
 extern int boot_msg_width;
 
 int TTF_Init(void);

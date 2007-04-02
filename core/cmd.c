@@ -19,7 +19,7 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <errno.h>
-#include "splash.h"
+#include "util.h"
 
 #ifdef CONFIG_FBSPLASH
 
@@ -96,7 +96,7 @@ int cmd_setcfg(unsigned char origin)
 	vc_cfg.twidth = cf.tw;
 	vc_cfg.theight = cf.th;
 	vc_cfg.bg_color = cf.bg_color;
-	vc_cfg.theme = config.theme;
+	vc_cfg.theme = config->theme;
 
 	if (ioctl(fd, FBIOSPLASH_SETCFG, &wrapper)) {
 		iprint(MSG_ERROR, "FBIOSPLASH_SETCFG failed, error code %d.\n", errno);

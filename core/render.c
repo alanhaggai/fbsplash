@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
-#include "splash.h"
+#include "util.h"
 
 /* Converts a RGBA/RGB image to whatever format the framebuffer uses */
 void rgba2fb (rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha)
@@ -59,15 +59,15 @@ void render_icon(icon *ticon, u8 *target)
 	u8 *out = NULL;
 	u8 *in = NULL;
 
-	int h = PROGRESS_MAX - arg_progress;
+	int h = PROGRESS_MAX - config->progress;
 	rect rct;
 
 	/* Interpolate a cropping rectangle if necessary. */
 	if (ticon->crop) {
-		rct.x1 = (ticon->crop_from.x1 * h + ticon->crop_to.x1 * arg_progress) / PROGRESS_MAX;
-		rct.x2 = (ticon->crop_from.x2 * h + ticon->crop_to.x2 * arg_progress) / PROGRESS_MAX;
-		rct.y1 = (ticon->crop_from.y1 * h + ticon->crop_to.y1 * arg_progress) / PROGRESS_MAX;
-		rct.y2 = (ticon->crop_from.y2 * h + ticon->crop_to.y2 * arg_progress) / PROGRESS_MAX;
+		rct.x1 = (ticon->crop_from.x1 * h + ticon->crop_to.x1 * config->progress) / PROGRESS_MAX;
+		rct.x2 = (ticon->crop_from.x2 * h + ticon->crop_to.x2 * config->progress) / PROGRESS_MAX;
+		rct.y1 = (ticon->crop_from.y1 * h + ticon->crop_to.y1 * config->progress) / PROGRESS_MAX;
+		rct.y2 = (ticon->crop_from.y2 * h + ticon->crop_to.y2 * config->progress) / PROGRESS_MAX;
 
 		xi = min(rct.x1, rct.x2);
 		yi = min(rct.y1, rct.y2);
@@ -262,28 +262,28 @@ void render_box(box *box, u8 *target)
 	}
 }
 
-/* Interpolates two boxes, based on the value of the arg_progress variable.
+/* Interpolates two boxes, based on the value of the config->progress variable.
  * This is a strange implementation of a progress bar, introduced by the
  * authors of Bootsplash. */
 void interpolate_box(box *a, box *b)
 {
-	int h = PROGRESS_MAX - arg_progress;
+	int h = PROGRESS_MAX - config->progress;
 
-	if (arg_progress == 0)
+	if (config->progress == 0)
 		return;
 
 #define inter_color(cl1, cl2) 					\
 {								\
-	cl1.r = (cl1.r * h + cl2.r * arg_progress) / PROGRESS_MAX; 	\
-	cl1.g = (cl1.g * h + cl2.g * arg_progress) / PROGRESS_MAX;	\
-	cl1.b = (cl1.b * h + cl2.b * arg_progress) / PROGRESS_MAX;	\
-	cl1.a = (cl1.a * h + cl2.a * arg_progress) / PROGRESS_MAX; 	\
+	cl1.r = (cl1.r * h + cl2.r * config->progress) / PROGRESS_MAX; 	\
+	cl1.g = (cl1.g * h + cl2.g * config->progress) / PROGRESS_MAX;	\
+	cl1.b = (cl1.b * h + cl2.b * config->progress) / PROGRESS_MAX;	\
+	cl1.a = (cl1.a * h + cl2.a * config->progress) / PROGRESS_MAX; 	\
 }
 
-	a->x1 = (a->x1 * h + b->x1 * arg_progress) / PROGRESS_MAX;
-	a->x2 = (a->x2 * h + b->x2 * arg_progress) / PROGRESS_MAX;
-	a->y1 = (a->y1 * h + b->y1 * arg_progress) / PROGRESS_MAX;
-	a->y2 = (a->y2 * h + b->y2 * arg_progress) / PROGRESS_MAX;
+	a->x1 = (a->x1 * h + b->x1 * config->progress) / PROGRESS_MAX;
+	a->x2 = (a->x2 * h + b->x2 * config->progress) / PROGRESS_MAX;
+	a->y1 = (a->y1 * h + b->y1 * config->progress) / PROGRESS_MAX;
+	a->y2 = (a->y2 * h + b->y2 * config->progress) / PROGRESS_MAX;
 
 	inter_color(a->c_ul, b->c_ul);
 	inter_color(a->c_ur, b->c_ur);
@@ -372,7 +372,7 @@ char *eval_text(char *txt)
 		*d = *p;
 
 		if (!strncmp(p, "$progress", 9)) {
-			d += sprintf(d, "%d", arg_progress * 100 / PROGRESS_MAX);
+			d += sprintf(d, "%d", config->progress * 100 / PROGRESS_MAX);
 			p += 9;
 		} else {
 			p++;
@@ -547,7 +547,7 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 				continue;
 
 			if (c->img->w > fb_var.xres - c->x || c->img->h > fb_var.yres - c->y) {
-				printwarn("Icon %s does not fit on the screen - ignoring it.", c->img->filename);
+				iprint(MSG_WARN,"Icon %s does not fit on the screen - ignoring it.", c->img->filename);
 				continue;
 			}
 
@@ -566,7 +566,7 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 				(a->status == F_ANIM_STATUS_DONE)) {
 				render_it = 1;
 			} else if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL) {
-				int ret = mng_render_proportional(a->mng, arg_progress);
+				int ret = mng_render_proportional(a->mng, config->progress);
 				if (ret == MNG_NEEDTIMERWAIT || ret == MNG_NOERROR)
 					render_it = 1;
 			}
@@ -615,18 +615,12 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 
 #if WANT_TTF
 	if (mode == 's') {
-		if (!boot_message)
-			TTF_Render(target, SYSMSG_DEFAULT, global_font,
-				   TTF_STYLE_NORMAL, cf.text_x, cf.text_y,
-				   cf.text_color, F_HS_LEFT | F_HS_TOP, &boot_msg_width);
-		else {
-			char *t;
-			t = eval_text(boot_message);
-			TTF_Render(target, t, global_font, TTF_STYLE_NORMAL,
-				   cf.text_x, cf.text_y, cf.text_color,
-				   F_HS_LEFT | F_HS_TOP, &boot_msg_width);
-			free(t);
-		}
+		char *t;
+		t = eval_text(config->message);
+		TTF_Render(target, t, global_font, TTF_STYLE_NORMAL,
+			   cf.text_x, cf.text_y, cf.text_color,
+			   F_HS_LEFT | F_HS_TOP, &boot_msg_width);
+		free(t);
 	}
 #endif /* TTF */
 }

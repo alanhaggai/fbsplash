@@ -19,7 +19,7 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 
-#include "splash.h"
+#include "util.h"
 
 struct fb_var_screeninfo   fb_var;
 struct fb_fix_screeninfo   fb_fix;
@@ -29,9 +29,7 @@ char *config_file = NULL;
 enum TASK	arg_task = none;
 int			arg_fb = 0;
 int			arg_vc = 0;
-char		arg_mode = 'v';
 char		*arg_pidfile = NULL;
-u16			arg_progress = 0;
 #ifndef TARGET_KERNEL
 char		*arg_export = NULL;
 #endif
@@ -45,8 +43,9 @@ struct fb_image pic;
 char *pic_file = NULL;
 
 sendian_t	endianess;
+scfg_t		*config;
 
-static void detect_endianess(sendian_t *end)
+void detect_endianess(sendian_t *end)
 {
 	u16 t = 0x1122;
 
@@ -83,19 +82,19 @@ int get_fb_settings(int fb_num)
 		if (fb == -1)
 #endif
 		{
-			printerr("Failed to open " PATH_DEV "/fb%d or " PATH_DEV
+			iprint(MSG_ERROR, "Failed to open " PATH_DEV "/fb%d or " PATH_DEV
 				 "/fb%d for reading.\n", fb_num, fb_num);
 			return 1;
 		}
 	}
 
 	if (ioctl(fb,FBIOGET_VSCREENINFO,&fb_var) == -1) {
-		printerr("Failed to get fb_var info.\n");
+		iprint(MSG_ERROR, "Failed to get fb_var info.\n");
 		return 2;
 	}
 
 	if (ioctl(fb,FBIOGET_FSCREENINFO,&fb_fix) == -1) {
-		printerr("Failed to get fb_fix info.\n");
+		iprint(MSG_ERROR, "Failed to get fb_fix info.\n");
 		return 3;
 	}
 
@@ -143,7 +142,7 @@ char *get_filepath(char *path)
 	if (path[0] == '/')
 		return strdup(path);
 
-	snprintf(buf, 512, "%s/%s/%s", THEME_DIR, config.theme, path);
+	snprintf(buf, 512, "%s/%s/%s", THEME_DIR, config->theme, path);
 	return strdup(buf);
 }
 
@@ -233,8 +232,8 @@ int open_fb()
 	if ((c = open(dev, O_RDWR)) == -1) {
 		sprintf(dev, PATH_DEV "/fb/%d", arg_fb);
 		if ((c = open(dev, O_RDWR)) == -1) {
-			printerr("Failed to open " PATH_DEV "/fb%d or "
-			         PATH_DEV "/fb/%d.\n", arg_fb, arg_fb);
+			iprint(MSG_ERROR, "Failed to open " PATH_DEV "/fb%d or "
+				   PATH_DEV "/fb/%d.\n", arg_fb, arg_fb);
 			return 0;
 		}
 	}
@@ -251,8 +250,8 @@ int open_tty(int tty)
 	if ((c = open(dev, O_RDWR)) == -1) {
 		sprintf(dev, PATH_DEV "/vc/%d", tty);
 		if ((c = open(dev, O_RDWR)) == -1) {
-			printerr("Failed to open " PATH_DEV "/tty%d or "
-				 PATH_DEV "/vc/%d\n", tty, tty);
+			iprint(MSG_ERROR, "Failed to open " PATH_DEV "/tty%d or "
+			       PATH_DEV "/vc/%d\n", tty, tty);
 			return 0;
 		}
 	}

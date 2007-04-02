@@ -61,9 +61,12 @@ scfg_t* splash_lib_init(stype_t type)
 {
 	splash_init_config(&config, type);
 
+	/* The kernel helper cannot touch any tty devices. */
+#ifndef TARGET_KERNEL
 	if (fd_tty0 == -1) {
-		fd_tty0 = open("/dev/tty0", O_RDWR);
+		fd_tty0 = open(PATH_DEV "/tty0", O_RDWR);
 	}
+#endif
 	return &config;
 }
 
@@ -83,6 +86,8 @@ int splash_lib_cleanup(void)
  */
 int splash_init_config(scfg_t *cfg, stype_t type)
 {
+	char *s;
+
 	cfg->tty_s = TTY_SILENT;
 	cfg->tty_v = TTY_VERBOSE;
 	cfg->theme = strdup(DEFAULT_THEME);
@@ -93,9 +98,18 @@ int splash_init_config(scfg_t *cfg, stype_t type)
 	cfg->reqmode = 'o';
 	cfg->minstances = false;
 	cfg->progress = 0;
+	cfg->effects = EFF_NONE;
 	cfg->verbosity = VERB_NORMAL;
 
-	switch (type) {
+	s = getenv("PROGRESS");
+	if (s)
+		cfg->progress = atoi(s);
+
+	s = getenv("BOOT_MSG");
+	if (s) {
+		cfg->message = strdup(s);
+	} else {
+		switch (type) {
 		case reboot:
 			cfg->message = strdup(SYSMSG_REBOOT);
 			break;
@@ -112,6 +126,7 @@ int splash_init_config(scfg_t *cfg, stype_t type)
 		default:
 			cfg->message = strdup(SYSMSG_DEFAULT);
 			break;
+		}
 	}
 	return 0;
 }
@@ -120,62 +135,96 @@ int splash_init_config(scfg_t *cfg, stype_t type)
  * Parse the kernel command line to get splash settings
  * and save them in 'cfg'.
  */
-int splash_parse_kcmdline(scfg_t *cfg)
+int splash_parse_kcmdline(scfg_t *cfg, bool sysmsg)
 {
 	FILE *fp;
-	char *p, *t, *opt;
+	char *p, *t, *opt, *pbuf;
 	char *buf = malloc(1024);
-	int err = 0, i;
+	char quot;
+	int err = 0, i, len;
 
 	if (!buf)
 		return -1;
 
-	fp = fopen("/proc/cmdline", "r");
+	fp = fopen(PATH_PROC "/cmdline", "r");
 	if (!fp)
 		goto fail;
 
 	fgets(buf, 1024, fp);
 	fclose(fp);
 
-	i = strlen(buf);
+	len = strlen(buf);
 
 	/* Remove the newline character so that it doesn't get
 	 * included in the theme name. */
-	if (buf[i-1] == '\n') {
-		buf[i-1] = 0;
+	if (buf[len-1] == '\n') {
+		buf[len-1] = 0;
 	}
 
-	/* FIXME: add support for multiple splash= settings */
-	t = strstr(buf, "splash=");
-	if (!t)
-		goto fail;
+	if (sysmsg) {
+		t = strstr(buf, "BOOT_MSG=\"");
+		if (t) {
+			t += 10;
+			for (i = 0; i < len-(t-buf) && buf[i]; i++) {
+				if (t[i] == '"' && !quot)
+					break;
+				if (t[i] == '\\') {
+					quot = 1;
+				} else {
+					quot = 0;
+				}
+			}
+			t[i] = 0;
+			if (cfg->message)
+				free(cfg->message);
+			cfg->message = strdup(t);
+			t[i] = '"';
+		}
+	}
 
-	t += 7; p = t;
-	for (p = t; *p != ' ' && *p != 0; p++);
-	*p = 0;
+	pbuf = buf;
 
-	while ((opt = strsep(&t, ",")) != NULL) {
+	/* We support multiple splash= arguments on the kernel command line.
+	 * The arguments are passed from left to right. This is useful with
+	 * some bootloaders which don't let the user modify their config during
+	 * boot but which do provide a way to add arguments to the kernel. */
+	while ((pbuf = strstr(pbuf, "splash="))) {
 
-		if (!strncmp(opt, "tty:", 4)) {
-			cfg->tty_v = strtol(opt+4, NULL, 0);
-//		} else if (!strncmp(opt, "fadein", 6)) {
-//			arg_effects |= EFF_FADEIN;
-		} else if (!strncmp(opt, "verbose", 7)) {
-			cfg->reqmode = 'v';
-		} else if (!strncmp(opt, "silent", 6)) {
-			cfg->reqmode = 's';
-		} else if (!strncmp(opt, "off", 3)) {
-			cfg->reqmode = 'o';
-		} else if (!strncmp(opt, "insane", 6)) {
-			cfg->insane = true;
-		} else if (!strncmp(opt, "theme:", 6)) {
-			if (cfg->theme)
-				free(cfg->theme);
-			cfg->theme = strdup(opt+6);
-		} else if (!strncmp(opt, "kdgraphics", 10)) {
-			cfg->kdmode = KD_GRAPHICS;
-		} else if (!strncmp(opt, "profile", 7)) {
-			cfg->profile = 1;
+		t = pbuf;
+		t += 7; p = t;
+
+		for (p = t; *p != ' ' && *p != 0; p++);
+
+		if (*p != 0)
+			pbuf = p+1;
+		else
+			pbuf = p;
+
+		*p = 0;
+
+		while ((opt = strsep(&t, ",")) != NULL) {
+
+			if (!strncmp(opt, "tty:", 4)) {
+				cfg->tty_v = strtol(opt+4, NULL, 0);
+			} else if (!strncmp(opt, "fadein", 6)) {
+				cfg->effects |= EFF_FADEIN;
+			} else if (!strncmp(opt, "verbose", 7)) {
+				cfg->reqmode = 'v';
+			} else if (!strncmp(opt, "silent", 6)) {
+				cfg->reqmode = 's';
+			} else if (!strncmp(opt, "off", 3)) {
+				cfg->reqmode = 'o';
+			} else if (!strncmp(opt, "insane", 6)) {
+				cfg->insane = true;
+			} else if (!strncmp(opt, "theme:", 6)) {
+				if (cfg->theme)
+					free(cfg->theme);
+				cfg->theme = strdup(opt+6);
+			} else if (!strncmp(opt, "kdgraphics", 10)) {
+				cfg->kdmode = KD_GRAPHICS;
+			} else if (!strncmp(opt, "profile", 7)) {
+				cfg->profile = 1;
+			}
 		}
 	}
 
@@ -198,6 +247,7 @@ int splash_set_verbose(void)
 	return ioctl(fd_tty0, VT_ACTIVATE, config.tty_v);
 }
 
+#ifndef TARGET_KERNEL
 /*
  * Switch to silent mode.
  */
@@ -284,7 +334,7 @@ int splash_daemon_check(int *pid_daemon)
 	}
 	fclose(fp);
 
-	sprintf(buf, "/proc/%d/stat", *pid_daemon);
+	sprintf(buf, PATH_PROC "/%d/stat", *pid_daemon);
 	fp = fopen(buf, "r");
 	if (!fp)
 		goto stale;
@@ -350,8 +400,8 @@ bool splash_evdev_set(void)
 	int i, j;
 
 	char *evdev_cmds[] = {
-		"/bin/grep -Hsi keyboard /sys/class/input/event*/device/driver/description | /bin/grep -o 'event[0-9]\\+'",
-		"/bin/grep -s -m 1 '^H: Handlers=kbd' /proc/bus/input/devices | grep -o 'event[0-9]\\+'"
+		"/bin/grep -Hsi keyboard " PATH_SYS "/class/input/event*/device/driver/description | /bin/grep -o 'event[0-9]\\+'",
+		"/bin/grep -s -m 1 '^H: Handlers=kbd' " PATH_PROC "/bus/input/devices | grep -o 'event[0-9]\\+'"
 	};
 
 	/* Try to activate the event device interface so that F2 can
@@ -371,7 +421,7 @@ bool splash_evdev_set(void)
 	}
 
 	if (buf[0] != 0) {
-		splash_send("set event /dev/input/%s\n", buf);
+		splash_send("set event dev " PATH_DEV "/input/%s\n", buf);
 		return true;
 	} else {
 		return false;
@@ -381,7 +431,6 @@ bool splash_evdev_set(void)
 /*
  * Save splash profiling data.
  */
-#ifndef TARGET_KERNEL
 int splash_profile(const char *fmt, ...)
 {
 	va_list ap;
@@ -391,7 +440,7 @@ int splash_profile(const char *fmt, ...)
 	if (config.profile)
 		return 0;
 
-	fp = fopen("/proc/uptime", "r");
+	fp = fopen(PATH_PROC "/uptime", "r");
 	if (!fp)
 		return -1;
 	fscanf(fp, "%f", &uptime);
@@ -407,7 +456,6 @@ int splash_profile(const char *fmt, ...)
 	va_end(ap);
 	return 0;
 }
-#endif
 
 /*
  * Send stuff to the splash daemon using the splash FIFO.
@@ -444,4 +492,6 @@ int splash_send(const char *fmt, ...)
 	splash_profile("comm %s", cmd);
 	return 0;
 }
+
+#endif /* TARGET_KERNEL */
 

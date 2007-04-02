@@ -14,9 +14,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
-#include "splash.h"
+#include "util.h"
 
-#define FADEIN_STEPS 	128
+#define FADEIN_STEPS	128
 #define FADEIN_STEPS_DC 256
 
 void put_img(u8 *dst, u8 *src)

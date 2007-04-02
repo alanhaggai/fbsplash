@@ -118,10 +118,10 @@ int cmd_exit(void **args)
  */
 int cmd_set_theme(void **args)
 {
-	if (config.theme)
-		free(config.theme);
+	if (config->theme)
+		free(config->theme);
 
-	config.theme = strdup(args[0]);
+	config->theme = strdup(args[0]);
 
 	pthread_mutex_lock(&mtx_paint);
 	reload_theme();
@@ -351,7 +351,7 @@ int cmd_progress(void **args)
 	if (*(int*)args[0] < 0 || *(int*)args[0] > PROGRESS_MAX)
 		return -1;
 
-	arg_progress = *(int*)args[0];
+	config->progress = *(int*)args[0];
 	return 0;
 }
 
@@ -364,9 +364,9 @@ int cmd_progress(void **args)
 int cmd_set_mesg(void **args)
 {
 #ifdef CONFIG_TTF
-	if (boot_message)
-		free(boot_message);
-	boot_message = strdup(args[0]);
+	if (config->message)
+		free(config->message);
+	config->message = strdup(args[0]);
 #endif
 	return 0;
 }

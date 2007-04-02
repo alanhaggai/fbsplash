@@ -1,15 +1,15 @@
 /*
- * list.c - list utility functions 
- * 
+ * list.c - list utility functions
+ *
  * Copyright (C) 2005 Michal Januszewski <spock@gentoo.org>
- * 
+ *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
  * more details.
  *
  */
 #include <stdlib.h>
-#include "splash.h"
+#include "util.h"
 
 void list_add(list *l, void *obj)
 {

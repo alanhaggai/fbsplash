@@ -237,7 +237,7 @@ void switch_silent()
 	get_fb_settings(arg_fb);
 
 	/* Set KD_GRAPHICS if necessary. */
-	if (config.kdmode == KD_GRAPHICS)
+	if (config->kdmode == KD_GRAPHICS)
 		ioctl(fd_tty_s, KDSETMODE, KD_GRAPHICS);
 
 	/* Update CMAP if we're in a DIRECTCOLOR mode. */
@@ -257,7 +257,7 @@ void switch_silent()
 		pthread_mutex_lock(&mtx_paint);
 
 		if (reload_theme()) {
-			fprintf(stderr, "Failed to (re-)load the '%s' theme.\n", config.theme);
+			fprintf(stderr, "Failed to (re-)load the '%s' theme.\n", config->theme);
 			exit(1);
 		}
 
@@ -266,7 +266,7 @@ void switch_silent()
 			      MAP_SHARED, fd_fb, 0);
 
 		if (fb_mem == MAP_FAILED) {
-			printerr("mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
+			iprint(MSG_ERROR, "mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
 			exit(1);
 		}
 
@@ -610,7 +610,7 @@ int reload_theme(void)
 	if (config_file)
 		free(config_file);
 
-	config_file = get_cfg_file(config.theme);
+	config_file = get_cfg_file(config->theme);
 	if (!config_file)
 		return -1;
 
@@ -690,7 +690,7 @@ void daemon_start()
 	struct vt_stat vtstat;
 	sigset_t sigset;
 
-	if (!config.minstances && (i = daemon_check_running("splash_util"))) {
+	if (!config->minstances && (i = daemon_check_running("splash_util"))) {
 		iprint(MSG_ERROR, "It looks like there's another instance of the splash daemon running (pid %d).\n", i);
 		iprint(MSG_ERROR, "Stop it first or run this program with `--minstances'.\n");
 		exit(1);

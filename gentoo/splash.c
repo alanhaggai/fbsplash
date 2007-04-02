@@ -547,7 +547,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	if (!config) {
 		config = splash_lib_init(type);
 		splash_config_gentoo(config, type);
-		splash_parse_kcmdline(config);
+		splash_parse_kcmdline(config, false);
 	}
 
 	/* Extremely weird.. should never happen. */

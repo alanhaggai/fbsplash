@@ -9,8 +9,10 @@
 #include <linux/tty.h>
 #include <linux/input.h>
 
+#include "splash.h"
+
 /* FIXME:
- * It should be perfectly OK to include sys/vt.h when building the kernel 
+ * It should be perfectly OK to include sys/vt.h when building the kernel
  * helper, but we don't do that to avoid problems with broken klibc versions.
  */
 #ifdef TARGET_KERNEL
@@ -56,14 +58,10 @@ typedef int8_t		s8;
 typedef int16_t		s16;
 typedef int32_t		s32;
 
-extern sendian_t endianess;
 typedef enum endianess { little, big } sendian_t;
 
-void vt_cursor_enable(int fd);
-void vt_cursor_disable(int fd);
-
-int tty_silent_set(int tty, int fd);
-int tty_silent_unset(int fd);
+extern sendian_t endianess;
+extern scfg_t *config;
 
 /* Message levels */
 #define MSG_CRITICAL	0
@@ -76,12 +74,12 @@ int tty_silent_unset(int fd);
 #define max(a,b)		((a) > (b) ? (a) : (b))
 
 #define iprint(type, args...) do {				\
-	if (config.verbosity == VERB_QUIET)			\
+	if (config->verbosity == VERB_QUIET)		\
 		break;									\
 												\
 	if (type <= MSG_ERROR) {					\
 		fprintf(stderr, ## args);				\
-	} else if (config.verbosity == VERB_HIGH) {	\
+	} else if (config->verbosity == VERB_HIGH) {	\
 		fprintf(stdout, ## args);				\
 	}											\
 } while (0);
@@ -251,6 +249,7 @@ struct splash_config {
  * ************************************************************************ */
 
 /* common.c */
+void detect_endianess(sendian_t *end);
 int get_fb_settings(int fb_num);
 char *get_cfg_file(char *theme);
 int do_getpic(unsigned char, unsigned char, char);
@@ -258,6 +257,10 @@ int cfg_check_sanity(unsigned char mode);
 char *get_filepath(char *path);
 int open_fb();
 int open_tty(int);
+void vt_cursor_enable(int fd);
+void vt_cursor_disable(int fd);
+int tty_silent_set(int tty, int fd);
+int tty_silent_unset(int fd);
 
 /* parse.c */
 int parse_cfg(char *cfgfile);
@@ -319,8 +322,6 @@ extern enum TASK arg_task;
 extern int arg_fb;
 extern int arg_vc;
 extern char *arg_pidfile;
-extern char arg_mode;
-extern u16 arg_progress;
 #ifndef TARGET_KERNEL
 extern char *arg_export;
 extern u8 theme_loaded;

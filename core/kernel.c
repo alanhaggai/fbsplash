@@ -26,8 +26,6 @@
 
 #include "util.h"
 
-#define EFF_FADEIN 1
-
 /* Opens /dev/console as stdout and stderr. */
 void prep_io()
 {
@@ -51,11 +49,9 @@ int handle_init(u8 update)
 	char *t, *p;
 	int fd, fd_vc, fd_fb, h, cnt;
 	u8 created_dev = 0;
-	u8 effects = 0;
 #ifdef CONFIG_FBSPLASH
 	u8 fbsplash = 1;
 #endif
-	arg_mode = ' ';
 
 	/* If possible, make sure that the error messages don't go straight
 	 * to /dev/null and are displayed on the screen instead. */
@@ -65,100 +61,35 @@ int handle_init(u8 update)
 
 	/* Mount the proc filesystem */
 	h = mount("proc", PATH_PROC, "proc", 0, NULL);
-	fd = open(PATH_PROC "/cmdline", O_RDONLY);
-	if (fd != -1 && (cnt = read(fd, buf, 1024)) > 0) {
-		char *opt;
-#ifdef CONFIG_TTF_KERNEL
-		char quot = 0;
-		int i;
-#endif
-		buf[cnt-1] = 0;
-
-#ifdef CONFIG_TTF_KERNEL
-		t = strstr(buf, "BOOT_MSG=\"");
-		if (t) {
-			t += 10;
-			for (i = 0; i < cnt-(t-buf) && buf[i]; i++) {
-				if (t[i] == '"' && !quot)
-					break;
-				if (t[i] == '\\') {
-					quot = 1;
-				} else {
-					quot = 0;
-				}
-			}
-
-			t[i] = 0;
-			boot_message = strdup(t);
-		}
-#endif
-		t = strstr(buf, "splash=");
-		if (!t)
-			goto parse_failure;
-
-		t += 7; p = t;
-		for (p = t; *p != ' ' && *p != 0; p++);
-		*p = 0;
-
-		while ((opt = strsep(&t, ",")) != NULL) {
-			if (!strncmp(opt, "tty:", 4)) {
-				stty = strtol(opt+4, NULL, 0);
-			} else if (!strncmp(opt, "fadein", 6)) {
-				effects |= EFF_FADEIN;
-			} else if (!strncmp(opt, "verbose", 7)) {
-				arg_mode = 'v';
-			} else if (!strncmp(opt, "silent", 6)) {
-				arg_mode = 's';
-			} else if (!strncmp(opt, "theme:", 6)) {
-				config.theme = strdup(opt+6);
-			} else if (!strncmp(opt, "kdgraphics", 10)) {
-				config.kdmode = KD_GRAPHICS;
-			}
-		}
-	} else {
-		/* If we can't parse the command line, we can't
-		 * make any assumptions as to in which mode splash
-		 * is to be started -- so we just quit. */
-parse_failure:	if (h == 0)
-			umount(PATH_PROC);
-
-		return -1;
-	}
-
-	close(fd);
-
+	splash_parse_kcmdline(config, true);
 	if (h == 0)
 		umount(PATH_PROC);
 
 	/* We don't want to use any effects if we're just updating the image.
 	 * Nor do we want to mess with the verbose mode. */
 	if (update) {
-		effects = 0;
+		config->effects = EFF_NONE;
 #ifdef CONFIG_FBSPLASH
 		fbsplash = 0;
 #endif
 	}
 
-	/* If no mode was specified, we can't make any decisions
-	 * by ourselves. */
-	if (arg_mode == ' ')
+	if (config->reqmode == 'o')
 		return 0;
 
-#ifdef CONFIG_FBSPLASH
-	if (!update) {
-		create_dev(SPLASH_DEV, PATH_SYS "/class/misc/fbsplash/dev", 0x1);
-	}
-#endif
-	if (!config.theme) {
-		config.theme = strdup(DEFAULT_THEME);
-	}
+	if (!config->theme)
+		return -1;
 
-	config_file = get_cfg_file(config.theme);
+	config_file = get_cfg_file(config->theme);
 	if (!config_file)
 		return -1;
 	parse_cfg(config_file);
 
 #ifdef CONFIG_FBSPLASH
+	if (!update) {
+		create_dev(SPLASH_DEV, PATH_SYS "/class/misc/fbsplash/dev", 0x1);
+	}
+
 	if (!update && !cfg_check_sanity('v')) {
 		/* Load the configuration and the verbose background picture
 		 * but don't activate fbsplash just yet. We'll enable it
@@ -173,7 +104,7 @@ parse_failure:	if (h == 0)
 	/* Activate verbose mode if it was explicitly requested. If silent mode
 	 * was requested, the verbose background image will be set after the
 	 * switch to the silent tty is complete. */
-	if (arg_mode != 's') {
+	if (config->reqmode != 's') {
 #ifdef CONFIG_FBSPLASH
 		/* Activate fbsplash on the first tty if the picture and
 		 * the config file were successfully loaded. */
@@ -233,13 +164,13 @@ parse_failure:	if (h == 0)
 
 	tty_silent_set(stty, fd_vc);
 
-	if (config.kdmode == KD_GRAPHICS)
+	if (config->kdmode == KD_GRAPHICS)
 		ioctl(fd_vc, KDSETMODE, KD_GRAPHICS);
 
 	if (silent_img.cmap.red)
 		ioctl(fd_fb, FBIOPUTCMAP, &silent_img.cmap);
 
-	if (effects & EFF_FADEIN) {
+	if (config->effects & EFF_FADEIN) {
 		fade_in(t, silent_img.data, silent_img.cmap, 1, fd_fb);
 	} else {
 		if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR)
@@ -276,7 +207,8 @@ int main(int argc, char **argv)
 	if (argc < 3)
 		goto out;
 
-	splash_init();
+	detect_endianess(&endianess);
+	config = splash_lib_init(undef);
 
 	if (strcmp(argv[1],"2") && strcmp(argv[1], "1")) {
 		fprintf(stderr, "Splash protocol mismatch: %s\n", argv[1]);
@@ -306,32 +238,19 @@ int main(int argc, char **argv)
 	/* On 'init' the theme isn't defined yet, and thus NULL is passed
 	 * instead of any meaningful value. */
 	if (argc > i && argv[i])
-		config.theme = strdup(argv[i]);
-	else
-		config.theme = NULL;
+		config->theme = strdup(argv[i]);
 
 	if (!mount("sysfs", PATH_SYS, "sysfs", 0, NULL))
 		mounts = 1;
 
 	get_fb_settings(arg_fb);
 
-	if (config.theme) {
-		config_file = get_cfg_file(config.theme);
-		if (!config_file)
-			goto out;
-		parse_cfg(config_file);
-	}
 
 #ifdef CONFIG_TTF_KERNEL
 	if (TTF_Init() < 0) {
 		fprintf(stderr, "Couldn't initialize TTF.\n");
 	}
-	boot_message = getenv("BOOT_MSG");
 #endif
-	/* The PROGRESS env. variable can be used to set the progress status. */
-	tmpc = getenv("PROGRESS");
-	if (tmpc)
-		arg_progress = atoi(tmpc);
 
 	if (!strcmp(argv[2],"init")) {
 		err = handle_init(0);
@@ -339,19 +258,26 @@ int main(int argc, char **argv)
 		err = handle_init(1);
 	}
 #ifdef CONFIG_FBSPLASH
-	else if (!strcmp(argv[2],"getpic")) {
-		err = cfg_check_sanity('v');
-		if (!err) {
-			err = do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, 'v');
-		}
-	} else if (!strcmp(argv[2],"modechange")) {
-		/* If we're missing a crucial element in the config file, don't
-		 * try to set the theme. */
-		err = cfg_check_sanity('v');
-		if (!err) {
-			cmd_setcfg(FB_SPLASH_IO_ORIG_KERNEL);
-			do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, 'v');
-			cmd_setstate(1, FB_SPLASH_IO_ORIG_KERNEL);
+	else if (config->theme) {
+		config_file = get_cfg_file(config->theme);
+		if (!config_file)
+			goto out;
+		parse_cfg(config_file);
+
+		if (!strcmp(argv[2],"getpic")) {
+			err = cfg_check_sanity('v');
+			if (!err) {
+				err = do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, 'v');
+			}
+		} else if (!strcmp(argv[2],"modechange")) {
+			/* If we're missing a crucial element in the config file, don't
+			 * try to set the theme. */
+			err = cfg_check_sanity('v');
+			if (!err) {
+				cmd_setcfg(FB_SPLASH_IO_ORIG_KERNEL);
+				do_getpic(FB_SPLASH_IO_ORIG_KERNEL, 1, 'v');
+				cmd_setstate(1, FB_SPLASH_IO_ORIG_KERNEL);
+			}
 		}
 	}
 #endif

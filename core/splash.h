@@ -12,11 +12,6 @@
 #define PATH_SYS	"/sys"
 #define SPLASH_DEV	PATH_DEV"/fbsplash"
 
-#if defined(TARGET_KERNEL)
-	#define PATH_SYS	"/splash/sys"
-	#define PATH_PROC	"/splash/proc"
-#endif
-
 #ifndef LIBDIR
 	#define LIBDIR "lib"
 #endif
@@ -48,10 +43,19 @@
 /* Non-adjustable settings. */
 #define PROGRESS_MAX	0xffff
 
+#if defined(TARGET_KERNEL)
+	#define PATH_SYS	"/splash/sys"
+	#define PATH_PROC	"/splash/proc"
+#endif
+
 /* Verbosity levels */
 #define VERB_QUIET		0
 #define VERB_NORMAL		1
 #define VERB_HIGH	    2
+
+/* Effects */
+#define EFF_NONE		0
+#define EFF_FADEIN		1
 
 typedef enum sp_type { undef, bootup, reboot, shutdown } stype_t;
 
@@ -61,6 +65,7 @@ typedef struct
 	char *theme;	/* theme */
 	char *message;	/* system message */
 	int kdmode;		/* KD_TEXT or KD_GRAPHICS */
+	char effects;	/* fadein, etc */
 	int tty_s;		/* silent tty */
 	int tty_v;		/* verbose tty */
 	char *pidfile;	/* pidfile */
@@ -80,7 +85,7 @@ typedef struct
 scfg_t* splash_lib_init(stype_t type);
 int splash_lib_cleanup();
 int splash_init_config(scfg_t *cfg, stype_t type);
-int splash_parse_kcmdline(scfg_t *cfg);
+int splash_parse_kcmdline(scfg_t *cfg, bool sysmsg);
 int splash_profile(const char *fmt, ...);
 int splash_set_verbose(void);
 int splash_set_silent(void);

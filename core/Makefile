@@ -128,11 +128,11 @@ SP_MNGR	  = splash_manager
 
 #### make rules below #####
 
-all:	objdir libsplash.so splash_kern splash_user
+all:	objdir $(OBJDIR)/libsplash.so splash_kern splash_user
 
-libsplash.so: $(OBJDIR)/libsplash.o
+$(OBJDIR)/libsplash.so: $(OBJDIR)/libsplash.o
 	@$(call infmsg,LD,$@)
-	$(Q)$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,$@ -o $(OBJDIR)/$@ -leinfo $+
+	$(Q)$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,libsplash.so -o $@ -leinfo $+
 
 splash_user: $(OBJDIR)/$(SP_UTIL)
 

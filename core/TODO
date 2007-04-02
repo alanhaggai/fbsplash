@@ -1,8 +1,8 @@
 - documentation update
+  - manpages for splash_util, splash_manager and splash_geninitramfs
+  - info about porting splash
 
 - use popen to get program output (?)
-
-- convert all printerr/printwarn to iprint
 
 - handle con2fb_map properly
 

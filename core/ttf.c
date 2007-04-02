@@ -27,10 +27,9 @@
 #include <freetype/ftoutln.h>
 #include <freetype/ttnameid.h>
 
-#include "splash.h"
+#include "util.h"
 
 TTF_Font *global_font;
-char *boot_message = NULL;
 int boot_msg_width = 0;
 
 #define DEFAULT_PTSIZE  18

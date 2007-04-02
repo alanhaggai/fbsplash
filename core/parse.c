@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <ctype.h>
-#include "splash.h"
+#include "util.h"
 
 struct config_opt {
 	char *name;
@@ -189,7 +189,7 @@ char *get_fontpath(char *t)
 		return strdup(t);
 	}
 		
-	snprintf(buf, 512, "%s/%s/%s", THEME_DIR, config.theme, t);
+	snprintf(buf, 512, "%s/%s/%s", THEME_DIR, config->theme, t);
 	snprintf(buf2, 512, "%s/%s", THEME_DIR, t);
 	
 	stat(buf, &st1);
@@ -652,7 +652,7 @@ void parse_anim(char *t)
 	canim->mng = mng_load(filename, &canim->w, &canim->h);
 	if (!canim->mng) {
 		free(filename);
-		printerr("Cannot allocate memory for mng (parse_anim)!\n");
+		iprint(MSG_ERROR,"Cannot allocate memory for mng (parse_anim)!\n");
 		goto pa_out;
 	}
 
@@ -660,7 +660,7 @@ void parse_anim(char *t)
 
 	cobj = malloc(sizeof(obj));
 	if (!cobj) {
-		printerr("Cannot allocate memory (parse_anim)!\n");
+		iprint(MSG_ERROR,"Cannot allocate memory (parse_anim)!\n");
 		goto pa_out;
 	}
 	cobj->type = o_anim;
@@ -815,7 +815,7 @@ char *parse_quoted_string(char *t, u8 keepvar)
 	len = p-t;
 	out = malloc(len - cnt + 1);
 	if (!out) {
-		printerr("Failed to allocate memory for a quoted string.\n");
+		iprint(MSG_ERROR, "Failed to allocate memory for a quoted string.\n");
 		return NULL;
 	}
 
@@ -1006,7 +1006,7 @@ void parse_text(char *t)
 
 pt_end:	cobj = malloc(sizeof(obj));
 	if (!cobj) {
-pt_outm:	printerr("Cannot allocate memory (parse_text)!\n");
+pt_outm:	iprint(MSG_ERROR, "Cannot allocate memory (parse_text)!\n");
 		goto pt_out;
 	}
 	cobj->type = o_text;
@@ -1015,7 +1015,7 @@ pt_outm:	printerr("Cannot allocate memory (parse_text)!\n");
 	return;
 
 pt_err:
-	printerr("parse error @ line %d\n", line);
+	iprint(MSG_ERROR, "parse error @ line %d\n", line);
 pt_out:	free(ct);
 	if (fpath)
 		free(fpath);

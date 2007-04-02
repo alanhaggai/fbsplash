@@ -28,7 +28,7 @@
   #include <jpeglib.h>
 #endif
 
-#include "splash.h"
+#include "util.h"
 
 struct fb_image verbose_img;
 struct fb_image silent_img;

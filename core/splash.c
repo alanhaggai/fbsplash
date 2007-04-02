@@ -23,7 +23,7 @@
 #include <getopt.h>
 #include <unistd.h>
 
-#include "splash.h"
+#include "util.h"
 
 struct option options[] = {
 	{ "fb",		required_argument, NULL, 0x100 },
@@ -116,11 +116,11 @@ void usage(void)
 int main(int argc, char **argv)
 {
 	char dev[16];
-	char *msg;
 	unsigned int c, i;
 	int fp, err = 0;
 
-	splash_init();
+	detect_endianess(&endianess);
+	config = splash_lib_init(undef);
 
 	arg_task = none;
 	arg_vc = -1;
@@ -128,10 +128,6 @@ int main(int argc, char **argv)
 	verbose_img.cmap.red = silent_img.cmap.red = NULL;
 
 #ifdef CONFIG_TTF
-	msg = getenv("BOOT_MSG");
-	if (msg)
-		boot_message = strdup(msg);
-
 	if (TTF_Init() < 0) {
 		fprintf(stderr, "Couldn't initialize TTF.\n");
 		return -1;
@@ -156,7 +152,9 @@ int main(int argc, char **argv)
 
 		case 0x103:
 		case 't':
-			config.theme = strdup(optarg);
+			if (config->theme)
+				free(config->theme);
+			config->theme = strdup(optarg);
 			break;
 
 		case 0x102:
@@ -172,14 +170,14 @@ int main(int argc, char **argv)
 		case 'm':
 		case 0x104:
 			if (optarg[0] == 's')
-				arg_mode = 's';
+				config->reqmode = 's';
 			else
-				arg_mode = 'v';
+				config->reqmode = 'v';
 			break;
 
 		case 'p':
 		case 0x105:
-			arg_progress = atoi(optarg);
+			config->progress = atoi(optarg);
 			break;
 
 		case 0x106:
@@ -194,11 +192,13 @@ int main(int argc, char **argv)
 			break;
 
 		case 0x108:
-			config.kdmode = KD_GRAPHICS;
+			config->kdmode = KD_GRAPHICS;
 			break;
 #ifdef CONFIG_TTF
 		case 0x109:
-			boot_message = strdup(optarg);
+			if (config->message)
+				free(config->message);
+			config->message = strdup(optarg);
 			break;
 #endif
 		case 0x10a:
@@ -206,7 +206,7 @@ int main(int argc, char **argv)
 			break;
 
 		case 0x10b:
-			config.minstances = true;
+			config->minstances = true;
 			break;
 
 		case 'd':
@@ -215,11 +215,11 @@ int main(int argc, char **argv)
 
 		/* Verbosity level adjustment. */
 		case 'q':
-			config.verbosity = VERB_QUIET;
+			config->verbosity = VERB_QUIET;
 			break;
 
 		case 'v':
-			config.verbosity = VERB_HIGH;
+			config->verbosity = VERB_HIGH;
 			break;
 		}
 	}
@@ -232,8 +232,8 @@ int main(int argc, char **argv)
 	if (get_fb_settings(arg_fb))
 		return -1;
 
-	if (config.theme)
-		config_file = get_cfg_file(config.theme);
+	if (config->theme)
+		config_file = get_cfg_file(config->theme);
 
 	if (config_file)
 		parse_cfg(config_file);
@@ -264,7 +264,7 @@ int main(int argc, char **argv)
 		struct vt_stat stat;
 
 		/* Setpic only makes sense in verbose mode. */
-		if (arg_mode != 'v')
+		if (config->reqmode != 'v')
 			break;
 
 		if ((fp = open(PATH_DEV "/tty", O_NOCTTY)) != -1) {
@@ -279,7 +279,7 @@ int main(int argc, char **argv)
 		if (err)
 			break;
 
-		err = do_getpic(FB_SPLASH_IO_ORIG_USER, 1, arg_mode);
+		err = do_getpic(FB_SPLASH_IO_ORIG_USER, 1, config->reqmode);
 setpic_out:	break;
 	}
 
@@ -323,14 +323,14 @@ setpic_out:	break;
 			fp = open_tty(arg_vc+1);
 			t = arg_vc+1;
 		} else {
-			t = (arg_mode == 's') ? TTY_SILENT : TTY_VERBOSE;
+			t = (config->reqmode == 's') ? TTY_SILENT : TTY_VERBOSE;
 			fp = open_tty(t);
 		}
 
 		if (fp < 0)
 			break;
 
-		if (arg_mode == 's') {
+		if (config->reqmode == 's') {
 			tty_silent_set(t, fp);
 		} else {
 			ioctl(fp, VT_ACTIVATE, t);
@@ -391,16 +391,16 @@ setpic_out:	break;
 		}
 
 		/* Make sure the config file contains sane settings. */
-		err = cfg_check_sanity(arg_mode);
+		err = cfg_check_sanity(config->reqmode);
 		if (err)
 			break;
 
-		if (do_getpic(FB_SPLASH_IO_ORIG_USER, 0, arg_mode)) {
+		if (do_getpic(FB_SPLASH_IO_ORIG_USER, 0, config->reqmode)) {
 			err = -1;
 			break;
 		}
 
-		if (arg_mode == 's') {
+		if (config->reqmode == 's') {
 			pic = silent_img;
 		} else {
 			pic = verbose_img;
@@ -409,7 +409,7 @@ setpic_out:	break;
 		if (pic.cmap.red)
 			ioctl(c, FBIOPUTCMAP, &pic.cmap);
 
-		if (arg_task == repaint || arg_mode == 'v') {
+		if (arg_task == repaint || config->reqmode == 'v') {
 			put_img(out, (u8*)pic.data);
 		} else {
 			do_paint(out, (u8*)pic.data);
