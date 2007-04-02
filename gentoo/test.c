@@ -17,8 +17,22 @@ int main(int argc, char **argv)
 {
 	void *h = dlopen("./splash.so", RTLD_LAZY);
 	void *f = dlsym(h, "_splash_hook");
+	char **list;
+	int i = 0;
 
-	rename(SPLASH_TMPDIR"/profile", SPLASH_CACHEDIR"/profile");
+//	rename(SPLASH_TMPDIR"/profile", SPLASH_CACHEDIR"/profile");
+
+	rc_depinfo_t *deptree = NULL;
+
+	deptree = rc_load_deptree();
+	list = rc_order_services (deptree, "reboot", RC_DEP_STOP);
+
+	while(list && list[i]) {
+		printf("%s ", list[i]);
+		i++;
+	}
+
+	printf("\n");
 
 /*f (mount("cachedir", SPLASH_CACHEDIR, "tmpfs", MS_MGC_VAL, "mode=0644,size=4096k")) {
 		printf("failed: %s\n", strerror(errno));
