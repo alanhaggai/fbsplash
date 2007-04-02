@@ -1,5 +1,5 @@
-#ifndef __SPLASH_OLD_H
-#define __SPLASH_OLD_H
+#ifndef __UTIL_H
+#define __UTIL_H
 
 #include "config.h"
 #include <stdio.h>
@@ -41,9 +41,50 @@
 	#endif
 #endif
 
-/* Useful macros. */
-#define printerr(args...)	fprintf(stderr, ## args);
-#define printwarn(args...)	fprintf(stderr, ## args);
+/* Necessary to avoid compilation errors when fbsplash support is
+   disabled. */
+#if !defined(CONFIG_FBSPLASH)
+	#define FB_SPLASH_IO_ORIG_USER		0
+	#define FB_SPLASH_IO_ORIG_KERNEL	1
+#endif
+
+/* Useful short-named types */
+typedef u_int8_t	u8;
+typedef u_int16_t	u16;
+typedef u_int32_t	u32;
+typedef int8_t		s8;
+typedef int16_t		s16;
+typedef int32_t		s32;
+
+extern sendian_t endianess;
+typedef enum endianess { little, big } sendian_t;
+
+void vt_cursor_enable(int fd);
+void vt_cursor_disable(int fd);
+
+int tty_silent_set(int tty, int fd);
+int tty_silent_unset(int fd);
+
+/* Message levels */
+#define MSG_CRITICAL	0
+#define MSG_ERROR		1
+#define MSG_WARN		2
+#define MSG_INFO		3
+
+/* Useful macros */
+#define min(a,b)		((a) < (b) ? (a) : (b))
+#define max(a,b)		((a) > (b) ? (a) : (b))
+
+#define iprint(type, args...) do {				\
+	if (config.verbosity == VERB_QUIET)			\
+		break;									\
+												\
+	if (type <= MSG_ERROR) {					\
+		fprintf(stderr, ## args);				\
+	} else if (config.verbosity == VERB_HIGH) {	\
+		fprintf(stdout, ## args);				\
+	}											\
+} while (0);
 
 #define CLAMP(x)		((x) > 255 ? 255 : (x))
 #define DEBUG(x...)
@@ -306,4 +347,4 @@ extern u8 fb_opt;
 extern u8 fb_ro, fb_go, fb_bo;
 extern u8 fb_rlen, fb_glen, fb_blen;
 
-#endif /* __SPLASH_OLD_H */
+#endif /* __UTIL_H */

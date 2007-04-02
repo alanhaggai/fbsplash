@@ -11,31 +11,17 @@
  * more details.
  *
  */
-
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
-
 #include <sys/wait.h>
-#include <sys/types.h>
-#include <sys/mount.h>
-#include <sys/stat.h>
-
 #include <linux/kd.h>
-#include <linux/fs.h>
-
-#if !defined(MNT_DETACH)
-	#define MNT_DETACH 2
-#endif
-/* FIXME */
-#define __SPLASH_OLD_H
-
 #include <einfo.h>
 #include <rc.h>
-#include "../core/splash.h"
+#include <splash.h>
 
 #define SPLASH_CMD "bash -c 'export SOFTLEVEL='%s'; export BOOTLEVEL="RC_LEVEL_BOOT";" \
 				   "export DEFAULTLEVEL="RC_LEVEL_DEFAULT"; export svcdir=${RC_SVCDIR};" \
@@ -44,11 +30,13 @@
 static char		**svcs = NULL;
 static int		svcs_cnt = 0;
 static int		svcs_done_cnt = 0;
-static int		progress = 0;
 static pid_t	pid_daemon = 0;
-static FILE*	fp_fifo = NULL;
+static scfg_t	*config = NULL;
 
-static int list_count(char **list)
+/*
+ * Count the number of items in a strlist.
+ */
+static int strlist_count(char **list)
 {
 	int c;
 
@@ -58,6 +46,9 @@ static int list_count(char **list)
 	return c;
 }
 
+/*
+ * Create a strlist from a file. Used for svcs_start/svcs_stop.
+ */
 static char **get_list(char **list, const char *file)
 {
 	FILE *fp;
@@ -97,36 +88,9 @@ static char **get_list(char **list, const char *file)
 	return list;
 }
 
-static int splash_sanity_check()
-{
-	FILE *fp;
-	char buf[128];
-
-	fp = popen("/bin/grep -E -e '(^| )CONSOLE=/dev/tty1( |$)' -e '(^| )console=tty1( |$)' /proc/cmdline", "r");
-	if (!fp)
-		goto err;
-
-	buf[0] = 0;
-	fgets(buf, 128, fp);
-	if (strlen(buf) == 0) {
-		pclose(fp);
-		goto err;
-	}
-	pclose(fp);
-	return 0;
-
-err:
-	/* Clear display. */
-	printf("\e[H\e[2J");
-	fflush(stdout);
-
-	ewarn("You don't appear to have a correct console= setting on your kernel");
-	ewarn("command line. Silent splash will not be enabled. Please add");
-	ewarn("console=tty1 or CONSOLE=/dev/tty1 to your kernel command line");
-	ewarn("to avoid this message.");
-	return -1;
-}
-
+/*
+ * Get splash settings from /etc/conf.d/splash
+ */
 static int splash_config_gentoo(scfg_t *cfg, stype_t type)
 {
 	char **confd;
@@ -215,11 +179,8 @@ static int splash_config_gentoo(scfg_t *cfg, stype_t type)
 }
 
 /*
- * splash_call(cmd, arg1, arg2)
- *
  * Call a function from /sbin/splash-functions.sh.
  * This is rather slow, so use it only when really necessary.
- *
  */
 static int splash_call(const char *cmd, const char *arg1, const char *arg2)
 {
@@ -248,6 +209,9 @@ static int splash_call(const char *cmd, const char *arg1, const char *arg2)
 	return l;
 }
 
+/*
+ * Run a theme hook script.
+ */
 static int splash_theme_hook(const char *name, const char *type, const char *arg1)
 {
 	char *buf;
@@ -259,10 +223,10 @@ static int splash_theme_hook(const char *name, const char *type, const char *arg
 		splash_profile("%s %s\n", type, name);
 
 	l += strlen(name);
-	l += strlen(config.theme);
+	l += strlen(config->theme);
 
 	buf = malloc(l * sizeof(char*));
-	snprintf(buf, 1024, "/etc/splash/%s/scripts/%s-%s", config.theme, name, type);
+	snprintf(buf, 1024, "/etc/splash/%s/scripts/%s-%s", config->theme, name, type);
 
 	if (!rc_is_exec(buf)) {
 		free(buf);
@@ -275,46 +239,14 @@ static int splash_theme_hook(const char *name, const char *type, const char *arg
 }
 
 /*
- * splash_send(cmd)
- *
- * Send cmd to the splash daemon.
+ * Update service state.
  */
-static int splash_send(char *cmd)
-{
-	if (!fp_fifo) {
-		int fd;
-
-		fd = open(SPLASH_FIFO, O_WRONLY | O_NONBLOCK);
-		if (fd == -1) {
-			eerror("Failed to open "SPLASH_FIFO": %s %s",
-					strerror(errno), (errno == ENXIO) ? "(is the splash daemon running?)" : "");
-			return -1;
-		}
-
-		fp_fifo = fdopen(fd, "w");
-		if (!fp_fifo) {
-			eerror("Failed to fdopen "SPLASH_FIFO": %s", strerror(errno));
-			return -1;
-		}
-		setbuf(fp_fifo, NULL);
-	}
-
-	fprintf(fp_fifo, cmd);
-	splash_profile("comm %s", cmd);
-	return 0;
-}
-
 static int splash_svc_state(const char *name, const char *state, bool paint)
 {
-	char buf[512];
-	int l;
-
 	if (paint)
 		splash_theme_hook(state, "pre", name);
 
-	l = snprintf(buf, 512, "update_svc %s %s\n", name, state);
-
-	splash_send(buf);
+	splash_send("update_svc %s %s\n", name, state);
 
 	if (paint) {
 		splash_send("paint\n");
@@ -324,42 +256,10 @@ static int splash_svc_state(const char *name, const char *state, bool paint)
 	return 0;
 }
 
-static int splash_daemon_check()
-{
-	int err = 0;
-	FILE *fp;
-	char buf[64];
-
-	fp = fopen(SPLASH_PIDFILE, "r");
-	if (!fp) {
-		eerror("Failed to open "SPLASH_PIDFILE);
-		return -1;
-	}
-
-	if (fscanf(fp, "%d", &pid_daemon) != 1) {
-		eerror("Failed to get the PID of the splash daemon.");
-		fclose(fp);
-		return -1;
-	}
-	fclose(fp);
-
-	sprintf(buf, "/proc/%d/stat", pid_daemon);
-	fp = fopen(buf, "r");
-	if (!fp)
-		goto stale;
-
-	if (fscanf(fp, "%*d (%s)", buf) != 1 || strncmp(buf, DAEMON_NAME, strlen(DAEMON_NAME)))
-		goto stale;
-
-out:
-	fclose(fp);
-	return err;
-stale:
-	err = -1;
-	eerror("Stale pidfile. Splash daemon not running.");
-	goto out;
-}
-
+/*
+ * Init splash config variables and check that the splash daemon
+ * is running.
+ */
 static int splash_init(bool start)
 {
 	rc_depinfo_t *deptree;
@@ -371,23 +271,23 @@ static int splash_init(bool start)
 	/* Booting.. */
 	if (start) {
 		svcs = get_list(NULL, SPLASH_CACHEDIR"/svcs_start");
-		svcs_cnt = list_count(svcs);
+		svcs_cnt = strlist_count(svcs);
 
 		tmp = rc_services_in_state(rc_service_started);
-		svcs_done_cnt = list_count(tmp);
+		svcs_done_cnt = strlist_count(tmp);
 		rc_strlist_free(tmp);
 
 		tmp = rc_services_in_state(rc_service_inactive);
-		svcs_done_cnt += list_count(tmp);
+		svcs_done_cnt += strlist_count(tmp);
 		rc_strlist_free(tmp);
 
 		tmp = rc_services_in_state(rc_service_failed);
-		svcs_done_cnt += list_count(tmp);
+		svcs_done_cnt +=  strlist_count(tmp);
 		rc_strlist_free(tmp);
 	/* .. or rebooting? */
 	} else {
 		svcs = get_list(NULL, SPLASH_CACHEDIR"/svcs_stop");
-		svcs_cnt = list_count(svcs);
+		svcs_cnt = strlist_count(svcs);
 
 		if ((deptree = rc_load_deptree()) == NULL) {
 			eerror("%s: failed to load deptree", __func__);
@@ -395,121 +295,45 @@ static int splash_init(bool start)
 		}
 
 		tmp = rc_order_services(deptree, rc_get_runlevel(), RC_DEP_STOP);
-		svcs_done_cnt = svcs_cnt - list_count(tmp);
+		svcs_done_cnt = svcs_cnt - strlist_count(tmp);
 		rc_strlist_free(tmp);
 
 		rc_free_deptree(deptree);
 		tmp = NULL;
 	}
 
-	if (splash_daemon_check())
+	if (splash_daemon_check(&pid_daemon))
 		return -1;
 
 	return 0;
 }
 
+/*
+ * Handle the start/stop of a single service.
+ */
 static int splash_svc_handle(const char *name, const char *state)
 {
-	char buf[512];
-
+	/* If we don't have any services, something must be broken.
+	 * Bail out since there is nothing we can do about it. */
 	if (svcs_cnt == 0)
 		return -1;
 
-	svcs_done_cnt++;
-
 	/* Recalculate progress */
-	progress = svcs_done_cnt * 65535 / svcs_cnt;
+	svcs_done_cnt++;
+	config->progress = svcs_done_cnt * PROGRESS_MAX / svcs_cnt;
 
 	splash_theme_hook(state, "pre", name);
 	splash_svc_state(name, state, 0);
-	snprintf(buf, 512, "progress %d\n", progress);
-	splash_send(buf);
+	splash_send("progress %d\n", config->progress);
 	splash_send("paint\n");
 	splash_theme_hook(state, "post", name);
 
 	return 0;
 }
 
-int splash_cache_prep()
-{
-	if (mount("cachedir", SPLASH_CACHEDIR, "tmpfs", MS_MGC_VAL, "mode=0644,size=4096k")) {
-		eerror("Unable to create splash cache: %s", strerror(errno));
-		return -1;
-	}
-
-	return 0;
-}
-
-int splash_cache_cleanup()
-{
-	int err = 0;
-	char *what = SPLASH_CACHEDIR;
-
-	if (!config.profile)
-		goto nosave;
-
-	if (!rc_is_dir(SPLASH_TMPDIR)) {
-		unlink(SPLASH_TMPDIR);
-		if ((err = mkdir(SPLASH_TMPDIR, 0700))) {
-			eerror("Failed to create " SPLASH_TMPDIR": %s", strerror(errno));
-			goto nosave;
-		}
-	}
-
-	if ((err = mount(SPLASH_CACHEDIR, SPLASH_TMPDIR, NULL, MS_MOVE, NULL))) {
-		eerror("Failed to move splash cache: %s", strerror(errno));
-		goto nosave;
-	}
-
-	err  = system("/bin/mv "SPLASH_TMPDIR"/profile "SPLASH_CACHEDIR"/profile");
-	err += system("/bin/mv "SPLASH_TMPDIR"/svcs_start "SPLASH_CACHEDIR"/svcs_start");
-	what = SPLASH_TMPDIR;
-
-nosave:
-	/* Clear a stale mtab entry created by /etc/init.d/checkroot */
-	system("/bin/sed -i -e '\\#"SPLASH_CACHEDIR"# d' /etc/mtab");
-
-	umount2(what, MNT_DETACH);
-	return err;
-}
-
-int splash_svcs_stop(const char *runlevel)
-{
-	rc_depinfo_t *deptree;
-	char **deporder, *s;
-	FILE *fp;
-	int i, err = 0;
-
-	fp = fopen(SPLASH_CACHEDIR"/svcs_stop", "w");
-	if (!fp) {
-		ewarn("%s: `%s': %s", __func__, SPLASH_CACHEDIR"/svcs_stop", strerror(errno));
-		return -1;
-	}
-
-	if ((deptree = rc_load_deptree()) == NULL) {
-		eerror("%s: failed to load deptree", __func__);
-		err = -2;
-		goto out;
-	}
-
-	deporder = rc_order_services(deptree, runlevel, RC_DEP_STOP);
-
-	i = 0;
-	if (deporder && deporder[0]) {
-		while ((s = deporder[i++])) {
-			if (i > 1)
-				fprintf(fp, " ");
-			fprintf(fp, "%s", s);
-		}
-	}
-
-	rc_strlist_free(deporder);
-	rc_free_deptree(deptree);
-out:
-	fclose(fp);
-	return err;
-}
-
+/*
+ * Create a list of services that will be started during bootup.
+ */
 int splash_svcs_start()
 {
 	rc_depinfo_t *deptree;
@@ -530,7 +354,7 @@ int splash_svcs_start()
 		goto out;
 	}
 
-	/* Get bootlevel and default level from env variables exported by RC.
+	/* Get boot and default levels from env variables exported by RC.
 	 * If unavailable, use the default ones. */
 	s = getenv("RC_BOOTLEVEL");
 	if (s)
@@ -586,24 +410,53 @@ out:
 }
 
 /*
- * splash_start(runlevel)
- *
+ * Create a list of services that will be stopped during reboot/shutdown.
+ */
+int splash_svcs_stop(const char *runlevel)
+{
+	rc_depinfo_t *deptree;
+	char **deporder, *s;
+	FILE *fp;
+	int i, err = 0;
+
+	fp = fopen(SPLASH_CACHEDIR"/svcs_stop", "w");
+	if (!fp) {
+		ewarn("%s: `%s': %s", __func__, SPLASH_CACHEDIR"/svcs_stop", strerror(errno));
+		return -1;
+	}
+
+	if ((deptree = rc_load_deptree()) == NULL) {
+		eerror("%s: failed to load deptree", __func__);
+		err = -2;
+		goto out;
+	}
+
+	deporder = rc_order_services(deptree, runlevel, RC_DEP_STOP);
+
+	i = 0;
+	if (deporder && deporder[0]) {
+		while ((s = deporder[i++])) {
+			if (i > 1)
+				fprintf(fp, " ");
+			fprintf(fp, "%s", s);
+		}
+	}
+
+	rc_strlist_free(deporder);
+	rc_free_deptree(deptree);
+out:
+	fclose(fp);
+	return err;
+}
+
+/*
  * Start the splash daemon during boot/reboot.
- *
  */
 static int splash_start(const char *runlevel)
 {
 	bool start;
 	int i, err = 0;
 	char buf[2048];
-	char buf2[128];
-	FILE *fp;
-
-	char *evdev_cmds[] = {
-		"/bin/grep -Hsi keyboard /sys/class/input/event*/device/driver/description | /bin/grep -o 'event[0-9]\\+'",
-		"/bin/grep -s -m 1 '^H: Handlers=kbd' /proc/bus/input/devices | grep -o 'event[0-9]\\+'"
-	};
-
 
 	/* Get a list of services that we'll have to handle. */
 	/* We're rebooting/shutting down. */
@@ -621,16 +474,13 @@ static int splash_start(const char *runlevel)
 	}
 	splash_theme_hook("rc_init", "pre", runlevel);
 
-	/* Perform sanity checks (console=, CONSOLE=). */
-	if (!config.insane) {
-		err = splash_sanity_check();
-		if (err)
-			return err;
-	}
+	/* Perform sanity checks (console=, CONSOLE= etc). */
+	if (!splash_sanity_check())
+		return -1;
 
 	/* Start the splash daemon */
 	snprintf(buf, 2048, "BOOT_MSG='%s' " SPLASH_EXEC " -d --theme=\"%s\" --pidfile=" SPLASH_PIDFILE " %s",
-			 config.message, config.theme, (config.kdmode == KD_GRAPHICS) ? "--kdgraphics" : "");
+			 config->message, config->theme, (config->kdmode == KD_GRAPHICS) ? "--kdgraphics" : "");
 
 	err = system(buf);
 	if (err == -1 || WEXITSTATUS(err) != 0) {
@@ -647,34 +497,16 @@ static int splash_start(const char *runlevel)
 		splash_svc_state(svcs[i], start ? "svc_inactive_start" : "svc_inactive_stop", 0);
 	}
 
-	/* Try to activate the event device interface so that F2 can
-	 * be used to switch from verbose to silent. */
-	buf2[0] = 0;
-	for (i = 0; i < sizeof(evdev_cmds)/sizeof(char*); i++) {
-		fp = popen(evdev_cmds[i], "r");
-		if (fp) {
-			fgets(buf2, 128, fp);
-			if (strlen(buf2) > 0) {
-				if (buf2[strlen(buf2)-1] == '\n')
-					buf2[strlen(buf2)-1] = 0;
-				break;
-			}
-			pclose(fp);
-		}
-	}
-
-	if (buf2[0] != 0) {
-		snprintf(buf, 128, "set event dev /dev/input/%s\n", buf2);
-		splash_send(buf);
-	}
-
-	snprintf(buf, 128, "set tty silent %d\n", config.tty_s);
-	splash_send(buf);
+	splash_evdev_set();
+	splash_send("set tty silent %d\n", config->tty_s);
 	splash_send("set mode silent\n");
 	splash_send("repaint\n");
 	return err;
 }
 
+/*
+ * Stop the splash daemon.
+ */
 static int splash_stop(const char *runlevel)
 {
 	char buf[128];
@@ -690,12 +522,10 @@ static int splash_stop(const char *runlevel)
 		cnt++;
 	}
 
-	return splash_cache_cleanup();
+	/* Just to be sure we aren't stuck in a black ex-silent tty.. */
+	splash_set_verbose();
 
-	/* TODO:
-	 * switch to verbose if running in silent mode. 
-	 * kill it the hard way
-	 */
+	return splash_cache_cleanup();
 }
 
 int _splash_hook (rc_hook_t hook, const char *name)
@@ -710,26 +540,22 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	else if (!strcmp(t, RC_LEVEL_SHUTDOWN))
 		type = shutdown;
 
-	/* Do nothing if we are at a very early stage of booting-up. */
-	switch (hook) {
-	case rc_hook_runlevel_start_in:
-	case rc_hook_runlevel_start_out:
-	case rc_hook_runlevel_stop_in:
-	case rc_hook_runlevel_stop_out:
-		if (!strcmp(name, RC_LEVEL_SYSINIT))
-			return 0;
-	default:
-		break;
+	/* Do nothing if we are in sysinit */
+	if (!strcmp(name, RC_LEVEL_SYSINIT))
+		return 0;
+
+	if (!config) {
+		config = splash_lib_init(type);
+		splash_config_gentoo(config, type);
+		splash_parse_kcmdline(config);
 	}
 
-	if (!config.theme) {
-		splash_init_lib(&config, type);
-		splash_config_gentoo(&config, type);
-		splash_parse_kcmdline(&config);
-	}
+	/* Extremely weird.. should never happen. */
+	if (!config)
+		return -1;
 
 	/* Don't do anything if we're not running in silent mode. */
-	if (config.reqmode != 's')
+	if (config->reqmode != 's')
 		return 0;
 
 	/* Don't do anything if we're starting/stopping a service, but
@@ -747,13 +573,12 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	}
 
 	switch (hook) {
-
 	case rc_hook_runlevel_stop_in:
 		/* Start the splash daemon on reboot. The theme hook is called
 		 * from splash_start(). */
 		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
 			if ((i = splash_start(name))) {
-				splash_verbose(&config);
+				splash_set_verbose();
 			} else {
 				if (rc_service_state("gpm", rc_service_started)) {
 					splash_send("set gpm\n");
@@ -775,7 +600,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		 * scripts. */
 		if (strcmp(name, RC_LEVEL_BOOT) == 0) {
 			if ((i = splash_start(RC_LEVEL_SYSINIT)))
-				splash_verbose(&config);
+				splash_set_verbose();
 			splash_theme_hook("rc_init", "post", RC_LEVEL_SYSINIT);
 			splash_theme_hook("rc_exit", "pre", RC_LEVEL_SYSINIT);
 			splash_theme_hook("rc_exit", "post", RC_LEVEL_SYSINIT);
@@ -785,7 +610,6 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		break;
 
 	case rc_hook_runlevel_start_out:
-
 		/* Stop the splash daemon after boot-up is finished. */
 		if (strcmp(name, RC_LEVEL_BOOT)) {
 			splash_theme_hook("rc_exit", "pre", name);
@@ -824,9 +648,9 @@ int _splash_hook (rc_hook_t hook, const char *name)
 			}
 		} else {
 			i = splash_svc_state(name, "svc_start_failed", 1);
-			if (config.vonerr) {
+			if (config->vonerr) {
 				ewarn("splash: service %s failed, switching to verbose mode", name);
-				splash_verbose(&config);
+				splash_set_verbose();
 			}
 		}
 		break;
@@ -837,7 +661,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 
 		/* We need to stop localmount from unmounting our cache dir.
 		   Luckily plugins can add to the unmount list. */
-		if (name && strcmp(name, "localmount") == 0) {
+		if (name && !strcmp(name, "localmount")) {
 			char *umounts = getenv("RC_NO_UMOUNTS");
 			char *new;
 			int i = strlen(SPLASH_CACHEDIR) + 1;
@@ -868,9 +692,9 @@ int _splash_hook (rc_hook_t hook, const char *name)
 			i = splash_svc_state(name, "svc_stopped", 1);
 		} else {
 			i = splash_svc_state(name, "svc_stop_failed", 1);
-			if (config.vonerr) {
+			if (config->vonerr) {
 				ewarn("splash: service %s failed, switching to verbose mode", name);
-				splash_verbose(&config);
+				splash_set_verbose();
 			}
 		}
 		break;

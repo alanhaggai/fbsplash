@@ -44,6 +44,19 @@ u8 fb_rlen, fb_glen, fb_blen;	/* red, green, blue length */
 struct fb_image pic;
 char *pic_file = NULL;
 
+sendian_t	endianess;
+
+static void detect_endianess(sendian_t *end)
+{
+	u16 t = 0x1122;
+
+	if (*(u8*)&t == 0x22) {
+		*end = little;
+	} else {
+		*end = big;
+	}
+}
+
 int get_fb_settings(int fb_num)
 {
 	char fn[32];
@@ -246,4 +259,48 @@ int open_tty(int tty)
 
 	return c;
 }
+
+void vt_cursor_disable(int fd)
+{
+	write(fd, "\e[?25l\e[?1c",11);
+}
+
+void vt_cursor_enable(int fd)
+{
+	write(fd, "\e[?25h\e[?0c",11);
+}
+
+/* FIXME: merge this with the functions from the daemon code. */
+
+int tty_silent_set(int tty, int fd)
+{
+	struct termios w;
+
+	tcgetattr(fd, &w);
+	w.c_lflag &= ~(ICANON|ECHO);
+	w.c_cc[VTIME] = 0;
+	w.c_cc[VMIN] = 1;
+	tcsetattr(fd, TCSANOW, &w);
+	vt_cursor_disable(fd);
+
+	ioctl(fd, VT_ACTIVATE, tty);
+	ioctl(fd, VT_WAITACTIVE, tty);
+
+	return 0;
+}
+
+int tty_silent_unset(int fd)
+{
+	struct termios w;
+
+	tcgetattr(fd, &w);
+	w.c_lflag &= (ICANON|ECHO);
+	w.c_cc[VTIME] = 0;
+	w.c_cc[VMIN] = 1;
+	tcsetattr(fd, TCSANOW, &w);
+	vt_cursor_enable(fd);
+
+	return 0;
+}
+
 

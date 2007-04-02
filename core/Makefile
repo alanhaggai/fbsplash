@@ -25,6 +25,7 @@ FT2SRC  ?= libs/freetype-2.1.9
 
 prefix     =
 sbindir    = ${prefix}/sbin
+libdir     = ${prefix}/lib
 usrbindir  = ${prefix}/usr/bin
 mandir 	   = ${prefix}/usr/share/man
 
@@ -127,7 +128,11 @@ SP_MNGR	  = splash_manager
 
 #### make rules below #####
 
-all:	objdir splash_kern splash_user
+all:	objdir libsplash.so splash_kern splash_user
+
+libsplash.so: $(OBJDIR)/libsplash.o
+	@$(call infmsg,LD,$@)
+	$(Q)$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,$@ -o $(OBJDIR)/$@ -leinfo $+
 
 splash_user: $(OBJDIR)/$(SP_UTIL)
 
@@ -222,6 +227,10 @@ $(OBJDIR)/%.o: %.c config.h splash.h daemon.h
 	@$(call infmsg,CC,$@)
 	$(Q)$(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
 
+$(OBJDIR)/libsplash.o: libsplash.c splash.h config.h
+	@$(call infmsg,CC,$@)
+	$(Q)$(CC) $(CFLAGS) -fPIC $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
+
 clean:	clean_all
 
 clean_all:	clean_zlib clean_png
@@ -280,6 +289,8 @@ install: all
 	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL) $(DESTDIR)$(sbindir)/$(SP_UTIL)
 	@$(call infmsg,INSTALL,$(SP_UTIL).static)
 	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL).static $(DESTDIR)$(sbindir)/$(SP_UTIL).static
+	@$(call infmsg,INSTALL,libsplash.so)
+	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/libsplash.so $(DESTDIR)$(libdir)/libsplash.so
 	@$(call infmsg,INSTALL,splash-functions.sh)
 	$(Q)$(INSTALL_PROG) -D scripts/splash-functions.sh $(DESTDIR)$(sbindir)/splash-functions.sh
 	$(Q)$(call install_script,$(SP_GIRAM))
@@ -294,6 +305,8 @@ uninstall:
 	$(Q)rm -f $(sbindir)/$(SP_UTIL)
 	@$(call infmsg,UNINSTALL,$(SP_UTIL).static)
 	$(Q)rm -f $(sbindir)/$(SP_UTIL).static
+	@$(call infmsg,UNINSTALL,libsplash.so)
+	$(Q)rm -f $(libdir)/libsplash.so
 	@$(call infmsg,UNINSTALL,splash-functions.sh)
 	$(Q)rm -f $(sbindir)/splash-functions.sh
 	@$(call infmsg,UNINSTALL,$(SP_GIRAM))

@@ -3,7 +3,6 @@
 
 #include <stdbool.h>
 #include <stdio.h>
-#include <sys/types.h>
 
 #include "config.h"
 
@@ -49,8 +48,12 @@
 /* Non-adjustable settings. */
 #define PROGRESS_MAX	0xffff
 
+/* Verbosity levels */
+#define VERB_QUIET		0
+#define VERB_NORMAL		1
+#define VERB_HIGH	    2
+
 typedef enum sp_type { undef, bootup, reboot, shutdown } stype_t;
-typedef enum endianess { little, big } sendian_t;
 
 typedef struct
 {
@@ -74,66 +77,19 @@ typedef struct
 
 } scfg_t;
 
-extern scfg_t config;
-extern sendian_t endianess;
-
-int splash_init(void);
-int splash_config_init(scfg_t *cfg, stype_t type);
+scfg_t* splash_lib_init(stype_t type);
+int splash_lib_cleanup();
+int splash_init_config(scfg_t *cfg, stype_t type);
 int splash_parse_kcmdline(scfg_t *cfg);
 int splash_profile(const char *fmt, ...);
-int splash_verbose(scfg_t *cfg);
+int splash_set_verbose(void);
+int splash_set_silent(void);
+int splash_daemon_check(int *pid_daemon);
 
-void vt_cursor_enable(int fd);
-void vt_cursor_disable(int fd);
-
-int tty_silent_set(int tty, int fd);
-int tty_silent_unset(int fd);
-
-enum sp_states { st_display, st_svc_inact_start, st_svc_inact_stop, st_svc_start,
-				 st_svc_started, st_svc_stop, st_svc_stopped, st_svc_stop_failed,
-				 st_svc_start_failed };
-
-/* Necessary to avoid compilation errors when fbsplash support is
-   disabled. */
-#if !defined(CONFIG_FBSPLASH)
-	#define FB_SPLASH_IO_ORIG_USER		0
-	#define FB_SPLASH_IO_ORIG_KERNEL	1
-#endif
-
-/* Useful short-named types */
-typedef u_int8_t	u8;
-typedef u_int16_t	u16;
-typedef u_int32_t	u32;
-typedef int8_t		s8;
-typedef int16_t		s16;
-typedef int32_t		s32;
-
-/* Verbosity levels */
-#define VERB_QUIET		0
-#define VERB_NORMAL		1
-#define VERB_HIGH	    2
-
-/* Message levels */
-#define MSG_CRITICAL	0
-#define MSG_ERROR		1
-#define MSG_WARN		2
-#define MSG_INFO		3
-
-/* Useful macros */
-#define min(a,b)		((a) < (b) ? (a) : (b))
-#define max(a,b)		((a) > (b) ? (a) : (b))
-
-#define iprint(type, args...) do {				\
-	if (config.verbosity == VERB_QUIET)			\
-		break;									\
-												\
-	if (type <= MSG_ERROR) {					\
-		fprintf(stderr, ## args);				\
-	} else if (config.verbosity == VERB_HIGH) {	\
-		fprintf(stdout, ## args);				\
-	}											\
-} while (0);
-
-#include "splash_old.h"
+int splash_cache_prep(void);
+int splash_cache_cleanup(void);
+int splash_send(const char *fmt, ...);
+bool splash_sanity_check(void);
+bool splash_evdev_set(void);
 
 #endif /* __SPLASH_H */

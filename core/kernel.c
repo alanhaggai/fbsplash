@@ -24,7 +24,7 @@
 #include <linux/tiocl.h>
 #include <linux/vt.h>
 
-#include "splash.h"
+#include "util.h"
 
 #define EFF_FADEIN 1
 
