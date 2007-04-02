@@ -56,6 +56,9 @@ int splash_config_init(scfg_t *cfg, stype_t type)
 	cfg->profile = false;
 	cfg->vonerr = false;
 	cfg->reqmode = 'o';
+	cfg->minstances = false;
+	cfg->progress = 0;
+	cfg->verbosity = VERB_NORMAL;
 
 	switch (type) {
 		case reboot:
@@ -67,8 +70,12 @@ int splash_config_init(scfg_t *cfg, stype_t type)
 			break;
 
 		case bootup:
-		default:
 			cfg->message = strdup(SYSMSG_BOOTUP);
+			break;
+
+		case undef:
+		default:
+			cfg->message = strdup(SYSMSG_DEFAULT);
 			break;
 	}
 
@@ -145,6 +152,34 @@ fail:
 	err = -1;
 	goto out;
 }
+
+#ifndef TARGET_KERNEL
+int splash_profile(const char *fmt, ...)
+{
+	va_list ap;
+	FILE *fp;
+	float uptime;
+
+	if (!config.profile)
+		return 0;
+
+	fp = fopen("/proc/uptime", "r");
+	if (!fp)
+		return -1;
+	fscanf(fp, "%f", &uptime);
+	fclose(fp);
+
+	fp = fopen(SPLASH_PROFILE, "a");
+	if (!fp)
+		return -1;
+	va_start(ap, fmt);
+	fprintf(fp, "%.2f: ", uptime);
+	vfprintf(fp, fmt, ap);
+	fclose(fp);
+	va_end(ap);
+	return 0;
+}
+#endif
 
 /* Switch to verbose mode */
 int splash_verbose(scfg_t *cfg)

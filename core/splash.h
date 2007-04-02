@@ -2,6 +2,7 @@
 #define __SPLASH_H
 
 #include <stdbool.h>
+#include <stdio.h>
 #include <sys/types.h>
 
 #include "config.h"
@@ -79,6 +80,7 @@ extern sendian_t endianess;
 int splash_init(void);
 int splash_config_init(scfg_t *cfg, stype_t type);
 int splash_parse_kcmdline(scfg_t *cfg);
+int splash_profile(const char *fmt, ...);
 int splash_verbose(scfg_t *cfg);
 
 void vt_cursor_enable(int fd);
