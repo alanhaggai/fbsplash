@@ -128,6 +128,10 @@ SP_RESIZE = splash_resize
 SP_CONV	  = bootsplash2fbsplash
 SP_MNGR	  = splash_manager
 
+# Don't pass command line variables when calling make. This saves
+# us trouble when building against klibc.
+MAKEOVERRIDES=
+
 #### make rules below #####
 
 all:	objdir $(OBJDIR)/libsplash.so splash_kern splash_user
@@ -207,9 +211,9 @@ ft2:	config.h
 	cd freetype2 ; \
 	if [ ! -e ./config.mk ]; then \
 		$(call infmsg,CONF,freetype2) ; \
-		sh -c 'export CFLAGS="$(K_CFLAGS) -include $(ROOT)/klibc_compat.h" \
-		CC=$(KLCC) CPPFLAGS="-I$(ROOT)/$(ZLIBSRC)" ; \
-		$(ROOT)/$(FT2SRC)/configure --disable-shared > $(OUTPUT)' ; \
+		CFLAGS="$(K_CFLAGS) -include $(ROOT)/klibc_compat.h" \
+		CC=$(KLCC) CPPFLAGS="-I$(ROOT)/$(ZLIBSRC)" \
+		$(ROOT)/$(FT2SRC)/configure --disable-shared > $(OUTPUT) ; \
 	fi ; \
 	if ! make -q CFLAGS="$(K_CFLAGS)" library; then $(call infmsg,MAKE,freetype2) ; fi ; \
 	make CFLAGS="-c $(K_CFLAGS)" library > $(OUTPUT)
