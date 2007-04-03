@@ -12,7 +12,7 @@
 #include <libmng.h>
 #include <sys/time.h>
 #include <time.h>
-#include "splash.h"
+#include "util.h"
 
 mng_ptr fb_mng_memalloc(mng_size_t len)
 {

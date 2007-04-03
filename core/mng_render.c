@@ -14,7 +14,7 @@
 #include <fcntl.h>
 #include <libmng.h>
 #include <unistd.h>
-#include "splash.h"
+#include "util.h"
 
 static int mng_readfile(mng_handle mngh, char *filename)
 {
