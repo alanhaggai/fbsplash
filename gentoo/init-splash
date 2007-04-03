@@ -1,5 +1,5 @@
 #!/sbin/runscript
-# Copyright 1999-2006 Gentoo Foundation
+# Copyright 1999-2007 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 depend() {
@@ -20,9 +20,10 @@ set_theme()
 }
 
 start() {
+	. /sbin/splash-functions.sh
 	splash_setup
 
-	if [[ -z "${SPLASH_TTYS}" ]]; then
+	if [ -z "${SPLASH_TTYS}" ]; then
 		if [ -n "${RC_TTY_NUMBER}" ]; then
 			SPLASH_TTYS=$(seq 1 "${RC_TTY_NUMBER}")
 		else
@@ -30,7 +31,7 @@ start() {
 		fi
 	fi
 
-	err=0
+	local err=0
 
 	# Only do this if the kernel supports fbsplash.
 	if [ -e /dev/fbsplash -a "${SPLASH_MODE_REQ}" != "off" ]; then
@@ -59,6 +60,6 @@ start() {
 				break
 			fi
 		done
-		eend $err "Failed to set background image on tty${TTY}"
+		eend "${err}" "Failed to set background image on tty${TTY}"
 	fi
 }

@@ -1,0 +1,124 @@
+
+           Splashutils & Initscripts: An Analysis and a Guide
+           --------------------------------------------------
+
+Last update: 2006-02-02
+
+
+1. Introduction
+---------------
+
+This document is an extended version of the 'splashutils_initscripts' file,
+updated with info about the latest (1.1.9.3) version of splashutils and with
+a more detailed analysis of the functions found in splashutils-gentoo.
+
+The intended audience of this text is people working on splash initscript
+integration for distros other than Gentoo and people interested in how the
+Gentoo splash initscript system works.
+
+
+2. Things to consider when implementing a splashutils initscript solution
+-------------------------------------------------------------------------
+
+It is highly recommended that you reuse as much code as possible from
+'splash-functions.sh' and 'splash' from the splashutils-gentoo tarball.
+Keeping the code similar to the upstream version will make it possible to
+quickly follow any changes in splashutils.
+
+With the recent versions of splashutils, some interfaces found in these
+two files are exported for use in the scripts bundled with splash themes.
+Code reuse is this no longer just a matter of convenience, it's now also
+a matter of interoperability between distros. In order to make it possible
+to use themes on any distro, please keep the following things in mind
+when designing your initscripts:
+
+ - there should exist a splash() function accepting the same arguments as
+   in the splash() function found in splash-functions.sh
+ - the variables $spl_cachedir and $spl_tempdir should be defined;
+   $spl_cachedir should point to a writable directory, usually mounted
+   as a tmpfs filesystem
+ - the splash_setup() function should be defined and should work exactly
+   as the one found in splash-functions.sh
+ - `splash_svclist_get start` should return a list of boot-up services
+   in the order in which they will be started
+ - splash_get_mode() should be defined and should work just like the version
+   found in splash-functions.sh
+ - splash_comm_send() should be defined and it should make safe
+   communication with the splash daemon possible
+
+The recommended way of using splashutils is the splash daemon mode.
+The old way of simply calling splash_util is discouraged due to its
+slowness. The splash daemon mode is described in docs/daemon (from
+the splashutils tarball).
+
+Please also note, that it should be possible to use the 'splash' wrapper
+script with little or no changes. There's no need to rewrite it from scratch.
+
+
+3. An analysis of the Gentoo initscripts
+----------------------------------------
+
+All splash-related functions in Gentoo systems are contained within a
+single file called 'splash-functions.sh' and located in /sbin. This file
+is sourced from the rc scripts. It interfaces with the rc scripts with
+a single function called splash(). The function is defined as a null function
+that does nothing by default. When 'splash-functions.sh' is sourced, the
+null function gets overridden.
+
+* splash()
+  The splash() function is responsible for handling events coming from rc
+  scripts and preparing the splash cache space when it's first called. It
+  should also allow for event hooks. A list of recognized events can be
+  found in the comments in splash-functions.sh. The names of the events
+  should be kept unchanged to ensure theme inter-distro compatibility.
+
+* splash_setup()
+  The splash_setup() function is responsible for reading splash
+  configuration from a file and parsing kernel command line parameters.
+  The global variable names it sets should be kept unchanged.
+
+* splash_init()
+  This function is called at the 'rc_init' event. It should start the
+  splash daemon when first called, and do other preparatory tasks.
+
+* splash_cache_prep()
+  This function is reponsible for preparing the splash cache -- usually a
+  small tmpfs filesystem. The splash cache should be writable at all times.
+
+* splash_cache_cleanup()
+  Cleans the splash cache.
+
+* splash_svclist_get()
+  This function returns an ordered list of initscripts that will be executed.
+
+* splash_svclist_update()
+  This function updates a cached ordered list of initscripts executed during
+  boot. This is Gentoo specific code and will have to be rewritten for every
+  distro.
+
+* splash_exit()
+  Called when the 'rc_exit' event is received. Should make sure that the
+  splash daemon is stopped, killing it if necessary.
+
+* splash_comm_send()
+  Sends messages to the splash daemon via the splash FIFO. Note that in
+  order to make things safe, we have to check whether the splash daemon
+  is still alive before sending anything through the FIFO.
+
+* splash_get_mode()
+  Returns 'silent', 'verbose' or 'off', depending on the current splash state.
+
+* splash_verbose()
+  Switches the splash to verbose mode.
+
+* splash_{load,save}_vars()
+  Loads/saves some common variables to a file in the splash cache.
+
+The functions defined in splash-functions.sh and not described here are either
+not very important or easy to understand.
+
+Should you have any questions about the initscript system, or some suggestions
+to make, feel free to mail me.
+
+-- 
+ Michal Januszewski <spock@gentoo.org>

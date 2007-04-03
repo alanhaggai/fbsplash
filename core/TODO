@@ -1,6 +1,7 @@
 - documentation update
   - manpages for splash_util, splash_manager and splash_geninitramfs
-  - info about porting splash
+
+- automatic generation of ChangeLogs
 
 - use popen to get program output (?)
 

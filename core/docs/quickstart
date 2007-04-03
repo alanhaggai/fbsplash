@@ -6,7 +6,7 @@ Assumptions:
 
 What to do:
 
- 1. Install spashutils. Please refer to the INSTALL file for detailed
+ 1. Install splashutils. Please refer to the INSTALL file for detailed
     instructions on how to do that.
  2. Generate an initramfs image:
     splash_geninitramfs -g /boot/initrd-fbsplash -r 1024x768 -v <theme>

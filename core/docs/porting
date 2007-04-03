@@ -1,0 +1,76 @@
+                      Splashutils porting guide
+                      -------------------------
+
+Last update: 2007-04-09
+
+This document describes how to port splashutils to different Linux distros
+and keep such ports maintainable.
+
+1. Initscript interface
+-----------------------
+To be of any use, splashutils has to be integrated with the initscript system
+used in a target Linux distro. There are many ways in which it can be done and
+this document will provide information about two of them:
+
+ 1) using a set of shell scripts
+ 2) using a compiled program/library
+
+The second way is especially useful for initscript systems that support some
+sort of plugins and are themselves written in a compiled language, such as C.
+
+2. Shell script interface
+-------------------------
+A skeleton for building a shell script interface is provided in
+scripts/splash-functions.sh, and normally installed in
+/sbin/splash-functions.sh.
+
+This file contains a stripped-down version of an interface that was used in
+Gentoo Linux once, and which can be found in splash-functions-bl1.sh, available
+in `splashutils-gentoo' tarballs on the project website [1]. The tarballs also
+contain a document with a detailed description of the internals of that file.
+Together they should provide a good starting point for a customized shell
+script interface.
+
+3. Library interface
+--------------------
+Starting with 1.4, splashutils comes with a simple library (`libsplash') which
+contains the majority of functions necessary to build an initscript interface.
+`splashutils-gentoo' contains a plugin which makes use of this library.
+
+Typically one would build an interface in the following way:
+
+splash_lib_init();
+splash_parse_kcmdline();
+/* call a specific function */
+splash_lib_clean();
+
+where the specific function could be:
+
+start() {
+	splash_check_sanity();
+	splash_cache_prep();
+	/* start the splash daemon */
+	splash_set_evdev();
+}
+
+stop() {
+	/* stop the splash daemon */
+	splash_cache_cleanup();
+}
+
+event() {
+	splash_check_daemon();
+	splash_profile();
+	splash_send();
+}
+
+etc.
+
+Please refer to the code of the Gentoo plugin and to libsplash.c
+for further information. In case of any doubts or problems, feel
+free to e-mail me :)
+
+[1] http://dev.gentoo.org/~spock/projects/gensplash/
+
+--
+  Written by: Michal Januszewski <spock@gentoo.org>

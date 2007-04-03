@@ -302,7 +302,7 @@ static int splash_init(bool start)
 		tmp = NULL;
 	}
 
-	if (splash_daemon_check(&pid_daemon))
+	if (splash_check_daemon(&pid_daemon))
 		return -1;
 
 	return 0;
@@ -475,7 +475,7 @@ static int splash_start(const char *runlevel)
 	splash_theme_hook("rc_init", "pre", runlevel);
 
 	/* Perform sanity checks (console=, CONSOLE= etc). */
-	if (!splash_sanity_check())
+	if (!splash_check_sanity())
 		return -1;
 
 	/* Start the splash daemon */
@@ -497,7 +497,7 @@ static int splash_start(const char *runlevel)
 		splash_svc_state(svcs[i], start ? "svc_inactive_start" : "svc_inactive_stop", 0);
 	}
 
-	splash_evdev_set();
+	splash_set_evdev();
 	splash_send("set tty silent %d\n", config->tty_s);
 	splash_send("set mode silent\n");
 	splash_send("repaint\n");

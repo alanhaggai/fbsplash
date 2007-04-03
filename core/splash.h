@@ -89,12 +89,12 @@ int splash_parse_kcmdline(scfg_t *cfg, bool sysmsg);
 int splash_profile(const char *fmt, ...);
 int splash_set_verbose(void);
 int splash_set_silent(void);
-int splash_daemon_check(int *pid_daemon);
+bool splash_set_evdev(void);
+int splash_check_daemon(int *pid_daemon);
+bool splash_check_sanity(void);
 
 int splash_cache_prep(void);
 int splash_cache_cleanup(void);
 int splash_send(const char *fmt, ...);
-bool splash_sanity_check(void);
-bool splash_evdev_set(void);
 
 #endif /* __SPLASH_H */

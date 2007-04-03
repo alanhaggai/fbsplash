@@ -315,7 +315,7 @@ nosave:
  * Check that the splash daemon is running. Sets 'pid_daemon'
  * to the PID of the splash daemon if it's found running.
  */
-int splash_daemon_check(int *pid_daemon)
+int splash_check_daemon(int *pid_daemon)
 {
 	int err = 0;
 	FILE *fp;
@@ -356,7 +356,7 @@ stale:
  * Perform sanity checks to make sure that it's safe to start the
  * splash daemon.
  */
-bool splash_sanity_check(void)
+bool splash_check_sanity(void)
 {
 	FILE *fp;
 	char buf[128];
@@ -393,7 +393,7 @@ err:
 /*
  * Try to set the event device for the splash daemon.
  */
-bool splash_evdev_set(void)
+bool splash_set_evdev(void)
 {
 	char buf[128];
 	FILE *fp;
