@@ -8,8 +8,8 @@
 #
 
 PKG_VERSION	= 1.4
-DEBUG		= false		# set to true to prevent stripping
-K_SHARED	= false		# set to true if you want to link to a shared klibc
+DEBUG		?= false		# set to true to prevent stripping
+K_SHARED	?= false		# set to true if you want to link to a shared klibc
 QUIET		?= true
 
 CC			= gcc
@@ -22,6 +22,8 @@ JPEGSRC	?= libs/jpeg-6b
 LPNGSRC ?= libs/libpng-1.2.8
 ZLIBSRC ?= libs/zlib-1.2.3
 FT2SRC  ?= libs/freetype-2.1.9
+
+LIB		?= lib
 
 prefix     =
 sbindir    = ${prefix}/sbin
@@ -66,13 +68,13 @@ K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
 K_DEPS   =
 
 # Flags for the user utilities
-CFLAGS   = -Wall -g
+CFLAGS   ?= -Wall -g
 LDLIBS   = -ljpeg -lm -pthread
 LDFLAGS  =
 
 # Include the klibc header files so that we can compile against fb.h
 # from a kernel thee patched with fbsplash.
-INCLUDES = -I/usr/include/freetype2 -idirafter /usr/lib/klibc/include/linux
+INCLUDES = -I/usr/include/freetype2 -idirafter /usr/$(LIB)/klibc/include/linux
 OBJS     = $(OBJDIR)/splash.o $(OBJDIR)/parse.o $(OBJDIR)/render.o $(OBJDIR)/image.o \
 		   $(OBJDIR)/cmd.o $(OBJDIR)/common.o $(OBJDIR)/daemon.o $(OBJDIR)/daemon_cmd.o \
 	       $(OBJDIR)/list.o $(OBJDIR)/effects.o $(OBJDIR)/libsplash.o
@@ -225,11 +227,11 @@ $(KOUT)/%.o: %.c config.h splash.h
 
 $(OBJDIR)/%.o: %.c config.h splash.h daemon.h
 	@$(call infmsg,CC,$@)
-	$(Q)$(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
+	$(Q)$(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -DLIBDIR=\"$(LIB)\" -c -o $@ $<
 
 $(OBJDIR)/libsplash.o: libsplash.c splash.h config.h
 	@$(call infmsg,CC,$@)
-	$(Q)$(CC) $(CFLAGS) -fPIC $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
+	$(Q)$(CC) $(CFLAGS) -fPIC $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -DLIBDIR=\"$(LIB)\" -c -o $@ $<
 
 clean:	clean_all
 
