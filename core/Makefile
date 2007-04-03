@@ -8,9 +8,9 @@
 #
 
 PKG_VERSION	= 1.4
-DEBUG		?= false		# set to true to prevent stripping
-K_SHARED	?= false		# set to true if you want to link to a shared klibc
-QUIET		?= true
+DEBUG		= false		# set to true to prevent stripping
+K_SHARED	= false		# set to true if you want to link to a shared klibc
+QUIET		= true
 
 CC			= gcc
 KLCC		= klcc
@@ -68,7 +68,7 @@ K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
 K_DEPS   =
 
 # Flags for the user utilities
-CFLAGS   ?= -Wall -g
+CFLAGS   = -Wall -g
 LDLIBS   = -ljpeg -lm -pthread
 LDFLAGS  =
 
@@ -207,9 +207,9 @@ ft2:	config.h
 	cd freetype2 ; \
 	if [ ! -e ./config.mk ]; then \
 		$(call infmsg,CONF,freetype2) ; \
-		CC=$(KLCC) CPPFLAGS="-I$(ROOT)/$(ZLIBSRC)" \
-		CFLAGS="$(K_CFLAGS) -include $(ROOT)/klibc_compat.h" \
-		$(ROOT)/$(FT2SRC)/configure --disable-shared > $(OUTPUT) ; \
+		sh -c 'export CFLAGS="$(K_CFLAGS) -include $(ROOT)/klibc_compat.h" \
+		CC=$(KLCC) CPPFLAGS="-I$(ROOT)/$(ZLIBSRC)" ; \
+		$(ROOT)/$(FT2SRC)/configure --disable-shared > $(OUTPUT)' ; \
 	fi ; \
 	if ! make -q CFLAGS="$(K_CFLAGS)" library; then $(call infmsg,MAKE,freetype2) ; fi ; \
 	make CFLAGS="-c $(K_CFLAGS)" library > $(OUTPUT)
