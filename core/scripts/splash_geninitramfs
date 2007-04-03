@@ -147,7 +147,7 @@ if [ "$mode" == "a" ]; then
 fi
 
 printv "o Creating directory structure.."
-mkdir -p ${imgdir}/{dev,dev/fb,dev/misc,dev/vc,$themedir,splash/proc,root,sbin,splash/sys}
+mkdir -p ${imgdir}/{dev,dev/fb,dev/misc,dev/vc,$themedir,lib/splash/proc,root,sbin,lib/splash/sys}
 
 if [ $EUID == 0 ]; then
 	[[ ! -e "${imgdir}/dev/null" ]] 	&& mknod "${imgdir}/dev/null" c 1 3

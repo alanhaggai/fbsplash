@@ -61,7 +61,7 @@ PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_S
 		-DPNG_READ_STRIP_ALPHA_SUPPORTED -DPNG_NO_INFO_IMAGE -DPNG_NO_READ_TRANSFORMS -DPNG_NO_READ_ANCILLARY_CHUNKS
 
 K_LDLIBS = $(OBJDIR)/jpeglib/libjpeg.a
-K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/dev.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
+K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
 		   $(KOUT)/cmd.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o $(KOUT)/libsplash.o
 K_DEPS   =
 

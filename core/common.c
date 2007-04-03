@@ -58,52 +58,29 @@ void detect_endianess(sendian_t *end)
 
 int get_fb_settings(int fb_num)
 {
-	char fn[32];
 	int fb;
 #ifdef TARGET_KERNEL
-	char sys[128];
+	bool create = true;
+#else
+	bool create = false;
 #endif
 
-	sprintf(fn, PATH_DEV "/fb/%d", fb_num);
-	fb = open(fn, O_WRONLY, 0);
-
+	fb = open_fb(fb_num, create);
 	if (fb == -1) {
-		sprintf(fn, PATH_DEV "/fb%d", fb_num);
-		fb = open(fn, O_WRONLY, 0);
+		iprint(MSG_ERROR, "Failed to open fb%d.\n", fb_num);
+		return -1;
 	}
 
-	if (fb == -1) {
-#ifdef TARGET_KERNEL
-		sprintf(sys, PATH_SYS "/class/graphics/fb%d/dev", fb_num);
-		create_dev(fn, sys, 0x1);
-		fb = open(fn, O_WRONLY, 0);
-		if (fb == -1)
-			remove_dev(fn, 0x1);
-		if (fb == -1)
-#endif
-		{
-			iprint(MSG_ERROR, "Failed to open " PATH_DEV "/fb%d or " PATH_DEV
-				 "/fb%d for reading.\n", fb_num, fb_num);
-			return 1;
-		}
-	}
-
-	if (ioctl(fb,FBIOGET_VSCREENINFO,&fb_var) == -1) {
+	if (ioctl(fb, FBIOGET_VSCREENINFO, &fb_var) == -1) {
 		iprint(MSG_ERROR, "Failed to get fb_var info.\n");
 		return 2;
 	}
 
-	if (ioctl(fb,FBIOGET_FSCREENINFO,&fb_fix) == -1) {
+	if (ioctl(fb, FBIOGET_FSCREENINFO, &fb_fix) == -1) {
 		iprint(MSG_ERROR, "Failed to get fb_fix info.\n");
 		return 3;
 	}
-
 	close(fb);
-
-#ifdef TARGET_KERNEL
-	remove_dev(fn, 0x1);
-#endif
-	bytespp = (fb_var.bits_per_pixel + 7) >> 3;
 
 	/* Check if optimized code can be used. We use special optimizations for
 	 * 24/32bpp modes in which all color components have a length of 8 bits. */
@@ -223,37 +200,98 @@ int cfg_check_sanity(u8 mode)
 	return 0;
 }
 
-int open_fb()
+static int dev_create(char *fn, char *sys)
 {
-	char dev[32];
-	int c;
+	char buf[256];
+	unsigned int major = 0, minor = 0;
+	int fd;
+	int res;
 
-	sprintf(dev, PATH_DEV "/fb%d", arg_fb);
+//	if (!access(fn, W_OK | R_OK))
+//		return 0;
+
+	fd = open(sys, O_RDONLY);
+
+	if (fd == -1) {
+		return 1;
+	}
+
+	read(fd, buf, 256);
+	close(fd);
+
+	buf[255] = 0;
+
+	sscanf(buf, "%u:%u", &major, &minor);
+
+	if (major == 0) {
+		return 2;
+	}
+
+	res = mknod(fn, 0600 | S_IFCHR, makedev(major, minor));
+
+	return res;
+}
+
+#ifdef CONFIG_FBSPLASH
+int open_fbsplash(bool create)
+{
+	int c;
+	c = open(SPLASH_DEV, O_RDWR);
+
+	if (c == -1 && create) {
+		if (!dev_create(SPLASH_DEV, PATH_SYS "/class/misc/fbsplash/dev"))
+			c = open(SPLASH_DEV, O_RDWR);
+	}
+
+	return c;
+}
+#endif
+
+int open_fb(int fb, bool create)
+{
+	char dev[64];
+	char sys[128];
+	int c;
+	bool first = true;
+
+tryopen:
+	snprintf(dev, 64, PATH_DEV "/fb%d", fb);
 	if ((c = open(dev, O_RDWR)) == -1) {
-		sprintf(dev, PATH_DEV "/fb/%d", arg_fb);
-		if ((c = open(dev, O_RDWR)) == -1) {
-			iprint(MSG_ERROR, "Failed to open " PATH_DEV "/fb%d or "
-				   PATH_DEV "/fb/%d.\n", arg_fb, arg_fb);
-			return 0;
-		}
+		snprintf(dev, 64, PATH_DEV "/fb/%d", fb);
+		c = open(dev, O_RDWR);
+	}
+
+	if (c == -1 && create && first) {
+		first = false;
+		snprintf(dev, 64, PATH_DEV "/fb%d", fb);
+		snprintf(sys, 128, PATH_SYS "/class/graphics/fb%d/dev", fb);
+		if (!dev_create(dev, sys))
+			goto tryopen;
 	}
 
 	return c;
 }
 
-int open_tty(int tty)
+int open_tty(int tty, bool create)
 {
-	char dev[32];
+	char dev[64];
+	char sys[128];
 	int c;
+	bool first = true;
 
-	sprintf(dev, PATH_DEV "/tty%d", tty);
+tryopen:
+	snprintf(dev, 64, PATH_DEV "/tty%d", tty);
 	if ((c = open(dev, O_RDWR)) == -1) {
-		sprintf(dev, PATH_DEV "/vc/%d", tty);
-		if ((c = open(dev, O_RDWR)) == -1) {
-			iprint(MSG_ERROR, "Failed to open " PATH_DEV "/tty%d or "
-			       PATH_DEV "/vc/%d\n", tty, tty);
-			return 0;
-		}
+		snprintf(dev, 64, PATH_DEV "/vc/%d", tty);
+		c = open(dev, O_RDWR);
+	}
+
+	if (c == -1 && create && first) {
+		first = false;
+		snprintf(dev, 64, PATH_DEV "/tty%d", tty);
+		snprintf(sys, 128, PATH_SYS "/class/tty/tty%d/dev", tty);
+		if (!dev_create(dev, sys))
+			goto tryopen;
 	}
 
 	return c;

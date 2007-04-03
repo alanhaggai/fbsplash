@@ -44,8 +44,8 @@
 #define PROGRESS_MAX	0xffff
 
 #if defined(TARGET_KERNEL)
-	#define PATH_SYS	"/splash/sys"
-	#define PATH_PROC	"/splash/proc"
+	#define PATH_SYS	"/lib/splash/sys"
+	#define PATH_PROC	"/lib/splash/proc"
 #endif
 
 /* Verbosity levels */

@@ -22,74 +22,47 @@
 #include "util.h"
 
 #ifdef CONFIG_FBSPLASH
+int fd_splash = -1;
 
 int cmd_setstate(unsigned int state, unsigned char origin)
 {
-	int fd, err = 0;
 	struct fb_splash_iowrapper wrapper = {
 		.vc = arg_vc,
 		.origin = origin,
 		.data = &state,
 	};
 
-	fd = open(SPLASH_DEV, O_WRONLY);
-	if (fd == -1) {
-		iprint(MSG_ERROR, "Can't open %s\n", SPLASH_DEV);
+	if (ioctl(fd_splash, FBIOSPLASH_SETSTATE, &wrapper)) {
+		iprint(MSG_ERROR, "FBIOSPLASH_SETSTATE failed, error code %d.\n", errno);
 		return -1;
 	}
-
-	if (ioctl(fd, FBIOSPLASH_SETSTATE, &wrapper)) {
-		iprint(MSG_ERROR, "FBIOSPLASH_SETSTATE failed, error code %d.\n", errno);
-		err = -2;
-		goto out;
-	}
-
-out:
-	close(fd);
-	return err;
+	return 0;
 }
 
 int cmd_setpic(struct fb_image *img, unsigned char origin)
 {
-	int fd, err = 0;
 	struct fb_splash_iowrapper wrapper = {
 		.vc = arg_vc,
 		.origin = origin,
 		.data = img,
 	};
 
-	fd = open(SPLASH_DEV, O_WRONLY);
-	if (fd == -1) {
-		iprint(MSG_ERROR, "Can't open %s\n", SPLASH_DEV);
-		return -1;
-	}
-
-	if (ioctl(fd, FBIOSPLASH_SETPIC, &wrapper)) {
+	if (ioctl(fd_splash, FBIOSPLASH_SETPIC, &wrapper)) {
 		iprint(MSG_ERROR, "FBIOSPLASH_SETPIC failed, error code %d.\n", errno);
 		iprint(MSG_ERROR, "Hint: are you calling 'setpic' for the current virtual console?\n");
-		err = -2;
-		goto out;
+		return -1;
 	}
-out:
-	close(fd);
-	return err;
+	return 0;
 }
 
 int cmd_setcfg(unsigned char origin)
 {
-	int fd, err = 0;
 	struct vc_splash vc_cfg;
 	struct fb_splash_iowrapper wrapper = {
 		.vc = arg_vc,
 		.origin = origin,
 		.data = &vc_cfg,
 	};
-
-	fd = open(SPLASH_DEV, O_WRONLY);
-	if (fd == -1) {
-		iprint(MSG_ERROR, "Can't open %s\n", SPLASH_DEV);
-		return -1;
-	}
 
 	vc_cfg.tx = cf.tx;
 	vc_cfg.ty = cf.ty;
@@ -98,19 +71,16 @@ int cmd_setcfg(unsigned char origin)
 	vc_cfg.bg_color = cf.bg_color;
 	vc_cfg.theme = config->theme;
 
-	if (ioctl(fd, FBIOSPLASH_SETCFG, &wrapper)) {
+	if (ioctl(fd_splash, FBIOSPLASH_SETCFG, &wrapper)) {
 		iprint(MSG_ERROR, "FBIOSPLASH_SETCFG failed, error code %d.\n", errno);
-		err = -2;
-		goto out;
+		return -1;
 	}
-out:
-	close(fd);
-	return err;
+	return 0;
 }
 
 int cmd_getcfg()
 {
-	int fd, err = 0;
+	int err = 0;
 	struct vc_splash vc_cfg;
 	struct fb_splash_iowrapper wrapper = {
 		.vc = arg_vc,
@@ -122,20 +92,11 @@ int cmd_getcfg()
 	if (!vc_cfg.theme)
 		return -1;
 
-	fd = open(SPLASH_DEV, O_WRONLY);
-	if (fd == -1) {
-		iprint(MSG_ERROR, "Can't open %s\n", SPLASH_DEV);
-		err = -1;
-		goto out;
-	}
-
-	if (ioctl(fd, FBIOSPLASH_GETCFG, &wrapper)) {
+	if (ioctl(fd_splash, FBIOSPLASH_GETCFG, &wrapper)) {
 		iprint(MSG_ERROR, "FBIOSPLASH_GETCFG failed, error code %d.\n", errno);
 		err = -2;
-		close(fd);
 		goto out;
 	}
-	close(fd);
 
 	if (vc_cfg.theme[0] == 0) {
 		strcpy(vc_cfg.theme, "<none>");

@@ -255,8 +255,10 @@ char *get_cfg_file(char *theme);
 int do_getpic(unsigned char, unsigned char, char);
 int cfg_check_sanity(unsigned char mode);
 char *get_filepath(char *path);
-int open_fb();
-int open_tty(int);
+
+int open_fb(int fb, bool create);
+int open_tty(int tty, bool create);
+int open_fbsplash(bool create);
 void vt_cursor_enable(int fd);
 void vt_cursor_disable(int fd);
 int tty_silent_set(int tty, int fd);
@@ -265,22 +267,6 @@ int tty_silent_unset(int fd);
 /* parse.c */
 int parse_cfg(char *cfgfile);
 int parse_svc_state(char *t, enum ESVC *state);
-
-/* dev.c */
-int create_dev(char *fn, char *sys, int flag);
-int remove_dev(char *fn, int flag);
-
-#define open_cr(fd, dev, sysfs, outlabel, flag)	\
-	create_dev(dev, sysfs, flag);		\
-	fd = open(dev, O_RDWR);				\
-	if (fd == -1) {						\
-		remove_dev(dev, flag);			\
-		goto outlabel;					\
-	}
-
-#define close_del(fd, dev, flag)		\
-	close(fd);				\
-	remove_dev(dev, flag);
 
 /* render.c */
 void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin);
@@ -317,6 +303,7 @@ extern char *cf_silentpic256;
 /* common.c */
 extern struct fb_var_screeninfo   fb_var;
 extern struct fb_fix_screeninfo   fb_fix;
+extern int fd_splash;
 
 extern enum TASK arg_task;
 extern int arg_fb;

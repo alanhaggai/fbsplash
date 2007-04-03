@@ -1,7 +1,7 @@
 /*
  * kernel.c - the core of splash_helper
  *
- * Copyright (C) 2004-2005, Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2004-2007, Michal Januszewski <spock@gentoo.org>
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
@@ -12,21 +12,21 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <termios.h>
+#include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include <linux/kd.h>
-#include <linux/tty.h>
 #include <linux/tiocl.h>
-#include <linux/vt.h>
 
 #include "util.h"
 
-/* Opens /dev/console as stdout and stderr. */
+/*
+ * Opens /dev/console as stdout and stderr. This will not work if console
+ * is set to a serial console, because ttySx are not initialized at the
+ * point where this function is used.
+ */
 void prep_io()
 {
 	int fd = 0;
@@ -39,9 +39,8 @@ void prep_io()
 	}
 }
 
-int handle_init(u8 update)
+int handle_init(bool update)
 {
-	int stty = TTY_SILENT;
 	char sys[128];
 	char fn_fb[32];
 	char fn_vc[32];
@@ -50,7 +49,7 @@ int handle_init(u8 update)
 	int fd, fd_vc, fd_fb, h, cnt;
 	u8 created_dev = 0;
 #ifdef CONFIG_FBSPLASH
-	u8 fbsplash = 1;
+	bool fbsplash = true;
 #endif
 
 	/* If possible, make sure that the error messages don't go straight
@@ -59,20 +58,12 @@ int handle_init(u8 update)
 		prep_io();
 	}
 
-	/* Mount the proc filesystem */
+	/* Parse the kernel command line to get splash settings. */
+	mkdir(PATH_PROC,0700);
 	h = mount("proc", PATH_PROC, "proc", 0, NULL);
 	splash_parse_kcmdline(config, true);
 	if (h == 0)
 		umount(PATH_PROC);
-
-	/* We don't want to use any effects if we're just updating the image.
-	 * Nor do we want to mess with the verbose mode. */
-	if (update) {
-		config->effects = EFF_NONE;
-#ifdef CONFIG_FBSPLASH
-		fbsplash = 0;
-#endif
-	}
 
 	if (config->reqmode == 'o')
 		return 0;
@@ -80,25 +71,32 @@ int handle_init(u8 update)
 	if (!config->theme)
 		return -1;
 
+	/* We don't want to use any effects if we're just updating the image.
+	 * Nor do we want to mess with the verbose mode. */
+	if (update) {
+		config->effects = EFF_NONE;
+#ifdef CONFIG_FBSPLASH
+		fbsplash = false;
+#endif
+	}
+
 	config_file = get_cfg_file(config->theme);
 	if (!config_file)
 		return -1;
 	parse_cfg(config_file);
 
 #ifdef CONFIG_FBSPLASH
-	if (!update) {
-		create_dev(SPLASH_DEV, PATH_SYS "/class/misc/fbsplash/dev", 0x1);
-	}
+	fd_splash = open_fbsplash(true);
 
 	if (!update && !cfg_check_sanity('v')) {
 		/* Load the configuration and the verbose background picture
 		 * but don't activate fbsplash just yet. We'll enable it
 		 * after the silent screen is displayed. */
 		if (cmd_setcfg(FB_SPLASH_IO_ORIG_USER) || do_getpic(FB_SPLASH_IO_ORIG_USER, 1, 'v')) {
-			fbsplash = 0;
+			fbsplash = false;
 		}
 	} else {
-		fbsplash = 0;
+		fbsplash = false;
 	}
 #endif
 	/* Activate verbose mode if it was explicitly requested. If silent mode
@@ -124,15 +122,15 @@ int handle_init(u8 update)
 
 	/* If the user supplied a silent tty number, check whether
 	 * it is valid. */
-	if (stty < 0 || stty > MAX_NR_CONSOLES)
-		stty = TTY_SILENT;
-
-	sprintf(fn_fb, PATH_DEV "/fb%d", arg_fb);
-	sprintf(sys, PATH_SYS "/class/graphics/fb%d/dev", arg_fb);
+	if (config->tty_s < 0 || config->tty_s > MAX_NR_CONSOLES)
+		config->tty_s = TTY_SILENT;
 
 	h = cfg_check_sanity('s');
 	if (h)
 		return h;
+
+	fd_fb = open_fb(arg_fb, true);
+	fd_vc = open_tty(config->tty_s, true);
 
 	if (do_getpic(FB_SPLASH_IO_ORIG_USER, 0, 's')) {
 		fprintf(stderr, "Failed to get silent splash image.\n");
@@ -143,17 +141,11 @@ int handle_init(u8 update)
 		return -1;
 	}
 
-	open_cr(fd_fb, fn_fb, sys, out, 0x4);
-
-	sprintf(fn_vc, PATH_DEV "/tty%d", stty);
-	sprintf(sys, PATH_SYS "/class/tty/tty%d/dev", stty);
-
-	open_cr(fd_vc, fn_vc, sys, out, 0x2);
 	t = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
 		 MAP_SHARED, fd_fb, fb_var.yoffset * fb_fix.line_length);
 
 	if (t == MAP_FAILED) {
-		goto clean;
+		goto out;
 	}
 
 	/* Redirect all kernel messages to tty1 so that they don't get
@@ -162,7 +154,7 @@ int handle_init(u8 update)
 	buf[1] = 1;
 	ioctl(fd_vc, TIOCLINUX, buf);
 
-	tty_silent_set(stty, fd_vc);
+	tty_silent_set(config->tty_s, fd_vc);
 
 	if (config->kdmode == KD_GRAPHICS)
 		ioctl(fd_vc, KDSETMODE, KD_GRAPHICS);
@@ -186,16 +178,12 @@ int handle_init(u8 update)
 		cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
 #endif
 
-clean:	close_del(fd_vc, fn_vc, 0x2);
-//	close_del(fd_fb, fn_fb, 0x4);
-
-out:	free(silent_img.data);
+out:
+	free(silent_img.data);
 	if (silent_img.cmap.red)
 		free(silent_img.cmap.red);
 
 	return 0;
-
-//	remove_dev(SPLASH_DEV, 0x1);
 }
 
 int main(int argc, char **argv)
@@ -240,11 +228,11 @@ int main(int argc, char **argv)
 	if (argc > i && argv[i])
 		config->theme = strdup(argv[i]);
 
+	mkdir(PATH_SYS, 0700);
 	if (!mount("sysfs", PATH_SYS, "sysfs", 0, NULL))
 		mounts = 1;
 
 	get_fb_settings(arg_fb);
-
 
 #ifdef CONFIG_TTF_KERNEL
 	if (TTF_Init() < 0) {
@@ -253,9 +241,9 @@ int main(int argc, char **argv)
 #endif
 
 	if (!strcmp(argv[2],"init")) {
-		err = handle_init(0);
+		err = handle_init(false);
 	} else if (!strcmp(argv[2],"repaint")) {
-		err = handle_init(1);
+		err = handle_init(true);
 	}
 #ifdef CONFIG_FBSPLASH
 	else if (config->theme) {
@@ -285,7 +273,8 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Unrecognized splash command: %s.\n", argv[2]);
 	}
 
-out:	if (mounts)
+out:
+	if (mounts)
 		umount2(PATH_SYS, 0);
 
 	if (config_file)

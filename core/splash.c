@@ -229,6 +229,10 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
+#ifdef CONFIG_FBSPLASH
+	fd_splash = open_fbsplash(false);
+#endif
+
 	if (get_fb_settings(arg_fb))
 		return -1;
 
@@ -302,13 +306,7 @@ setpic_out:	break;
 			.data = &i,
 		};
 
-		fp = open(SPLASH_DEV, O_WRONLY);
-		if (fp == -1) {
-			fprintf(stderr, "Can't open %s\n", SPLASH_DEV);
-			break;
-		}
-		ioctl(fp, FBIOSPLASH_GETSTATE, &wrapper);
-		close(fp);
+		ioctl(fd_splash, FBIOSPLASH_GETSTATE, &wrapper);
 
 		printf("Splash state on console %d: %s\n", arg_vc, (i != 0) ? "on" : "off");
 		break;
@@ -320,11 +318,11 @@ setpic_out:	break;
 		int t;
 
 		if (arg_vc > -1) {
-			fp = open_tty(arg_vc+1);
+			fp = open_tty(arg_vc+1, false);
 			t = arg_vc+1;
 		} else {
 			t = (config->reqmode == 's') ? TTY_SILENT : TTY_VERBOSE;
-			fp = open_tty(t);
+			fp = open_tty(t, false);
 		}
 
 		if (fp < 0)
@@ -336,7 +334,7 @@ setpic_out:	break;
 			ioctl(fp, VT_ACTIVATE, t);
 			ioctl(fp, VT_WAITACTIVE, t);
 			close(fp);
-			fp = open_tty(TTY_SILENT);
+			fp = open_tty(TTY_SILENT, false);
 			if (fp < 0)
 				break;
 			tty_silent_unset(fp);
@@ -428,6 +426,10 @@ setpic_out:	break;
 	default:
 		break;
 	}
+
+#ifdef CONFIG_FBSPLASH
+	close(fd_splash);
+#endif
 
 	if (config_file)
 		free(config_file);

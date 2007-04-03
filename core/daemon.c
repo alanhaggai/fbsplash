@@ -697,7 +697,7 @@ void daemon_start()
 	}
 
 	/* Create a mmap of the framebuffer */
-	fd_fb = open_fb();
+	fd_fb = open_fb(arg_fb, false);
 	if (!fd_fb)
 		exit(1);
 
@@ -717,22 +717,17 @@ void daemon_start()
 		notify[i] = NULL;
 	}
 
-	fd_tty0 = open(PATH_DEV "/tty0", O_RDWR);
+	fd_tty0 = open_tty(0, false);
+	fd_tty1 = open_tty(1, false);
+
 	if (fd_tty0 == -1) {
-		fd_tty0 = open(PATH_DEV "/vc/0", O_RDWR);
-		if (fd_tty0 == -1) {
-			iprint(MSG_ERROR, "Can't open " PATH_DEV "/tty0.\n");
-			exit(2);
-		}
+		iprint(MSG_ERROR, "Failed to open /dev/tty0.\n");
+		exit(1);
 	}
 
-	fd_tty1 = open(PATH_DEV "/tty1", O_RDWR);
 	if (fd_tty1 == -1) {
-		fd_tty1 = open(PATH_DEV "/vc/1", O_RDWR);
-		if (fd_tty1 == -1) {
-			iprint(MSG_ERROR, "Can't open " PATH_DEV "/tty1.\n");
-			exit(2);
-		}
+		iprint(MSG_ERROR, "Failed to open /dev/tty1.\n");
+		exit(1);
 	}
 
 	/* Create the splash FIFO if it's not already in place. */
