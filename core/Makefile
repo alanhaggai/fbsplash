@@ -1,13 +1,13 @@
 # Makefile for splashutils
 #
-# Copyright (C) 2004-2006, Michal Januszewski <spock@gentoo.org>
-# 
+# Copyright (C) 2004-2007, Michal Januszewski <spock@gentoo.org>
+#
 # This file is subject to the terms and conditions of the GNU General Public
 # License.  See the file COPYING in the main directory of this archive for
 # more details.
 #
 
-PKG_VERSION	= 1.3.1
+PKG_VERSION	= 1.4
 DEBUG		= false		# set to true to prevent stripping
 K_SHARED	= false		# set to true if you want to link to a shared klibc
 QUIET		?= true
