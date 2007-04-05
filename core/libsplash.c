@@ -31,7 +31,7 @@
 #endif
 
 /* If we're not on Gentoo, define eerror() and ewarn() */
-#if !defined(__gentoo__)
+#ifndef CONFIG_GENTOO
 	#if !defined(eerror)
 		#define eerror(args...)		fprintf(stderr, ## args);
 	#endif

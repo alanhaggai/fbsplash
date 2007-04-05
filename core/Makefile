@@ -80,7 +80,7 @@ OBJS     = $(OBJDIR)/splash.o $(OBJDIR)/parse.o $(OBJDIR)/render.o $(OBJDIR)/ima
 	       $(OBJDIR)/list.o $(OBJDIR)/effects.o $(OBJDIR)/libsplash.o
 
 # Checks whether an option is set in config.h
-config_opt = $(shell if [ -e config.h -a -n "`egrep '^\#define[[:space:]]+$(1)([[:space:]]+|$$)' config.h`" ]; then echo true ; fi)
+config_opt = $(shell if [ -e config.h -a -n "`egrep '^\#define[[:space:]]+$(1)([[:space:]]+|$$)' config.h 2>/dev/null`" ]; then echo true ; fi)
 
 ifeq ($(call config_opt,CONFIG_TTF),true)
 	OBJS   += $(OBJDIR)/ttf.o
@@ -138,7 +138,11 @@ all:	objdir $(OBJDIR)/libsplash.so splash_kern splash_user
 
 $(OBJDIR)/libsplash.so: $(OBJDIR)/libsplash.o
 	@$(call infmsg,LD,$@)
+ifeq ($(call config_opt,CONFIG_GENTOO),true)
 	$(Q)$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,libsplash.so -o $@ -leinfo $+
+else
+	$(Q)$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,libsplash.so -o $@ $+
+endif
 
 splash_user: $(OBJDIR)/$(SP_UTIL)
 
