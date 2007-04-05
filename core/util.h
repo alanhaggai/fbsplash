@@ -2,12 +2,14 @@
 #define __UTIL_H
 
 #include "config.h"
+#include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <sys/types.h>
 #include <linux/kd.h>
 #include <linux/tty.h>
 #include <linux/input.h>
+#include <limits.h>
 
 #include "splash.h"
 
