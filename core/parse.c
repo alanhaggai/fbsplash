@@ -410,10 +410,11 @@ void parse_icon(char *t)
 	i = parse_svc_state(t, &cic->type);
 
 	if (i)
-		t += i; 
+		t += i;
 	else
 		cic->type = e_display;
 
+	/* Find the service name */
 	skip_whitespace(&t);
 	for (i = 0; t[i] != ' ' && t[i] != '\t' && t[i] != '\0'; i++);
 	t[i] = 0;
@@ -473,20 +474,19 @@ void parse_icon(char *t)
 
 		cic->status = 1;
 	} else {
-
 		if (cic->type == e_display) 
 			cic->status = 1;
-		else 
+		else
 			cic->status = 0;
 	}
 
 	if (cic->type != e_display) {
 		cic->svc = strdup(t);
 	}
-		
+
 	for (ti = icons.head ; ti != NULL; ti = ti->next) {
 		icon_img *ii = (icon_img*) ti->p;
-	
+
 		if (!strcmp(ii->filename, filename)) {
 			cic->img = ii;
 			goto pi_end;
@@ -580,7 +580,8 @@ void parse_anim(char *t)
 	char *filename;
 	obj *cobj = NULL;
 	anim *canim = malloc(sizeof(anim));
-	
+	int i;
+
 	if (!canim)
 		return;
 	
@@ -646,6 +647,24 @@ void parse_anim(char *t)
 		canim->y = fb_var.yres-1;
 
 	canim->status = 0;
+
+	i = parse_svc_state(t, &canim->type);
+	if (i)
+		t += i;
+	else
+		canim->type = e_display;
+
+	/* Find the service name */
+	skip_whitespace(&t);
+	for (i = 0; t[i] != ' ' && t[i] != '\t' && t[i] != '\0'; i++);
+	t[i] = 0;
+	i = 0;
+
+	if (canim->type == e_display)
+		canim->flags |= F_ANIM_DISPLAY;
+
+	if (canim->type != e_display)
+		canim->svc = strdup(t);
 
 	filename = get_filepath(filename);
 

@@ -111,7 +111,8 @@ void *thf_anim(void *unused)
 	for (i = anims.head; i != NULL; i = i->next) {
 		ca = i->p;
 
-		if ((ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL)
+		if (!(ca->flags & F_ANIM_DISPLAY) ||
+			(ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL)
 			continue;
 
 		mng = mng_get_userdata(ca->mng);
@@ -128,7 +129,8 @@ void *thf_anim(void *unused)
 		for (i = anims.head; i != NULL; i = i->next) {
 			ca = i->p;
 
-			if ((ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL ||
+			if (!(ca->flags & F_ANIM_DISPLAY) ||
+				(ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL ||
 			    ca->status == F_ANIM_STATUS_DONE)
 				continue;
 
@@ -138,6 +140,11 @@ void *thf_anim(void *unused)
 				delay = mng->wait_msecs;
 				a = ca;
 			}
+
+			/* If this is a new animation (activated by a service),
+			 * display it immediately. */
+			if (!mng->displayed_first)
+				anim_render_frame(ca);
 		}
 		pthread_mutex_unlock(&mtx_paint);
 		pthread_setcancelstate(oldstate, NULL);
@@ -157,7 +164,8 @@ void *thf_anim(void *unused)
 		for (i = anims.head ; i != NULL; i = i->next) {
 			ca = i->p;
 
-			if ((ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL ||
+			if (!(ca->flags & F_ANIM_DISPLAY) ||
+				(ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL ||
 			    ca->status == F_ANIM_STATUS_DONE || ca == a)
 				continue;
 
@@ -529,28 +537,50 @@ void free_objs()
 }
 
 /*
- * Update icons after a service status change.
+ * Update objects after a service status change.
  */
-void icon_update_status(char *svc, enum ESVC state)
+void obj_update_status(char *svc, enum ESVC state)
 {
 	item *i;
 
 	for (i = objs.head; i != NULL; i = i->next) {
-		icon *ic;
+		icon *ci;
+		anim *ca;
 		obj *o = (obj*)i->p;
 
-		if (o->type != o_icon)
+		switch (o->type) {
+
+		case o_icon:
+			ci = (icon*)o->p;
+
+			if (!ci->svc || strcmp(ci->svc, svc))
+				continue;
+
+			if (ci->type == state)
+				ci->status = 1;
+			else
+				ci->status = 0;
+
+			break;
+
+		case o_anim:
+			ca = (anim*)o->p;
+
+			if (!ca->svc || strcmp(ca->svc, svc))
+				continue;
+
+			if (ca->type == state)
+				ca->flags |= F_ANIM_DISPLAY;
+			else
+				ca->flags &= ~F_ANIM_DISPLAY;
+
+			printf("updating anim, have: %d\n", ca->flags);
+
+			break;
+
+		default:
 			continue;
-
-		ic = (icon*)o->p;
-
-		if (!ic->svc || strcmp(ic->svc, svc))
-			continue;
-
-		if (ic->type == state)
-			ic->status = 1;
-		else
-			ic->status = 0;
+		}
 	}
 }
 
@@ -630,7 +660,7 @@ int reload_theme(void)
 #endif
 	for (i = svcs.head ; i != NULL; i = i->next) {
 		svc_state *ss = (svc_state*)i->p;
-		icon_update_status(ss->svc, ss->state);
+		obj_update_status(ss->svc, ss->state);
 	}
 
 #ifdef CONFIG_MNG

@@ -115,7 +115,6 @@ void usage(void)
 
 int main(int argc, char **argv)
 {
-	char dev[16];
 	unsigned int c, i;
 	int fp, err = 0;
 

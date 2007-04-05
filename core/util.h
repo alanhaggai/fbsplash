@@ -162,6 +162,7 @@ struct colorf {
 #define F_ANIM_ONCE			0
 #define F_ANIM_LOOP			4
 #define F_ANIM_PROPORTIONAL	8
+#define F_ANIM_DISPLAY		16
 
 #define F_ANIM_STATUS_DONE 1
 

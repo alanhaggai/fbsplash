@@ -5,7 +5,7 @@
 #include <pthread.h>
 
 /* daemon.c */
-void icon_update_status(char *svc, enum ESVC state);
+void obj_update_status(char *svc, enum ESVC state);
 void bgbuffer_alloc(void);
 void free_objs(void);
 int reload_theme(void);

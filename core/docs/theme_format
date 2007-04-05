@@ -94,14 +94,14 @@ Silent mode settings
   The color can be specified either as #rrggbb or as #rrggbbaa.
 
   The x and y coordinates specify the position of the hot spot of the text
-  string. The position of the hot stop within the bounding rectangle of the
+  string. The position of the hot spot within the bounding rectangle of the
   text string can be chosen with the 'left', 'middle' and 'right', 'top'
   and 'bottom' flags.
 
   The different positions of the hot spot are shown below:
 
  (lt)-------------------------(mt)----------------------------(rt)
-  | TTTTTT EEEEE  SSSS TTTTTT      TTTTTT EEEEE XX  XX TTTTTT   | 
+  | TTTTTT EEEEE  SSSS TTTTTT      TTTTTT EEEEE XX  XX TTTTTT   |
   |   TT   EE    SS      TT          TT   EE     XXXX    TT     |
  (lm) TT   EEEE   SSS    TT   (mm)   TT   EEEE    XX     TT   (rm)
   |   TT   EE       SS   TT          TT   EE     XXXX    TT     |
@@ -235,7 +235,7 @@ Silent mode settings
   Currently, all animations are displayed on a separate 'layer' located
   above all other objects. An animation object will always cover icons,
   boxes, etc. Overlapping animations with other objects should currently
-  be avoid, as it may lead to unexpected flickering.
+  be avoided as it may lead to unexpected flickering.
 
   Depending on how the mng file is constructed 'once' and 'proportional'
   might not work as aspected. When the file is internally looped, the

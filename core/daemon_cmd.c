@@ -465,7 +465,7 @@ int cmd_update_svc(void **args)
 
 cus_update:
 	ss->state = state;
-	icon_update_status(args[0], state);
+	obj_update_status(args[0], state);
 
 	return 0;
 }
