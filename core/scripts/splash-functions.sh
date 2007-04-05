@@ -52,7 +52,7 @@ splash_setup() {
 		for opt in ${options} ; do
 			options=${opt#*=}
 
-			for i in $(echo "${options}" | sed -e 's/,//g') ; do
+			for i in $(echo "${options}" | sed -e 's/,/ /g') ; do
 				case ${i%:*} in
 					theme)		SPLASH_THEME=${i#*:} ;;
 					tty)		SPLASH_TTY=${i#*:} ;;
