@@ -545,7 +545,6 @@ void obj_update_status(char *svc, enum ESVC state)
 
 	for (i = objs.head; i != NULL; i = i->next) {
 		icon *ci;
-		anim *ca;
 		obj *o = (obj*)i->p;
 
 		switch (o->type) {
@@ -565,6 +564,8 @@ void obj_update_status(char *svc, enum ESVC state)
 
 #ifdef CONFIG_MNG
 		case o_anim:
+		{
+			anim *ca;
 			ca = (anim*)o->p;
 
 			if (!ca->svc || strcmp(ca->svc, svc))
@@ -577,6 +578,7 @@ void obj_update_status(char *svc, enum ESVC state)
 
 			printf("updating anim, have: %d\n", ca->flags);
 			break;
+		}
 #endif
 		default:
 			continue;
