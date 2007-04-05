@@ -47,6 +47,11 @@ copt_gpm_desc="Enable support for GPM"
 copt_gpm_type="bool"
 copt_gpm_def=y
 
+copt_deprecated=CONFIG_DEPRECATED
+copt_deprecated_desc="Enable support for deprecated features."
+copt_deprecated_type="bool"
+copt_deprecated_def=n
+
 options=`set | grep '^copt_' | sed -re 's/copt_([^_=]+)[_=].*/\1/' | uniq`
 
 write_conf()

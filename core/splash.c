@@ -81,8 +81,10 @@ void usage(void)
 "           note that this command will only have any effect if\n"
 "           it's called for the current console\n"
 #endif
+#ifdef CONFIG_DEPRECATED
 "  paint    paint the background picture\n"
 "  repaint  paint the whole background picture (full refresh)\n"
+#endif
 "  setmode  set global splash mode\n"
 "  getmode  get global splash mode\n\n"
 "Options:\n"
@@ -360,6 +362,7 @@ setpic_out:	break;
 		break;
 	}
 
+#ifdef CONFIG_DEPRECATED
 	/* Deprecated. The daemon mode should be used instead. */
 	case paint:
 	case repaint:
@@ -416,6 +419,7 @@ setpic_out:	break;
 
 		break;
 	}
+#endif
 
 	default:
 		break;
