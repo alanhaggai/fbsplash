@@ -563,6 +563,7 @@ void obj_update_status(char *svc, enum ESVC state)
 
 			break;
 
+#ifdef CONFIG_MNG
 		case o_anim:
 			ca = (anim*)o->p;
 
@@ -575,9 +576,8 @@ void obj_update_status(char *svc, enum ESVC state)
 				ca->flags &= ~F_ANIM_DISPLAY;
 
 			printf("updating anim, have: %d\n", ca->flags);
-
 			break;
-
+#endif
 		default:
 			continue;
 		}
