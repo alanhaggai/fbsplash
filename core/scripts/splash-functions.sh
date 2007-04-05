@@ -52,7 +52,7 @@ splash_setup() {
 		for opt in ${options} ; do
 			options=${opt#*=}
 
-			for i in ${options//,/ } ; do
+			for i in $(echo "${options}" | sed -e 's/,//g') ; do
 				case ${i%:*} in
 					theme)		SPLASH_THEME=${i#*:} ;;
 					tty)		SPLASH_TTY=${i#*:} ;;
@@ -88,7 +88,7 @@ splash_comm_send() {
 	fi
 
 	if [ -r /proc/$(<"${spl_pidfile}")/status -a
-		  "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]; then
+		  "$( (read t;echo ${t} | sed -e 's/Name://'}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]; then
 		echo "$*" > "${spl_fifo}" &
 	else
 		echo "Splash daemon not running!"
@@ -103,7 +103,7 @@ splash_get_mode() {
 	if [ "${ctty}" == "${SPLASH_TTY}" ]; then
 		echo "silent"
 	else
-		if [ -z "$(${spl_util} -c getstate --vc=$(($ctty-1)) 2>/dev/null | grep off)" ]; then
+		if [ -z "$(${spl_util} -c getstate --tty=${tty} 2>/dev/null | grep off)" ]; then
 			echo "verbose"
 		else
 			echo "off"
