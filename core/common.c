@@ -82,6 +82,8 @@ int get_fb_settings(int fb_num)
 	}
 	close(fb);
 
+	bytespp = (fb_var.bits_per_pixel + 7) >> 3;
+
 	/* Check if optimized code can be used. We use special optimizations for
 	 * 24/32bpp modes in which all color components have a length of 8 bits. */
 	if (bytespp < 3 || fb_var.blue.length != 8 || fb_var.green.length != 8 || fb_var.red.length != 8) {
