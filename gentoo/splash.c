@@ -262,7 +262,6 @@ static int splash_svc_state(const char *name, const char *state, bool paint)
  */
 static int splash_init(bool start)
 {
-	rc_depinfo_t *deptree;
 	char **tmp;
 
 	if (svcs)
@@ -289,17 +288,19 @@ static int splash_init(bool start)
 		svcs = get_list(NULL, SPLASH_CACHEDIR"/svcs_stop");
 		svcs_cnt = strlist_count(svcs);
 
-		if ((deptree = rc_load_deptree()) == NULL) {
-			eerror("%s: failed to load deptree", __func__);
-			return -1;
-		}
-
-		tmp = rc_order_services(deptree, rc_get_runlevel(), RC_DEP_STOP);
-		svcs_done_cnt = svcs_cnt - strlist_count(tmp);
+		tmp = rc_services_in_state(rc_service_started);
+		svcs_done_cnt = strlist_count(tmp);
 		rc_strlist_free(tmp);
 
-		rc_free_deptree(deptree);
-		tmp = NULL;
+		tmp = rc_services_in_state(rc_service_starting);
+		svcs_done_cnt += strlist_count(tmp);
+		rc_strlist_free(tmp);
+
+		tmp = rc_services_in_state(rc_service_inactive);
+		svcs_done_cnt += strlist_count(tmp);
+		rc_strlist_free(tmp);
+
+		svcs_done_cnt = svcs_cnt - svcs_done_cnt;
 	}
 
 	if (splash_check_daemon(&pid_daemon))
@@ -593,6 +594,15 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		}
 		break;
 
+	case rc_hook_runlevel_stop_out:
+		/* Make sure the progress indicator reaches 100%, even if
+		 * something went wrong along the way. */
+		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
+			splash_send("progress %d\n", PROGRESS_MAX);
+			splash_send("paint\n");
+		}
+		break;
+
 	case rc_hook_runlevel_start_in:
 		/* Start the splash daemon during boot right after we finish
 		 * sysinit and are entering the boot runlevel. Due to historical
@@ -612,6 +622,10 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	case rc_hook_runlevel_start_out:
 		/* Stop the splash daemon after boot-up is finished. */
 		if (strcmp(name, RC_LEVEL_BOOT)) {
+			/* Make sure the progress indicator reaches 100%, even if
+			 * something went wrong along the way. */
+			splash_send("progress %d\n", PROGRESS_MAX);
+			splash_send("paint\n");
 			splash_theme_hook("rc_exit", "pre", name);
 			i = splash_stop(name);
 			splash_theme_hook("rc_exit", "post", name);
