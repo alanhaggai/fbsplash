@@ -368,15 +368,10 @@ setpic_out:	break;
 		struct fb_image pic;
 		u8 *out;
 
-		sprintf(dev, PATH_DEV "/fb%d", arg_fb);
-		if ((c = open(dev, O_RDWR)) == -1) {
-			sprintf(dev, PATH_DEV "/fb/%d", arg_fb);
-			if ((c = open(dev, O_RDWR)) == -1) {
-				fprintf(stderr, "Failed to open " PATH_DEV "/fb%d or "
-					 PATH_DEV "/fb/%d.\n", arg_fb, arg_fb);
-				break;
-			}
-		}
+		if (config->reqmode != 'v' && config->reqmode != 's')
+			break;
+
+		c = open_fb(arg_fb, false);
 
 		out = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
 				MAP_SHARED, c, fb_var.yoffset * fb_fix.line_length);
