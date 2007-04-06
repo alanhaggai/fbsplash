@@ -597,12 +597,14 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 			if (!ct->font || !ct->font->font)
 				continue;
 
+			txt = ct->val;
+
 			if (ct->flags & F_TXT_EXEC) {
 				txt = get_program_output(ct->val, origin);
-			} else if (ct->flags & F_TXT_EVAL) {
-				txt = eval_text(ct->val);
-			} else {
-				txt = ct->val;
+			}
+
+			if (ct->flags & F_TXT_EVAL) {
+				txt = eval_text(txt);
 			}
 
 			if (txt) {

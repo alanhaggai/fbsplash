@@ -68,7 +68,7 @@ Silent mode settings
    - a path relative to THEME_DIR/<theme_name> (eg. /etc/splash/default),
 
 * text [flags] <font> [style] <size> <x> [left|middle|right]
-  <y> [top|middle|bottom] <color> [exec|eval] "text"
+  <y> [top|middle|bottom] <color> [exec] [eval] "text"
 
   Draws an UTF8-encoded text string somewhere on the screen.
 

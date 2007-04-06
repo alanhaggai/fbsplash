@@ -984,14 +984,18 @@ void parse_text(char *t)
 	if (parse_color(&t, &ct->col)) 
 		goto pt_err;
 
+again:
 	skip_whitespace(&t);
 	if (!strncmp(t, "exec", 4)) {
 		ct->flags |= F_TXT_EXEC;
 		t += 4;
+		goto again;
 	} else if (!strncmp(t, "eval", 4)) {
 		ct->flags |= F_TXT_EVAL;
 		t += 4;
+		goto again;
 	}
+
 
 	skip_whitespace(&t);
 	ct->val = parse_quoted_string(t, (ct->flags & F_TXT_EVAL) ? 1 : 0);	
