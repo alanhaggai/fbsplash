@@ -56,7 +56,6 @@ extern int fd_gpm;
 /*
  * Framebuffer device and background buffer.
  */
-//extern pthread_mutex_t mtx_bgbuf;
 extern int fd_fb, fd_bg;
 extern u8 *fb_mem, *bg_buffer;
 
@@ -65,6 +64,9 @@ extern u8 *fb_mem, *bg_buffer;
  */
 extern pthread_t th_switchmon, th_sighandler, th_anim;
 extern pthread_mutex_t mtx_paint;
+extern pthread_mutex_t mtx_anim;
+extern pthread_cond_t  cnd_anim;
+
 
 /*
  * Service state structure.

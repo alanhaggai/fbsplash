@@ -89,7 +89,7 @@ endif
 
 ifeq ($(call config_opt,CONFIG_MNG),true)
 	OBJS   += $(OBJDIR)/mng_render.o $(OBJDIR)/mng_callbacks.o
-	LDLIBS += -lmng -llcms -ljpeg -lz
+	LDLIBS += -lmng -llcms -ljpeg -lz -lrt
 endif
 
 ifeq ($(call config_opt,CONFIG_TTF_KERNEL),true)

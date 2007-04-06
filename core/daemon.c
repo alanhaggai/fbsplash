@@ -23,7 +23,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include <dirent.h>
-
+#include <time.h>
 
 #include "splash.h"
 #include "daemon.h"
@@ -31,6 +31,9 @@
 /* Threading structures */
 pthread_mutex_t mtx_tty = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mtx_paint = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mtx_anim = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t  cnd_anim  = PTHREAD_COND_INITIALIZER;
+
 pthread_t th_switchmon, th_sighandler, th_anim;
 
 int ctty = CTTY_VERBOSE;
@@ -100,10 +103,11 @@ void anim_render_frame(anim *a)
  */
 void *thf_anim(void *unused)
 {
-	anim *a = NULL, *ca;
+	anim *ca;
 	item *i;
 	mng_anim *mng;
-	int delay = 10000, oldstate;
+	int delay = 10000, rdelay, oldstate;
+	struct timespec ts, tsc;
 
 	/* Render the first frame of all animations on the screen. */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
@@ -136,20 +140,32 @@ void *thf_anim(void *unused)
 
 			mng = mng_get_userdata(ca->mng);
 
-			if (mng->wait_msecs < delay && mng->wait_msecs > 0) {
-				delay = mng->wait_msecs;
-				a = ca;
-			}
-
 			/* If this is a new animation (activated by a service),
 			 * display it immediately. */
 			if (!mng->displayed_first)
 				anim_render_frame(ca);
+
+			if (mng->wait_msecs < delay && mng->wait_msecs > 0) {
+				delay = mng->wait_msecs;
+			}
 		}
 		pthread_mutex_unlock(&mtx_paint);
 		pthread_setcancelstate(oldstate, NULL);
 
-		usleep(delay * 1000);
+		pthread_mutex_lock(&mtx_anim);
+		clock_gettime(CLOCK_REALTIME, &ts);
+
+		ts.tv_sec  += (int)(delay / 1000);
+		ts.tv_nsec += (delay % 1000) * 1000000;
+
+		/* Check for overflow of the nanoseconds field */
+		if (ts.tv_nsec >= 1000000000) {
+			ts.tv_sec++;
+			ts.tv_nsec -= 1000000000;
+		}
+
+		pthread_cond_timedwait(&cnd_anim, &mtx_anim, &ts);
+		pthread_mutex_unlock(&mtx_anim);
 
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 		pthread_mutex_lock(&mtx_paint);
@@ -157,8 +173,10 @@ void *thf_anim(void *unused)
 		if (ctty != CTTY_SILENT)
 			goto next;
 
-		if (a)
-			anim_render_frame(a);
+		/* Calculate the real delay. We might have been signalled by
+		 * the splash daemon before 'delay' msecs passed. */
+		clock_gettime(CLOCK_REALTIME, &tsc);
+		rdelay = delay + (tsc.tv_sec - ts.tv_sec)*1000 + (tsc.tv_nsec - ts.tv_nsec)/1000000;
 
 		/* Update the wait time for all relevant animation objects. */
 		for (i = anims.head ; i != NULL; i = i->next) {
@@ -166,21 +184,20 @@ void *thf_anim(void *unused)
 
 			if (!(ca->flags & F_ANIM_DISPLAY) ||
 				(ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL ||
-			    ca->status == F_ANIM_STATUS_DONE || ca == a)
+			    ca->status == F_ANIM_STATUS_DONE)
 				continue;
 
 			mng = mng_get_userdata(ca->mng);
 			if (mng->wait_msecs > 0) {
-				mng->wait_msecs -= delay;
+				mng->wait_msecs -= rdelay;
 				if (mng->wait_msecs <= 0)
 					anim_render_frame(ca);
 			}
 		}
-
 next:	pthread_mutex_unlock(&mtx_paint);
 		pthread_setcancelstate(oldstate, NULL);
 
-		a = NULL;
+		/* Default delay is 10s */
 		delay = 10000;
 	}
 }
@@ -543,46 +560,41 @@ void obj_update_status(char *svc, enum ESVC state)
 {
 	item *i;
 
-	for (i = objs.head; i != NULL; i = i->next) {
-		icon *ci;
-		obj *o = (obj*)i->p;
+	for (i = icons.head; i != NULL; i = i->next) {
+		icon *ci = (icon*)i->p;
 
-		switch (o->type) {
+		if (!ci->svc || strcmp(ci->svc, svc))
+			continue;
 
-		case o_icon:
-			ci = (icon*)o->p;
-
-			if (!ci->svc || strcmp(ci->svc, svc))
-				continue;
-
-			if (ci->type == state)
-				ci->status = 1;
-			else
-				ci->status = 0;
-
-			break;
+		if (ci->type == state)
+			ci->status = 1;
+		else
+			ci->status = 0;
+		break;
+	}
 
 #ifdef CONFIG_MNG
-		case o_anim:
-		{
-			anim *ca;
-			ca = (anim*)o->p;
+	/* Lock the paint mutex to prevent the anim thread from
+	 * accessing the anims list while we're modifying it. */
+	pthread_mutex_lock(&mtx_paint);
+	for (i = anims.head; i != NULL; i = i->next) {
+		anim *ca = (anim*)i->p;
 
-			if (!ca->svc || strcmp(ca->svc, svc))
-				continue;
-
-			if (ca->type == state)
-				ca->flags |= F_ANIM_DISPLAY;
-			else
-				ca->flags &= ~F_ANIM_DISPLAY;
-
-			break;
-		}
-#endif
-		default:
+		if (!ca->svc || strcmp(ca->svc, svc))
 			continue;
+
+		if (ca->type == state) {
+			ca->flags |= F_ANIM_DISPLAY;
+			pthread_mutex_lock(&mtx_anim);
+			pthread_cond_signal(&cnd_anim);
+			pthread_mutex_unlock(&mtx_anim);
+		} else {
+			ca->flags &= ~F_ANIM_DISPLAY;
 		}
+		break;
 	}
+	pthread_mutex_unlock(&mtx_paint);
+#endif
 }
 
 /*
