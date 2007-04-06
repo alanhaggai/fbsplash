@@ -576,7 +576,6 @@ void obj_update_status(char *svc, enum ESVC state)
 			else
 				ca->flags &= ~F_ANIM_DISPLAY;
 
-			printf("updating anim, have: %d\n", ca->flags);
 			break;
 		}
 #endif
