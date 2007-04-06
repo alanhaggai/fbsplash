@@ -363,7 +363,10 @@ char *eval_text(char *txt)
 			if (*p == 0)
 				break;
 
-			*d = *p;
+			if (*p == 'n')
+				*d = '\n';
+			else
+				*d = *p;
 			p++;
 			d++;
 			continue;
