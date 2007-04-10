@@ -40,12 +40,12 @@ start() {
 		for TTY in ${SPLASH_TTYS} ; do
 			theme="${SPLASH_THEME}"
 
-			[ ${TTY} == "1" -a -z "$(/sbin/splash_util -c getstate --tty=${TTY}| grep 'off')" ] && continue
-			[ ${TTY} == "0" ] && continue
+			[ ${TTY} = "1" -a -z "$(/sbin/splash_util -c getstate --tty=${TTY}| grep 'off')" ] && continue
+			[ ${TTY} = "0" ] && continue
 
 			if [ -n "${SPLASH_TTY_MAP}" ]; then
 				for i in ${SPLASH_TTY_MAP} ; do
-					if [ "${i%:*}" == "${TTY}" ]; then
+					if [ "${i%:*}" = "${TTY}" ]; then
 						theme="${i#*:}"
 					fi
 				done

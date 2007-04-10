@@ -23,9 +23,9 @@
 #include <rc.h>
 #include <splash.h>
 
-#define SPLASH_CMD "bash -c 'export SOFTLEVEL='%s'; export BOOTLEVEL="RC_LEVEL_BOOT";" \
+#define SPLASH_CMD "export SOFTLEVEL='%s'; export BOOTLEVEL="RC_LEVEL_BOOT";" \
 				   "export DEFAULTLEVEL="RC_LEVEL_DEFAULT"; export svcdir=${RC_SVCDIR};" \
-				   ". /sbin/splash-functions.sh; %s %s %s'"
+				   ". /sbin/splash-functions.sh; %s %s %s"
 
 static char		**svcs = NULL;
 static int		svcs_cnt = 0;
@@ -641,7 +641,8 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		break;
 
 	case rc_hook_service_start_out:
-		if (rc_service_state(name, rc_service_started)) {
+		if (rc_service_state(name, rc_service_started) ||
+		    rc_service_state(name, rc_service_inactive)) {
 			bool gpm = false;
 
 			if (!strcmp(name, "gpm")) {

@@ -67,9 +67,9 @@ splash_setup() {
 }
 
 splash_get_boot_message() {
-	if [ "${RUNLEVEL}" == "6" ]; then
+	if [ "${RUNLEVEL}" = "6" ]; then
 		echo "${SPLASH_REBOOT_MESSAGE}"
-	elif [ "${RUNLEVEL}" == "0" ]; then
+	elif [ "${RUNLEVEL}" = "0" ]; then
 		echo "${SPLASH_SHUTDOWN_MESSAGE}"
 	else
 		echo "${SPLASH_BOOT_MESSAGE}"
@@ -88,7 +88,7 @@ splash_comm_send() {
 	fi
 
 	if [ -r /proc/$(<"${spl_pidfile}")/status -a
-		  "$( (read t;echo ${t} | sed -e 's/Name://'}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]; then
+		  "$( (read t;echo ${t} | sed -e 's/Name://'}) </proc/$(<${spl_pidfile})/status)" = "splash_util.sta" ]; then
 		echo "$*" > "${spl_fifo}" &
 	else
 		echo "Splash daemon not running!"
@@ -100,7 +100,7 @@ splash_comm_send() {
 splash_get_mode() {
 	local ctty="$(${spl_bindir}/fgconsole)"
 
-	if [ "${ctty}" == "${SPLASH_TTY}" ]; then
+	if [ "${ctty}" = "${SPLASH_TTY}" ]; then
 		echo "silent"
 	else
 		if [ -z "$(${spl_util} -c getstate --tty=${tty} 2>/dev/null | grep off)" ]; then
@@ -144,9 +144,9 @@ splash_silent() {
 #  - start - to get a list of services to be started during bootup
 #  - stop  - to get a list of services to be stopped during shutdown/reboot
 splash_svclist_get() {
-	if [ "$1" == "start" -a -r "${spl_cachedir}/svcs_start" ]; then
+	if [ "$1" = "start" -a -r "${spl_cachedir}/svcs_start" ]; then
 		cat "${spl_cachedir}/svcs_start"
-	elif [ "$1" == "stop" -a -r "${spl_cachedir}/svcs_stop"]; then
+	elif [ "$1" = "stop" -a -r "${spl_cachedir}/svcs_stop"]; then
 		cat "${spl_cachedir}/svcs_stop"
 	fi
 }
