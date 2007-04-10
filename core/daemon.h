@@ -3,6 +3,7 @@
 
 #include "util.h"
 #include <pthread.h>
+#include <time.h>
 
 /* daemon.c */
 void obj_update_status(char *svc, enum ESVC state);
@@ -72,6 +73,7 @@ extern pthread_cond_t  cnd_anim;
  * Service state structure.
  */
 typedef struct {
+	struct timespec ts;
 	char *svc;
 	enum ESVC state;
 } svc_state;

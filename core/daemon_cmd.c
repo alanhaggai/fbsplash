@@ -450,9 +450,12 @@ int cmd_update_svc(void **args)
 	item *i;
 	svc_state *ss;
 	enum ESVC state;
+	struct timespec ts;
 
 	if (!parse_svc_state(args[1], &state))
 		return -1;
+
+	clock_gettime(CLOCK_MONOTONIC, &ts);
 
 	for (i = svcs.head ; i != NULL; i = i->next) {
 		ss = (svc_state*)i->p;
@@ -466,8 +469,42 @@ int cmd_update_svc(void **args)
 
 cus_update:
 	ss->state = state;
+
+	if (ss->state == e_svc_start) {
+		ss->ts = ts;
+	} else if (ss->state == e_svc_started || ss->state == e_svc_start_failed) {
+		ss->ts.tv_sec  = ts.tv_sec  - ss->ts.tv_sec;
+		ss->ts.tv_nsec = ts.tv_nsec - ss->ts.tv_nsec;
+
+		/* Check for overflow of the nanoseconds field */
+		if (ss->ts.tv_nsec < 0) {
+			ss->ts.tv_sec--;
+			ss->ts.tv_nsec += 1000000000;
+		}
+	}
+
 	obj_update_status(args[0], state);
 
+	return 0;
+}
+
+int cmd_dump_svc_timings(void **args)
+{
+	svc_state *ss;
+	item *i;
+	FILE *fp = fopen("/lib/splash/cache/svc_timings", "w");
+
+	if (!fp)
+		return -1;
+
+	for (i = svcs.head; i != NULL; i = i->next) {
+		ss = (svc_state*)i->p;
+		if (ss->svc && (ss->ts.tv_sec > 0 || ss->ts.tv_nsec > 0)) {
+			fprintf(fp, "%s: %d.%.6d\n", ss->svc, (int)ss->ts.tv_sec, (int)(ss->ts.tv_nsec/1000));
+		}
+	}
+
+	fclose(fp);
 	return 0;
 }
 
@@ -543,6 +580,12 @@ cmdhandler known_cmds[] =
 		.handler = cmd_update_svc,
 		.args = 2,
 		.specs = "ss",
+	},
+
+	{	.cmd = "dump_svc_timings",
+		.handler = cmd_dump_svc_timings,
+		.args = 0,
+		.specs = NULL,
 	},
 
 	{	.cmd = "exit",
