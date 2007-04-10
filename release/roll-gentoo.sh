@@ -14,7 +14,7 @@ if [[ "$1" == "major" ]]; then
 elif [[ "$1" == "minor" ]]; then
 	minor=$(($minor+1))
 	sub=0
-else 
+else
 	sub=$(($sub+1))
 fi
 
