@@ -560,17 +560,19 @@ void obj_update_status(char *svc, enum ESVC state)
 {
 	item *i;
 
-	for (i = icons.head; i != NULL; i = i->next) {
-		icon *ci = (icon*)i->p;
+	for (i = objs.head; i != NULL; i = i->next) {
+		obj *co = (obj*)i->p;
 
-		if (!ci->svc || strcmp(ci->svc, svc))
-			continue;
+		if (co->type == o_icon) {
+			icon *ci = (icon*)co->p;
+			if (!ci->svc || strcmp(ci->svc, svc))
+				continue;
 
-		if (ci->type == state)
-			ci->status = 1;
-		else
-			ci->status = 0;
-		break;
+			if (ci->type == state)
+				ci->status = 1;
+			else
+				ci->status = 0;
+		}
 	}
 
 #ifdef CONFIG_MNG
@@ -591,7 +593,6 @@ void obj_update_status(char *svc, enum ESVC state)
 		} else {
 			ca->flags &= ~F_ANIM_DISPLAY;
 		}
-		break;
 	}
 	pthread_mutex_unlock(&mtx_paint);
 #endif
