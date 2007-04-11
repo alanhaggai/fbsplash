@@ -198,7 +198,7 @@ for (( i=0 ; i < index ; i++ )) ; do
 		done
 
 		icons=`cat "${themedir}/${theme}/${j}.cfg" | \
-		       egrep -v '^#' | grep icon | awk '{print $2}'`
+		       egrep -v '^#' | grep 'icon ' | awk '{print $2}'`
 		for icon in ${icons} ; do
 			put_item "${icon}"
 		done
