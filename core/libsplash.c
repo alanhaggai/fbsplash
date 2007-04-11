@@ -223,7 +223,7 @@ int splash_parse_kcmdline(scfg_t *cfg, bool sysmsg)
 			} else if (!strncmp(opt, "kdgraphics", 10)) {
 				cfg->kdmode = KD_GRAPHICS;
 			} else if (!strncmp(opt, "profile", 7)) {
-				cfg->profile = 1;
+				cfg->profile = true;
 			}
 		}
 	}
@@ -283,7 +283,7 @@ int splash_cache_cleanup(void)
 	char *what = SPLASH_CACHEDIR;
 	struct stat buf;
 
-	if (config.profile)
+	if (!config.profile)
 		goto nosave;
 
 	if (stat(SPLASH_TMPDIR, &buf) != 0 || !S_ISDIR(buf.st_mode)) {
@@ -438,7 +438,7 @@ int splash_profile(const char *fmt, ...)
 	FILE *fp;
 	float uptime;
 
-	if (config.profile)
+	if (!config.profile)
 		return 0;
 
 	fp = fopen(PATH_PROC "/uptime", "r");

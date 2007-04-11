@@ -574,7 +574,7 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 					render_it = 1;
 			}
 
-			if (render_it) {
+			if (render_it && (a->flags & F_ANIM_DISPLAY)) {
 				if (bgnd)
 					mng_display_buf(a->mng, bgnd, target, a->x, a->y, fb_var.xres * bytespp, fb_var.xres * bytespp);
 				else
