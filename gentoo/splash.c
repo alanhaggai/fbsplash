@@ -47,19 +47,14 @@ static int strlist_count(char **list)
 }
 
 /*
- * Create a strlist from a file. Used for svcs_start/svcs_stop.
+ * Create a strlist from a file pointer. Can be used
+ * to get a list of words printed by an app/script.
  */
-static char **get_list(char **list, const char *file)
+static char **get_list_fp(char **list, FILE *fp)
 {
-	FILE *fp;
 	char buffer[512];
 	char *p;
 	char *token;
-
-	if (!(fp = fopen(file, "r"))) {
-		ewarn("%s: `%s': %s", __func__, file, strerror(errno));
-		return list;
-	}
 
 	while (fgets(buffer, 512, fp)) {
 		p = buffer;
@@ -83,6 +78,23 @@ static char **get_list(char **list, const char *file)
 			}
 		}
 	}
+
+	return list;
+}
+
+/*
+ * Create a strlist from a file. Used for svcs_start/svcs_stop.
+ */
+static char **get_list(char **list, const char *file)
+{
+	FILE *fp;
+
+	if (!(fp = fopen(file, "r"))) {
+		ewarn("%s: `%s': %s", __func__, file, strerror(errno));
+		return list;
+	}
+
+	list = get_list_fp(list, fp);
 	fclose(fp);
 
 	return list;
@@ -541,9 +553,27 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	else if (!strcmp(t, RC_LEVEL_SHUTDOWN))
 		type = shutdown;
 
-	/* Do nothing if we are in sysinit */
-	if (!strcmp(name, RC_LEVEL_SYSINIT))
+	/* We generally do nothing if we're in sysinit. Except if the
+	 * autoconfig service is present, when we get a list of services
+	 * that will be started by it and mark them as coldplugged. */
+	if (!strcmp(name, RC_LEVEL_SYSINIT)) {
+		if (hook == rc_hook_runlevel_start_out) {
+			FILE *fp;
+			char **list = NULL;
+			int i;
+
+			fp = popen("if [ -e /etc/init.d/autoconfig ]; then . /etc/init.d/autoconfig ; list_services ; fi", "r");
+			if (!fp)
+				return 0;
+
+			list = get_list_fp(NULL, fp);
+			for (i = 0; list && list[i]; i++) {
+				rc_mark_service(list[i], rc_service_coldplugged);
+			}
+			pclose(fp);
+		}
 		return 0;
+	}
 
 	if (!config) {
 		config = splash_lib_init(type);
