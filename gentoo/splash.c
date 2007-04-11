@@ -561,17 +561,12 @@ int _splash_hook (rc_hook_t hook, const char *name)
 
 	/* Don't do anything if we're starting/stopping a service, but
 	 * we aren't in the middle of a runlevel switch. */
-	switch (hook) {
-	case rc_hook_service_start_in:
-	case rc_hook_service_stop_in:
-	case rc_hook_service_start_out:
-	case rc_hook_service_stop_out:
-		if (!rc_runlevel_starting() && !rc_runlevel_stopping())
-			return 0;
-
-	default:
-		break;
-	}
+	if (!(rc_runlevel_starting() || rc_runlevel_stopping()) &&
+		hook != rc_hook_runlevel_stop_in &&
+		hook != rc_hook_runlevel_stop_out &&
+		hook != rc_hook_runlevel_start_in &&
+		hook != rc_hook_runlevel_stop_out)
+		return 0;
 
 	switch (hook) {
 	case rc_hook_runlevel_stop_in:
@@ -632,7 +627,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		}
 		break;
 
-	case rc_hook_service_start_in:
+	case rc_hook_service_start_now:
 		/* If we're starting or stopping a service, we're being called by
 		 * runscript and thus have to reload our config. */
 		if (splash_init(true))
@@ -640,7 +635,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		i = splash_svc_handle(name, "svc_start");
 		break;
 
-	case rc_hook_service_start_out:
+	case rc_hook_service_start_done:
 		if (rc_service_state(name, rc_service_started) ||
 		    rc_service_state(name, rc_service_inactive)) {
 			bool gpm = false;
@@ -670,7 +665,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		}
 		break;
 
-	case rc_hook_service_stop_in:
+	case rc_hook_service_stop_now:
 		if (splash_init(false))
 			return -1;
 
@@ -702,7 +697,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		i = splash_svc_handle(name, "svc_stop");
 		break;
 
-	case rc_hook_service_stop_out:
+	case rc_hook_service_stop_done:
 		if (rc_service_state(name, rc_service_stopped)) {
 			i = splash_svc_state(name, "svc_stopped", 1);
 		} else {
