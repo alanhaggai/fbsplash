@@ -301,7 +301,7 @@ int splash_cache_cleanup(void)
 
 	err  = system("/bin/mv "SPLASH_TMPDIR"/profile "SPLASH_CACHEDIR"/profile");
 	err += system("/bin/mv "SPLASH_TMPDIR"/svcs_start "SPLASH_CACHEDIR"/svcs_start");
-	err += system("/bin/mv "SPLASH_TMPDIR"/svc_timings "SPLASH_CACHEDIR"/svc_timings");
+//	err += system("/bin/mv "SPLASH_TMPDIR"/svc_timings "SPLASH_CACHEDIR"/svc_timings");
 	what = SPLASH_TMPDIR;
 
 nosave:
