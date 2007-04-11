@@ -69,7 +69,7 @@ K_DEPS   =
 
 # Flags for the user utilities
 CFLAGS   = -Wall -g
-LDLIBS   = -ljpeg -lm -pthread
+LDLIBS   = -ljpeg -lm -pthread -lrt
 LDFLAGS  =
 
 # Include the klibc header files so that we can compile against fb.h
