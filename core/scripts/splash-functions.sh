@@ -17,11 +17,11 @@
 # both readable and writable at all times, even when the root fs
 # is mounted read-only. This writable space is provided by a tmpfs
 # mounted at ${spl_cachedir}.
-spl_util="/sbin/splash_util.static"
-spl_bindir="/lib/splash/bin"
-spl_cachedir="/lib/splash/cache"
-spl_fifo="${spl_cachedir}/.splash"
-spl_pidfile="${spl_cachedir}/daemon.pid"
+export spl_util="/sbin/splash_util.static"
+export spl_bindir="/lib/splash/bin"
+export spl_cachedir="/lib/splash/cache"
+export spl_fifo="${spl_cachedir}/.splash"
+export spl_pidfile="${spl_cachedir}/daemon.pid"
 
 [ -r /etc/init.d/functions.sh ] && . /etc/init.d/functions.sh
 
@@ -150,6 +150,18 @@ splash_svclist_get() {
 		cat "${spl_cachedir}/svcs_stop"
 	fi
 }
+
+# Export functions if we're running bash.
+if [ -n "${BASH}" ]; then
+	export -f splash_setup
+	export -f splash_get_boot_message
+	export -f splash_comm_send
+	export -f splash_get_mode
+	export -f chvt
+	export -f splash_verbose
+	export -f splash_silent
+	export -f splash_svclist_get
+fi
 
 splash_setup
 
