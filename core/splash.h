@@ -90,7 +90,7 @@ int splash_profile(const char *fmt, ...);
 int splash_set_verbose(void);
 int splash_set_silent(void);
 bool splash_set_evdev(void);
-int splash_check_daemon(int *pid_daemon);
+int splash_check_daemon(int *pid_daemon, bool verbose);
 bool splash_check_sanity(void);
 
 int splash_cache_prep(void);

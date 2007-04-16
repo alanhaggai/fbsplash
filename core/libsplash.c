@@ -44,6 +44,7 @@
 
 #include "splash.h"
 
+static FILE *fp_fifo = NULL;
 static int fd_tty0 = -1;
 static scfg_t config;
 
@@ -76,6 +77,21 @@ scfg_t* splash_lib_init(stype_t type)
  */
 int splash_lib_cleanup(void)
 {
+	if (config.theme) {
+		free(config.theme);
+		config.theme = NULL;
+	}
+
+	if (config.message) { 
+		free(config.message);
+		config.message = NULL;
+	}
+
+	if (fp_fifo) {
+		fclose(fp_fifo);
+		fp_fifo = NULL;
+	}
+
 	if (fd_tty0 >= 0)
 		close(fd_tty0);
 	return 0;
@@ -316,7 +332,7 @@ nosave:
  * Check that the splash daemon is running. Sets 'pid_daemon'
  * to the PID of the splash daemon if it's found running.
  */
-int splash_check_daemon(int *pid_daemon)
+int splash_check_daemon(int *pid_daemon, bool verbose)
 {
 	int err = 0;
 	FILE *fp;
@@ -324,12 +340,14 @@ int splash_check_daemon(int *pid_daemon)
 
 	fp = fopen(SPLASH_PIDFILE, "r");
 	if (!fp) {
-		eerror("Failed to open "SPLASH_PIDFILE);
+		if (verbose)
+			eerror("Failed to open "SPLASH_PIDFILE);
 		return -1;
 	}
 
 	if (fscanf(fp, "%d", pid_daemon) != 1) {
-		eerror("Failed to get the PID of the splash daemon.");
+		if (verbose)
+			eerror("Failed to get the PID of the splash daemon.");
 		fclose(fp);
 		return -1;
 	}
@@ -349,7 +367,8 @@ out:
 	return err;
 stale:
 	err = -1;
-	eerror("Stale pidfile. Splash daemon not running.");
+	if (verbose)
+		eerror("Stale pidfile. Splash daemon not running.");
 	goto out;
 }
 
@@ -463,7 +482,6 @@ int splash_profile(const char *fmt, ...)
  */
 int splash_send(const char *fmt, ...)
 {
-	static FILE *fp_fifo = NULL;
 	char cmd[256];
 	va_list ap;
 
