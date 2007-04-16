@@ -120,7 +120,7 @@ chvt() {
 	if [ -x /usr/bin/chvt ] ; then
 		/usr/bin/chvt ${ntty}
 	else
-		echo -en "\e[12;${ntty}]"
+		printf "\e[12;${ntty}]"
 	fi
 }
 
