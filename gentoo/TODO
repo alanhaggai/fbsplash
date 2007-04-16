@@ -1,2 +1,3 @@
 - test autoconfig support
 - add debug option (kernel command line)
+- BUG: rc single, Ctrl+D hangs after 105 (start_in) checkroot, after going through 105, 106 clock

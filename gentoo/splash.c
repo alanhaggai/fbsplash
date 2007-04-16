@@ -23,10 +23,12 @@
 #include <rc.h>
 #include <splash.h>
 
-#define SPLASH_CMD "export SOFTLEVEL='%s'; export BOOTLEVEL="RC_LEVEL_BOOT";" \
-				   "export DEFAULTLEVEL="RC_LEVEL_DEFAULT"; export svcdir=${RC_SVCDIR};" \
+#define SPLASH_CMD "export SOFTLEVEL='%s'; export BOOTLEVEL='%s';" \
+				   "export DEFAULTLEVEL='%s'; export svcdir=${RC_SVCDIR};" \
 				   ". /sbin/splash-functions.sh; %s %s %s"
 
+static char		*bootlevel = NULL;
+static char		*defaultlevel = NULL;
 static char		**svcs = NULL;
 static int		svcs_cnt = 0;
 static int		svcs_done_cnt = 0;
@@ -214,8 +216,8 @@ static int splash_call(const char *cmd, const char *arg1, const char *arg2)
 		return -1;
 
 	snprintf(c, l, SPLASH_CMD,
-			arg1 ? (strcmp(arg1, RC_LEVEL_SYSINIT) == 0 ? RC_LEVEL_BOOT : soft) : soft,
-			cmd, arg1 ? arg1 : "", arg2 ? arg2 : "");
+			arg1 ? (strcmp(arg1, RC_LEVEL_SYSINIT) == 0 ? bootlevel : soft) : soft,
+			bootlevel, defaultlevel, cmd, arg1 ? arg1 : "", arg2 ? arg2 : "");
 	l = system(c);
 	free(c);
 	return l;
@@ -276,6 +278,10 @@ static int splash_init(bool start)
 {
 	char **tmp;
 
+	if (splash_check_daemon(&pid_daemon, false)) {
+		return -1;
+	}
+
 	if (svcs)
 		ewarn("%s: We already have a svcs list!", __func__);
 
@@ -315,9 +321,6 @@ static int splash_init(bool start)
 		svcs_done_cnt = svcs_cnt - svcs_done_cnt;
 	}
 
-	if (splash_check_daemon(&pid_daemon))
-		return -1;
-
 	return 0;
 }
 
@@ -352,7 +355,6 @@ int splash_svcs_start()
 	rc_depinfo_t *deptree;
 	FILE *fp;
 	char **t, **deporder, *s, *r;
-	char *bootlevel = NULL, *deflevel = NULL;
 	int i, j, err = 0;
 
 	fp = fopen(SPLASH_CACHEDIR"/svcs_start", "w");
@@ -367,20 +369,6 @@ int splash_svcs_start()
 		goto out;
 	}
 
-	/* Get boot and default levels from env variables exported by RC.
-	 * If unavailable, use the default ones. */
-	s = getenv("RC_BOOTLEVEL");
-	if (s)
-		bootlevel = strdup(s);
-	else
-		bootlevel = strdup(RC_LEVEL_BOOT);
-
-	s = getenv("RC_DEFAULTLEVEL");
-	if (s)
-		deflevel = strdup(s);
-	else
-		deflevel = strdup(RC_LEVEL_DEFAULT);
-
 	deporder = rc_order_services(deptree, bootlevel, RC_DEP_START);
 
 	/* Save what we've got so far to the svcs_start. */
@@ -394,7 +382,7 @@ int splash_svcs_start()
 	}
 
 	t = deporder;
-	deporder = rc_order_services(deptree, deflevel, RC_DEP_START);
+	deporder = rc_order_services(deptree, defaultlevel, RC_DEP_START);
 
 	/* Print the new services and skip ones that have already been started
 	 * in the 'boot' runlevel. */
@@ -415,8 +403,6 @@ next:		i++;
 	rc_strlist_free(t);
 	rc_free_deptree(deptree);
 
-	free(deflevel);
-	free(bootlevel);
 out:
 	fclose(fp);
 	return 0;
@@ -545,12 +531,12 @@ int _splash_hook (rc_hook_t hook, const char *name)
 {
 	int i = 0;
 	stype_t type = bootup;
-	char *t;
+	char *runlev;
 
-	t = rc_get_runlevel();
-	if (!strcmp(t, RC_LEVEL_REBOOT))
+	runlev = rc_get_runlevel();
+	if (!strcmp(runlev, RC_LEVEL_REBOOT))
 		type = reboot;
-	else if (!strcmp(t, RC_LEVEL_SHUTDOWN))
+	else if (!strcmp(runlev, RC_LEVEL_SHUTDOWN))
 		type = shutdown;
 
 	/* We generally do nothing if we're in sysinit. Except if the
@@ -589,14 +575,35 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	if (config->reqmode != 's')
 		return 0;
 
+	/* Get boot and default levels from env variables exported by RC.
+	 * If unavailable, use the default ones. */
+	bootlevel = getenv("RC_BOOTLEVEL");
+	if (!bootlevel)
+		bootlevel = RC_LEVEL_BOOT;
+
+	defaultlevel = getenv("RC_DEFAULTLEVEL");
+	if (!defaultlevel)
+		defaultlevel = RC_LEVEL_DEFAULT;
+
 	/* Don't do anything if we're starting/stopping a service, but
 	 * we aren't in the middle of a runlevel switch. */
-	if (!(rc_runlevel_starting() || rc_runlevel_stopping()) &&
-		hook != rc_hook_runlevel_stop_in &&
-		hook != rc_hook_runlevel_stop_out &&
-		hook != rc_hook_runlevel_start_in &&
-		hook != rc_hook_runlevel_stop_out)
-		return 0;
+	if (!(rc_runlevel_starting() || rc_runlevel_stopping())) {
+		if (hook != rc_hook_runlevel_stop_in &&
+			hook != rc_hook_runlevel_stop_out &&
+			hook != rc_hook_runlevel_start_in &&
+			hook != rc_hook_runlevel_stop_out)
+			return 0;
+	} else {
+		/* We're starting/stopping a runlevel. Check whether we're
+		 * actually booting/rebooting. */
+		if (rc_runlevel_starting() && strcmp(runlev, bootlevel) &&
+			strcmp(runlev, defaultlevel) && strcmp(runlev, RC_LEVEL_SYSINIT))
+			return 0;
+
+		if (rc_runlevel_stopping() && strcmp(runlev, bootlevel) &&
+			strcmp(runlev, RC_LEVEL_REBOOT) && strcmp(runlev, RC_LEVEL_SHUTDOWN))
+			return 0;
+	}
 
 	switch (hook) {
 	case rc_hook_runlevel_stop_in:
@@ -605,6 +612,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
 			if ((i = splash_start(name))) {
 				splash_set_verbose();
+				return i;
 			} else {
 				if (rc_service_state("gpm", rc_service_started)) {
 					splash_send("set gpm\n");
@@ -616,6 +624,8 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		} else {
 			splash_theme_hook("rc_exit", "pre", name);
 			splash_theme_hook("rc_exit", "post", name);
+			splash_lib_cleanup();
+			config = NULL;
 		}
 		break;
 
@@ -625,6 +635,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
 			splash_send("progress %d\n", PROGRESS_MAX);
 			splash_send("paint\n");
+			splash_cache_cleanup();
 		}
 		break;
 
@@ -633,7 +644,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		 * sysinit and are entering the boot runlevel. Due to historical
 		 * reasons, we simulate a full sysinit cycle here for the theme
 		 * scripts. */
-		if (strcmp(name, RC_LEVEL_BOOT) == 0) {
+		if (strcmp(name, bootlevel) == 0) {
 			if ((i = splash_start(RC_LEVEL_SYSINIT)))
 				splash_set_verbose();
 			splash_theme_hook("rc_init", "post", RC_LEVEL_SYSINIT);
@@ -646,7 +657,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 
 	case rc_hook_runlevel_start_out:
 		/* Stop the splash daemon after boot-up is finished. */
-		if (strcmp(name, RC_LEVEL_BOOT)) {
+		if (strcmp(name, bootlevel)) {
 			/* Make sure the progress indicator reaches 100%, even if
 			 * something went wrong along the way. */
 			splash_send("progress %d\n", PROGRESS_MAX);
@@ -654,6 +665,8 @@ int _splash_hook (rc_hook_t hook, const char *name)
 			splash_theme_hook("rc_exit", "pre", name);
 			i = splash_stop(name);
 			splash_theme_hook("rc_exit", "post", name);
+			splash_lib_cleanup();
+			config = NULL;
 		}
 		break;
 
@@ -693,6 +706,8 @@ int _splash_hook (rc_hook_t hook, const char *name)
 				splash_set_verbose();
 			}
 		}
+		splash_lib_cleanup();
+		config = NULL;
 		break;
 
 	case rc_hook_service_stop_now:
@@ -737,10 +752,17 @@ int _splash_hook (rc_hook_t hook, const char *name)
 				splash_set_verbose();
 			}
 		}
+		splash_lib_cleanup();
+		config = NULL;
 		break;
 
 	default:
-		return i;
+		break;
+	}
+
+	if (svcs) {
+		rc_strlist_free(svcs);
+		svcs = NULL;
 	}
 
 	return i;
