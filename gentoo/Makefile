@@ -17,7 +17,7 @@ test: test.o
 	$(CC) $(CFLAGS) $(INCLUDES) -DLIBDIR=\"$(LIB)\" -fPIC -c -o $@ $<
 
 install:
-	install -D splash.so $(DESTDIR)/lib/rcscripts/plugins/splash.so
+	install -D splash.so $(DESTDIR)/$(LIB)/rcscripts/plugins/splash.so
 
 clean:
 	rm -rf *.o *.so
