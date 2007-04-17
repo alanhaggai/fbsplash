@@ -27,7 +27,7 @@ LIB		?= lib
 
 prefix     =
 sbindir    = ${prefix}/sbin
-libdir     = ${prefix}/lib
+libdir     = ${prefix}/${LIB}
 usrbindir  = ${prefix}/usr/bin
 mandir 	   = ${prefix}/usr/share/man
 
