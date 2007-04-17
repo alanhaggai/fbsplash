@@ -1,3 +1,5 @@
+LIB ?= lib
+
 all: fgconsole
 
 fgconsole: fgconsole.o getfd.o
@@ -7,5 +9,5 @@ clean:
 	rm -f *.o fgconsole
 
 install:
-	install -D fgconsole $(DESTDIR)/lib/splash/bin/fgconsole
+	install -D fgconsole $(DESTDIR)/$(LIB)/splash/bin/fgconsole
 
