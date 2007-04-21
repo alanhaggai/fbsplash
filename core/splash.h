@@ -87,6 +87,7 @@ int splash_lib_cleanup();
 int splash_init_config(scfg_t *cfg, stype_t type);
 int splash_parse_kcmdline(scfg_t *cfg, bool sysmsg);
 int splash_profile(const char *fmt, ...);
+bool splash_is_silent(void);
 int splash_set_verbose(void);
 int splash_set_silent(void);
 bool splash_set_evdev(void);

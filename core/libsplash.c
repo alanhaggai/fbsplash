@@ -263,6 +263,24 @@ int splash_set_verbose(void)
 	return ioctl(fd_tty0, VT_ACTIVATE, config.tty_v);
 }
 
+/*
+ * Returns true if the silent splash screen is currently displayed.
+ */
+bool splash_is_silent(void)
+{
+	struct vt_stat vtstat;
+
+	if (fd_tty0 == -1)
+		return false;
+
+	if (ioctl(fd_tty0, VT_GETSTATE, &vtstat) != -1) {
+		return (vtstat.v_active == config.tty_s);
+
+	} else {
+		return false;
+	}
+}
+
 #ifndef TARGET_KERNEL
 /*
  * Switch to silent mode.
