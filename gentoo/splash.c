@@ -702,7 +702,6 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		} else {
 			i = splash_svc_state(name, "svc_start_failed", 1);
 			if (config->vonerr) {
-				ewarn("splash: service %s failed, switching to verbose mode", name);
 				splash_set_verbose();
 			}
 		}
@@ -748,7 +747,6 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		} else {
 			i = splash_svc_state(name, "svc_stop_failed", 1);
 			if (config->vonerr) {
-				ewarn("splash: service %s failed, switching to verbose mode", name);
 				splash_set_verbose();
 			}
 		}
