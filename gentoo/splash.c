@@ -511,7 +511,8 @@ static int splash_stop(const char *runlevel)
 	char buf[128];
 	int cnt = 0;
 
-	splash_send("set mode verbose\n");
+	if (splash_is_silent())
+		splash_send("set mode verbose\n");
 	splash_send("exit\n");
 	snprintf(buf, 128, "/proc/%d", pid_daemon);
 
@@ -522,7 +523,8 @@ static int splash_stop(const char *runlevel)
 	}
 
 	/* Just to be sure we aren't stuck in a black ex-silent tty.. */
-	splash_set_verbose();
+	if (splash_is_silent())
+		splash_set_verbose();
 
 	return splash_cache_cleanup();
 }
