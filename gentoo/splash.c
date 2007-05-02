@@ -30,10 +30,36 @@
 static char		*bootlevel = NULL;
 static char		*defaultlevel = NULL;
 static char		**svcs = NULL;
+static char		**svcs_done = NULL;
 static int		svcs_cnt = 0;
 static int		svcs_done_cnt = 0;
 static pid_t	pid_daemon = 0;
 static scfg_t	*config = NULL;
+
+/*
+ * Check whether a strlist contains a specific item.
+ */
+static bool list_has(char **list, const char *item)
+{
+	for (; list && *list; list++) {
+		if (strcmp(*list, item) == 0)
+			return true;
+	}
+	return false;
+}
+
+/*
+ * Merge two strlists keeping them sorted.
+ */
+static char** strlist_merge_sort(char **dest, char **src)
+{
+	int i;
+
+	for (i = 0; src && src[i]; i++) {
+		dest = rc_strlist_addsort(dest, src[i]);
+	}
+	return dest;
+}
 
 /*
  * Count the number of items in a strlist.
@@ -290,35 +316,37 @@ static int splash_init(bool start)
 		svcs = get_list(NULL, SPLASH_CACHEDIR"/svcs_start");
 		svcs_cnt = strlist_count(svcs);
 
-		tmp = rc_services_in_state(rc_service_started);
-		svcs_done_cnt = strlist_count(tmp);
-		rc_strlist_free(tmp);
+		svcs_done = rc_services_in_state(rc_service_started);
 
 		tmp = rc_services_in_state(rc_service_inactive);
-		svcs_done_cnt += strlist_count(tmp);
+		svcs_done = strlist_merge_sort(svcs_done, tmp);
 		rc_strlist_free(tmp);
 
 		tmp = rc_services_in_state(rc_service_failed);
-		svcs_done_cnt +=  strlist_count(tmp);
+		svcs_done = strlist_merge_sort(svcs_done, tmp);
 		rc_strlist_free(tmp);
+
+		tmp = rc_services_in_state(rc_service_scheduled);
+		svcs_done = strlist_merge_sort(svcs_done, tmp);
+		rc_strlist_free(tmp);
+
+		svcs_done_cnt = strlist_count(svcs_done);
 	/* .. or rebooting? */
 	} else {
 		svcs = get_list(NULL, SPLASH_CACHEDIR"/svcs_stop");
 		svcs_cnt = strlist_count(svcs);
 
-		tmp = rc_services_in_state(rc_service_started);
-		svcs_done_cnt = strlist_count(tmp);
-		rc_strlist_free(tmp);
+		svcs_done = rc_services_in_state(rc_service_started);
 
 		tmp = rc_services_in_state(rc_service_starting);
-		svcs_done_cnt += strlist_count(tmp);
+		svcs_done = strlist_merge_sort(svcs_done, tmp);
 		rc_strlist_free(tmp);
 
 		tmp = rc_services_in_state(rc_service_inactive);
-		svcs_done_cnt += strlist_count(tmp);
+		svcs_done = strlist_merge_sort(svcs_done, tmp);
 		rc_strlist_free(tmp);
 
-		svcs_done_cnt = svcs_cnt - svcs_done_cnt;
+		svcs_done_cnt = svcs_cnt - strlist_count(svcs_done);
 	}
 
 	return 0;
@@ -333,6 +361,12 @@ static int splash_svc_handle(const char *name, const char *state)
 	 * Bail out since there is nothing we can do about it. */
 	if (svcs_cnt == 0)
 		return -1;
+
+	/* Don't process services twice. */
+	if (list_has(svcs_done, name))
+		return 0;
+
+	rc_strlist_add(svcs_done, name);
 
 	/* Recalculate progress */
 	svcs_done_cnt++;
@@ -675,9 +709,15 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	case rc_hook_service_start_now:
 		/* If we're starting or stopping a service, we're being called by
 		 * runscript and thus have to reload our config. */
+do_start:
 		if (splash_init(true))
 			return -1;
 		i = splash_svc_handle(name, "svc_start");
+		break;
+
+	case rc_hook_service_start_out:
+		if (rc_service_state(name, rc_service_scheduled))
+			goto do_start;
 		break;
 
 	case rc_hook_service_start_done:
