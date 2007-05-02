@@ -87,8 +87,8 @@ splash_comm_send() {
 		return 1
 	fi
 
-	if [ -r /proc/$(<"${spl_pidfile}")/status -a
-		  "$( (read t;echo ${t} | sed -e 's/Name://'}) </proc/$(<${spl_pidfile})/status)" = "splash_util.sta" ]; then
+	if [ -r /proc/$(<"${spl_pidfile}")/status -a \
+		  "$( (read t;echo ${t} | sed -e 's/Name: //') </proc/$(<${spl_pidfile})/status)" = "splash_util.sta" ]; then
 		echo "$*" > "${spl_fifo}" &
 	else
 		echo "Splash daemon not running!"
