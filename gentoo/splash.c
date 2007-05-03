@@ -597,20 +597,6 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		return 0;
 	}
 
-	if (!config) {
-		config = splash_lib_init(type);
-		splash_config_gentoo(config, type);
-		splash_parse_kcmdline(config, false);
-	}
-
-	/* Extremely weird.. should never happen. */
-	if (!config)
-		return -1;
-
-	/* Don't do anything if we're not running in silent mode. */
-	if (config->reqmode != 's')
-		return 0;
-
 	/* Get boot and default levels from env variables exported by RC.
 	 * If unavailable, use the default ones. */
 	bootlevel = getenv("RC_BOOTLEVEL");
@@ -627,7 +613,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		if (hook != rc_hook_runlevel_stop_in &&
 			hook != rc_hook_runlevel_stop_out &&
 			hook != rc_hook_runlevel_start_in &&
-			hook != rc_hook_runlevel_stop_out)
+			hook != rc_hook_runlevel_start_out)
 			return 0;
 	} else {
 		/* We're starting/stopping a runlevel. Check whether we're
@@ -640,6 +626,20 @@ int _splash_hook (rc_hook_t hook, const char *name)
 			strcmp(runlev, RC_LEVEL_REBOOT) && strcmp(runlev, RC_LEVEL_SHUTDOWN))
 			return 0;
 	}
+
+	if (!config) {
+		config = splash_lib_init(type);
+		splash_config_gentoo(config, type);
+		splash_parse_kcmdline(config, false);
+	}
+
+	/* Extremely weird.. should never happen. */
+	if (!config)
+		return -1;
+
+	/* Don't do anything if we're not running in silent mode. */
+	if (config->reqmode != 's')
+		return 0;
 
 	switch (hook) {
 	case rc_hook_runlevel_stop_in:
@@ -669,6 +669,8 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		/* Make sure the progress indicator reaches 100%, even if
 		 * something went wrong along the way. */
 		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
+			if (splash_check_daemon(&pid_daemon, false))
+				return -1;
 			splash_send("progress %d\n", PROGRESS_MAX);
 			splash_send("paint\n");
 			splash_cache_cleanup();
@@ -694,6 +696,9 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	case rc_hook_runlevel_start_out:
 		/* Stop the splash daemon after boot-up is finished. */
 		if (strcmp(name, bootlevel)) {
+			if (splash_check_daemon(&pid_daemon, false))
+				return -1;
+
 			/* Make sure the progress indicator reaches 100%, even if
 			 * something went wrong along the way. */
 			splash_send("progress %d\n", PROGRESS_MAX);
@@ -721,6 +726,9 @@ do_start:
 		break;
 
 	case rc_hook_service_start_done:
+		if (splash_check_daemon(&pid_daemon, false))
+			return -1;
+
 		if (rc_service_state(name, rc_service_started) ||
 		    rc_service_state(name, rc_service_inactive)) {
 			bool gpm = false;
@@ -784,6 +792,9 @@ do_start:
 		break;
 
 	case rc_hook_service_stop_done:
+		if (splash_check_daemon(&pid_daemon, false))
+			return -1;
+
 		if (rc_service_state(name, rc_service_stopped)) {
 			i = splash_svc_state(name, "svc_stopped", 1);
 		} else {
