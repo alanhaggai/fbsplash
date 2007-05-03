@@ -82,7 +82,7 @@ int splash_lib_cleanup(void)
 		config.theme = NULL;
 	}
 
-	if (config.message) { 
+	if (config.message) {
 		free(config.message);
 		config.message = NULL;
 	}
@@ -92,8 +92,10 @@ int splash_lib_cleanup(void)
 		fp_fifo = NULL;
 	}
 
-	if (fd_tty0 >= 0)
+	if (fd_tty0 >= 0) {
 		close(fd_tty0);
+		fd_tty0 = -1;
+	}
 	return 0;
 }
 
