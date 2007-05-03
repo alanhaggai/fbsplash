@@ -1,7 +1,7 @@
 /*
  * splash.c - The core of splash_util
  *
- * Copyright (C) 2004-2006 Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2004-2007 Michal Januszewski <spock@gentoo.org>
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
@@ -66,7 +66,6 @@ struct cmd cmds[] = {
 
 void usage(void)
 {
-
 	printf(
 "splash_util/splashutils-" PKG_VERSION "\n"
 "Usage: splash_util [options] -c <cmd>\n\n"
@@ -237,8 +236,22 @@ int main(int argc, char **argv)
 	if (get_fb_settings(arg_fb))
 		return -1;
 
-	if (config->theme)
-		config_file = get_cfg_file(config->theme);
+	/* Get the config file only if it will actually be used
+	 * later on. */
+	switch (arg_task) {
+	case setpic:
+	case setcfg:
+	case start_daemon:
+#ifdef CONFIG_DEPRECATED
+	case paint:
+	case repaint:
+#endif
+		if (config->theme)
+			config_file = get_cfg_file(config->theme);
+		break;
+	default:
+		break;
+	}
 
 	if (config_file)
 		parse_cfg(config_file);
