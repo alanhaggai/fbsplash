@@ -383,7 +383,8 @@ int splash_check_daemon(int *pid_daemon, bool verbose)
 		goto stale;
 
 out:
-	fclose(fp);
+	if (fp)
+		fclose(fp);
 	return err;
 stale:
 	err = -1;
