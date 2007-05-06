@@ -83,7 +83,8 @@ int handle_init(bool update)
 	config_file = get_cfg_file(config->theme);
 	if (!config_file)
 		return -1;
-	parse_cfg(config_file);
+	if (parse_cfg(config_file))
+		return -1;
 
 #ifdef CONFIG_FBSPLASH
 	fd_splash = open_fbsplash(true);
@@ -250,7 +251,8 @@ int main(int argc, char **argv)
 		config_file = get_cfg_file(config->theme);
 		if (!config_file)
 			goto out;
-		parse_cfg(config_file);
+		if (parse_cfg(config_file))
+			goto out;
 
 		if (!strcmp(argv[2],"getpic")) {
 			err = cfg_check_sanity('v');
