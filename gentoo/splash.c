@@ -542,6 +542,7 @@ static int splash_start(const char *runlevel)
  */
 static int splash_stop(const char *runlevel)
 {
+	char *save[] = { "profile", "svcs_start" };
 	char buf[128];
 	int cnt = 0;
 
@@ -560,7 +561,7 @@ static int splash_stop(const char *runlevel)
 	if (splash_is_silent())
 		splash_set_verbose();
 
-	return splash_cache_cleanup();
+	return splash_cache_cleanup(save);
 }
 
 int _splash_hook (rc_hook_t hook, const char *name)
@@ -673,7 +674,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 				return -1;
 			splash_send("progress %d\n", PROGRESS_MAX);
 			splash_send("paint\n");
-			splash_cache_cleanup();
+			splash_cache_cleanup(NULL);
 		}
 		break;
 

@@ -312,8 +312,11 @@ int splash_cache_prep(void)
 
 /*
  * Clean the splash cache.
+ *
+ * profile_save is a strlist of files that should be saved on the hdd
+ * if profiling is enabled.
  */
-int splash_cache_cleanup(void)
+int splash_cache_cleanup(char **profile_save)
 {
 	int err = 0;
 	char *what = SPLASH_CACHEDIR;
@@ -335,9 +338,17 @@ int splash_cache_cleanup(void)
 		goto nosave;
 	}
 
-	err  = system("/bin/mv "SPLASH_TMPDIR"/profile "SPLASH_CACHEDIR"/profile");
-	err += system("/bin/mv "SPLASH_TMPDIR"/svcs_start "SPLASH_CACHEDIR"/svcs_start");
-//	err += system("/bin/mv "SPLASH_TMPDIR"/svc_timings "SPLASH_CACHEDIR"/svc_timings");
+	if (profile_save) {
+		char buf[PATH_MAX];
+		err = 0;
+
+		while (*profile_save) {
+			snprintf(buf, PATH_MAX, "/bin/mv "SPLASH_TMPDIR"/%s "SPLASH_CACHEDIR"/%s", *profile_save, *profile_save);
+			err += system(buf);
+			profile_save++;
+		}
+	}
+
 	what = SPLASH_TMPDIR;
 
 nosave:

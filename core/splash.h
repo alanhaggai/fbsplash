@@ -95,7 +95,7 @@ int splash_check_daemon(int *pid_daemon, bool verbose);
 bool splash_check_sanity(void);
 
 int splash_cache_prep(void);
-int splash_cache_cleanup(void);
+int splash_cache_cleanup(char **profile_save);
 int splash_send(const char *fmt, ...);
 
 #endif /* __SPLASH_H */
