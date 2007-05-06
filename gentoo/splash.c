@@ -542,7 +542,7 @@ static int splash_start(const char *runlevel)
  */
 static int splash_stop(const char *runlevel)
 {
-	char *save[] = { "profile", "svcs_start" };
+	char *save[] = { "profile", "svcs_start", NULL };
 	char buf[128];
 	int cnt = 0;
 
