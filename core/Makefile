@@ -136,7 +136,7 @@ MAKEOVERRIDES=
 
 all:	objdir $(OBJDIR)/libsplash.so splash_kern splash_user
 
-$(OBJDIR)/libsplash.so: $(OBJDIR)/libsplash.o
+$(OBJDIR)/libsplash.so: $(OBJDIR)/solibsplash.o
 	@$(call infmsg,LD,$@)
 ifeq ($(call config_opt,CONFIG_GENTOO),true)
 	$(Q)$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,libsplash.so -o $@ -leinfo $+
@@ -235,9 +235,9 @@ $(KOUT)/%.o: %.c config.h splash.h
 
 $(OBJDIR)/%.o: %.c config.h splash.h daemon.h
 	@$(call infmsg,CC,$@)
-	$(Q)$(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -DLIBDIR=\"$(LIB)\" -c -o $@ $<
+	$(Q)$(CC) $(CFLAGS) -DTARGET_UTIL $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -DLIBDIR=\"$(LIB)\" -c -o $@ $<
 
-$(OBJDIR)/libsplash.o: libsplash.c splash.h config.h
+$(OBJDIR)/solibsplash.o: libsplash.c splash.h config.h
 	@$(call infmsg,CC,$@)
 	$(Q)$(CC) $(CFLAGS) -fPIC $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -DLIBDIR=\"$(LIB)\" -c -o $@ $<
 

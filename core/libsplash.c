@@ -30,8 +30,11 @@
 	#define MNT_DETACH 2
 #endif
 
+#include "splash.h"
+
 /* If we're not on Gentoo, define eerror() and ewarn() */
-#ifndef CONFIG_GENTOO
+
+#if !defined(CONFIG_GENTOO) || defined(TARGET_UTIL) || defined(TARGET_KERNEL)
 	#if !defined(eerror)
 		#define eerror(args...)		fprintf(stderr, ## args);
 	#endif
@@ -41,8 +44,6 @@
 #else
 	#include <einfo.h>
 #endif
-
-#include "splash.h"
 
 static FILE *fp_fifo = NULL;
 static int fd_tty0 = -1;
