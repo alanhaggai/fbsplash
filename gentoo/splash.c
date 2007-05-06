@@ -767,26 +767,11 @@ do_start:
 		   Luckily plugins can add to the unmount list. */
 		if (name && !strcmp(name, "localmount")) {
 			char *umounts = getenv("RC_NO_UMOUNTS");
-			char *new;
-			int i = strlen(SPLASH_CACHEDIR) + 1;
 
-			if (umounts)
-				i += strlen (umounts) + 1;
-
-			new = malloc(sizeof(char*) * i);
-			if (new) {
-				if (umounts)
-					snprintf(new, i, "%s:%s", umounts, SPLASH_CACHEDIR);
-				else
-					snprintf(new, i, "%s", SPLASH_CACHEDIR);
-			}
-
-			/* We unsetenv first as some libc's leak memory if we overwrite
-			   a var with a bigger value */
-			if (umounts)
-				unsetenv ("RC_NO_UMOUNTS");
-			setenv ("RC_NO_UMOUNTS", new, 1);
-			free (new);
+            if (umounts)
+                fprintf(rc_environ_fd, "RC_NO_UMOUNTS=%s:%s", umounts, SPLASH_CACHEDIR);
+            else
+                fprintf(rc_environ_fd, "RC_NO_UMOUNTS=%s", SPLASH_CACHEDIR);
 		}
 		i = splash_svc_handle(name, "svc_stop");
 		break;
