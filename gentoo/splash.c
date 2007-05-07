@@ -561,7 +561,13 @@ static int splash_stop(const char *runlevel)
 	if (splash_is_silent())
 		splash_set_verbose();
 
-	return splash_cache_cleanup(save);
+	/* If we don't get a runlevel argument, then we're being executed
+	 * because of a rc-abort event and we don't save any data. */
+	if (runlevel == NULL) {
+		return splash_cache_cleanup(NULL);
+	} else {
+		return splash_cache_cleanup(save);
+	}
 }
 
 int _splash_hook (rc_hook_t hook, const char *name)
@@ -579,7 +585,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	/* We generally do nothing if we're in sysinit. Except if the
 	 * autoconfig service is present, when we get a list of services
 	 * that will be started by it and mark them as coldplugged. */
-	if (!strcmp(name, RC_LEVEL_SYSINIT)) {
+	if (name && !strcmp(name, RC_LEVEL_SYSINIT)) {
 		if (hook == rc_hook_runlevel_start_out) {
 			FILE *fp;
 			char **list = NULL;
@@ -789,6 +795,12 @@ do_start:
 				splash_set_verbose();
 			}
 		}
+		splash_lib_cleanup();
+		config = NULL;
+		break;
+
+	case rc_hook_abort:
+		i = splash_stop(name);
 		splash_lib_cleanup();
 		config = NULL;
 		break;
