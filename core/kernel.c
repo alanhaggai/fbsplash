@@ -254,6 +254,8 @@ int main(int argc, char **argv)
 		if (parse_cfg(config_file))
 			goto out;
 
+		fd_splash = open_fbsplash(false);
+
 		if (!strcmp(argv[2],"getpic")) {
 			err = cfg_check_sanity('v');
 			if (!err) {
