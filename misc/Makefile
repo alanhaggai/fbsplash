@@ -1,15 +1,16 @@
 SUBDIRS = fbtruetype kbd
 LIB		?= lib
+STRIP	= strip
 
 all:	fbres usleep
 
-fbres:	
+fbres:
 	$(CC) $(CFLAGS) $@.c -o $@
-	strip $@
+	$(STRIP) $@
 
-usleep:	
+usleep:
 	$(CC) $(CFLAGS) $@.c -o $@
-	strip $@
+	$(STRIP) $@
 
 %:
 	@set -e; for d in $(SUBDIRS); do $(MAKE) -C $$d $@; done
