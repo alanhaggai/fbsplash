@@ -736,7 +736,14 @@ do_start:
 		break;
 
 	case rc_hook_service_start_out:
-		if (rc_service_state(name, rc_service_scheduled)) {
+		/* If a service gets scheduled, we want to increment the progress
+		 * bar (as it is no longer blocking boot completion). However,
+		 * the service may actually start during boot (some time after
+		 * being scheduled), so we don't want to increment the progress
+		 * bar twice. The following if clause satisfies this by catching
+		 * the first case but not the second. */
+		if (rc_service_state(name, rc_service_scheduled) &&
+		    !rc_service_state(name, rc_service_starting)) {
 			skip = true;
 			goto do_start;
 		}
