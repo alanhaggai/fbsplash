@@ -355,21 +355,23 @@ static int splash_init(bool start)
 /*
  * Handle the start/stop of a single service.
  */
-static int splash_svc_handle(const char *name, const char *state)
+static int splash_svc_handle(const char *name, const char *state, bool skip)
 {
-	/* If we don't have any services, something must be broken.
-	 * Bail out since there is nothing we can do about it. */
-	if (svcs_cnt == 0)
-		return -1;
+	if (!skip) {
+		/* If we don't have any services, something must be broken.
+		 * Bail out since there is nothing we can do about it. */
+		if (svcs_cnt == 0)
+			return -1;
 
-	/* Don't process services twice. */
-	if (list_has(svcs_done, name))
-		return 0;
+		/* Don't process services twice. */
+		if (list_has(svcs_done, name))
+			return 0;
 
-	rc_strlist_add(svcs_done, name);
+		rc_strlist_add(svcs_done, name);
+		svcs_done_cnt++;
+	}
 
 	/* Recalculate progress */
-	svcs_done_cnt++;
 	config->progress = svcs_done_cnt * PROGRESS_MAX / svcs_cnt;
 
 	splash_theme_hook(state, "pre", name);
@@ -575,6 +577,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	int i = 0;
 	stype_t type = bootup;
 	char *runlev;
+	bool skip = false;
 
 	runlev = rc_get_runlevel();
 	if (!strcmp(runlev, RC_LEVEL_REBOOT))
@@ -719,17 +722,24 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		break;
 
 	case rc_hook_service_start_now:
+do_start:
+		/* If we've been inactive, do nothing since the service has
+		 * already been handled before it went inactive. */
+		if (rc_service_state(name, rc_service_wasinactive))
+			return 0;
+
 		/* If we're starting or stopping a service, we're being called by
 		 * runscript and thus have to reload our config. */
-do_start:
 		if (splash_init(true))
 			return -1;
-		i = splash_svc_handle(name, "svc_start");
+		i = splash_svc_handle(name, "svc_start", skip);
 		break;
 
 	case rc_hook_service_start_out:
-		if (rc_service_state(name, rc_service_scheduled))
+		if (rc_service_state(name, rc_service_scheduled)) {
+			skip = true;
 			goto do_start;
+		}
 		break;
 
 	case rc_hook_service_start_done:
@@ -780,7 +790,7 @@ do_start:
             else
                 fprintf(rc_environ_fd, "RC_NO_UMOUNTS=%s", SPLASH_CACHEDIR);
 		}
-		i = splash_svc_handle(name, "svc_stop");
+		i = splash_svc_handle(name, "svc_stop", false);
 		break;
 
 	case rc_hook_service_stop_done:
