@@ -53,7 +53,7 @@ endif
 ROOT = $(shell pwd)
 
 # Flags for the kernel utilities
-K_CFLAGS = -w -ffunction-sections -fdata-sections $(MISCINCS) \
+K_CFLAGS = -Os -w -ffunction-sections -fdata-sections $(MISCINCS) \
 		-I$(ROOT)/$(ZLIBSRC) -I$(ROOT)/$(FT2SRC)/include -I$(ROOT)/$(OBJDIR)/jpeglib \
 		-DWITH_ERRLIST -DTARGET_KERNEL -DTT_CONFIG_OPTION_BYTECODE_INTERPRETER
 
@@ -68,9 +68,9 @@ K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
 K_DEPS   =
 
 # Flags for the user utilities
-CFLAGS   = -Wall -g
+CFLAGS   ?= -Wall -g
 LDLIBS   = -ljpeg -lm -pthread -lrt
-LDFLAGS  =
+LDFLAGS  ?=
 
 # Include the klibc header files so that we can compile against fb.h
 # from a kernel thee patched with fbsplash.
