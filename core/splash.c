@@ -281,10 +281,6 @@ int main(int argc, char **argv)
 	{
 		struct vt_stat stat;
 
-		/* Setpic only makes sense in verbose mode. */
-		if (config->reqmode != 'v')
-			break;
-
 		if ((fp = open(PATH_DEV "/tty", O_NOCTTY)) != -1) {
 			if (ioctl(fp, VT_GETSTATE, &stat) != -1) {
 				if (arg_vc != stat.v_active - 1)
@@ -297,7 +293,7 @@ int main(int argc, char **argv)
 		if (err)
 			break;
 
-		err = do_getpic(FB_SPLASH_IO_ORIG_USER, 1, config->reqmode);
+		err = do_getpic(FB_SPLASH_IO_ORIG_USER, 1, 'v');
 setpic_out:	break;
 	}
 
