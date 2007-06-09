@@ -22,11 +22,11 @@ LIBDIR   = $(PREFIX)/$(LIB)
 PROGRAMS = fbtruetype fbtruetype.static
 OBJECTS  = fbtruetype.o messages.o console.o ttf.o luxisri.o
 
-LDFLAGS  =  -L$(LIBDIR)
+LDFLAGS  += -L$(LIBDIR)
 LIBSS    = $(LIBDIR)/libfreetype.a $(LIBDIR)/libz.a -lm
 LIBSD    = -lfreetype -lm
 
-CFLAGS   = -O2 -Wall -I/usr/include/freetype2
+CFLAGS   += -I/usr/include/freetype2
 COMPILE  = $(CC) $(CFLAGS)
 LINKS    = $(CC) $(CFLAGS) $(LDFLAGS) -static -o $@
 LINKD    = $(CC) $(CFLAGS) $(LDFLAGS) -o $@
@@ -49,7 +49,7 @@ mostlyclean:
 clean:	mostlyclean
 	-rm -f fbtruetype fbtruetype.static
 
-fbtruetype: $(OBJECTS) 
+fbtruetype: $(OBJECTS)
 	@rm -f fbtruetype
 	$(LINKD) $(LDFLAGS) $(OBJECTS) $(LIBSD)
 fbtruetype.static: $(OBJECTS)
