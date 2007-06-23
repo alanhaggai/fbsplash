@@ -5,11 +5,11 @@ STRIP	= strip
 all:	fbres usleep
 
 fbres:
-	$(CC) $(CFLAGS) $@.c -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) $@.c -o $@
 	$(STRIP) $@
 
 usleep:
-	$(CC) $(CFLAGS) $@.c -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) $@.c -o $@
 	$(STRIP) $@
 
 %:
