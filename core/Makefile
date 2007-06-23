@@ -156,8 +156,8 @@ config.h:
 
 $(OBJDIR)/$(SP_UTIL): $(OBJS)
 	@$(call infmsg,LD,$@)
-	$(Q)$(CC) $+ $(LDLIBS) -o $@
-	$(Q)$(CC) $+ $(LDLIBS) -L/usr/lib/nptl -static -o $@.static
+	$(Q)$(CC) $(LDFLAGS) $+ $(LDLIBS) -o $@
+	$(Q)$(CC) $(LDFLAGS) $+ $(LDLIBS) -L/usr/lib/nptl -static -o $@.static
 
 objdir:
 	@if [ ! -d "$(OBJDIR)" ]; then \
