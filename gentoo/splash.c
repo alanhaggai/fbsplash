@@ -519,7 +519,7 @@ static int splash_start(const char *runlevel)
 
 	err = system(buf);
 	if (err == -1 || WEXITSTATUS(err) != 0) {
-		eerror("Failed to splash the splash daemon, error code %d", err);
+		eerror("Failed to start the splash daemon, error code %d", err);
 		return err;
 	}
 
@@ -753,8 +753,8 @@ do_start:
 		if (splash_check_daemon(&pid_daemon, false))
 			return -1;
 
-		if (rc_service_state(name, rc_service_started) ||
-		    rc_service_state(name, rc_service_inactive)) {
+		if (!rc_service_state(name, rc_service_failed) &&
+		    !rc_service_state(name, rc_service_stopped)) {
 			bool gpm = false;
 
 			if (!strcmp(name, "gpm")) {
