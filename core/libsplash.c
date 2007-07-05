@@ -453,8 +453,10 @@ bool splash_set_evdev(void)
 	int i, j;
 
 	char *evdev_cmds[] = {
+		"/bin/grep -i keyboard " PATH_SYS " /sys/class/input/input*/name | /bin/sed -e 's#.*input\\([0-9]*\\)/name.*#event\\1#'
 		"/bin/grep -Hsi keyboard " PATH_SYS "/class/input/event*/device/driver/description | /bin/grep -o 'event[0-9]\\+'",
-		"/bin/grep -s -m 1 '^H: Handlers=kbd' " PATH_PROC "/bus/input/devices | grep -o 'event[0-9]\\+'"
+		"for i in " PATH_SYS "/class/input/input* ; do if [ \"$((0x$(cat $i/capabilities/ev) & 0x100002))\" = \"1048578\" ] ; then echo $i | sed -e 's#.*input\\([0-9]*\\)#event\\1#' ; fi ; done",
+		"/bin/grep -s -m 1 '^H: Handlers=kbd' " PATH_PROC "/bus/input/devices | /bin/grep -o 'event[0-9]\\+'"
 	};
 
 	/* Try to activate the event device interface so that F2 can
