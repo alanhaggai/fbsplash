@@ -88,7 +88,7 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 	gl8 = 8 - glen;
 	bl8 = 8 - blen;
 
-	t = malloc(fb_var.xres * fb_var.yres * 3);
+	t = malloc(cf.xres * cf.yres * 3);
 	if (!t) {
 		put_img(dst, image);
 		return;
@@ -98,7 +98,7 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 
 	/* Decode the image into a table where each color component
 	 * takes exatly one byte */
-	for (i = 0; i < fb_var.xres * fb_var.yres; i++) {
+	for (i = 0; i < cf.xres * cf.yres; i++) {
 
 		if (bytespp == 2) {
 			h = *(u16*)pic;
@@ -130,12 +130,12 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 
 	for (step = 0; step < FADEIN_STEPS; step++) {
 
-		pic = dst;
+		pic = dst + fb_fix.line_length * cf.ymarg + cf.xmarg * bytespp;
 		p = t;
 
-		for (y = 0; y < fb_var.yres; y++) {
+		for (y = 0; y < cf.yres; y++) {
 
-			for (x = 0; x < fb_var.xres; x++) {
+			for (x = 0; x < cf.xres; x++) {
 
 				r = *p; p++;
 				g = *p; p++;
@@ -173,7 +173,7 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 				}
 			}
 
-			pic += fb_fix.line_length - fb_var.xres * bytespp;
+			pic += fb_fix.line_length - cf.xres * bytespp;
 		}
 	}
 
