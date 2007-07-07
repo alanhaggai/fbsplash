@@ -1,8 +1,8 @@
 /*
  * A stupid little program that isn't really useful for anything
  * and that has to be here because some people use separate /usr
- * partitions ;>
- * 
+ * partitions.
+ *
  */
 
 #include <stdlib.h>
@@ -32,6 +32,15 @@ int main(int argc, char *argv[])
 {
 	struct fb_var_screeninfo var;
 	int fh;
+	char *xres, *yres;
+
+	xres = getenv("SPLASH_XRES");
+	yres = getenv("SPLASH_YRES");
+
+	if (xres && yres && atoi(xres) > 0 && atoi(yres) > 0) {
+		printf("%sx%s\n", xres, yres);
+		return 0;
+	}
 
 	if ((fh = open("/dev/fb0", O_RDONLY)) == -1)
 		if ((fh = open("/dev/fb/0", O_RDONLY)) == -1)
@@ -40,8 +49,9 @@ int main(int argc, char *argv[])
 	if (ioctl(fh, FBIOGET_VSCREENINFO, &var))
 		die("Can't get fb_var\n");
 
+
 	printf("%dx%d\n", var.xres, var.yres);
 	close(fh);
 
-	exit(0);
+	return 0;
 }
