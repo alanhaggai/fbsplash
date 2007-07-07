@@ -324,7 +324,7 @@ int cmd_repaint(void **args)
 	if (notify[NOTIFY_REPAINT])
 		system(notify[NOTIFY_REPAINT]);
 
-	put_img(fb_mem, bg_buffer, true);
+	put_img(fb_mem, bg_buffer);
 out:
 	pthread_mutex_unlock(&mtx_paint);
 

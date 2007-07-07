@@ -300,7 +300,7 @@ void do_repaint(u8 *dst, u8 *src);
 void list_add(list *l, void *obj);
 
 /* effects.c */
-void put_img(u8 *dst, u8 *src, bool);
+void put_img(u8 *dst, u8 *src);
 void fade_in(u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd);
 void set_directcolor_cmap(int fd);
 
