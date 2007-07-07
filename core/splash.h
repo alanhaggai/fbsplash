@@ -79,13 +79,13 @@ typedef struct
 	bool minstances;	/* allow multiple instances of the splash daemon? */
 	int progress;		/* current value of progress */
 	char verbosity;		/* verbosity level */
-
 } scfg_t;
 
 scfg_t* splash_lib_init(stype_t type);
 int splash_lib_cleanup();
 int splash_init_config(scfg_t *cfg, stype_t type);
 int splash_parse_kcmdline(scfg_t *cfg, bool sysmsg);
+void splash_get_res(char *theme, int *xres, int *yres);
 int splash_profile(const char *fmt, ...);
 bool splash_is_silent(void);
 int splash_set_verbose(void);

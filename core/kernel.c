@@ -169,7 +169,7 @@ int handle_init(bool update)
 		if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR)
 			set_directcolor_cmap(fd_fb);
 
-		put_img(t, silent_img.data);
+		put_img(t, silent_img.data, false);
 	}
 
 	munmap(t, fb_fix.line_length * fb_var.yres);

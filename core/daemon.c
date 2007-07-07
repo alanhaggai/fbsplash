@@ -53,6 +53,10 @@ int fd_gpm = -1;
 
 /* In-memory buffers */
 u8 *fb_mem = NULL;
+
+/* This buffer holds the image to be displayed on the screen. It
+ * has the size appropriate for the current config file and uses the
+ * same pixel format as the framebuffer. */
 u8 *bg_buffer = NULL;
 
 /* Misc settings */
@@ -380,7 +384,7 @@ void* thf_switch_evdev(void *unused)
 
 	while (1) {
 		rb = read(fd_evdev, ev, sizeof(struct input_event)*8);
-    	if (rb < (int) sizeof(struct input_event))
+		if (rb < (int) sizeof(struct input_event))
 			continue;
 
 		for (i = 0; i < (int) (rb / sizeof(struct input_event)); i++) {
@@ -603,36 +607,14 @@ void obj_update_status(char *svc, enum ESVC state)
  */
 void bgbuffer_alloc()
 {
-	int i = 0;
-
 	/*
-	 * If we're not going to export the memory buffer to a file,
-	 * simply allocate a chunk of memory large enough to hold the
+	 * Allocate a chunk of memory large enough to hold the
 	 * contents of the screen.
 	 */
-	if (!arg_export) {
-		bg_buffer = malloc(fb_var.xres * fb_var.yres * bytespp);
-		if (!bg_buffer) {
-			fprintf(stderr, "Can't allocate background image buffer.\n");
-			exit(1);
-		}
-	} else {
-		fd_bg = open(arg_export, O_CREAT | O_TRUNC | O_RDWR, 0660);
-		if (fd_bg == -1) {
-			fprintf(stderr, "Can't open file for the background buffer.\n");
-			exit(1);
-		}
-		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
-		write(fd_bg, &i, 1);
-
-		bg_buffer = mmap(NULL, fb_var.xres * fb_var.yres * bytespp, PROT_WRITE | PROT_READ,
-						 MAP_SHARED, fd_bg, 0);
-
-		if (bg_buffer == MAP_FAILED) {
-			fprintf(stderr, "Failed to mmap the background buffer.\n");
-			close(fd_bg);
-			exit(1);
-		}
+	bg_buffer = malloc(cf.xres * cf.yres * bytespp);
+	if (!bg_buffer) {
+		fprintf(stderr, "Can't allocate background image buffer.\n");
+		exit(1);
 	}
 }
 

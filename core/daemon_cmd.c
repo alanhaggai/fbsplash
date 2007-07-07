@@ -28,8 +28,8 @@ void inline do_paint_rect2(u8 *dst, u8 *src, int x1, int y1, int x2, int y2)
 
 	j = (x2 - x1 + 1) * bytespp;
 	for (y = y1; y <= y2; y++) {
-		to = dst + y * fb_fix.line_length + x1 * bytespp;
-		memcpy(to, src + (y * fb_var.xres + x1) * bytespp, j);
+		to = dst + (y + cf.ymarg) * fb_fix.line_length + (x1 + cf.xmarg) * bytespp;
+		memcpy(to, src + (y * cf.xres + x1) * bytespp, j);
 	}
 }
 
@@ -38,6 +38,10 @@ void do_paint_rect(u8 *dst, u8 *src, rect *re)
 	do_paint_rect2(dst, src, re->x1, re->y1, re->x2, re->y2);
 }
 
+/*
+ * dst = fb_mem
+ * src = bg_buffer
+ */
 void do_paint(u8 *dst, u8 *src)
 {
 	item *ti;
@@ -274,7 +278,7 @@ int cmd_set_notify(void **args)
  */
 int cmd_paint(void **args)
 {
-	char i = 0, ret = 0;
+	char ret = 0;
 
 	pthread_mutex_lock(&mtx_paint);
 	if (!theme_loaded) {
@@ -284,15 +288,6 @@ int cmd_paint(void **args)
 
 	if (ctty != CTTY_SILENT)
 		goto out;
-
-	if (fd_bg) {
-		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
-		write(fd_bg, &i, 1);
-	}
-/*
- 	memcpy(bg_buffer, silent_img.data, fb_var.xres * fb_var.yres * bytespp);
-	render_objs('s', (u8*)bg_buffer, FB_SPLASH_IO_ORIG_USER);
-*/
 
 	render_objs((u8*)bg_buffer, (u8*)silent_img.data, 's', FB_SPLASH_IO_ORIG_USER);
 
@@ -312,7 +307,7 @@ out:
  */
 int cmd_repaint(void **args)
 {
-	char i = 0, ret = 0;
+	char ret = 0;
 
 	pthread_mutex_lock(&mtx_paint);
 	if (!theme_loaded) {
@@ -323,18 +318,13 @@ int cmd_repaint(void **args)
 	if (ctty != CTTY_SILENT)
 		goto out;
 
-	if (fd_bg) {
-		lseek(fd_bg, fb_var.xres * fb_var.yres * bytespp, SEEK_SET);
-		write(fd_bg, &i, 1);
-	}
-
-	memcpy(bg_buffer, silent_img.data, fb_var.xres * fb_var.yres * bytespp);
+	memcpy(bg_buffer, silent_img.data, cf.xres * cf.yres * bytespp);
 	render_objs((u8*)bg_buffer, NULL, 's', FB_SPLASH_IO_ORIG_USER);
 
 	if (notify[NOTIFY_REPAINT])
 		system(notify[NOTIFY_REPAINT]);
 
-	put_img(fb_mem, bg_buffer);
+	put_img(fb_mem, bg_buffer, true);
 out:
 	pthread_mutex_unlock(&mtx_paint);
 
@@ -420,17 +410,17 @@ int cmd_paint_rect(void **args)
 	if (re.x2 < 0)
 		re.x2 = 0;
 
-	if (re.x1 >= fb_var.xres)
-		re.x1 = fb_var.xres-1;
+	if (re.x1 >= cf.xres)
+		re.x1 = cf.xres-1;
 
-	if (re.x2 >= fb_var.xres)
-		re.x2 = fb_var.xres-1;
+	if (re.x2 >= cf.xres)
+		re.x2 = cf.xres-1;
 
-	if (re.y1 >= fb_var.yres)
-		re.y1 = fb_var.yres-1;
+	if (re.y1 >= cf.yres)
+		re.y1 = cf.yres-1;
 
-	if (re.y2 >= fb_var.yres)
-		re.y2 = fb_var.yres-1;
+	if (re.y2 >= cf.yres)
+		re.y2 = cf.yres-1;
 
 	do_paint_rect(fb_mem, bg_buffer, &re);
 

@@ -19,14 +19,15 @@
 #define FADEIN_STEPS	128
 #define FADEIN_STEPS_DC 256
 
-void put_img(u8 *dst, u8 *src)
+void put_img(u8 *dst, u8 *src, bool exact)
 {
 	int y, i;
 	u8 *to = dst;
 
-	i = fb_var.xres * bytespp;
+	to += cf.xmarg * bytespp + cf.ymarg * fb_fix.line_length;
+	i = cf.xres * bytespp;
 
-	for (y = 0; y < fb_var.yres; y++) {
+	for (y = 0; y < cf.yres; y++) {
 		memcpy(to, src + i*y, i);
 		to += fb_fix.line_length;
 	}
@@ -54,7 +55,7 @@ void fade_in_directcolor(u8 *dst, u8 *image, int fd)
 	}
 
 	ioctl(fd, FBIOPUTCMAP, &cmap);
-	put_img(dst, image);
+	put_img(dst, image, false);
 
 	for (step = 1; step < FADEIN_STEPS_DC+1; step++) {
 		for (i = 0; i < cmap.len; i++) {
@@ -84,7 +85,7 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 
 	t = malloc(fb_var.xres * fb_var.yres * 3);
 	if (!t) {
-		put_img(dst, image);
+		put_img(dst, image, false);
 		return;
 	}
 
@@ -183,7 +184,7 @@ void fade_in(u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd)
 
 	/* FIXME: We need to handle 8bpp modes */
 	if (cmap.red) {
-		put_img(dst, image);
+		put_img(dst, image, false);
 		return;
 	}
 

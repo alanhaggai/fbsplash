@@ -16,6 +16,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <errno.h>
+#include <dirent.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -32,7 +33,7 @@
 
 #include "splash.h"
 
-/* If we're not on Gentoo, define eerror() and ewarn() */
+/* If we're not a Gentoo system, define eerror() and ewarn() */
 
 #if !defined(CONFIG_GENTOO) || defined(TARGET_UTIL) || defined(TARGET_KERNEL)
 	#if !defined(eerror)
@@ -284,6 +285,56 @@ bool splash_is_silent(void)
 	}
 }
 
+/*
+ * Get the resolution that the splash will use.
+ *  @xres - preferred xres (e.g. fb_var.xres)
+ *  @yres - preferred yres (e.g. fb_var.yres)
+ */
+void splash_get_res(char *theme, int *xres, int *yres)
+{
+	FILE *fp;
+	char buf[512];
+	int oxres, oyres;
+
+	oxres = *xres;
+	oyres = *yres;
+	snprintf(buf, 512, THEME_DIR "/%s/%dx%d.cfg", theme, oxres, oyres);
+
+	fp = fopen(buf, "r");
+	if (!fp) {
+		unsigned int t, tx, ty, mdist = 0xffffffff;
+		struct dirent *dent;
+		DIR *tdir;
+
+		snprintf(buf, 512, THEME_DIR "/%s", theme);
+		tdir = opendir(buf);
+		while ((dent = readdir(tdir))) {
+			if (sscanf(dent->d_name, "%dx%d.cfg", &tx, &ty) != 2)
+				continue;
+
+			/* We only want configs for resolutions smaller than the current one,
+			 * so that we can actually fit the image on the screen. */
+			if (tx >= oxres || ty >= oyres)
+				continue;
+
+			t = (tx - oxres) * (tx - oxres) + (ty - oyres) * (ty - oyres);
+
+			/* Penalize configs for resolutions with different aspect ratios. */
+			if (oxres / oyres != tx / ty)
+				t *= 10;
+
+			if (t < mdist) {
+				*xres = tx;
+				*yres = ty;
+				mdist = t;
+			}
+		}
+		closedir(tdir);
+	} else {
+		fclose(fp);
+	}
+}
+
 #ifndef TARGET_KERNEL
 /*
  * Switch to silent mode.
@@ -453,7 +504,7 @@ bool splash_set_evdev(void)
 	int i, j;
 
 	char *evdev_cmds[] = {
-		"/bin/grep -i keyboard " PATH_SYS " /sys/class/input/input*/name | /bin/sed -e 's#.*input\\([0-9]*\\)/name.*#event\\1#'
+		"/bin/grep -i keyboard " PATH_SYS " /sys/class/input/input*/name | /bin/sed -e 's#.*input\\([0-9]*\\)/name.*#event\\1#'",
 		"/bin/grep -Hsi keyboard " PATH_SYS "/class/input/event*/device/driver/description | /bin/grep -o 'event[0-9]\\+'",
 		"for i in " PATH_SYS "/class/input/input* ; do if [ \"$((0x$(cat $i/capabilities/ev) & 0x100002))\" = \"1048578\" ] ; then echo $i | sed -e 's#.*input\\([0-9]*\\)#event\\1#' ; fi ; done",
 		"/bin/grep -s -m 1 '^H: Handlers=kbd' " PATH_PROC "/bus/input/devices | /bin/grep -o 'event[0-9]\\+'"

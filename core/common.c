@@ -18,6 +18,8 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 #include "util.h"
 
@@ -30,9 +32,6 @@ enum TASK	arg_task = none;
 int			arg_fb = 0;
 int			arg_vc = 0;
 char		*arg_pidfile = NULL;
-#ifndef TARGET_KERNEL
-char		*arg_export = NULL;
-#endif
 
 int bytespp = 4;		/* bytes per pixel */
 u8 fb_opt = 0;			/* can we use optimized 24/32bpp routines? */
@@ -121,7 +120,7 @@ char *get_filepath(char *path)
 	if (path[0] == '/')
 		return strdup(path);
 
-	snprintf(buf, 512, "%s/%s/%s", THEME_DIR, config->theme, path);
+	snprintf(buf, 512, THEME_DIR "/%s/%s", config->theme, path);
 	return strdup(buf);
 }
 
@@ -129,7 +128,15 @@ char *get_cfg_file(char *theme)
 {
 	char buf[512];
 
-	snprintf(buf, 512, "%s/%s/%dx%d.cfg", THEME_DIR, theme, fb_var.xres, fb_var.yres);
+	cf.xres = fb_var.xres;
+	cf.yres = fb_var.yres;
+
+	splash_get_res(theme, &cf.xres, &cf.yres);
+	snprintf(buf, 512, THEME_DIR "/%s/%dx%d.cfg", theme, cf.xres, cf.yres);
+
+	cf.xmarg = (fb_var.xres - cf.xres) / 2;
+	cf.ymarg = (fb_var.yres - cf.yres) / 2;
+
 	return strdup(buf);
 }
 
@@ -168,6 +175,11 @@ int cfg_check_sanity(u8 mode)
 		iprint(MSG_CRITICAL, "No config file.\n");
 		return -1;
 	}
+
+	/* Verbose mode needs a config file for the exact video mode that is
+	 * currently in use. */
+	if (mode == 'v' && (cf.xres != fb_var.xres || cf.yres != fb_var.yres))
+		return -1;
 
 	/* If the user specified invalid values for the text field - correct it.
 	 * Also setup default values (text field covering the whole screen). */

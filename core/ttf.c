@@ -454,13 +454,13 @@ void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 		current = &glyph->pixmap;
 		for(row = 0; row < ((font->style & TTF_STYLE_UNDERLINE) ? height-glyph->yoffset : current->rows); ++row) {
 			int add;
-			u8 *memlimit = target + fb_var.xres * fb_var.yres * bytespp;
+			u8 *memlimit = target + cf.xres * cf.yres * bytespp;
 
 			/* Sanity checks.. */
 			i = y + row + glyph->yoffset;
 			j = xstart + glyph->minx + x;
 
-			if (i < 0 || i >= fb_var.yres || j >= fb_var.xres)
+			if (i < 0 || i >= cf.yres || j >= cf.xres)
 				continue;
 
 			if (j < 0)
@@ -470,7 +470,7 @@ void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 				j -= glyph->minx;
 			}
 
-			dst = (unsigned char *)target + (i * fb_var.xres + j)*bytespp;
+			dst = (unsigned char *)target + (i * cf.xres + j)*bytespp;
 			src = current->buffer + row*current->pitch;
 
 			add = x & 1;
@@ -480,7 +480,7 @@ void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 			     col < ((font->style & TTF_STYLE_UNDERLINE && *(ch+1)) ?
 			           current->width + glyph->advance : current->width); col++) {
 
-				if (col + j >= fb_var.xres-1)
+				if (col + j >= cf.xres-1)
 					continue;
 
 				if (dst+bytespp-1 > memlimit)

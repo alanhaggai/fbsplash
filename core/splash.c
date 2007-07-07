@@ -33,7 +33,6 @@ struct option options[] = {
 	{ "mode",	required_argument, NULL, 0x104 },
 	{ "progress",required_argument, NULL, 0x105 },
 	{ "tty",	required_argument, NULL, 0x106 },
-	{ "export",	required_argument, NULL, 0x107 },
 	{ "kdgraphics", no_argument, NULL, 0x108 },
 #ifdef CONFIG_TTF
 	{ "mesg",	required_argument, NULL, 0x109 },
@@ -57,11 +56,14 @@ struct cmd cmds[] = {
 	{ "setcfg",		setcfg },
 	{ "getcfg",		getcfg },
 	{ "setpic",		setpic },
+#ifdef CONFIG_DEPRECATED
 	{ "paint",		paint },
 	{ "repaint",	repaint },
+#endif
 	{ "setmode",	setmode },
 	{ "getmode",	getmode },
 	{ "getstate",	getstate },
+	{ "getres",		getres },
 };
 
 void usage(void)
@@ -85,7 +87,8 @@ void usage(void)
 "  repaint  paint the whole background picture (full refresh)\n"
 #endif
 "  setmode  set global splash mode\n"
-"  getmode  get global splash mode\n\n"
+"  getmode  get global splash mode\n"
+"  getres   get the resolution which the silent splash will use\n\n"
 "Options:\n"
 "  -c, --cmd=CMD       execute command CMD\n"
 "  -d, --daemon        start the splash daemon\n"
@@ -96,9 +99,6 @@ void usage(void)
 "      --fb=NUM        use NUMth framebuffer device\n"
 "  -m, --mode=(v|s)    use either silent (s) or verbsose (v) mode\n"
 "  -p, --progress=NUM  set progress to NUM/65535 * 100%%\n"
-"  -e, --export=FILE   export the silent background image to a file\n"
-"                      this option is only used when splash_util is\n"
-"                      running in daemon mode\n"
 "      --kdgraphics    use KD_GRAPHICS mode for the silent splash\n"
 "                      when splash_util is running in daemon mode\n"
 "  -v, --verbose       display verbose error messages\n"
@@ -186,11 +186,6 @@ int main(int argc, char **argv)
 				arg_vc = 0;
 			break;
 
-		case 'e':
-		case 0x107:
-			arg_export = optarg;
-			break;
-
 		case 0x108:
 			config->kdmode = KD_GRAPHICS;
 			break;
@@ -239,6 +234,14 @@ int main(int argc, char **argv)
 	/* Get the config file only if it will actually be used
 	 * later on. */
 	switch (arg_task) {
+	case getres:
+	{
+		int xres = fb_var.xres;
+		int yres = fb_var.yres;
+		splash_get_res(config->theme, &xres, &yres);
+		printf("%dx%d\n", xres, yres);
+		return 0;
+	}
 	case setpic:
 	case setcfg:
 	case start_daemon:
@@ -384,6 +387,11 @@ setpic_out:	break;
 
 		c = open_fb(arg_fb, false);
 
+		/* We need a config file designed for the video mode that
+		 * is currently in use. */
+		if (cf.xres != fb_var.xres || cf.yres != fb_var.yres)
+			break;
+
 		out = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
 				MAP_SHARED, c, fb_var.yoffset * fb_fix.line_length);
 
@@ -414,7 +422,7 @@ setpic_out:	break;
 			ioctl(c, FBIOPUTCMAP, &pic.cmap);
 
 		if (arg_task == repaint || config->reqmode == 'v') {
-			put_img(out, (u8*)pic.data);
+			put_img(out, (u8*)pic.data, false);
 		} else {
 			do_paint(out, (u8*)pic.data);
 		}
@@ -428,7 +436,7 @@ setpic_out:	break;
 
 		break;
 	}
-#endif
+#endif /* CONFIG_DEPRECATED */
 
 	default:
 		break;

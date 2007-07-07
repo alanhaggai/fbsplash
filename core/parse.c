@@ -556,14 +556,14 @@ void parse_rect(char *t)
 	t = p; skip_whitespace(&t);
 
 	/* sanity checks */
-	if (crect->x1 >= fb_var.xres)
-		crect->x1 = fb_var.xres-1;
-	if (crect->x2 >= fb_var.xres)
-		crect->x2 = fb_var.xres-1;
-	if (crect->y1 >= fb_var.yres)
-		crect->y1 = fb_var.yres-1;
-	if (crect->y2 >= fb_var.yres)
-		crect->y2 = fb_var.yres-1;
+	if (crect->x1 >= cf.xres)
+		crect->x1 = cf.xres-1;
+	if (crect->x2 >= cf.xres)
+		crect->x2 = cf.xres-1;
+	if (crect->y1 >= cf.yres)
+		crect->y1 = cf.yres-1;
+	if (crect->y2 >= cf.yres)
+		crect->y2 = cf.yres-1;
 
 	list_add(&rects, crect);
 	return;
@@ -641,10 +641,10 @@ void parse_anim(char *t)
 	t = p; skip_whitespace(&t);
 
 	/* sanity checks */
-	if (canim->x >= fb_var.xres)
-		canim->x = fb_var.xres-1;
-	if (canim->y >= fb_var.yres)
-		canim->y = fb_var.yres-1;
+	if (canim->x >= cf.xres)
+		canim->x = cf.xres-1;
+	if (canim->y >= cf.yres)
+		canim->y = cf.yres-1;
 
 	canim->status = 0;
 
@@ -743,14 +743,14 @@ void parse_box(char *t)
 	t = p; skip_whitespace(&t);
 
 	/* sanity checks */
-	if (cbox->x1 >= fb_var.xres)
-		cbox->x1 = fb_var.xres-1;
-	if (cbox->x2 >= fb_var.xres)
-		cbox->x2 = fb_var.xres-1;
-	if (cbox->y1 >= fb_var.yres)
-		cbox->y1 = fb_var.yres-1;
-	if (cbox->y2 >= fb_var.yres)
-		cbox->y2 = fb_var.yres-1;
+	if (cbox->x1 >= cf.xres)
+		cbox->x1 = cf.xres-1;
+	if (cbox->x2 >= cf.xres)
+		cbox->x2 = cf.xres-1;
+	if (cbox->y1 >= cf.yres)
+		cbox->y1 = cf.yres-1;
+	if (cbox->y2 >= cf.yres)
+		cbox->y2 = cf.yres-1;
 
 #define zero_color(cl) *(u32*)(&cl) = 0;
 #define is_zero_color(cl) (*(u32*)(&cl) == 0)
@@ -967,13 +967,13 @@ void parse_text(char *t)
 	skip_whitespace(&t);
 
 	/* Sanity checks */
-	if (ct->x >= fb_var.xres)
+	if (ct->x >= cf.xres)
 		goto pt_err;
 
 	if (ct->x < 0)
 		ct->x = 0;
 
-	if (ct->y >= fb_var.yres)
+	if (ct->y >= cf.yres)
 		goto pt_err;
 
 	if (ct->y < 0)

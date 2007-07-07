@@ -109,7 +109,7 @@ typedef struct {
  * 				Enums
  * ************************************************************************ */
 
-enum TASK { setpic, init, on, off, setcfg, getcfg, getstate, none, paint, 
+enum TASK { getres, setpic, init, on, off, setcfg, getcfg, getstate, none, paint, 
 	    setmode, getmode, repaint, start_daemon };
 enum ESVC { e_display, e_svc_inact_start, e_svc_inact_stop, e_svc_start, 
 	    e_svc_started, e_svc_stop, e_svc_stopped, e_svc_stop_failed, 
@@ -245,10 +245,16 @@ struct splash_config {
 	u16 text_size;
 	color text_color;
 	char *text_font;
-} __attribute__ ((packed));
+	int xres;
+	int yres;
+	int xmarg;		/* Margins. Non-zero only if using a config file
+					 * designed for a different resolution than the one
+					 * currently in use. */
+	int ymarg;
+};
 
 /* ************************************************************************
- * 				Functions 
+ *				Functions
  * ************************************************************************ */
 
 /* common.c */
@@ -294,7 +300,7 @@ void do_repaint(u8 *dst, u8 *src);
 void list_add(list *l, void *obj);
 
 /* effects.c */
-void put_img(u8 *dst, u8 *src);
+void put_img(u8 *dst, u8 *src, bool);
 void fade_in(u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd);
 void set_directcolor_cmap(int fd);
 
@@ -313,7 +319,6 @@ extern int arg_fb;
 extern int arg_vc;
 extern char *arg_pidfile;
 #ifndef TARGET_KERNEL
-extern char *arg_export;
 extern u8 theme_loaded;
 #endif 
 

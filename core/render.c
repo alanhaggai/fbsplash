@@ -80,7 +80,7 @@ void render_icon(icon *ticon, u8 *target)
 	}
 
 	for (y = ticon->y + yi; yi < hi; yi++, y++) {
-		out = target + (ticon->x + xi + y * fb_var.xres) * bytespp;
+		out = target + (ticon->x + xi + y * cf.xres) * bytespp;
 		in = ticon->img->picbuf + (xi + yi * ticon->img->w) * 4;
 		rgba2fb((rgbacolor*)in, out, out, wi, y, 1);
 	}
@@ -184,7 +184,7 @@ void render_box(box *box, u8 *target)
 		u8  opt = 0;
 		float hr, hg, hb, ha, fr, fg, fb, fa;
 
-		pic = target + (box->x1 + y * fb_var.xres) * bytespp;
+		pic = target + (box->x1 + y * cf.xres) * bytespp;
 
 		/* Do a nice 2x2 ordered dithering, like it was done in bootsplash;
 		 * this makes the pics in 15/16bpp modes look much nicer;
@@ -400,15 +400,15 @@ void prep_bgnd(u8 *target, u8 *src, int x, int y, int w, int h)
 		x = 0;
 	if (y < 0)
 		y = 0;
-	if (x + w > fb_var.xres)
-		w = fb_var.xres - x;
-	if (y + h > fb_var.yres)
-		h = fb_var.yres - y;
+	if (x + w > cf.xres)
+		w = cf.xres - x;
+	if (y + h > cf.yres)
+		h = cf.yres - y;
 
-	t = target + (y * fb_var.xres + x) * bytespp;
-	s = src    + (y * fb_var.xres + x) * bytespp;
+	t = target + (y * cf.xres + x) * bytespp;
+	s = src    + (y * cf.xres + x) * bytespp;
 	j = w * bytespp;
-	i = fb_var.xres * bytespp;
+	i = cf.xres * bytespp;
 
 	for (y = 0; y < h; y++) {
 		memcpy(t, s, j);
@@ -451,7 +451,7 @@ void prep_bgnds(u8 *target, u8 *bgnd, char mode)
 			if (!c->img || !c->img->picbuf)
 				continue;
 
-			if (c->img->w > fb_var.xres - c->x || c->img->h > fb_var.yres - c->y)
+			if (c->img->w > cf.xres - c->x || c->img->h > cf.yres - c->y)
 				continue;
 
 			prep_bgnd(target, bgnd, c->x, c->y, c->img->w, c->img->h);
@@ -549,7 +549,7 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 			if (!c->img || !c->img->picbuf)
 				continue;
 
-			if (c->img->w > fb_var.xres - c->x || c->img->h > fb_var.yres - c->y) {
+			if (c->img->w > cf.xres - c->x || c->img->h > cf.yres - c->y) {
 				iprint(MSG_WARN,"Icon %s does not fit on the screen - ignoring it.", c->img->filename);
 				continue;
 			}
@@ -576,9 +576,9 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 
 			if (render_it && (a->flags & F_ANIM_DISPLAY)) {
 				if (bgnd)
-					mng_display_buf(a->mng, bgnd, target, a->x, a->y, fb_var.xres * bytespp, fb_var.xres * bytespp);
+					mng_display_buf(a->mng, bgnd, target, a->x, a->y, cf.xres * bytespp, cf.xres * bytespp);
 				else
-					mng_display_buf(a->mng, target, target, a->x, a->y, fb_var.xres * bytespp, fb_var.xres * bytespp);
+					mng_display_buf(a->mng, target, target, a->x, a->y, cf.xres * bytespp, cf.xres * bytespp);
 			}
 		}
 #endif /* CONFIG_MNG */

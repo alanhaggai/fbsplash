@@ -103,7 +103,7 @@ int load_png(char *filename, u8 **data, struct fb_cmap *cmap, unsigned int *widt
 		*height = info_ptr->height;
 	}
 
-	*data = malloc(fb_var.xres * fb_var.yres * bytespp);
+	*data = malloc(cf.xres * cf.yres * bytespp);
 	if (!*data) {
 		iprint(MSG_CRITICAL, "Failed to allocate memory for image: %s.\n", filename);
 		return -4;
@@ -237,8 +237,8 @@ int load_bg_images(char mode)
 	char *pic;
 	int i;
 
-	img->width = fb_var.xres;
-	img->height = fb_var.yres;
+	img->width = cf.xres;
+	img->height = cf.yres;
 	img->depth = fb_var.bits_per_pixel;
 
 	/* Deal with 8bpp modes. Only PNGs can be loaded, and pic256
