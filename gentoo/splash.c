@@ -18,12 +18,15 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/wait.h>
+#include <sys/ioctl.h>
 #include <linux/kd.h>
+#include <linux/fb.h>
 #include <einfo.h>
 #include <rc.h>
 #include <splash.h>
 
-#define SPLASH_CMD "export SOFTLEVEL='%s'; export BOOTLEVEL='%s';" \
+#define SPLASH_CMD "export SPLASH_XRES='%d'; export SPLASH_YRES='%d';" \
+				   "export SOFTLEVEL='%s'; export BOOTLEVEL='%s';" \
 				   "export DEFAULTLEVEL='%s'; export svcdir=${RC_SVCDIR};" \
 				   ". /sbin/splash-functions.sh; %s %s %s"
 
@@ -35,6 +38,9 @@ static int		svcs_cnt = 0;
 static int		svcs_done_cnt = 0;
 static pid_t	pid_daemon = 0;
 static scfg_t	*config = NULL;
+
+static int		xres = 0;
+static int		yres = 0;
 
 /*
  * Check whether a strlist contains a specific item.
@@ -241,7 +247,7 @@ static int splash_call(const char *cmd, const char *arg1, const char *arg2)
 	if (!c)
 		return -1;
 
-	snprintf(c, l, SPLASH_CMD,
+	snprintf(c, l, SPLASH_CMD, xres, yres,
 			arg1 ? (strcmp(arg1, RC_LEVEL_SYSINIT) == 0 ? bootlevel : soft) : soft,
 			bootlevel, defaultlevel, cmd, arg1 ? arg1 : "", arg2 ? arg2 : "");
 	l = system(c);
@@ -297,12 +303,35 @@ static int splash_svc_state(const char *name, const char *state, bool paint)
 }
 
 /*
+ * Get the resolution that the silent splash will use.
+ */
+static void splash_init_res()
+{
+	struct fb_var_screeninfo var;
+	int fh;
+
+	if ((fh = open("/dev/fb0", O_RDONLY)) == -1)
+		if ((fh = open("/dev/fb/0", O_RDONLY)) == -1)
+			return;
+
+	if (ioctl(fh, FBIOGET_VSCREENINFO, &var))
+		return;
+
+	close(fh);
+
+	splash_get_res(config->theme, (int*)&var.xres, (int*)&var.yres);
+	xres = var.xres;
+	yres = var.yres;
+}
+
+/*
  * Init splash config variables and check that the splash daemon
  * is running.
  */
 static int splash_init(bool start)
 {
 	char **tmp;
+
 
 	if (splash_check_daemon(&pid_daemon, false)) {
 		return -1;
@@ -348,6 +377,8 @@ static int splash_init(bool start)
 
 		svcs_done_cnt = svcs_cnt - strlist_count(svcs_done);
 	}
+
+	splash_init_res();
 
 	return 0;
 }
@@ -507,6 +538,7 @@ static int splash_start(const char *runlevel)
 		splash_svcs_start();
 		start = true;
 	}
+	splash_init_res();
 	splash_theme_hook("rc_init", "pre", runlevel);
 
 	/* Perform sanity checks (console=, CONSOLE= etc). */
