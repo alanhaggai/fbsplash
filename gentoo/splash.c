@@ -237,7 +237,7 @@ static int splash_call(const char *cmd, const char *arg1, const char *arg2)
 	if (!cmd || !soft)
 		return -1;
 
-	l = strlen(SPLASH_CMD) + strlen(soft) + strlen(cmd);
+	l = strlen(SPLASH_CMD) + strlen(soft) + strlen(cmd) + 10;
 	if (arg1)
 		l += strlen(arg1);
 	if (arg2)
