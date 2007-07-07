@@ -183,7 +183,7 @@ check_silent() {
 	local cres=$2
 	local action=$3
 
-	if [ -z $(cat "${themedir}/${ctheme}/${cres}.cfg" | egrep "^silent(pic|jpeg)=") ]; then
+	if [ -z $(cat "${themedir}/${ctheme}/${cres}.cfg" 2>/dev/null | egrep "^silent(pic|jpeg)=") ]; then
 		[ "${action}" == "test" ] && return 1
 		err "Theme '${ctheme}' doesn't support the silent splash mode."
 		exit 1
@@ -197,7 +197,7 @@ check_verbose() {
 	local cres=$2
 	local action=$3
 
-	if [ -z $(cat "${themedir}/${ctheme}/${cres}.cfg" | egrep "^(pic|jpeg)=") ]; then
+	if [ -z $(cat "${themedir}/${ctheme}/${cres}.cfg" 2>/dev/null | egrep "^(pic|jpeg)=") ]; then
 		[ "${action}" == "test" ] && return 1
 		err "Theme '${ctheme}' doesn't support the silent splash mode."
 		exit 1
@@ -290,6 +290,8 @@ replay() {
 	source /sbin/splash-functions.sh
 	splash_setup
 
+	export SPLASH_XRES="$xres"
+	export SPLASH_YRES="$yres"
 	export SPLASH_THEME=${theme}
 
 	while read line ; do
@@ -852,11 +854,8 @@ theme_switch() {
 }
 
 # Set some useful variables that we'll be using in various places
-res=$(${spl_dir}/bin/fbres)
 ctty=$(${spl_dir}/bin/fgconsole)
 usleep="${spl_dir}/bin/usleep"
-yres=${res#*x}
-xres=${res%x*}
 
 # Default settings
 steps=100
@@ -865,7 +864,7 @@ cexec=''
 progress=''
 msg=''
 pid=''
-profile=''
+profile="${spl_dir}/cache/profile"
 
 args="$@"
 temp=`getopt -l help,cmd:,theme:,steps:,delay:,mode:,msg:,tty:,exec:,progress:,profile: c:m:t:he: "$@"`
@@ -897,6 +896,10 @@ if [ -z "${op}" ]; then
 	usage
 	exit 0
 fi
+
+res=$(${spl_util} -c getres -t ${theme})
+yres=${res#*x}
+xres=${res%x*}
 
 case "${op}" in
 	'set')	set_theme "${theme}" "${tty}" ;;
