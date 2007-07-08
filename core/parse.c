@@ -18,13 +18,13 @@
 
 struct config_opt {
 	char *name;
-	enum { 
+	enum {
 		t_int, t_path, t_box, t_icon, t_rect, t_color, t_fontpath,
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
 		t_anim,
 #endif
 #if WANT_TTF
-		t_text,	
+		t_text,
 #endif
 	} type;
 	void *val;
@@ -36,15 +36,15 @@ list icons = { NULL, NULL };
 list objs = { NULL, NULL };
 list rects = { NULL, NULL };
 
-char *cf_silentpic 	= NULL;
-char *cf_pic 		= NULL;
-char *cf_silentpic256 	= NULL;		/* pictures for 8bpp modes */
-char *cf_pic256 	= NULL;
+char *cf_silentpic	= NULL;
+char *cf_pic		= NULL;
+char *cf_silentpic256 = NULL;		/* pictures for 8bpp modes */
+char *cf_pic256		= NULL;
 
 struct splash_config cf;
 int line = 0;
 
-/* Note that pic256 and silentpic256 have to be located before pic and 
+/* Note that pic256 and silentpic256 have to be located before pic and
  * silentpic or we are gonna get a parse error @ pic256/silentpic256. */
 struct config_opt opts[] =
 {
@@ -52,14 +52,14 @@ struct config_opt opts[] =
 		.type = t_path,
 		.val = &cf_pic		},
 
-	{	.name = "pic256",	
+	{	.name = "pic256",
 		.type = t_path,
 		.val = &cf_pic256	},
 
-	{	.name = "silentpic256",	
+	{	.name = "silentpic256",
 		.type = t_path,
 		.val = &cf_silentpic256	},
-	
+
 	{	.name = "silentjpeg",
 		.type = t_path,
 		.val = &cf_silentpic	},
@@ -71,7 +71,7 @@ struct config_opt opts[] =
 	{	.name = "silentpic",
 		.type = t_path,
 		.val = &cf_silentpic	},
-	
+
 	{	.name = "bg_color",
 		.type = t_int,
 		.val = &cf.bg_color	},
@@ -91,7 +91,7 @@ struct config_opt opts[] =
 	{	.name = "th",
 		.type = t_int,
 		.val = &cf.th		},
-	
+
 	{	.name = "box",
 		.type = t_box,
 		.val = NULL		},
@@ -99,7 +99,7 @@ struct config_opt opts[] =
 	{	.name = "icon",
 		.type = t_icon,
 		.val = NULL		},
-	
+
 	{	.name = "rect",
 		.type = t_rect,
 		.val = NULL		},
@@ -136,16 +136,22 @@ struct config_opt opts[] =
 #endif /* TTF */
 };
 
-int ishexdigit(char c) 
+
+#define parse_error(msg, args...)											\
+do {																		\
+	iprint(MSG_ERROR, "Parse error at line %d: " msg "\n", line, ## args);	\
+} while (0)
+
+int ishexdigit(char c)
 {
 	return (isdigit(c) || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) ? 1 : 0;
 }
 
-void skip_whitespace(char **buf) 
+void skip_whitespace(char **buf)
 {
 	while (**buf == ' ' || **buf == '\t')
 		(*buf)++;
-		
+
 	return;
 }
 
@@ -153,14 +159,14 @@ void skip_nonwhitespace(char **buf)
 {
 	while (**buf != ' ' && **buf != '\t')
 		(*buf)++;
-	
+
 	return;
 }
 
 void parse_int(char *t, struct config_opt opt)
 {
 	if (*t != '=') {
-		fprintf(stderr, "parse error @ line %d\n", line);
+		parse_error("expected '=' instead of '%c'", *t);
 		return;
 	}
 
@@ -171,7 +177,7 @@ void parse_int(char *t, struct config_opt opt)
 void parse_path(char *t, struct config_opt opt)
 {
 	if (*t != '=') {
-		fprintf(stderr, "parse error @ line %d\n", line);
+		parse_error("expected '=' instead of'%c'", *t);
 		return;
 	}
 
@@ -188,13 +194,13 @@ char *get_fontpath(char *t)
 	if (t[0] == '/') {
 		return strdup(t);
 	}
-		
+
 	snprintf(buf, 512, "%s/%s/%s", THEME_DIR, config->theme, t);
 	snprintf(buf2, 512, "%s/%s", THEME_DIR, t);
-	
+
 	stat(buf, &st1);
 	stat(buf2, &st2);
-	
+
 	if (S_ISREG(st1.st_mode) || S_ISLNK(st1.st_mode)) {
 		return strdup(buf);
 	} else if (S_ISREG(st2.st_mode) || S_ISLNK(st2.st_mode)) {
@@ -209,7 +215,7 @@ char *get_fontpath(char *t)
 void parse_fontpath(char *t, struct config_opt opt)
 {
 	if (*t != '=') {
-		fprintf(stderr, "parse error @ line %d\n", line);
+		parse_error("expected '=' instead of '%c'", *t);
 		return;
 	}
 
@@ -217,11 +223,11 @@ void parse_fontpath(char *t, struct config_opt opt)
 	*(char**)opt.val = get_fontpath(t);
 }
 
-int parse_color(char **t, struct color *cl) 
+int parse_color(char **t, struct color *cl)
 {
 	u32 h, len = 0;
 	char *p;
-	
+
 	if (**t != '#') {
 		if (strncmp(*t, "0x", 2))
 			return -1;
@@ -249,7 +255,7 @@ int parse_color(char **t, struct color *cl)
 		cl->g = (h >> 8 ) & 0xff;
 		cl->b = h & 0xff;
 	}
-	
+
 	*t = p;
 
 	return 0;
@@ -259,17 +265,17 @@ int is_in_svclist(char *svc, char *list)
 {
 	char *data = getenv(list);
 	int l = strlen(svc);
-	
+
 	if (!data)
 		return 0;
 
 	skip_whitespace(&data);
-	
+
 	while (1) {
 
 		if (data[0] == 0)
 			break;
-		
+
 		if (!strncmp(data, svc, l) && (data[l] == ' ' || data[l] == 0))
 			return 1;
 
@@ -364,42 +370,52 @@ void parse_icon(char *t)
 	obj *cobj;
 	int i;
 
-	if (!cic)
+	if (!cic) {
+		iprint(MSG_ERROR, "%s: failed to allocate memory.\n", __func__);
 		return;
-	
+	}
+
 	cic->svc = NULL;
-	
+
 	skip_whitespace(&t);
 	for (i = 0; t[i] != ' ' && t[i] != '\t' && t[i] != '\0'; i++);
 	t[i] = 0;
 
 	filename = get_filepath(t);
 	t += (i+1);
-	
-	skip_whitespace(&t);	
+
+	skip_whitespace(&t);
 	cic->x = strtol(t,&p,0);
-	if (t == p)
+	if (t == p) {
+		parse_error("expected a number instead of '%s'", t);
 		goto pi_err;
+	}
 
 	t = p; skip_whitespace(&t);
 	cic->y = strtol(t,&p,0);
-	if (t == p)
+	if (t == p) {
+		parse_error("expected a number instead of '%s'", t);
 		goto pi_err;
-	
+
+	}
 	t = p; skip_whitespace(&t);
 
 	/* Do we need to crop this icon? */
 	if (!strncmp(t, "crop", 4)) {
 		t += 4;
 		skip_whitespace(&t);
-		
-		if (parse_4vec(&t, &cic->crop_from))
+
+		if (parse_4vec(&t, &cic->crop_from)) {
+			parse_error("expected a 4-tuple instead of '%s'", t);
 			goto pi_err;
+		}
 
 		skip_whitespace(&t);
 
-		if (parse_4vec(&t, &cic->crop_to))
+		if (parse_4vec(&t, &cic->crop_to)) {
+			parse_error("expected a 4-tuple instead of '%s'", t);
 			goto pi_err;
+		}
 
 		skip_whitespace(&t);
 		cic->crop = 1;
@@ -421,23 +437,23 @@ void parse_icon(char *t)
 	i = 0;
 
 	if (arg_task != start_daemon) {
-	
+
 		switch (cic->type) {
-		
+
 		case e_svc_inact_start:
 			if (is_in_svclist(t, "SPL_SVC_INACTIVE_START"))
 				i = 1;
 			break;
-	
+
 		case e_svc_inact_stop:
 			if (is_in_svclist(t, "SPL_SVC_INACTIVE_STOP"))
 				i = 1;
 			break;
-		
+
 		case e_svc_started:
 			if (is_in_svclist(t, "SPL_SVC_STARTED"))
 				i = 1;
-			break;	
+			break;
 
 		case e_svc_stopped:
 			if (is_in_svclist(t, "SPL_SVC_STOPPED"))
@@ -474,7 +490,7 @@ void parse_icon(char *t)
 
 		cic->status = 1;
 	} else {
-		if (cic->type == e_display) 
+		if (cic->type == e_display)
 			cic->status = 1;
 		else
 			cic->status = 0;
@@ -494,9 +510,9 @@ void parse_icon(char *t)
 	}
 
 	/* Allocate a new entry in the icons list */
-	cim = malloc(sizeof(icon_img));	
+	cim = malloc(sizeof(icon_img));
 	if (!cim)
-		goto pi_outm;	
+		goto pi_outm;
 	cim->filename = filename;
 	cim->w = cim->h	= 0;
 	cim->picbuf = NULL;
@@ -506,17 +522,18 @@ void parse_icon(char *t)
 pi_end:
 	cobj = malloc(sizeof(obj));
 	if (!cobj) {
-pi_outm:	fprintf(stderr, "Cannot allocate memory (parse_icon)!");
+pi_outm:	iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
 		goto pi_out;
 	}
 	cobj->type = o_icon;
 	cobj->p = cic;
-	
+
 	list_add(&objs, cobj);
 	return;
 
-pi_err:	fprintf(stderr, "parse error @ line %d\n", line);
-pi_out:	if (filename)
+pi_err:
+pi_out:
+	if (filename)
 		free(filename);
 	if (cic->svc)
 		free(cic->svc);
@@ -526,12 +543,14 @@ pi_out:	if (filename)
 
 void parse_rect(char *t)
 {
-	char *p;	
+	char *p;
 	rect *crect = malloc(sizeof(rect));
-	
-	if (!crect)
+
+	if (!crect) {
+		iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
 		return;
-	
+	}
+
 	skip_whitespace(&t);
 
 	while (!isdigit(*t)) {
@@ -539,20 +558,31 @@ void parse_rect(char *t)
 	}
 
 	crect->x1 = strtol(t,&p,0);
-	if (t == p)
+	if (t == p) {
+		parse_error("expected a number instead of '%s'", t);
 		goto pr_err;
+	}
 	t = p; skip_whitespace(&t);
+
 	crect->y1 = strtol(t,&p,0);
-	if (t == p)
+	if (t == p) {
+		parse_error("expected a number instead of '%s'", t);
 		goto pr_err;
+	}
 	t = p; skip_whitespace(&t);
+
 	crect->x2 = strtol(t,&p,0);
-	if (t == p)
+	if (t == p) {
+		parse_error("expected a number instead of '%s'", t);
 		goto pr_err;
+	}
 	t = p; skip_whitespace(&t);
+
 	crect->y2 = strtol(t,&p,0);
-	if (t == p)
+	if (t == p) {
+		parse_error("expected a number instead of '%s'", t);
 		goto pr_err;
+	}
 	t = p; skip_whitespace(&t);
 
 	/* sanity checks */
@@ -568,7 +598,6 @@ void parse_rect(char *t)
 	list_add(&rects, crect);
 	return;
 pr_err:
-	fprintf(stderr, "parse error @ line %d\n", line);
 	free(crect);
 	return;
 }
@@ -576,15 +605,17 @@ pr_err:
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
 void parse_anim(char *t)
 {
-	char *p;	
+	char *p;
 	char *filename;
 	obj *cobj = NULL;
 	anim *canim = malloc(sizeof(anim));
 	int i;
 
-	if (!canim)
+	if (!canim) {
+		iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
 		return;
-	
+	}
+
 	skip_whitespace(&t);
 	canim->flags = 0;
 
@@ -618,6 +649,8 @@ void parse_anim(char *t)
 		canim->flags |= F_ANIM_PROPORTIONAL;
 		t += 12;
 	} else {
+		parse_error("an anim has to be flagged with one of the following:\n"
+					"'once', 'loop' or 'proportional' (got '%s' instead)", t);
 		goto pa_err;
 	}
 
@@ -631,13 +664,17 @@ void parse_anim(char *t)
 	skip_whitespace(&t);
 
 	canim->x = strtol(t,&p,0);
-	if (t == p)
+	if (t == p) {
+		parse_error("expected a number instead of '%s'", t);
 		goto pa_err;
+	}
 	t = p; skip_whitespace(&t);
 
 	canim->y = strtol(t,&p,0);
-	if (t == p)
+	if (t == p) {
+		parse_error("expected a number instead of '%s'", t);
 		goto pa_err;
+	}
 	t = p; skip_whitespace(&t);
 
 	/* sanity checks */
@@ -671,7 +708,7 @@ void parse_anim(char *t)
 	canim->mng = mng_load(filename, &canim->w, &canim->h);
 	if (!canim->mng) {
 		free(filename);
-		iprint(MSG_ERROR,"Cannot allocate memory for mng (parse_anim)!\n");
+		iprint(MSG_ERROR, "%s: failed to allocate memory for mng\n", __func__);
 		goto pa_out;
 	}
 
@@ -679,7 +716,7 @@ void parse_anim(char *t)
 
 	cobj = malloc(sizeof(obj));
 	if (!cobj) {
-		iprint(MSG_ERROR,"Cannot allocate memory (parse_anim)!\n");
+		iprint(MSG_ERROR, "%s: failed to allocate memory for cobj\n", __func__);
 		goto pa_out;
 	}
 	cobj->type = o_anim;
@@ -688,7 +725,6 @@ void parse_anim(char *t)
 	list_add(&anims, canim);
 	return;
 pa_err:
-	fprintf(stderr, "parse error @ line %d\n", line);
 pa_out:
 	free(canim);
 	return;
@@ -697,14 +733,14 @@ pa_out:
 
 void parse_box(char *t)
 {
-	char *p;	
+	char *p;
 	int ret;
 	box *cbox = malloc(sizeof(box));
 	obj *cobj = NULL;
 
 	if (!cbox)
 		return;
-	
+
 	skip_whitespace(&t);
 	cbox->attr = 0;
 
@@ -719,27 +755,39 @@ void parse_box(char *t)
 			cbox->attr |= BOX_SILENT;
 			t += 6;
 		} else {
+			parse_error("expected 'noover', 'inter' or 'silent' instead of '%s'", t);
 			goto pb_err;
 		}
 
 		skip_whitespace(&t);
-	}	
+	}
 
 	cbox->x1 = strtol(t,&p,0);
-	if (t == p)
+	if (t == p) {
+		parse_error("expected a number instead of '%s'", t);
 		goto pb_err;
+	}
 	t = p; skip_whitespace(&t);
+
 	cbox->y1 = strtol(t,&p,0);
-	if (t == p)
+	if (t == p) {
+		parse_error("expected a number instead of '%s'", t);
 		goto pb_err;
+	}
 	t = p; skip_whitespace(&t);
+
 	cbox->x2 = strtol(t,&p,0);
-	if (t == p)
+	if (t == p) {
+		parse_error("expected a number instead of '%s'", t);
 		goto pb_err;
+	}
 	t = p; skip_whitespace(&t);
+
 	cbox->y2 = strtol(t,&p,0);
-	if (t == p)
+	if (t == p) {
+		parse_error("expected a number instead of '%s'", t);
 		goto pb_err;
+	}
 	t = p; skip_whitespace(&t);
 
 	/* sanity checks */
@@ -755,51 +803,58 @@ void parse_box(char *t)
 #define zero_color(cl) *(u32*)(&cl) = 0;
 #define is_zero_color(cl) (*(u32*)(&cl) == 0)
 #define assign_color(c1, c2) *(u32*)(&c1) = *(u32*)(&c2);
-	
+
 	zero_color(cbox->c_ul);
 	zero_color(cbox->c_ur);
 	zero_color(cbox->c_ll);
 	zero_color(cbox->c_lr);
-	
-	if (parse_color(&t, &cbox->c_ul)) 
+
+	if (parse_color(&t, &cbox->c_ul)) {
+		parse_error("expected a color instead of '%s'", t);
 		goto pb_err;
+	}
 
 	skip_whitespace(&t);
 
 	ret = parse_color(&t, &cbox->c_ur);
-	
+
 	if (ret == -1) {
 		assign_color(cbox->c_ur, cbox->c_ul);
 		assign_color(cbox->c_lr, cbox->c_ul);
 		assign_color(cbox->c_ll, cbox->c_ul);
 		goto pb_end;
-	} else if (ret == -2)
+	} else if (ret == -2) {
+		parse_error("failed to parse color");
 		goto pb_err;
+	}
 
 	skip_whitespace(&t);
 
-	if (parse_color(&t, &cbox->c_ll))
+	if (parse_color(&t, &cbox->c_ll)) {
+		parse_error("expected a color instead of '%s'", t);
 		goto pb_err;
-	
+	}
+
 	skip_whitespace(&t);
 
-	if (parse_color(&t, &cbox->c_lr))
+	if (parse_color(&t, &cbox->c_lr)) {
+		parse_error("expected a color instead of '%s'", t);
 		goto pb_err;
+	}
 pb_end:
 	cobj = malloc(sizeof(obj));
 	if (!cobj) {
 		free(cbox);
-		fprintf(stderr, "Cannot allocate memory (parse_box)!");
+		iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
 		return;
 	}
 	cobj->type = o_box;
 	cobj->p = cbox;
-	
+
 	list_add(&objs, cobj);
 	return;
 
 pb_err:
-	fprintf(stderr, "parse error @ line %d\n", line);
 	free(cbox);
 	return;
 }
@@ -842,9 +897,9 @@ char *parse_quoted_string(char *t, u8 keepvar)
 		if (*t == '\\' && i < len-1) {
 			if (!keepvar) {
 				t++;
-			} 
+			}
 		}
-		out[i] = t[0];	
+		out[i] = t[0];
 	}
 
 	out[len-cnt] = 0;
@@ -860,18 +915,19 @@ void parse_text(char *t)
 	obj *cobj = NULL;
 	item *ti;
 	font_e *fe;
-	
-	if (!ct)
+
+	if (!ct) {
+		iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
 		return;
-	
+	}
+
 	skip_whitespace(&t);
 	ct->flags = 0;
 	ct->hotspot = 0;
 	ct->style = TTF_STYLE_NORMAL;
 	ret = 1;
-	
+
 	while (!isdigit(*t) && ret) {
-	
 		if (!strncmp(t, "silent", 6)) {
 			ct->flags |= F_TXT_SILENT;
 			t += 6;
@@ -897,10 +953,10 @@ void parse_text(char *t)
 		*p = 0;
 		t = p+1;
 	}
-	skip_whitespace(&t);		
+	skip_whitespace(&t);
 
 	/* Parse the style selector */
-	while(!isdigit(*t)) {
+	while (!isdigit(*t)) {
 		if (*t == 'b') {
 			ct->style |= TTF_STYLE_BOLD;
 		} else if (*t == 'i') {
@@ -908,24 +964,29 @@ void parse_text(char *t)
 		} else if (*t == 'u') {
 			ct->style |= TTF_STYLE_UNDERLINE;
 		} else if (*t != ' ' && *t != '\t') {
+			parse_error("expected a style specifier instead of '%s'", t);
 			goto pt_err;
 		}
 		t++;
 	}
-	
+
 	/* Parse font size */
 	fontsize = strtol(t,&p,0);
-	if (t == p)
+	if (t == p) {
+		parse_error("expected font size (a number) instead of '%s'", t);
 		goto pt_err;
-	
+	}
+
 	t = p; skip_whitespace(&t);
 
 	/* Parse x position */
 	ct->x = strtol(t,&p,0);
-	if (t == p)
+	if (t == p) {
+		parse_error("expected x position (a number) instead of '%s'", t);
 		goto pt_err;
+	}
 	t = p; skip_whitespace(&t);
-	
+
 	if (!isdigit(*t)) {
 		if (!strncmp(t, "left", 4)) {
 			ct->hotspot |= F_HS_LEFT;
@@ -933,10 +994,11 @@ void parse_text(char *t)
 		} else if (!strncmp(t, "right", 5)) {
 			ct->hotspot |= F_HS_RIGHT;
 			t += 5;
-		} else if (!strncmp(t, "middle", 6)) { 
+		} else if (!strncmp(t, "middle", 6)) {
 			ct->hotspot |= F_HS_HMIDDLE;
 			t += 6;
 		} else {
+			parse_error("expected 'left', 'right' or 'middle' instead of '%s'", t);
 			goto pt_err;
 		}
 
@@ -947,8 +1009,10 @@ void parse_text(char *t)
 
 	/* Parse y position */
 	ct->y = strtol(t,&p,0);
-	if (t == p)
+	if (t == p) {
+		parse_error("expected y position (a number) instead of '%s'", t);
 		goto pt_err;
+	}
 	t = p; skip_whitespace(&t);
 
 	if (!strncmp(t, "top", 3)) {
@@ -967,22 +1031,28 @@ void parse_text(char *t)
 	skip_whitespace(&t);
 
 	/* Sanity checks */
-	if (ct->x >= cf.xres)
+	if (ct->x >= cf.xres) {
+		parse_error("the x position is invalid (larger than x resolution)");
 		goto pt_err;
+	}
 
 	if (ct->x < 0)
 		ct->x = 0;
 
-	if (ct->y >= cf.yres)
+	if (ct->y >= cf.yres) {
+		parse_error("the y position is invalid (larger than y resolution)");
 		goto pt_err;
+	}
 
 	if (ct->y < 0)
 		ct->y = 0;
-	
+
 	zero_color(ct->col);
 
-	if (parse_color(&t, &ct->col)) 
+	if (parse_color(&t, &ct->col)) {
+		parse_error("expected a color instead of '%s'", t);
 		goto pt_err;
+	}
 
 again:
 	skip_whitespace(&t);
@@ -998,15 +1068,17 @@ again:
 
 
 	skip_whitespace(&t);
-	ct->val = parse_quoted_string(t, (ct->flags & F_TXT_EVAL) ? 1 : 0);	
-	if (!ct->val)
+	ct->val = parse_quoted_string(t, (ct->flags & F_TXT_EVAL) ? 1 : 0);
+	if (!ct->val) {
+		parse_error("failed to parse a quoted string: '%s'", t);
 		goto pt_err;
+	}
 
 	if (!fontname)
 		fontname = DEFAULT_FONT;
-	
+
 	fpath = get_fontpath(fontname);
-	
+
 	for (ti = fonts.head ; ti != NULL; ti = ti->next) {
 		fe = (font_e*) ti->p;
 
@@ -1017,19 +1089,22 @@ again:
 	}
 
 	/* Allocate a new entry in the fonts list */
-	fe = malloc(sizeof(font_e));	
-	if (!fe)
-		goto pt_outm;	
+	fe = malloc(sizeof(font_e));
+	if (!fe) {
+		iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
+		goto pt_outm;
+	}
 	fe->file = fpath;
 	fe->size = fontsize;
 	fe->font = NULL;
-	
+
 	list_add(&fonts, fe);
 	ct->font = fe;
 
 pt_end:	cobj = malloc(sizeof(obj));
 	if (!cobj) {
-pt_outm:	iprint(MSG_ERROR, "Cannot allocate memory (parse_text)!\n");
+pt_outm:
+		iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
 		goto pt_out;
 	}
 	cobj->type = o_text;
@@ -1038,7 +1113,6 @@ pt_outm:	iprint(MSG_ERROR, "Cannot allocate memory (parse_text)!\n");
 	return;
 
 pt_err:
-	iprint(MSG_ERROR, "parse error @ line %d\n", line);
 pt_out:	free(ct);
 	if (fpath)
 		free(fpath);
@@ -1054,37 +1128,37 @@ int parse_cfg(char *cfgfile)
 	int len, i;
 
 	if ((cfg = fopen(cfgfile,"r")) == NULL) {
-		fprintf(stderr, "Can't open config file %s.\n", cfgfile);
+		iprint(MSG_ERROR, "Can't open config file %s.\n", cfgfile);
 		return 1;
 	}
-	
+
 	while (fgets(buf, sizeof(buf), cfg)) {
 
 		line++;
 
 		len = strlen(buf);
-			
+
 		if (len == 0 || len == sizeof(buf)-1)
 			continue;
 
 		buf[len-1] = 0;		/* get rid of \n */
-		
-		t = buf;	
+
+		t = buf;
 		skip_whitespace(&t);
-		
+
 		/* skip comments */
 		if (*t == '#')
 			continue;
-			
-		for (i = 0; i < sizeof(opts) / sizeof(struct config_opt); i++) 
+
+		for (i = 0; i < sizeof(opts) / sizeof(struct config_opt); i++)
 		{
 			if (!strncmp(opts[i].name, t, strlen(opts[i].name))) {
-	
-				t += strlen(opts[i].name); 
+
+				t += strlen(opts[i].name);
 				skip_whitespace(&t);
 
-				switch(opts[i].type) {
-				
+				switch (opts[i].type) {
+
 				case t_path:
 					parse_path(t, opts[i]);
 					break;
@@ -1096,20 +1170,20 @@ int parse_cfg(char *cfgfile)
 				case t_color:
 				{
 					if (*t != '=') {
-						fprintf(stderr, "parse error @ line %d\n", line);
-						break;	
+						parse_error("expected '=' instead of '%c'", *t);
+						break;
 					}
-					
+
 					t++;
 					skip_whitespace(&t);
 					parse_color(&t, opts[i].val);
 					break;
 				}
-					
+
 				case t_int:
 					parse_int(t, opts[i]);
 					break;
-				
+
 				case t_box:
 					parse_box(t);
 					break;
@@ -1117,7 +1191,7 @@ int parse_cfg(char *cfgfile)
 				case t_icon:
 					parse_icon(t);
 					break;
-				
+
 				case t_rect:
 					parse_rect(t);
 					break;
@@ -1139,7 +1213,7 @@ int parse_cfg(char *cfgfile)
 
 #ifndef TARGET_KERNEL
 	theme_loaded = 1;
-#endif	
+#endif
 	fclose(cfg);
 	return 0;
 }

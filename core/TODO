@@ -14,11 +14,6 @@ Clenanups
 =========
 - general code cleanup
 - use popen to get program output (?)
-- animations handling:
-  - move code to correct places
-  - add more comments
-  - handle 'proportional' and 'done'
-- make the parser more user-friendly
 
 New features
 ============
