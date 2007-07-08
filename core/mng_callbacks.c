@@ -73,7 +73,7 @@ static mng_ptr fb_mng_getcanvasline(mng_handle handle, mng_uint32 line_num)
 	mng_anim *mng = mng_get_userdata(handle);
 
 	if (mng->canvas == NULL || line_num >= mng->canvas_h) {
-		fprintf(stderr, "%s(mngh, %d): Requested invalid line or canvas was NULL.\n",
+		iprint(MSG_ERROR, "%s(mngh, %d): Requested invalid line or canvas was NULL.\n",
 				__FUNCTION__, line_num);
 		return MNG_NULL;
 	}
@@ -126,7 +126,7 @@ static mng_bool fb_mng_processheader(mng_handle handle, mng_uint32 width,
 	mng->canvas_bytes_pp = 4;
 
 	if ((mng->canvas = malloc(width*height*mng->canvas_bytes_pp)) == NULL) {
-		fprintf(stderr, "%s: Unable to allocate memory for MNG canvas\n",
+		iprint(MSG_ERROR, "%s: Unable to allocate memory for MNG canvas\n",
 				__FUNCTION__);
 		return MNG_FALSE;
 	}
@@ -144,7 +144,7 @@ static mng_bool fb_mng_errorproc(mng_handle handler, mng_int32 code,
 		mng_int8 severity, mng_chunkid chunkname, mng_uint32 chunkseq,
 		mng_int32 extra1, mng_int32 extra2, mng_pchar errtext)
 {
-	fprintf(stderr, "libmng error: Code: %d, Severity: %d - %s\n",
+	iprint(MSG_ERROR, "libmng error: Code: %d, Severity: %d - %s\n",
 			code, severity, errtext);
 	abort();
 	return MNG_TRUE;
@@ -154,7 +154,7 @@ static mng_bool fb_mng_errorproc(mng_handle handler, mng_int32 code,
 static mng_bool fb_mng_traceproc(mng_handle handle, mng_int32 funcnr,
 		mng_int32 seq, mng_pchar funcname)
 {
-	fprintf(stderr, "libmng trace: %s (seq %d\n)", funcname, seq);
+	iprint(MSG_ERROR, "libmng trace: %s (seq %d\n)", funcname, seq);
 	return MNG_TRUE;
 
 }

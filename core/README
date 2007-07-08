@@ -8,7 +8,7 @@ reboot and shutdown.
 
 For installation instructions, have a look at the INSTALL file.
 
-Here's a short description a provided programs, scripts and documents:
+Here's a short description of provided programs, scripts and documents:
 
 1. Programs
 
@@ -19,7 +19,7 @@ Here's a short description a provided programs, scripts and documents:
 
    splash_helper
    -------------
-   A simple small program run directly by the kernel to:
+   A simple and small program run directly by the kernel to:
     - initialize the silent mode during early stages of the boot-up process,
 	- provide the kernel with background images and theme configuration
 	  for the verbose splash mode.
@@ -52,7 +52,7 @@ Here's a short description a provided programs, scripts and documents:
 
    splash_manager
    --------------
-   Performs various splash-related tasks in an user-friendly way. It
+   Performs various splash-related tasks in a user-friendly way. It
    allows the user to easily set and test themes, take screenshots
    of silent and verbose splash screens, and to replay recorded boot
    sequences.

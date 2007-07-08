@@ -286,7 +286,7 @@ void switch_silent()
 		pthread_mutex_lock(&mtx_paint);
 
 		if (reload_theme()) {
-			fprintf(stderr, "Failed to (re-)load the '%s' theme.\n", config->theme);
+			iprint(MSG_ERROR, "Failed to (re-)load the '%s' theme.\n", config->theme);
 			exit(1);
 		}
 
@@ -485,7 +485,7 @@ void switchmon_start(int update)
 			sprintf(t, PATH_DEV "/vc/%d", tty_s);
 			fd_tty_s = open(t, O_RDWR);
 			if (fd_tty_s == -1) {
-				fprintf(stderr, "Can't open %s.\n", t);
+				iprint(MSG_ERROR, "Can't open %s.\n", t);
 				exit(2);
 			}
 		}
@@ -496,7 +496,7 @@ void switchmon_start(int update)
 	/* Do we have to start a monitor thread? */
 	if (fd_evdev != -1 && (update & UPD_MON)) {
 		if (pthread_create(&th_switchmon, NULL, &thf_switch_evdev, NULL)) {
-			fprintf(stderr, "Evdev monitor thread creation failed.\n");
+			iprint(MSG_ERROR, "Evdev monitor thread creation failed.\n");
 			exit(3);
 		}
 
@@ -504,7 +504,7 @@ void switchmon_start(int update)
 	 * has been defined and if the silent TTY has just been changed. */
 	} else if (fd_evdev == -1 && (update & UPD_SILENT)) {
 		if (pthread_create(&th_switchmon, NULL, &thf_switch_ttymon, NULL)) {
-			fprintf(stderr, "TTY monitor thread creation failed.\n");
+			iprint(MSG_ERROR, "TTY monitor thread creation failed.\n");
 			exit(3);
 		}
 	}
@@ -613,7 +613,7 @@ void bgbuffer_alloc()
 	 */
 	bg_buffer = malloc(cf.xres * cf.yres * bytespp);
 	if (!bg_buffer) {
-		fprintf(stderr, "Can't allocate background image buffer.\n");
+		iprint(MSG_ERROR, "Can't allocate background image buffer.\n");
 		exit(1);
 	}
 }
@@ -794,9 +794,9 @@ void daemon_start()
 	chdir("/");
 
 	/* Make /dev/null stdin, and /dev/console stdout/stderr */
-	i=open("/dev/null", O_RDWR);
+	i = open("/dev/null", O_RDWR);
 	dup2(i, 0);
-	i=open("/dev/console", O_RDWR);
+	i = open("/dev/console", O_RDWR);
 	dup2(i, 1);
 	dup2(i, 2);
 

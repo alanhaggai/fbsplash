@@ -312,7 +312,7 @@ int TTF_Init(void)
 	status = 0;
 	error = FT_Init_FreeType(&library);
 	if (error) {
-		fprintf(stderr, "Couldn't init FreeType engine %d\n", error);
+		iprint(MSG_ERROR, "Couldn't init FreeType engine %d\n", error);
 		status = -1;
 	} else {
 		TTF_initialized = 1;
@@ -405,7 +405,7 @@ void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 
 	/* Get the dimensions of the text surface */
 	if ((TTF_SizeUNICODE(font, text, &width, NULL) < 0) || !width) {
-		fprintf(stderr,"Text has zero width\n");
+		iprint(MSG_ERROR, "Text has zero width\n");
 		return;
 	}
 	height = font->height;
@@ -525,7 +525,7 @@ unsigned char* TTF_RenderText_Shaded(u8 *target, const char *text,
 	unicode_text = (unsigned short *)malloc((unicode_len+1)*(sizeof*unicode_text));
 
 	if (unicode_text == NULL) {
-		printf("Out of memory\n");
+		iprint(MSG_ERROR, "Out of memory\n");
 		return(NULL);
 	}
 
@@ -573,7 +573,7 @@ TTF_Font* TTF_OpenFontIndex(const char *file, int ptsize, long index)
 
 	font = (TTF_Font*) malloc(sizeof *font);
 	if (font == NULL) {
-		fprintf(stderr, "Out of memory\n");
+		iprint(MSG_ERROR, "Out of memory\n");
 		return NULL;
 	}
 	memset(font, 0, sizeof(*font));
@@ -588,7 +588,7 @@ TTF_Font* TTF_OpenFontIndex(const char *file, int ptsize, long index)
 //		error=FT_New_Memory_Face(library, (const FT_Byte*)luxisri_ttf, LUXISRI_SIZE, 0, &font->face);
 
 	if (error) {
-		printf("Couldn't load font file\n");
+		iprint(MSG_ERROR, "Couldn't load font file\n");
 		free(font);
 		return NULL;
 	}
@@ -597,13 +597,13 @@ TTF_Font* TTF_OpenFontIndex(const char *file, int ptsize, long index)
 		if (font->face->num_faces > index) {
 			FT_Done_Face(font->face);
 			error = FT_New_Face(library, file, index, &font->face);
-			if(error) {
-				printf("Couldn't get font face\n");
+			if (error) {
+				iprint(MSG_ERROR, "Couldn't get font face\n");
 				free(font);
 				return NULL;
 			}
 		} else {
-			fprintf(stderr, "No such font face\n");
+			iprint(MSG_ERROR, "No such font face\n");
 			free(font);
 			return NULL;
 		}
@@ -612,7 +612,7 @@ TTF_Font* TTF_OpenFontIndex(const char *file, int ptsize, long index)
 
 	/* Make sure that our font face is scalable (global metrics) */
 	if (! FT_IS_SCALABLE(face)) {
-		fprintf(stderr,"Font face is not scalable\n");
+		iprint(MSG_ERROR, "Font face is not scalable\n");
 		TTF_CloseFont(font);
 		return NULL;
 	}
@@ -620,7 +620,7 @@ TTF_Font* TTF_OpenFontIndex(const char *file, int ptsize, long index)
 	/* Set the character size and use default DPI (72) */
 	error = FT_Set_Char_Size(font->face, 0, ptsize * 64, 0, 0);
 	if (error) {
-		fprintf(stderr, "Couldn't set font size\n");
+		iprint(MSG_ERROR, "Couldn't set font size\n");
 		TTF_CloseFont(font);
 		return NULL;
 	}
@@ -654,7 +654,7 @@ TTF_Font* TTF_OpenFont(const char *file, int ptsize)
 	a = TTF_OpenFontIndex(file, ptsize, 0);
 
 	if (a == NULL) {
-		fprintf(stderr, "Couldn't load %d pt font from %s\n", ptsize, file);
+		iprint(MSG_ERROR, "Couldn't load %d pt font from %s\n", ptsize, file);
 	}
 
 	return a;

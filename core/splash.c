@@ -129,7 +129,7 @@ int main(int argc, char **argv)
 
 #ifdef CONFIG_TTF
 	if (TTF_Init() < 0) {
-		fprintf(stderr, "Couldn't initialize TTF.\n");
+		iprint(MSG_ERROR, "Couldn't initialize TTF.\n");
 		return -1;
 	}
 #endif
@@ -396,7 +396,7 @@ setpic_out:	break;
 				MAP_SHARED, c, fb_var.yoffset * fb_fix.line_length);
 
 		if (out == MAP_FAILED) {
-			fprintf(stderr, "mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
+			iprint(MSG_ERROR, "mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
 			close(c);
 			err = -1;
 			break;

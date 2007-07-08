@@ -1,34 +1,27 @@
-- documentation update
-  - manpages for splash_util, splash_manager and splash_geninitramfs
+Documentation
+=============
+ - manpages for splash_util, splash_manager and splash_geninitramfs
+ - automatic generation of ChangeLogs
 
-- automatic generation of ChangeLogs
+Fixes
+=====
+ - handle con2fb_map properly
+ - fix handling of redrawing the inter boxes
+ - add a dirty tiles/rects system to handle prep_bgnds
+   in a more sensible way
 
+Clenanups
+=========
+- general code cleanup
 - use popen to get program output (?)
-
-- handle con2fb_map properly
-
-- clean up the code
-
-- fix handling of redrawing the inter boxes
-
 - animations handling:
   - move code to correct places
   - add more comments
   - handle 'proportional' and 'done'
-
-- add effects (fadein/fadeout/blendin) for icon/anim
-
-- add a dirty tiles/rects system to handle prep_bgnds
-  in a more sensible way
-
 - make the parser more user-friendly
 
-- fix error messages (doubled messages, etc)
-  - use log_warn and log_err
-
-New features:
-=============
-
+New features
+============
 - separate progress bars for shutdown/bootup
-
 - automatic theme resizing
+- add effects (fadein/fadeout/blendin) for icon/anim

@@ -34,7 +34,7 @@ static int mng_readfile(mng_handle mngh, char *filename)
 	mng->len = sb.st_size;
 
 	if ((mng->data = malloc(mng->len)) == NULL) {
-		fprintf(stderr, "mng_readfile: Unable to allocate memory for MNG file\n");
+		iprint(MSG_ERROR, "mng_readfile: Unable to allocate memory for MNG file\n");
 		goto close_fail;
 	}
 
@@ -51,7 +51,7 @@ static int mng_readfile(mng_handle mngh, char *filename)
 				perror("mng_readfile: read");
 				goto close_fail;
 			case 0:
-				fprintf(stderr, "mng_readfile: Shorter file than expected!\n");
+				iprint(MSG_ERROR, "mng_readfile: Shorter file than expected!\n");
 				goto close_fail;
 		}
 		file_data += ret;
@@ -74,7 +74,7 @@ mng_handle mng_load(char* filename, int *width, int *height)
 
 	mng = (mng_anim*)malloc(sizeof(mng_anim));
 	if (!mng) {
-		fprintf(stderr, "%s: Unable to allocate memory for MNG data\n",
+		iprint(MSG_ERROR, "%s: Unable to allocate memory for MNG data\n",
 				__FUNCTION__);
 		return MNG_NULL;
 	}
@@ -83,7 +83,7 @@ mng_handle mng_load(char* filename, int *width, int *height)
 	mngh = mng_initialize(mng, fb_mng_memalloc, fb_mng_memfree,
 			MNG_NULL);
 	if (mngh == MNG_NULL) {
-		fprintf(stderr, "%s: mng_initialize failed\n", __FUNCTION__);
+		iprint(MSG_ERROR, "%s: mng_initialize failed\n", __FUNCTION__);
 		goto freemem_fail;
 	}
 
