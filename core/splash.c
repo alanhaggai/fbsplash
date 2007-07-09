@@ -40,6 +40,7 @@ struct option options[] = {
 	{ "pidfile",required_argument, NULL, 0x10a },
 	{ "minstances", no_argument, NULL, 0x10b },
 	{ "effects", required_argument, NULL, 0x10c },
+	{ "type", required_argument, NULL, 0x10d },
 	{ "daemon",	no_argument, NULL, 'd'},
 	{ "help",	no_argument, NULL, 'h'},
 	{ "verbose", no_argument, NULL, 'v'},
@@ -111,6 +112,7 @@ void usage(void)
 "      --minstances    allow multiple instances of the splash daemon\n"
 "      --effects=LIST  a comma-separated list of effects to use;\n"
 "                      supported effects: fadein, fadeout\n"
+"      --type=TYPE     TYPE can be: bootup, reboot, shutdown\n"
 #ifndef CONFIG_FBSPLASH
 "\nThis version of splashutils has been compiled without support for fbsplash.\n"
 #endif
@@ -123,7 +125,7 @@ int main(int argc, char **argv)
 	int fp, err = 0;
 
 	detect_endianess(&endianess);
-	config = splash_lib_init(undef);
+	config = splash_lib_init(bootup);
 
 	arg_task = none;
 	arg_vc = -1;
@@ -219,6 +221,15 @@ int main(int argc, char **argv)
 			}
 			break;
 		}
+
+		case 0x10d:
+			if (!strcmp(optarg, "reboot"))
+				config->type = reboot;
+			else if (!strcmp(optarg, "shutdown"))
+				config->type = shutdown;
+			else
+				config->type = bootup;
+			break;
 
 		case 'd':
 			arg_task = start_daemon;

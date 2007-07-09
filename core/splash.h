@@ -70,6 +70,7 @@ typedef struct
 	int tty_s;		/* silent tty */
 	int tty_v;		/* verbose tty */
 	char *pidfile;	/* pidfile */
+	stype_t type;	/* bootup/reboot/shutdown? */
 
 	/* rc system data */
 	bool profile;	/* enable profiling? */

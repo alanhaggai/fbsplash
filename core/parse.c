@@ -1,8 +1,8 @@
 /*
  * parse.c - Functions for parsing splashutils config files
- * 
- * Copyright (C) 2004-2005, Michal Januszewski <spock@gentoo.org>
- * 
+ *
+ * Copyright (C) 2004-2007, Michal Januszewski <spock@gentoo.org>
+ *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
  * more details.
@@ -20,6 +20,7 @@ struct config_opt {
 	char *name;
 	enum {
 		t_int, t_path, t_box, t_icon, t_rect, t_color, t_fontpath,
+		t_type_open, t_type_close,
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
 		t_anim,
 #endif
@@ -102,6 +103,14 @@ struct config_opt opts[] =
 
 	{	.name = "rect",
 		.type = t_rect,
+		.val = NULL		},
+
+	{	.name = "<type",
+		.type = t_type_open,
+		.val = NULL		},
+
+	{	.name = "</type>",
+		.type = t_type_close,
 		.val = NULL		},
 
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
@@ -1126,6 +1135,7 @@ int parse_cfg(char *cfgfile)
 	char buf[1024];
 	char *t;
 	int len, i;
+	bool ignore = false;
 
 	if ((cfg = fopen(cfgfile,"r")) == NULL) {
 		iprint(MSG_ERROR, "Can't open config file %s.\n", cfgfile);
@@ -1153,6 +1163,9 @@ int parse_cfg(char *cfgfile)
 		for (i = 0; i < sizeof(opts) / sizeof(struct config_opt); i++)
 		{
 			if (!strncmp(opts[i].name, t, strlen(opts[i].name))) {
+
+				if (ignore && opts[i].type != t_type_close)
+					continue;
 
 				t += strlen(opts[i].name);
 				skip_whitespace(&t);
@@ -1194,6 +1207,33 @@ int parse_cfg(char *cfgfile)
 
 				case t_rect:
 					parse_rect(t);
+					break;
+
+				case t_type_open:
+					ignore = true;
+					while (*t != '>') {
+						skip_whitespace(&t);
+						if (!strncmp(t, "bootup", 6)) {
+							if (config->type == bootup)
+								ignore = false;
+							t += 6;
+						} else if (!strncmp(t, "reboot", 6)) {
+							if (config->type == reboot)
+								ignore = false;
+							t += 6;
+						} else if (!strncmp(t, "shutdown", 8)) {
+							if (config->type == shutdown)
+								ignore = false;
+							t += 8;
+						} else {
+							parse_error("expected 'bootup', 'reboot' or 'shutdown' instead of '%s'", t);
+							break;
+						}
+					}
+					break;
+
+				case t_type_close:
+					ignore = false;
 					break;
 
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)

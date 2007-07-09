@@ -30,12 +30,40 @@ Verbose mode settings
 
 * tw=<n>
   The width of the text window. n cannot be greater than horizontal resolution.
- 
+
 * th=<n>
   The height of the text window. n cannot be greater than vertical resolution.
 
 Silent mode settings
 --------------------
+
+You put any number of the following directives inside the <type>..</type>
+section to make them effective only during bootup, reboot or shutdown.
+This way you can effectively have completely different configs for each
+of the three supported processes.  If a directive is not inside a
+<type>..</type> section, it is effective regardless of whether the system
+is booting or rebooting.
+
+The format for the <type> tag is:
+  <type type-spec [type-spec]>
+
+where type-spec is any of the following: 'bootup', 'reboot', 'shutdown'.
+
+Example:
+ # Progress bar for boot-up.
+ <type bootup>
+ 	 box silent inter 0    262  0    337  #22222c #191920 #383849 #2e2e3d
+  	 box silent       0    262  799  337  #22222c #191920 #383849 #2e2e3d
+ </type>
+
+ # Progress bar for reboot/shutdown.
+ <type reboot shutdown>
+	 box silent inter 0    262  799  337  #22222c #191920 #383849 #2e2e3d
+	 box silent       0    262  0    337  #22222c #191920 #383849 #2e2e3d
+ </type>
+
+Silent mode directives
+----------------------
 
 * silentpic=<path>
   Full path to the JPG/PNG background image for silent mode.

@@ -17,6 +17,5 @@ Clenanups
 
 New features
 ============
-- separate progress bars for shutdown/bootup
 - automatic theme resizing
 - add effects (fadein/fadeout/blendin) for icon/anim

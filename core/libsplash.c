@@ -120,6 +120,7 @@ int splash_init_config(scfg_t *cfg, stype_t type)
 	cfg->progress = 0;
 	cfg->effects = EFF_NONE;
 	cfg->verbosity = VERB_NORMAL;
+	cfg->type = type;
 
 	s = getenv("PROGRESS");
 	if (s)
