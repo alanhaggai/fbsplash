@@ -581,8 +581,6 @@ static int splash_stop(const char *runlevel)
 	char buf[128];
 	int cnt = 0;
 
-//	if (splash_is_silent())
-//		splash_send("set mode verbose\n");
 	splash_send("exit\n");
 	snprintf(buf, 128, "/proc/%d", pid_daemon);
 
