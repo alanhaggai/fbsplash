@@ -301,7 +301,7 @@ void list_add(list *l, void *obj);
 
 /* effects.c */
 void put_img(u8 *dst, u8 *src);
-void fade_in(u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd);
+void fade(u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd, char);
 void set_directcolor_cmap(int fd);
 
 extern char *cf_pic;

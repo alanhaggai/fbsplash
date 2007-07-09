@@ -226,23 +226,25 @@ int splash_parse_kcmdline(scfg_t *cfg, bool sysmsg)
 
 			if (!strncmp(opt, "tty:", 4)) {
 				cfg->tty_v = strtol(opt+4, NULL, 0);
-			} else if (!strncmp(opt, "fadein", 6)) {
+			} else if (!strcmp(opt, "fadein")) {
 				cfg->effects |= EFF_FADEIN;
-			} else if (!strncmp(opt, "verbose", 7)) {
+			} else if (!strcmp(opt, "fadeout")) {
+				cfg->effects |= EFF_FADEOUT;
+			} else if (!strcmp(opt, "verbose")) {
 				cfg->reqmode = 'v';
-			} else if (!strncmp(opt, "silent", 6)) {
+			} else if (!strcmp(opt, "silent")) {
 				cfg->reqmode = 's';
-			} else if (!strncmp(opt, "off", 3)) {
+			} else if (!strcmp(opt, "off")) {
 				cfg->reqmode = 'o';
-			} else if (!strncmp(opt, "insane", 6)) {
+			} else if (!strcmp(opt, "insane")) {
 				cfg->insane = true;
 			} else if (!strncmp(opt, "theme:", 6)) {
 				if (cfg->theme)
 					free(cfg->theme);
 				cfg->theme = strdup(opt+6);
-			} else if (!strncmp(opt, "kdgraphics", 10)) {
+			} else if (!strcmp(opt, "kdgraphics")) {
 				cfg->kdmode = KD_GRAPHICS;
-			} else if (!strncmp(opt, "profile", 7)) {
+			} else if (!strcmp(opt, "profile")) {
 				cfg->profile = true;
 			}
 		}

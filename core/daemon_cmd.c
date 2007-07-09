@@ -101,6 +101,19 @@ int cmd_exit(void **args)
 	pthread_kill(th_sighandler, SIGINT);
 	pthread_join(th_sighandler, NULL);
 
+	pthread_mutex_lock(&mtx_paint);
+
+	if (ctty == CTTY_SILENT) {
+		if (config->effects & EFF_FADEOUT)
+			fade(fb_mem, bg_buffer, silent_img.cmap, 0, fd_fb, 1);
+
+		/* Switch to the verbose tty if we're in silent mode when the
+		 * 'exit' command is received. */
+		ioctl(fd_tty0, VT_ACTIVATE, config->tty_v);
+	}
+
+	pthread_mutex_unlock(&mtx_paint);
+
 	free_objs();
 
 	for (i = svcs.head; i != NULL; ) {
@@ -145,9 +158,9 @@ int cmd_set_mode(void **args)
 	int n;
 
 	if (!strcmp(args[0], "silent")) {
-		n = tty_s;
+		n = config->tty_s;
 	} else if (!strcmp(args[0], "verbose")) {
-		n = tty_v;
+		n = config->tty_v;
 	} else {
 		return -1;
 	}
@@ -180,7 +193,7 @@ int cmd_set_gpm(void **args)
 	conn.minMod = 0;
 	conn.maxMod = ~0;
 	pthread_mutex_lock(&mtx_tty);
-	fd_gpm = Gpm_Open(&conn, tty_s);
+	fd_gpm = Gpm_Open(&conn, config->tty_s);
 	pthread_mutex_unlock(&mtx_tty);
 	return fd_gpm;
 #else
@@ -201,13 +214,13 @@ int cmd_set_tty(void **args)
 
 	if (!strcmp(args[0], "silent")) {
 		/* Do nothing if the new tty is the same as the old one. */
-		if (tty_s == *(int*)args[1])
+		if (config->tty_s == *(int*)args[1])
 			return 0;
 
 		pthread_cancel(th_switchmon);
 
 		pthread_mutex_lock(&mtx_tty);
-		tty_s = *(int*)args[1];
+		config->tty_s = *(int*)args[1];
 		switchmon_start(UPD_SILENT);
 		pthread_mutex_unlock(&mtx_tty);
 #ifdef CONFIG_GPM
@@ -218,11 +231,11 @@ int cmd_set_tty(void **args)
 #endif
 	} else if (!strcmp(args[0], "verbose")) {
 		/* Do nothing if the new tty is the same as the old one. */
-		if (tty_v == *(int*)args[1])
+		if (config->tty_v == *(int*)args[1])
 			return 0;
 
 		pthread_mutex_lock(&mtx_tty);
-		tty_v = *(int*)args[1];
+		config->tty_v = *(int*)args[1];
 		pthread_mutex_unlock(&mtx_tty);
 	} else {
 		return -1;

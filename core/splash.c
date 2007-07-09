@@ -39,6 +39,7 @@ struct option options[] = {
 #endif
 	{ "pidfile",required_argument, NULL, 0x10a },
 	{ "minstances", no_argument, NULL, 0x10b },
+	{ "effects", required_argument, NULL, 0x10c },
 	{ "daemon",	no_argument, NULL, 'd'},
 	{ "help",	no_argument, NULL, 'h'},
 	{ "verbose", no_argument, NULL, 'v'},
@@ -108,6 +109,8 @@ void usage(void)
 #endif
 "      --pidfile=FILE  save the PID of the daemon to FILE\n"
 "      --minstances    allow multiple instances of the splash daemon\n"
+"      --effects=LIST  a comma-separated list of effects to use;\n"
+"                      supported effects: fadein, fadeout\n"
 #ifndef CONFIG_FBSPLASH
 "\nThis version of splashutils has been compiled without support for fbsplash.\n"
 #endif
@@ -203,6 +206,19 @@ int main(int argc, char **argv)
 		case 0x10b:
 			config->minstances = true;
 			break;
+
+		case 0x10c:
+		{
+			char *topt;
+
+			while ((topt = strsep(&optarg, ",")) != NULL) {
+				if (!strcmp(topt, "fadein"))
+					config->effects |= EFF_FADEIN;
+				else if (!strcmp(topt, "fadeout"))
+					config->effects |= EFF_FADEOUT;
+			}
+			break;
+		}
 
 		case 'd':
 			arg_task = start_daemon;

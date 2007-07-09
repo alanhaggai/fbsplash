@@ -56,6 +56,7 @@
 /* Effects */
 #define EFF_NONE		0
 #define EFF_FADEIN		1
+#define EFF_FADEOUT		2
 
 typedef enum sp_type { undef, bootup, reboot, shutdown } stype_t;
 

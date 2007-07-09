@@ -38,7 +38,10 @@ void put_img(u8 *dst, u8 *src)
 	}
 }
 
-void fade_in_directcolor(u8 *dst, u8 *image, int fd)
+/*
+ * @type = 0 (fadein) or 1 (fadeout)
+ */
+void fade_directcolor(u8 *dst, u8 *image, int fd, char type)
 {
 	int len, i, step;
 	struct fb_cmap cmap;
@@ -64,14 +67,21 @@ void fade_in_directcolor(u8 *dst, u8 *image, int fd)
 
 	for (step = 1; step < FADEIN_STEPS_DC+1; step++) {
 		for (i = 0; i < cmap.len; i++) {
-			cmap.red[i] = cmap.green[i] = cmap.blue[i] = (0xffff * i * step)/((cmap.len-1)*FADEIN_STEPS_DC);
+			if (type)
+				cmap.red[i] = cmap.green[i] = cmap.blue[i] = (0xffff * i * (FADEIN_STEPS_DC+1-step))/
+							((cmap.len-1)*FADEIN_STEPS_DC);
+			else
+				cmap.red[i] = cmap.green[i] = cmap.blue[i] = (0xffff * i * step)/((cmap.len-1)*FADEIN_STEPS_DC);
 		}
 		ioctl(fd, FBIOPUTCMAP, &cmap);
 		usleep(7500);
 	}
 }
 
-void fade_in_truecolor(u8 *dst, u8 *image)
+/*
+ * @type = 0 (fadein) or 1 (fadeout)
+ */
+void fade_truecolor(u8 *dst, u8 *image, char type)
 {
 	int rlen, glen, blen;
 	int i, step, h, x, y;
@@ -122,11 +132,15 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 	/* Compute the color look-up table */
 	for (step = 0; step < FADEIN_STEPS; step++) {
 		for (i = 0; i < 256; i++) {
-			clut[i][step] = (step+1) * i / FADEIN_STEPS;
+			if (type)
+				clut[i][step] = (FADEIN_STEPS-1-step) * i / FADEIN_STEPS;
+			else
+				clut[i][step] = (step+1) * i / FADEIN_STEPS;
 		}
 	}
 
-	memset(dst, 0, fb_var.yres * fb_fix.line_length);
+	if (type == 0)
+		memset(dst, 0, fb_var.yres * fb_fix.line_length);
 
 	for (step = 0; step < FADEIN_STEPS; step++) {
 
@@ -180,7 +194,7 @@ void fade_in_truecolor(u8 *dst, u8 *image)
 	free(t);
 }
 
-void fade_in(u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd)
+void fade(u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd, char type)
 {
 	if (bgnd) {
 		if (fork())
@@ -194,9 +208,9 @@ void fade_in(u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd)
 	}
 
 	if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR) {
-		fade_in_directcolor(dst, image, fd);
+		fade_directcolor(dst, image, fd, type);
 	} else {
-		fade_in_truecolor(dst, image);
+		fade_truecolor(dst, image, type);
 	}
 
 	if (bgnd) {

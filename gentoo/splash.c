@@ -546,8 +546,9 @@ static int splash_start(const char *runlevel)
 		return -1;
 
 	/* Start the splash daemon */
-	snprintf(buf, 2048, "BOOT_MSG='%s' " SPLASH_EXEC " -d --theme=\"%s\" --pidfile=" SPLASH_PIDFILE " %s",
-			 config->message, config->theme, (config->kdmode == KD_GRAPHICS) ? "--kdgraphics" : "");
+	snprintf(buf, 2048, "BOOT_MSG='%s' " SPLASH_EXEC " -d --theme=\"%s\" --pidfile=" SPLASH_PIDFILE " %s %s",
+			 config->message, config->theme, (config->kdmode == KD_GRAPHICS) ? "--kdgraphics" : "",
+			 (config->effects & EFF_FADEOUT) ? "--effects=fadeout" : "");
 
 	err = system(buf);
 	if (err == -1 || WEXITSTATUS(err) != 0) {
@@ -580,13 +581,13 @@ static int splash_stop(const char *runlevel)
 	char buf[128];
 	int cnt = 0;
 
-	if (splash_is_silent())
-		splash_send("set mode verbose\n");
+//	if (splash_is_silent())
+//		splash_send("set mode verbose\n");
 	splash_send("exit\n");
 	snprintf(buf, 128, "/proc/%d", pid_daemon);
 
-	/* Wait up to 0.5s for the splash daemon to exit. */
-	while (rc_is_dir(buf) && cnt < 50) {
+	/* Wait up to 1.0s for the splash daemon to exit. */
+	while (rc_is_dir(buf) && cnt < 100) {
 		usleep(10000);
 		cnt++;
 	}

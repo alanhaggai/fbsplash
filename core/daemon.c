@@ -37,8 +37,6 @@ pthread_cond_t  cnd_anim  = PTHREAD_COND_INITIALIZER;
 pthread_t th_switchmon, th_sighandler, th_anim;
 
 int ctty = CTTY_VERBOSE;
-int tty_s = TTY_SILENT;
-int tty_v = TTY_VERBOSE;
 
 /* File descriptors */
 int fd_tty_s = -1;
@@ -394,9 +392,9 @@ void* thf_switch_evdev(void *unused)
 			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 			pthread_mutex_lock(&mtx_paint);
 			if (ctty == CTTY_SILENT) {
-				h = tty_v;
+				h = config->tty_v;
 			} else {
-				h = tty_s;
+				h = config->tty_s;
 			}
 			pthread_mutex_unlock(&mtx_paint);
 			pthread_setcancelstate(oldstate, NULL);
@@ -447,7 +445,7 @@ void* thf_switch_ttymon(void *unused)
 			     (endianess == big && 0x5b5b4200))) {
 				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 				pthread_mutex_lock(&mtx_tty);
-				ioctl(fd_tty0, VT_ACTIVATE, tty_v);
+				ioctl(fd_tty0, VT_ACTIVATE, config->tty_v);
 				pthread_mutex_unlock(&mtx_tty);
 				pthread_setcancelstate(oldstate, NULL);
 			}
@@ -479,10 +477,10 @@ void switchmon_start(int update)
 		}
 
 		/* Open a new silent TTY and initialize it. */
-		sprintf(t, PATH_DEV "/tty%d", tty_s);
+		sprintf(t, PATH_DEV "/tty%d", config->tty_s);
 		fd_tty_s = open(t, O_RDWR);
 		if (fd_tty_s == -1) {
-			sprintf(t, PATH_DEV "/vc/%d", tty_s);
+			sprintf(t, PATH_DEV "/vc/%d", config->tty_s);
 			fd_tty_s = open(t, O_RDWR);
 			if (fd_tty_s == -1) {
 				iprint(MSG_ERROR, "Can't open %s.\n", t);
@@ -818,7 +816,7 @@ void daemon_start()
 
 	/* Check which TTY is active */
 	if (ioctl(fd_tty0, VT_GETSTATE, &vtstat) != -1) {
-		if (vtstat.v_active == tty_s) {
+		if (vtstat.v_active == config->tty_s) {
 			ctty = CTTY_SILENT;
 		} else {
 			ctty = CTTY_VERBOSE;

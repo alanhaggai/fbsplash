@@ -164,7 +164,7 @@ int handle_init(bool update)
 		ioctl(fd_fb, FBIOPUTCMAP, &silent_img.cmap);
 
 	if (config->effects & EFF_FADEIN) {
-		fade_in(t, silent_img.data, silent_img.cmap, 1, fd_fb);
+		fade(t, silent_img.data, silent_img.cmap, 1, fd_fb, 0);
 	} else {
 		if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR)
 			set_directcolor_cmap(fd_fb);
