@@ -17,6 +17,7 @@ a continuous configuration string. The following options are recognized:
                 the kernel and from the initscripts are covered by a picture
                 and thus hidden from the user)
  - fadein     - Use a 'fade from black' effect to display the silent image.
+ - fadeout    - Use a 'fade to black' effect after the bootup is finished.
  - theme:foo  - Use theme 'foo'.
  - tty:n      - Sse the n-th tty as the silent tty. Default silent tty is
                 tty8.
