@@ -546,8 +546,10 @@ static int splash_start(const char *runlevel)
 		return -1;
 
 	/* Start the splash daemon */
-	snprintf(buf, 2048, "BOOT_MSG='%s' " SPLASH_EXEC " -d --theme=\"%s\" --pidfile=" SPLASH_PIDFILE " %s %s",
-			 config->message, config->theme, (config->kdmode == KD_GRAPHICS) ? "--kdgraphics" : "",
+	snprintf(buf, 2048, "BOOT_MSG='%s' " SPLASH_EXEC " -d --theme=\"%s\" --pidfile=" SPLASH_PIDFILE "--type=%s %s %s",
+			 config->message, config->theme,
+			 (config->type == reboot) ? "reboot" : ((config->type == shutdown) ? "shutdown" : "bootup"),
+			 (config->kdmode == KD_GRAPHICS) ? "--kdgraphics" : "",
 			 (config->effects & EFF_FADEOUT) ? "--effects=fadeout" : "");
 
 	err = system(buf);
