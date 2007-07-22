@@ -25,11 +25,12 @@ FT2SRC  ?= libs/freetype-2.1.9
 
 LIB		?= lib
 
-prefix     =
+prefix     ?= /usr
 sbindir    = ${prefix}/sbin
 libdir     = ${prefix}/${LIB}
-usrbindir  = ${prefix}/usr/bin
-mandir 	   = ${prefix}/usr/share/man
+usrbindir  = ${prefix}/bin
+mandir 	   = ${prefix}/share/man
+incdir     = ${prefix}/include
 
 INSTALL 		= /usr/bin/install -c
 INSTALL_PROG 	= ${INSTALL}
@@ -301,6 +302,8 @@ install: all
 	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL).static $(DESTDIR)$(sbindir)/$(SP_UTIL).static
 	@$(call infmsg,INSTALL,libsplash.so)
 	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/libsplash.so $(DESTDIR)$(libdir)/libsplash.so
+	@$(call infmsg,INSTALL,splash.h)
+	$(Q)$(INSTALL_PROG) -D splash.h $(DESTDIR)$(incdir)/splash.h
 	@$(call infmsg,INSTALL,splash-functions.sh)
 	$(Q)$(INSTALL_PROG) -D scripts/splash-functions.sh $(DESTDIR)$(sbindir)/splash-functions.sh
 	$(Q)$(call install_script,$(SP_GIRAM))
@@ -317,6 +320,8 @@ uninstall:
 	$(Q)rm -f $(sbindir)/$(SP_UTIL).static
 	@$(call infmsg,UNINSTALL,libsplash.so)
 	$(Q)rm -f $(libdir)/libsplash.so
+	@$(call insmsg,UNINSTALL,splash.h)
+	$(Q)rm -f $(incdir)/splash.h
 	@$(call infmsg,UNINSTALL,splash-functions.sh)
 	$(Q)rm -f $(sbindir)/splash-functions.sh
 	@$(call infmsg,UNINSTALL,$(SP_GIRAM))
