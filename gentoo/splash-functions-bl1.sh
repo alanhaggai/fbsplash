@@ -275,12 +275,15 @@ splash_start() {
 
 	# Set the input device if it exists. This will make it possible to use F2 to
 	# switch from verbose to silent.
-	local t=$(grep -Hsi keyboard /sys/class/input/event*/device/driver/description | grep -o 'event[0-9]\+')
+	local t=$(grep -Hsi keyboard /sys/class/input/input*/name | sed -e 's#.*input\\([0-9]*\\)/name.*#event\\1#')
 	if [[ -z "${t}" ]]; then
-		# Try an alternative method of finding the event device. The idea comes
-		# from Bombadil <bombadil(at)h3c.de>. We're couting on the keyboard controller
-		# being the first device handled by kbd listed in input/devices.
-		t=$(/bin/grep -s -m 1 '^H: Handlers=kbd' /proc/bus/input/devices | grep -o 'event[0-9]*')
+		t=$(grep -Hsi keyboard /sys/class/input/event*/device/driver/description | grep -o 'event[0-9]\+')
+		if [[ -z "${t}" ]]; then
+			# Try an alternative method of finding the event device. The idea comes
+			# from Bombadil <bombadil(at)h3c.de>. We're couting on the keyboard controller
+			# being the first device handled by kbd listed in input/devices.
+			t=$(/bin/grep -s -m 1 '^H: Handlers=kbd' /proc/bus/input/devices | grep -o 'event[0-9]*')
+		fi
 	fi
 	[[ -n "${t}" ]] && splash_comm_send "set event dev /dev/input/${t}"
 
