@@ -272,12 +272,12 @@ void interpolate_box(box *a, box *b)
 	if (config->progress == 0)
 		return;
 
-#define inter_color(cl1, cl2) 					\
-{								\
-	cl1.r = (cl1.r * h + cl2.r * config->progress) / PROGRESS_MAX; 	\
+#define inter_color(cl1, cl2)										\
+{																	\
+	cl1.r = (cl1.r * h + cl2.r * config->progress) / PROGRESS_MAX;	\
 	cl1.g = (cl1.g * h + cl2.g * config->progress) / PROGRESS_MAX;	\
 	cl1.b = (cl1.b * h + cl2.b * config->progress) / PROGRESS_MAX;	\
-	cl1.a = (cl1.a * h + cl2.a * config->progress) / PROGRESS_MAX; 	\
+	cl1.a = (cl1.a * h + cl2.a * config->progress) / PROGRESS_MAX;	\
 }
 
 	a->x1 = (a->x1 * h + b->x1 * config->progress) / PROGRESS_MAX;
