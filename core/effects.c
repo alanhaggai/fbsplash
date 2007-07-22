@@ -16,7 +16,7 @@
 #include <sys/ioctl.h>
 #include "util.h"
 
-#define FADEIN_STEPS	128
+#define FADEIN_STEPS	64
 #define FADEIN_STEPS_DC 256
 
 /*
