@@ -269,26 +269,31 @@ void interpolate_box(box *a, box *b)
 {
 	int h = PROGRESS_MAX - config->progress;
 
-	if (config->progress == 0)
-		return;
+	if (!a->curr) {
+		a->curr = malloc(sizeof(box));
+		if (!a->curr) {
+			iprint(MSG_ERROR, "Failed to allocate memory for interpolated box.\n");
+			return;
+		}
+	}
 
-#define inter_color(cl1, cl2)										\
+#define inter_color(clo, cl1, cl2)									\
 {																	\
-	cl1.r = (cl1.r * h + cl2.r * config->progress) / PROGRESS_MAX;	\
-	cl1.g = (cl1.g * h + cl2.g * config->progress) / PROGRESS_MAX;	\
-	cl1.b = (cl1.b * h + cl2.b * config->progress) / PROGRESS_MAX;	\
-	cl1.a = (cl1.a * h + cl2.a * config->progress) / PROGRESS_MAX;	\
+	clo.r = (cl1.r * h + cl2.r * config->progress) / PROGRESS_MAX;	\
+	clo.g = (cl1.g * h + cl2.g * config->progress) / PROGRESS_MAX;	\
+	clo.b = (cl1.b * h + cl2.b * config->progress) / PROGRESS_MAX;	\
+	clo.a = (cl1.a * h + cl2.a * config->progress) / PROGRESS_MAX;	\
 }
 
-	a->x1 = (a->x1 * h + b->x1 * config->progress) / PROGRESS_MAX;
-	a->x2 = (a->x2 * h + b->x2 * config->progress) / PROGRESS_MAX;
-	a->y1 = (a->y1 * h + b->y1 * config->progress) / PROGRESS_MAX;
-	a->y2 = (a->y2 * h + b->y2 * config->progress) / PROGRESS_MAX;
+	a->curr->x1 = (a->x1 * h + b->x1 * config->progress) / PROGRESS_MAX;
+	a->curr->x2 = (a->x2 * h + b->x2 * config->progress) / PROGRESS_MAX;
+	a->curr->y1 = (a->y1 * h + b->y1 * config->progress) / PROGRESS_MAX;
+	a->curr->y2 = (a->y2 * h + b->y2 * config->progress) / PROGRESS_MAX;
 
-	inter_color(a->c_ul, b->c_ul);
-	inter_color(a->c_ur, b->c_ur);
-	inter_color(a->c_ll, b->c_ll);
-	inter_color(a->c_lr, b->c_lr);
+	inter_color(a->curr->c_ul, a->c_ul, b->c_ul);
+	inter_color(a->curr->c_ur, a->c_ur, b->c_ur);
+	inter_color(a->curr->c_ll, a->c_ll, b->c_ll);
+	inter_color(a->curr->c_lr, a->c_lr, b->c_lr);
 }
 
 char *get_program_output(char *prg, unsigned char origin)
@@ -427,8 +432,7 @@ void prep_bgnds(u8 *target, u8 *bgnd, char mode)
 		obj *o = (obj*)i->p;
 
 		if (o->type == o_box) {
-			box *b, *n;
-			b = (box*)o->p;
+			box *b = o->p;
 
 			if (b->attr & BOX_SILENT && mode != 's')
 				continue;
@@ -437,9 +441,9 @@ void prep_bgnds(u8 *target, u8 *bgnd, char mode)
 				continue;
 
 			if ((b->attr & BOX_INTER) && i->next != NULL) {
-				if (((obj*)i->next->p)->type == o_box) {
-					n = (box*)((obj*)i->next->p)->p;
-					prep_bgnd(target, bgnd, n->x1, n->y1, n->x2 - n->x1 + 1, n->y2 - n->y1 + 1);
+				if (b->curr) {
+					prep_bgnd(target, bgnd, b->curr->x1, b->curr->y1, b->curr->x2 - b->curr->x1 + 1, b->curr->y2 - b->curr->y1 + 1);
+					i = i->next;
 				}
 			}
 		} else if (o->type == o_icon && mode == 's') {
@@ -518,7 +522,7 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 		obj *o = (obj*)i->p;
 
 		if (o->type == o_box) {
-			box tmp, *b, *n;
+			box *b, *n;
 			b = (box*)o->p;
 
 			if ((b->attr & BOX_SILENT) && mode != 's')
@@ -530,9 +534,8 @@ void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin)
 			if ((b->attr & BOX_INTER) && i->next != NULL) {
 				if (((obj*)i->next->p)->type == o_box) {
 					n = (box*)((obj*)i->next->p)->p;
-					tmp = *b;
-					interpolate_box(&tmp, n);
-					render_box(&tmp, target);
+					interpolate_box(b, n);
+					render_box(b->curr, target);
 					i = i->next;
 				}
 			} else {

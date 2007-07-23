@@ -216,11 +216,12 @@ void text_get_xy(text *ct, int *x, int *y);
 
 #endif /* TTF */
 
-typedef struct {
+typedef struct box {
 	int x1, x2, y1, y2;
-	struct color c_ul, c_ur, c_ll, c_lr; 	/* upper left, upper right,
+	struct color c_ul, c_ur, c_ll, c_lr;	/* upper left, upper right,
 											   lower left, lower right */
 	u8 attr;
+	struct box *curr;						/* current interpolated box */
 } box;
 
 typedef struct {

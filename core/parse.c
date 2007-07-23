@@ -752,6 +752,7 @@ void parse_box(char *t)
 
 	skip_whitespace(&t);
 	cbox->attr = 0;
+	cbox->curr = NULL;
 
 	while (!isdigit(*t)) {
 		if (!strncmp(t,"noover",6)) {

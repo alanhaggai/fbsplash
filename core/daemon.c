@@ -516,6 +516,14 @@ void free_objs()
 	item *i, *j;
 
 	for (i = objs.head ; i != NULL; ) {
+		obj *o = (obj*)i->p;
+
+		if (o->type == o_box) {
+			box *b = (box*)o->p;
+			if (b->curr)
+				free(b->curr);
+		}
+		
 		j = i->next;
 		free(i->p);
 		free(i);
