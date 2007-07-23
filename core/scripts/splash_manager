@@ -3,7 +3,7 @@
 # splash_manager -- a convenience utility to perform various splash-related
 #                   tasks in an easy and user-friendly way
 #
-# Copyright (C) 2005, Michal Januszewski <spock@gentoo.org>
+# Copyright (C) 2005-2007, Michal Januszewski <spock@gentoo.org>
 #
 # This file is a part of the splashutils package.
 #
@@ -211,7 +211,7 @@ set_silent() {
 
 	# Make sure the splash daemon is not running
 	killall -9 ${spl_util_exename} 2>/dev/null
-	${spl_util} -d -t "${theme}" --pidfile ${spl_pidfile}
+	${spl_util} -d -t "${theme}" --pidfile ${spl_pidfile} ${util_params}
 	pid=$(cat ${spl_pidfile})
 
 	[ -z "${msg}" ] && msg="Testing the '${theme}' theme (\$progress%)..."
@@ -888,9 +888,11 @@ for i ; do
 		--delay)	delay="$2"; shift; shift;;
 		--tty)		tty="$2"; shift; shift;;
 		--msg)		msg="$2"; shift; shift;;
-		--)		shift; break;;
+		--)			shift; break;;
 	esac
 done
+
+util_params="$@"
 
 if [ -z "${op}" ]; then
 	usage
