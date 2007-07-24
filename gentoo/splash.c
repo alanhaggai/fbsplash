@@ -272,7 +272,7 @@ static int splash_theme_hook(const char *name, const char *type, const char *arg
 	l += strlen(config->theme);
 
 	buf = malloc(l * sizeof(char*));
-	snprintf(buf, 1024, "/etc/splash/%s/scripts/%s-%s", config->theme, name, type);
+	snprintf(buf, l, "/etc/splash/%s/scripts/%s-%s", config->theme, name, type);
 
 	if (!rc_is_exec(buf)) {
 		free(buf);
