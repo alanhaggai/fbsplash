@@ -26,8 +26,8 @@ FT2SRC  ?= libs/freetype-2.1.9
 LIB		?= lib
 
 prefix     ?= /usr
-sbindir    = ${prefix}/sbin
-libdir     = ${prefix}/${LIB}
+sbindir    = /sbin
+libdir     = /${LIB}
 usrbindir  = ${prefix}/bin
 mandir 	   = ${prefix}/share/man
 incdir     = ${prefix}/include
