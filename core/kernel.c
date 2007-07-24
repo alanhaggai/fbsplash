@@ -89,7 +89,7 @@ int handle_init(bool update)
 #ifdef CONFIG_FBSPLASH
 	fd_splash = open_fbsplash(true);
 
-	if (!update && !cfg_check_sanity('v')) {
+	if (!update && !cfg_check_sanity('v') && (config->reqmode == 's' || config->reqmode == 'v')) {
 		/* Load the configuration and the verbose background picture
 		 * but don't activate fbsplash just yet. We'll enable it
 		 * after the silent screen is displayed. */
@@ -103,7 +103,7 @@ int handle_init(bool update)
 	/* Activate verbose mode if it was explicitly requested. If silent mode
 	 * was requested, the verbose background image will be set after the
 	 * switch to the silent tty is complete. */
-	if (config->reqmode != 's') {
+	if (config->reqmode == 'v') {
 #ifdef CONFIG_FBSPLASH
 		/* Activate fbsplash on the first tty if the picture and
 		 * the config file were successfully loaded. */
@@ -175,7 +175,7 @@ int handle_init(bool update)
 	munmap(t, fb_fix.line_length * fb_var.yres);
 
 #ifdef CONFIG_FBSPLASH
-	if (fbsplash)
+	if (fbsplash && config->reqmode != 't')
 		cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
 #endif
 

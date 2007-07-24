@@ -15,7 +15,8 @@ a continuous configuration string. The following options are recognized:
  - verbose    - Start the system with a verbose splash screen.
  - silent     - Start the system in the 'silent' mode. (all messages from
                 the kernel and from the initscripts are covered by a picture
-                and thus hidden from the user)
+                and thus hidden from the user).
+ - silentonly - The same as 'silent', but does not activate the verbose mode.
  - fadein     - Use a 'fade from black' effect to display the silent image.
  - fadeout    - Use a 'fade to black' effect after the bootup is finished.
  - theme:foo  - Use theme 'foo'.

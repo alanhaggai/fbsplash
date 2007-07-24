@@ -62,7 +62,12 @@ typedef enum sp_type { undef, bootup, reboot, shutdown } stype_t;
 
 typedef struct
 {
-	char reqmode;	/* requested splash mode */
+	char reqmode;	/* requested splash mode:
+					 *  s - silent & verbose
+					 *  t - silent only
+					 *  v - verbose only
+					 *  o - off
+					 */
 	char *theme;	/* theme */
 	char *message;	/* system message */
 	int kdmode;		/* KD_TEXT or KD_GRAPHICS */

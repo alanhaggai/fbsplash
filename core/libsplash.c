@@ -235,6 +235,8 @@ int splash_parse_kcmdline(scfg_t *cfg, bool sysmsg)
 				cfg->reqmode = 'v';
 			} else if (!strcmp(opt, "silent")) {
 				cfg->reqmode = 's';
+			} else if (!strcmp(opt, "silentonly")) {
+				cfg->reqmode = 't';
 			} else if (!strcmp(opt, "off")) {
 				cfg->reqmode = 'o';
 			} else if (!strcmp(opt, "insane")) {
