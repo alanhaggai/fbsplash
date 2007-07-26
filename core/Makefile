@@ -164,7 +164,6 @@ $(OBJDIR)/libsplashrender.la: $(OBJLDIR)/libsplashrender.lo $(LIBOBJS)
 	@$(call infmsg,LD,$@)
 	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $(OBJDIR)/libsplashrender.la $+ $(LDLLIBS) $(OBJDIR)/libsplash.la -rpath $(usrlibdir)
 
-
 splash_user: $(OBJDIR)/$(SP_UTIL) $(OBJDIR)/$(SP_UTIL).static
 
 config.h:
@@ -175,11 +174,12 @@ config.h:
 		exit 1 ; \
 	fi
 
-$(OBJDIR)/$(SP_UTIL): $(OBJS)
+$(OBJDIR)/$(SP_UTIL): $(OBJS) $(OBJDIR)/libsplash.la $(OBJDIR)/libsplashrender.la
 	@$(call infmsg,LD,$@)
 	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) $+ $(LDLIBS) $(OBJDIR)/libsplashrender.la $(OBJDIR)/libsplash.la -o $@
 
-$(OBJDIR)/$(SP_UTIL).static: $(OBJS)
+$(OBJDIR)/$(SP_UTIL).static: $(OBJS) $(OBJDIR)/libsplash.la $(OBJDIR)/libsplashrender.la
+	@$(call infmsg,LD,$@)
 	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) -all-static $(LDFLAGS) $+ $(OBJDIR)/libsplashrender.la $(OBJDIR)/libsplash.la $(LDLIBS) -L/usr/lib/nptl -o $@
 
 objdir:
