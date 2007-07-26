@@ -50,6 +50,8 @@
 #if !defined(CONFIG_FBSPLASH)
 	#define FB_SPLASH_IO_ORIG_USER		0
 	#define FB_SPLASH_IO_ORIG_KERNEL	1
+#else
+	extern int fd_fbsplash;
 #endif
 
 /* Useful short-named types */
@@ -60,10 +62,7 @@ typedef int8_t		s8;
 typedef int16_t		s16;
 typedef int32_t		s32;
 
-typedef enum endianess { little, big } sendian_t;
-
-extern sendian_t endianess;
-extern scfg_t *config;
+typedef enum { little, big } sendian_t;
 
 /* Message levels */
 #define MSG_CRITICAL	0
@@ -76,12 +75,12 @@ extern scfg_t *config;
 #define max(a,b)		((a) > (b) ? (a) : (b))
 
 #define iprint(type, args...) do {				\
-	if (config->verbosity == VERB_QUIET)		\
+	if (config.verbosity == VERB_QUIET)			\
 		break;									\
 												\
 	if (type <= MSG_ERROR) {					\
 		fprintf(stderr, ## args);				\
-	} else if (config->verbosity == VERB_HIGH) {	\
+	} else if (config.verbosity == VERB_HIGH) {	\
 		fprintf(stdout, ## args);				\
 	}											\
 } while (0);
@@ -152,32 +151,6 @@ struct colorf {
 	float r, g, b, a;
 };
 
-#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
-#include "mng_splash.h"
-
-#if 0
-#define F_ANIM_SILENT		1
-#define F_ANIM_VERBOSE		2
-#endif
-
-#define F_ANIM_METHOD_MASK	12
-#define F_ANIM_ONCE			0
-#define F_ANIM_LOOP			4
-#define F_ANIM_PROPORTIONAL	8
-#define F_ANIM_DISPLAY		16
-
-#define F_ANIM_STATUS_DONE 1
-
-typedef struct {
-	int x, y, w, h;
-	mng_handle mng;
-	char *svc;
-	enum ESVC type;
-	u8 status;
-	u8 flags;
-} anim;
-#endif	/* CONFIG_MNG */
-
 #if WANT_TTF
 #define F_TXT_SILENT  	1
 #define F_TXT_VERBOSE	2
@@ -216,6 +189,88 @@ void text_get_xy(text *ct, int *x, int *y);
 
 #endif /* TTF */
 
+#define MODE_VERBOSE 0x01
+#define MODE_SILENT  0x02
+
+typedef struct stheme {
+	u8 bg_color;
+	u16 tx;
+	u16 ty;
+	u16 tw;
+	u16 th;
+	u16 text_x, text_y;
+	u16 text_size;
+	color text_color;
+	char *text_font;
+
+	u8 modes;				/* bitmask of supported splash modes */
+
+	char *silentpic;		/* background pictures */
+	char *pic;
+	char *silentpic256;		/* pictures for 8bpp modes */
+	char *pic256;
+
+	/* Loaded background images */
+	struct fb_image verbose_img;
+	struct fb_image silent_img;
+
+	u8 *bgbuf;				/* background buffer */
+
+	/* A list of all objects used in the theme config file. */
+	list objs;
+
+	/* A list of anims used in the theme config file.  Anims from this
+	 * list are also members of the objs list. */
+	list anims;
+
+	/* A list of icon_img's. */
+	list icons;
+
+	/* A list of fonts used in the theme. */
+	list fonts;
+
+	/* A list of rectangles. Rectangles are not on the objs list as they
+	 * only describe a special area on the screen and are not renderable. */
+	list rects;
+
+#if WANT_TTF
+	TTF_Font *main_font;
+#endif
+
+	int xres;		/* Resolution for which this theme has been designed. */
+	int yres;
+	int xmarg;		/* Margins. Non-zero only if using a config file
+					 * designed for a different resolution than the one
+					 * currently in use. */
+	int ymarg;
+} stheme_t;
+
+#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
+#include "mng_splash.h"
+
+#if 0
+#define F_ANIM_SILENT		1
+#define F_ANIM_VERBOSE		2
+#endif
+
+#define F_ANIM_METHOD_MASK	12
+#define F_ANIM_ONCE			0
+#define F_ANIM_LOOP			4
+#define F_ANIM_PROPORTIONAL	8
+#define F_ANIM_DISPLAY		16
+
+#define F_ANIM_STATUS_DONE 1
+
+typedef struct {
+	int x, y, w, h;
+	mng_handle mng;
+	char *svc;
+	enum ESVC type;
+	u8 status;
+	u8 flags;
+} anim;
+#endif	/* CONFIG_MNG */
+
 typedef struct box {
 	int x1, x2, y1, y2;
 	struct color c_ul, c_ur, c_ll, c_lr;	/* upper left, upper right,
@@ -236,112 +291,80 @@ typedef struct {
 #define BOX_INTER 0x02
 #define BOX_SILENT 0x04
 
-struct splash_config {
-	u8 bg_color;
-	u16 tx;
-	u16 ty;
-	u16 tw;
-	u16 th;
-	u16 text_x, text_y;
-	u16 text_size;
-	color text_color;
-	char *text_font;
-	int xres;
-	int yres;
-	int xmarg;		/* Margins. Non-zero only if using a config file
-					 * designed for a different resolution than the one
-					 * currently in use. */
-	int ymarg;
+struct fb_data {
+	struct fb_var_screeninfo   var;
+	struct fb_fix_screeninfo   fix;
+	int bytespp;			/* bytes per pixel */
+	bool opt;				/* can we use optimized 24/32bpp routines? */
+	u8 ro, go, bo;			/* red, green, blue offset */
+	u8 rlen, glen, blen;	/* red, green, blue length */
 };
+
 
 /* ************************************************************************
  *				Functions
  * ************************************************************************ */
 
 /* common.c */
-void detect_endianess(sendian_t *end);
-int get_fb_settings(int fb_num);
-char *get_cfg_file(char *theme);
+int fb_get_settings(int);
 int do_getpic(unsigned char, unsigned char, char);
-int cfg_check_sanity(unsigned char mode);
-char *get_filepath(char *path);
+int cfg_check_sanity(stheme_t *theme, u8 mode);
 
-int open_fb(int fb, bool create);
+int dev_create(char *fn, char *sys);
+int fb_open(int fb, bool create);
+void fb_unmap(u8 *fb);
+void* fb_mmap(int fb);
+
 int open_tty(int tty, bool create);
-int open_fbsplash(bool create);
 void vt_cursor_enable(int fd);
 void vt_cursor_disable(int fd);
 int tty_silent_set(int tty, int fd);
 int tty_silent_unset(int fd);
 
 /* parse.c */
-int parse_cfg(char *cfgfile);
 int parse_svc_state(char *t, enum ESVC *state);
+int parse_cfg(char *cfgfile, stheme_t *st);
 
 /* render.c */
-void render_objs(u8 *target, u8 *bgnd, char mode, unsigned char origin);
-inline void put_pixel (u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add);
-void rgba2fb (rgbacolor* data, u8* bg, u8* out, int len, int y, u8 alpha);
+void rgba2fb (struct fb_data *fbd, rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha);
+void put_pixel (struct fb_data *fbd, u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add);
+void render_objs(stheme_t *theme, u8 *target, char mode, unsigned char origin);
+void prep_bgnds(stheme_t *theme, u8 *target, u8 *bgnd, char mode);
 
 /* image.c */
-int load_images(char mode);
+int load_images(stheme_t *theme, char mode);
 
-/* cmd.c */
-int cmd_setstate(unsigned int state, unsigned char origin);
-int cmd_setpic(struct fb_image *img, unsigned char origin);
-int cmd_setcfg(unsigned char origin);
-int cmd_getcfg();
+/* fbsplash.c */
+int fbsplash_open(bool create);
+int fbsplash_setstate(unsigned int state, unsigned char origin);
+int fbsplash_setpic(stheme_t *theme, unsigned char origin);
+int fbsplash_setcfg(stheme_t *theme, unsigned char origin);
+int fbsplash_getcfg();
 
 /* daemon.c */
 void daemon_start();
-void do_paint(u8 *dst, u8 *src);
-void do_repaint(u8 *dst, u8 *src);
 	
 /* list.c */
 void list_add(list *l, void *obj);
+void list_free(list l, bool free_item);
 
 /* effects.c */
-void put_img(u8 *dst, u8 *src);
-void fade(u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd, char);
+void paint_rect(stheme_t *theme, u8 *dst, u8 *src, int x1, int y1, int x2, int y2);
+void put_img(stheme_t *theme, u8 *dst, u8 *src);
+void paint_img(stheme_t *theme, u8 *dst, u8 *src);
+void fade(stheme_t *theme, u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd, char type);
 void set_directcolor_cmap(int fd);
 
-extern char *cf_pic;
-extern char *cf_silentpic;
-extern char *cf_pic256;
-extern char *cf_silentpic256;
-
 /* common.c */
-extern struct fb_var_screeninfo   fb_var;
-extern struct fb_fix_screeninfo   fb_fix;
-extern int fd_splash;
 
 extern enum TASK arg_task;
 extern int arg_fb;
 extern int arg_vc;
 extern char *arg_pidfile;
-#ifndef TARGET_KERNEL
-extern u8 theme_loaded;
-#endif 
 
-extern char *config_file;
-
-extern list icons;
-extern list objs;
-extern list rects;
-extern list fonts;
-extern list anims;
-
+extern int fd_fbsplash;
 extern u8 *bg_buffer;
-extern int bytespp;
-
-extern struct fb_image verbose_img;
-extern struct fb_image silent_img;
-
-extern struct splash_config cf;
-
-/* common.c */
-extern u8 fb_opt;
-extern u8 fb_ro, fb_go, fb_bo;
-extern u8 fb_rlen, fb_glen, fb_blen;
+extern sendian_t endianess;
+extern scfg_t config;
 
 #endif /* __UTIL_H */

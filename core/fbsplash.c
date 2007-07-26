@@ -1,7 +1,7 @@
 /*
- * splash_cmd.c - Functions for handling communication with the kernel
+ * fbsplash.c - Functions for handling communication with the kernel
  *
- * Copyright (C) 2004-2005 Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2004-2007 Michal Januszewski <spock@gentoo.org>
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
@@ -22,9 +22,20 @@
 #include "util.h"
 
 #ifdef CONFIG_FBSPLASH
-int fd_splash = -1;
+int fbsplash_open(bool create)
+{
+	int c;
+	c = open(SPLASH_DEV, O_RDWR);
 
-int cmd_setstate(unsigned int state, unsigned char origin)
+	if (c == -1 && create) {
+		if (!dev_create(SPLASH_DEV, PATH_SYS "/class/misc/fbsplash/dev"))
+			c = open(SPLASH_DEV, O_RDWR);
+	}
+
+	return c;
+}
+
+int fbsplash_setstate(unsigned int state, unsigned char origin)
 {
 	struct fb_splash_iowrapper wrapper = {
 		.vc = arg_vc,
@@ -32,22 +43,25 @@ int cmd_setstate(unsigned int state, unsigned char origin)
 		.data = &state,
 	};
 
-	if (ioctl(fd_splash, FBIOSPLASH_SETSTATE, &wrapper)) {
+	if (ioctl(fd_fbsplash, FBIOSPLASH_SETSTATE, &wrapper)) {
 		iprint(MSG_ERROR, "FBIOSPLASH_SETSTATE failed, error code %d.\n", errno);
 		return -1;
 	}
 	return 0;
 }
 
-int cmd_setpic(struct fb_image *img, unsigned char origin)
+int fbsplash_setpic(stheme_t *theme, unsigned char origin)
 {
 	struct fb_splash_iowrapper wrapper = {
 		.vc = arg_vc,
 		.origin = origin,
-		.data = img,
+		.data = &theme->verbose_img.data,
 	};
 
-	if (ioctl(fd_splash, FBIOSPLASH_SETPIC, &wrapper)) {
+	if (splash_render_buf(theme, (u8*)theme->verbose_img.data, true, 'v'))
+		return -1;
+
+	if (ioctl(fd_fbsplash, FBIOSPLASH_SETPIC, &wrapper)) {
 		iprint(MSG_ERROR, "FBIOSPLASH_SETPIC failed, error code %d.\n", errno);
 		iprint(MSG_ERROR, "Hint: are you calling 'setpic' for the current virtual console?\n");
 		return -1;
@@ -55,7 +69,7 @@ int cmd_setpic(struct fb_image *img, unsigned char origin)
 	return 0;
 }
 
-int cmd_setcfg(unsigned char origin)
+int fbsplash_setcfg(stheme_t *theme, unsigned char origin)
 {
 	struct vc_splash vc_cfg;
 	struct fb_splash_iowrapper wrapper = {
@@ -64,21 +78,21 @@ int cmd_setcfg(unsigned char origin)
 		.data = &vc_cfg,
 	};
 
-	vc_cfg.tx = cf.tx;
-	vc_cfg.ty = cf.ty;
-	vc_cfg.twidth = cf.tw;
-	vc_cfg.theight = cf.th;
-	vc_cfg.bg_color = cf.bg_color;
-	vc_cfg.theme = config->theme;
+	vc_cfg.tx = theme->tx;
+	vc_cfg.ty = theme->ty;
+	vc_cfg.twidth = theme->tw;
+	vc_cfg.theight = theme->th;
+	vc_cfg.bg_color = theme->bg_color;
+	vc_cfg.theme = config.theme;
 
-	if (ioctl(fd_splash, FBIOSPLASH_SETCFG, &wrapper)) {
+	if (ioctl(fd_fbsplash, FBIOSPLASH_SETCFG, &wrapper)) {
 		iprint(MSG_ERROR, "FBIOSPLASH_SETCFG failed, error code %d.\n", errno);
 		return -1;
 	}
 	return 0;
 }
 
-int cmd_getcfg()
+int fbsplash_getcfg()
 {
 	int err = 0;
 	struct vc_splash vc_cfg;
@@ -92,7 +106,7 @@ int cmd_getcfg()
 	if (!vc_cfg.theme)
 		return -1;
 
-	if (ioctl(fd_splash, FBIOSPLASH_GETCFG, &wrapper)) {
+	if (ioctl(fd_fbsplash, FBIOSPLASH_GETCFG, &wrapper)) {
 		iprint(MSG_ERROR, "FBIOSPLASH_GETCFG failed, error code %d.\n", errno);
 		err = -2;
 		goto out;

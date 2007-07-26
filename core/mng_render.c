@@ -195,31 +195,31 @@ mng_retcode mng_render_proportional(mng_handle mngh, int progress)
 	return ret;
 }
 
-int mng_display_buf(mng_handle mngh, u8* bg, u8* dest, int x, int y, int stride, int bgstride)
+int mng_display_buf(mng_handle mngh, stheme_t *theme, u8* bg, u8* dest, int x, int y, int stride, int bgstride)
 {
 	rgbacolor *src;
 	mng_anim *mng = mng_get_userdata(mngh);
 	int dispwidth, dispheight, line;
 
-	if (x + mng->canvas_w > cf.xres)
-		dispwidth = cf.xres - x;
+	if (x + mng->canvas_w > theme->xres)
+		dispwidth = theme->xres - x;
 	else
 		dispwidth = mng->canvas_w;
 
-	if (y + mng->canvas_h > cf.yres)
-		dispheight = cf.yres - y;
+	if (y + mng->canvas_h > theme->yres)
+		dispheight = theme->yres - y;
 	else
 		dispheight = mng->canvas_h;
 
-	x += cf.xmarg;
-	y += cf.ymarg;
+	x += theme->xmarg;
+	y += theme->ymarg;
 
 	dest += y * stride;
 	bg += y * bgstride;
 	src = (rgbacolor*)mng->canvas;
 
 	for (line = 0; line < dispheight; line++) {
-		rgba2fb(src, bg + (x * bytespp), dest + (x * bytespp), dispwidth, y + line, 1);
+		rgba2fb(config.fbd, src, bg + (x * config.fbd->bytespp), dest + (x * config.fbd->bytespp), dispwidth, y + line, 1);
 		dest += stride;
 		bg   += bgstride;
 		src  += mng->canvas_w;

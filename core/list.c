@@ -1,7 +1,7 @@
 /*
- * list.c - list utility functions
+ * list.c -- list utility functions
  *
- * Copyright (C) 2005 Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2005, 2007 Michal Januszewski <spock@gentoo.org>
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
@@ -25,3 +25,15 @@ void list_add(list *l, void *obj)
 	}
 }
 
+void list_free(list l, bool free_item) 
+{
+	item *i, *j;
+
+	for (i = l.head; i != NULL; ) {
+		j = i->next;
+		if (free_item)
+			free(i->p);
+		free(i);
+		i = j;
+	}
+}

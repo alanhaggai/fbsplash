@@ -21,75 +21,6 @@
 #include "splash.h"
 #include "daemon.h"
 
-void inline do_paint_rect2(u8 *dst, u8 *src, int x1, int y1, int x2, int y2)
-{
-	u8 *to;
-	int y, j;
-
-	j = (x2 - x1 + 1) * bytespp;
-	for (y = y1; y <= y2; y++) {
-		to = dst + (y + cf.ymarg) * fb_fix.line_length + (x1 + cf.xmarg) * bytespp;
-		memcpy(to, src + (y * cf.xres + x1) * bytespp, j);
-	}
-}
-
-void do_paint_rect(u8 *dst, u8 *src, rect *re)
-{
-	do_paint_rect2(dst, src, re->x1, re->y1, re->x2, re->y2);
-}
-
-/*
- * dst = fb_mem
- * src = bg_buffer
- */
-void do_paint(u8 *dst, u8 *src)
-{
-	item *ti;
-
-	for (ti = rects.head ; ti != NULL; ti = ti->next) {
-		rect *re;
-		re = (rect*)ti->p;
-		do_paint_rect(dst, src, re);
-	}
-
-	for (ti = objs.head; ti != NULL; ti = ti->next) {
-		obj *o;
-		o = (obj*)ti->p;
-
-		switch (o->type) {
-		case o_box:
-		{
-			box *b = (box*)o->p;
-			if (!(b->attr & BOX_INTER) || ti->next == NULL)
-				continue;
-
-			if (((obj*)ti->next->p)->type != o_box)
-				continue;
-
-			b = (box*)((obj*)ti->next->p)->p;
-			do_paint_rect2(dst, src, b->x1, b->y1, b->x2, b->y2);
-			break;
-		}
-#if WANT_TTF
-		case o_text:
-		{
-			int x, y;
-			text *t = (text*)o->p;
-			text_get_xy(t, &x, &y);
-			do_paint_rect2(dst, src, x, y, x + t->last_width, y + t->font->font->height);
-			break;
-		}
-#endif
-		default:
-			continue;
-		}
-	}
-
-#if WANT_TTF
-	do_paint_rect2(dst, src, cf.text_x, cf.text_y, cf.text_x + boot_msg_width, cf.text_y + global_font->height);
-#endif
-}
-
 /*
  * 'exit' command handler.
  */
@@ -104,17 +35,19 @@ int cmd_exit(void **args)
 	pthread_mutex_lock(&mtx_paint);
 
 	if (ctty == CTTY_SILENT) {
-		if (config->effects & EFF_FADEOUT)
-			fade(fb_mem, bg_buffer, silent_img.cmap, 0, fd_fb, 1);
+		if (config.effects & EFF_FADEOUT)
+			fade(theme, fb_mem, theme->bgbuf, theme->silent_img.cmap, 0, fd_fb, 1);
 
 		/* Switch to the verbose tty if we're in silent mode when the
 		 * 'exit' command is received. */
-		ioctl(fd_tty0, VT_ACTIVATE, config->tty_v);
+		ioctl(fd_tty0, VT_ACTIVATE, config.tty_v);
 	}
 
 	pthread_mutex_unlock(&mtx_paint);
 
-	free_objs();
+	splash_theme_free(theme);
+	splash_render_cleanup();
+	splash_lib_cleanup();
 
 	for (i = svcs.head; i != NULL; ) {
 		j = i->next;
@@ -136,10 +69,10 @@ int cmd_exit(void **args)
  */
 int cmd_set_theme(void **args)
 {
-	if (config->theme)
-		free(config->theme);
+	if (config.theme)
+		free(config.theme);
 
-	config->theme = strdup(args[0]);
+	config.theme = strdup(args[0]);
 
 	pthread_mutex_lock(&mtx_paint);
 	reload_theme();
@@ -158,9 +91,9 @@ int cmd_set_mode(void **args)
 	int n;
 
 	if (!strcmp(args[0], "silent")) {
-		n = config->tty_s;
+		n = config.tty_s;
 	} else if (!strcmp(args[0], "verbose")) {
-		n = config->tty_v;
+		n = config.tty_v;
 	} else {
 		return -1;
 	}
@@ -193,7 +126,7 @@ int cmd_set_gpm(void **args)
 	conn.minMod = 0;
 	conn.maxMod = ~0;
 	pthread_mutex_lock(&mtx_tty);
-	fd_gpm = Gpm_Open(&conn, config->tty_s);
+	fd_gpm = Gpm_Open(&conn, config.tty_s);
 	pthread_mutex_unlock(&mtx_tty);
 	return fd_gpm;
 #else
@@ -214,13 +147,13 @@ int cmd_set_tty(void **args)
 
 	if (!strcmp(args[0], "silent")) {
 		/* Do nothing if the new tty is the same as the old one. */
-		if (config->tty_s == *(int*)args[1])
+		if (config.tty_s == *(int*)args[1])
 			return 0;
 
 		pthread_cancel(th_switchmon);
 
 		pthread_mutex_lock(&mtx_tty);
-		config->tty_s = *(int*)args[1];
+		config.tty_s = *(int*)args[1];
 		switchmon_start(UPD_SILENT);
 		pthread_mutex_unlock(&mtx_tty);
 #ifdef CONFIG_GPM
@@ -231,11 +164,11 @@ int cmd_set_tty(void **args)
 #endif
 	} else if (!strcmp(args[0], "verbose")) {
 		/* Do nothing if the new tty is the same as the old one. */
-		if (config->tty_v == *(int*)args[1])
+		if (config.tty_v == *(int*)args[1])
 			return 0;
 
 		pthread_mutex_lock(&mtx_tty);
-		config->tty_v = *(int*)args[1];
+		config.tty_v = *(int*)args[1];
 		pthread_mutex_unlock(&mtx_tty);
 	} else {
 		return -1;
@@ -294,7 +227,7 @@ int cmd_paint(void **args)
 	char ret = 0;
 
 	pthread_mutex_lock(&mtx_paint);
-	if (!theme_loaded) {
+	if (!theme) {
 		ret = -1;
 		goto out;
 	}
@@ -302,12 +235,7 @@ int cmd_paint(void **args)
 	if (ctty != CTTY_SILENT)
 		goto out;
 
-	render_objs((u8*)bg_buffer, (u8*)silent_img.data, 's', FB_SPLASH_IO_ORIG_USER);
-
-	if (notify[NOTIFY_PAINT])
-		system(notify[NOTIFY_PAINT]);
-
-	do_paint(fb_mem, bg_buffer);
+	splash_render_screen(theme, false, 's', EFF_NONE);
 out:
 	pthread_mutex_unlock(&mtx_paint);
 	return ret;
@@ -323,7 +251,7 @@ int cmd_repaint(void **args)
 	char ret = 0;
 
 	pthread_mutex_lock(&mtx_paint);
-	if (!theme_loaded) {
+	if (!theme) {
 		ret = -1;
 		goto out;
 	}
@@ -331,13 +259,7 @@ int cmd_repaint(void **args)
 	if (ctty != CTTY_SILENT)
 		goto out;
 
-	memcpy(bg_buffer, silent_img.data, cf.xres * cf.yres * bytespp);
-	render_objs((u8*)bg_buffer, NULL, 's', FB_SPLASH_IO_ORIG_USER);
-
-	if (notify[NOTIFY_REPAINT])
-		system(notify[NOTIFY_REPAINT]);
-
-	put_img(fb_mem, bg_buffer);
+	splash_render_screen(theme, true, 's', EFF_NONE);
 out:
 	pthread_mutex_unlock(&mtx_paint);
 
@@ -355,7 +277,7 @@ int cmd_progress(void **args)
 	if (*(int*)args[0] < 0 || *(int*)args[0] > PROGRESS_MAX)
 		return -1;
 
-	config->progress = *(int*)args[0];
+	config.progress = *(int*)args[0];
 	return 0;
 }
 
@@ -368,9 +290,9 @@ int cmd_progress(void **args)
 int cmd_set_mesg(void **args)
 {
 #ifdef CONFIG_TTF
-	if (config->message)
-		free(config->message);
-	config->message = strdup(args[0]);
+	if (config.message)
+		free(config.message);
+	config.message = strdup(args[0]);
 #endif
 	return 0;
 }
@@ -387,7 +309,7 @@ int cmd_paint_rect(void **args)
 	int t, ret = 0;
 
 	pthread_mutex_lock(&mtx_paint);
-	if (!theme_loaded) {
+	if (!theme) {
 		ret = -1;
 		goto out;
 	}
@@ -423,20 +345,19 @@ int cmd_paint_rect(void **args)
 	if (re.x2 < 0)
 		re.x2 = 0;
 
-	if (re.x1 >= cf.xres)
-		re.x1 = cf.xres-1;
+	if (re.x1 >= theme->xres)
+		re.x1 = theme->xres-1;
 
-	if (re.x2 >= cf.xres)
-		re.x2 = cf.xres-1;
+	if (re.x2 >= theme->xres)
+		re.x2 = theme->xres-1;
 
-	if (re.y1 >= cf.yres)
-		re.y1 = cf.yres-1;
+	if (re.y1 >= theme->yres)
+		re.y1 = theme->yres-1;
 
-	if (re.y2 >= cf.yres)
-		re.y2 = cf.yres-1;
+	if (re.y2 >= theme->yres)
+		re.y2 = theme->yres-1;
 
-	do_paint_rect(fb_mem, bg_buffer, &re);
-
+	paint_rect(theme, fb_mem, theme->bgbuf, re.x1, re.y1, re.x2, re.y2);
 out:
 
 	pthread_mutex_unlock(&mtx_paint);

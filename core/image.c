@@ -30,19 +30,16 @@
 
 #include "util.h"
 
-struct fb_image verbose_img;
-struct fb_image silent_img;
-
 #ifdef CONFIG_PNG
 #define PALETTE_COLORS 240
-int load_png(char *filename, u8 **data, struct fb_cmap *cmap, unsigned int *width, unsigned int *height, u8 want_alpha)
+static int load_png(stheme_t *theme, char *filename, u8 **data, struct fb_cmap *cmap, unsigned int *width, unsigned int *height, u8 want_alpha)
 {
 	png_structp	png_ptr;
 	png_infop	info_ptr;
 	png_bytep	row_pointer;
 	png_colorp	palette;
 	int			rowbytes, num_palette;
-	int			i, j, bytespp = (fb_var.bits_per_pixel + 7) >> 3;
+	int			i, j, bytespp = config.fbd->bytespp;
 	u8 *buf = NULL;
 	u8 *t;
 
@@ -103,7 +100,7 @@ int load_png(char *filename, u8 **data, struct fb_cmap *cmap, unsigned int *widt
 		*height = info_ptr->height;
 	}
 
-	*data = malloc(cf.xres * cf.yres * bytespp);
+	*data = malloc(theme->xres * theme->yres * config.fbd->bytespp);
 	if (!*data) {
 		iprint(MSG_CRITICAL, "Failed to allocate memory for image: %s.\n", filename);
 		return -4;
@@ -125,7 +122,7 @@ int load_png(char *filename, u8 **data, struct fb_cmap *cmap, unsigned int *widt
 			row_pointer = buf;
 		}
 
-	        png_read_row(png_ptr, row_pointer, NULL);
+	    png_read_row(png_ptr, row_pointer, NULL);
 
 		if (cmap) {
 			int h = 256 - cmap->len;
@@ -142,7 +139,7 @@ int load_png(char *filename, u8 **data, struct fb_cmap *cmap, unsigned int *widt
 		/* We only need to convert the image if the alpha channel is not required */
 		} else if (!want_alpha) {
 			u8 *tmp = *data + info_ptr->width * bytespp * i;
-			rgba2fb((rgbacolor*)buf, tmp, tmp, info_ptr->width, i, 0);
+			rgba2fb(config.fbd, (rgbacolor*)buf, tmp, tmp, info_ptr->width, i, 0);
 		}
 	}
 
@@ -160,7 +157,7 @@ int load_png(char *filename, u8 **data, struct fb_cmap *cmap, unsigned int *widt
 	return 0;
 }
 
-int is_png(char *filename)
+static int is_png(char *filename)
 {
 	unsigned char header[8];
 	FILE *fp = fopen(filename,"r");
@@ -175,14 +172,14 @@ int is_png(char *filename)
 }
 #endif /* PNG */
 
-int load_jpeg(char *filename, u8 **data, unsigned int *width, unsigned int *height)
+static int load_jpeg(char *filename, u8 **data, unsigned int *width, unsigned int *height)
 {
 	struct jpeg_decompress_struct cinfo;
 	struct jpeg_error_mgr jerr;
 	FILE* injpeg;
 
 	u8 *buf = NULL;
-	int i, bytespp = (fb_var.bits_per_pixel+7) >> 3;
+	int i;
 
 	cinfo.err = jpeg_std_error(&jerr);
 	jpeg_create_decompress(&cinfo);
@@ -210,7 +207,7 @@ int load_jpeg(char *filename, u8 **data, unsigned int *width, unsigned int *heig
 		return -1;
 	}
 
-	*data = malloc(cinfo.output_width * cinfo.output_height * bytespp);
+	*data = malloc(cinfo.output_width * cinfo.output_height * config.fbd->bytespp);
 	if (!*data) {
 		iprint(MSG_ERROR, "Failed to allocate memory for image: %s.\n", filename);
 		return -4;
@@ -219,8 +216,8 @@ int load_jpeg(char *filename, u8 **data, unsigned int *width, unsigned int *heig
 	for (i = 0; i < cinfo.output_height; i++) {
 		u8 *tmp;
 		jpeg_read_scanlines(&cinfo, (JSAMPARRAY) &buf, 1);
-		tmp = *data + cinfo.output_width * bytespp * i;
-		rgba2fb((rgbacolor*)buf, tmp, tmp, cinfo.output_width, i, 0);
+		tmp = *data + cinfo.output_width * config.fbd->bytespp * i;
+		rgba2fb(config.fbd, (rgbacolor*)buf, tmp, tmp, cinfo.output_width, i, 0);
 	}
 
 	jpeg_finish_decompress(&cinfo);
@@ -231,20 +228,20 @@ int load_jpeg(char *filename, u8 **data, unsigned int *width, unsigned int *heig
 	return 0;
 }
 
-int load_bg_images(char mode)
+static int load_bg_images(stheme_t *theme, char mode)
 {
-	struct fb_image *img = (mode == 'v') ? &verbose_img : &silent_img;
+	struct fb_image *img = (mode == 'v') ? &theme->verbose_img : &theme->silent_img;
 	char *pic;
 	int i;
 
-	img->width = cf.xres;
-	img->height = cf.yres;
-	img->depth = fb_var.bits_per_pixel;
+	img->width = theme->xres;
+	img->height = theme->yres;
+	img->depth = config.fbd->var.bits_per_pixel;
 
 	/* Deal with 8bpp modes. Only PNGs can be loaded, and pic256
 	 * option has to be used to specify the filename of the image */
-	if (fb_var.bits_per_pixel == 8) {
-		pic = (mode == 'v') ? cf_pic256 : cf_silentpic256;
+	if (config.fbd->var.bits_per_pixel == 8) {
+		pic = (mode == 'v') ? theme->pic256 : theme->silentpic256;
 
 		if (!pic)
 			return -1;
@@ -277,7 +274,7 @@ int load_bg_images(char mode)
 		img->cmap.blue = img->cmap.green + i;
 		img->cmap.len = i;
 
-		if (load_png(pic, (u8**)&img->data, &img->cmap, &img->width, &img->height, 0)) {
+		if (load_png(theme, pic, (u8**)&img->data, &img->cmap, &img->width, &img->height, 0)) {
 			iprint(MSG_ERROR, "Failed to load PNG file %s.\n", pic);
 			return -1;
 		}
@@ -287,14 +284,14 @@ int load_bg_images(char mode)
 #endif
 	/* Deal with 15, 16, 24 and 32bpp modes */
 	} else {
-		pic = (mode == 'v') ? cf_pic : cf_silentpic;
+		pic = (mode == 'v') ? theme->pic : theme->silentpic;
 
 		if (!pic)
 			return -2;
 
 #ifdef CONFIG_PNG
-		if (is_png(cf_pic)) {
-			i = load_png(pic, (u8**)&img->data, NULL, &img->width, &img->height, 0);
+		if (is_png(pic)) {
+			i = load_png(theme, pic, (u8**)&img->data, NULL, &img->width, &img->height, 0);
 		} else
 #endif
 		{
@@ -310,26 +307,16 @@ int load_bg_images(char mode)
 	return 0;
 }
 
-
-int load_images(char mode)
+int load_images(stheme_t *theme, char mode)
 {
 	item *i;
 
-	if (!config_file) {
-		iprint(MSG_ERROR, "No config file specified.\n");
+	if (load_bg_images(theme, mode))
 		return -1;
-	}
 
-	if (mode == 'v' || mode == 'a')
-		if (load_bg_images('v'))
-			return -2;
-
-	if (mode == 's' || mode == 'a') {
-		if (load_bg_images('s'))
-			return -2;
-
+	if (mode == 's') {
 #ifdef CONFIG_PNG
-		for (i = icons.head; i != NULL; i = i->next) {
+		for (i = theme->icons.head; i != NULL; i = i->next) {
 			icon_img *ii = (icon_img*) i->p;
 			ii->w = ii->h = 0;
 
@@ -338,7 +325,7 @@ int load_images(char mode)
 				continue;
 			}
 
-			if (load_png(ii->filename, &ii->picbuf, NULL, &ii->w, &ii->h, 1)) {
+			if (load_png(theme, ii->filename, &ii->picbuf, NULL, &ii->w, &ii->h, 1)) {
 				iprint(MSG_ERROR, "Failed to load icon %s.\n", ii->filename);
 				ii->picbuf = NULL;
 				ii->w = ii->h = 0;
@@ -350,5 +337,4 @@ int load_images(char mode)
 
 	return 0;
 }
-
 

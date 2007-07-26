@@ -123,21 +123,13 @@ int main(int argc, char **argv)
 {
 	unsigned int c, i;
 	int fp, err = 0;
+	stheme_t *theme;
 
-	detect_endianess(&endianess);
-	config = splash_lib_init(bootup);
+	splash_lib_init(bootup);
+	splash_render_init(false);
 
 	arg_task = none;
 	arg_vc = -1;
-
-	verbose_img.cmap.red = silent_img.cmap.red = NULL;
-
-#ifdef CONFIG_TTF
-	if (TTF_Init() < 0) {
-		iprint(MSG_ERROR, "Couldn't initialize TTF.\n");
-		return -1;
-	}
-#endif
 
 	while ((c = getopt_long(argc, argv, "c:t:m:p:e:hdvq", options, NULL)) != EOF) {
 
@@ -157,9 +149,9 @@ int main(int argc, char **argv)
 
 		case 0x103:
 		case 't':
-			if (config->theme)
-				free(config->theme);
-			config->theme = strdup(optarg);
+			if (config.theme)
+				free(config.theme);
+			config.theme = strdup(optarg);
 			break;
 
 		case 0x102:
@@ -175,14 +167,14 @@ int main(int argc, char **argv)
 		case 'm':
 		case 0x104:
 			if (optarg[0] == 's')
-				config->reqmode = 's';
+				config.reqmode = 's';
 			else
-				config->reqmode = 'v';
+				config.reqmode = 'v';
 			break;
 
 		case 'p':
 		case 0x105:
-			config->progress = atoi(optarg);
+			config.progress = atoi(optarg);
 			break;
 
 		case 0x106:
@@ -192,13 +184,13 @@ int main(int argc, char **argv)
 			break;
 
 		case 0x108:
-			config->kdmode = KD_GRAPHICS;
+			config.kdmode = KD_GRAPHICS;
 			break;
 #ifdef CONFIG_TTF
 		case 0x109:
-			if (config->message)
-				free(config->message);
-			config->message = strdup(optarg);
+			if (config.message)
+				free(config.message);
+			config.message = strdup(optarg);
 			break;
 #endif
 		case 0x10a:
@@ -206,7 +198,7 @@ int main(int argc, char **argv)
 			break;
 
 		case 0x10b:
-			config->minstances = true;
+			config.minstances = true;
 			break;
 
 		case 0x10c:
@@ -215,20 +207,20 @@ int main(int argc, char **argv)
 
 			while ((topt = strsep(&optarg, ",")) != NULL) {
 				if (!strcmp(topt, "fadein"))
-					config->effects |= EFF_FADEIN;
+					config.effects |= EFF_FADEIN;
 				else if (!strcmp(topt, "fadeout"))
-					config->effects |= EFF_FADEOUT;
+					config.effects |= EFF_FADEOUT;
 			}
 			break;
 		}
 
 		case 0x10d:
 			if (!strcmp(optarg, "reboot"))
-				config->type = reboot;
+				config.type = reboot;
 			else if (!strcmp(optarg, "shutdown"))
-				config->type = shutdown;
+				config.type = shutdown;
 			else
-				config->type = bootup;
+				config.type = bootup;
 			break;
 
 		case 'd':
@@ -237,11 +229,11 @@ int main(int argc, char **argv)
 
 		/* Verbosity level adjustment. */
 		case 'q':
-			config->verbosity = VERB_QUIET;
+			config.verbosity = VERB_QUIET;
 			break;
 
 		case 'v':
-			config->verbosity = VERB_HIGH;
+			config.verbosity = VERB_HIGH;
 			break;
 		}
 	}
@@ -251,24 +243,17 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-#ifdef CONFIG_FBSPLASH
-	fd_splash = open_fbsplash(false);
-#endif
-
-	if (get_fb_settings(arg_fb))
-		return -1;
-
-	/* Get the config file only if it will actually be used
-	 * later on. */
 	switch (arg_task) {
 	case getres:
 	{
-		int xres = fb_var.xres;
-		int yres = fb_var.yres;
-		splash_get_res(config->theme, &xres, &yres);
+		int xres = config.fbd->var.xres;
+		int yres = config.fbd->var.yres;
+		splash_get_res(config.theme, &xres, &yres);
 		printf("%dx%d\n", xres, yres);
 		return 0;
 	}
+
+	/* Only load the theme if it will actually be used. */
 	case setpic:
 	case setcfg:
 	case start_daemon:
@@ -276,20 +261,13 @@ int main(int argc, char **argv)
 	case paint:
 	case repaint:
 #endif
-		if (config->theme)
-			config_file = get_cfg_file(config->theme);
-		break;
+		theme = splash_theme_load();
 	default:
 		break;
 	}
 
-	if (config_file)
-		parse_cfg(config_file);
-
 	if (arg_task == start_daemon) {
-		if (load_images('s'))
-			return -1;
-		daemon_start();
+		daemon_start(theme);
 		/* we never get here */
 	}
 
@@ -300,11 +278,11 @@ int main(int argc, char **argv)
 
 #ifdef CONFIG_FBSPLASH
 	case on:
-		err = cmd_setstate(1, FB_SPLASH_IO_ORIG_USER);
+		err = fbsplash_setstate(1, FB_SPLASH_IO_ORIG_USER);
 		break;
 
 	case off:
-		err = cmd_setstate(0, FB_SPLASH_IO_ORIG_USER);
+		err = fbsplash_setstate(0, FB_SPLASH_IO_ORIG_USER);
 		break;
 
 	case setpic:
@@ -319,23 +297,19 @@ int main(int argc, char **argv)
 			close(fp);
 		}
 
-		err = cfg_check_sanity('v');
-		if (err)
-			break;
-
-		err = do_getpic(FB_SPLASH_IO_ORIG_USER, 1, 'v');
+		err = fbsplash_setpic(theme, FB_SPLASH_IO_ORIG_USER);
 setpic_out:	break;
 	}
 
 	case getcfg:
-		err = cmd_getcfg(FB_SPLASH_IO_ORIG_USER);
+		err = fbsplash_getcfg(FB_SPLASH_IO_ORIG_USER);
 		break;
 
 	case setcfg:
-		err = cfg_check_sanity('v');
+		err = cfg_check_sanity(theme, 'v');
 		if (err)
 			break;
-		err = cmd_setcfg(FB_SPLASH_IO_ORIG_USER);
+		err = fbsplash_setcfg(theme, FB_SPLASH_IO_ORIG_USER);
 		break;
 
 	case getstate:
@@ -346,7 +320,7 @@ setpic_out:	break;
 			.data = &i,
 		};
 
-		ioctl(fd_splash, FBIOSPLASH_GETSTATE, &wrapper);
+		ioctl(fd_fbsplash, FBIOSPLASH_GETSTATE, &wrapper);
 
 		printf("Splash state on console %d: %s\n", arg_vc, (i != 0) ? "on" : "off");
 		break;
@@ -361,14 +335,14 @@ setpic_out:	break;
 			fp = open_tty(arg_vc+1, false);
 			t = arg_vc+1;
 		} else {
-			t = (config->reqmode == 's') ? TTY_SILENT : TTY_VERBOSE;
+			t = (config.reqmode == 's') ? TTY_SILENT : TTY_VERBOSE;
 			fp = open_tty(t, false);
 		}
 
 		if (fp < 0)
 			break;
 
-		if (config->reqmode == 's') {
+		if (config.reqmode == 's') {
 			tty_silent_set(t, fp);
 		} else {
 			ioctl(fp, VT_ACTIVATE, t);
@@ -405,76 +379,16 @@ setpic_out:	break;
 	/* Deprecated. The daemon mode should be used instead. */
 	case paint:
 	case repaint:
-	{
-		struct fb_image pic;
-		u8 *out;
+		/* FIXME: support the deprecated options here */
 
-		if (config->reqmode != 'v' && config->reqmode != 's')
-			break;
-
-		c = open_fb(arg_fb, false);
-
-		/* We need a config file designed for the video mode that
-		 * is currently in use. */
-		if (cf.xres != fb_var.xres || cf.yres != fb_var.yres)
-			break;
-
-		out = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
-				MAP_SHARED, c, fb_var.yoffset * fb_fix.line_length);
-
-		if (out == MAP_FAILED) {
-			iprint(MSG_ERROR, "mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
-			close(c);
-			err = -1;
-			break;
-		}
-
-		/* Make sure the config file contains sane settings. */
-		err = cfg_check_sanity(config->reqmode);
-		if (err)
-			break;
-
-		if (do_getpic(FB_SPLASH_IO_ORIG_USER, 0, config->reqmode)) {
-			err = -1;
-			break;
-		}
-
-		if (config->reqmode == 's') {
-			pic = silent_img;
-		} else {
-			pic = verbose_img;
-		}
-
-		if (pic.cmap.red)
-			ioctl(c, FBIOPUTCMAP, &pic.cmap);
-
-		if (arg_task == repaint || config->reqmode == 'v') {
-			put_img(out, (u8*)pic.data);
-		} else {
-			do_paint(out, (u8*)pic.data);
-		}
-
-		munmap(out, fb_fix.line_length * fb_var.yres);
-		close(c);
-
-		free((u8*)pic.data);
-		if (pic.cmap.red)
-			free(pic.cmap.red);
-
-		break;
-	}
 #endif /* CONFIG_DEPRECATED */
 
 	default:
 		break;
 	}
 
-#ifdef CONFIG_FBSPLASH
-	close(fd_splash);
-#endif
-
-	if (config_file)
-		free(config_file);
+	splash_render_cleanup();
+	splash_lib_cleanup();
 
 	return err;
 }

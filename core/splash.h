@@ -4,8 +4,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "config.h"
-
 /* Adjustable settings */
 #define PATH_DEV	"/dev"
 #define PATH_PROC	"/proc"
@@ -30,6 +28,7 @@
 #define TTY_SILENT		8
 #define TTY_VERBOSE		1
 
+#define THEME_DIR		"/etc/splash"
 #define DEFAULT_FONT	"luxisri.ttf"
 #define DEFAULT_THEME	"default"
 #define DAEMON_NAME		"splash_util"
@@ -57,6 +56,9 @@
 #define EFF_NONE		0
 #define EFF_FADEIN		1
 #define EFF_FADEOUT		2
+
+struct fb_data;
+struct stheme;
 
 typedef enum sp_type { undef, bootup, reboot, shutdown } stype_t;
 
@@ -86,6 +88,8 @@ typedef struct
 	bool minstances;	/* allow multiple instances of the splash daemon? */
 	int progress;		/* current value of progress */
 	char verbosity;		/* verbosity level */
+
+	struct fb_data* fbd;
 } scfg_t;
 
 scfg_t* splash_lib_init(stype_t type);
@@ -104,5 +108,16 @@ bool splash_check_sanity(void);
 int splash_cache_prep(void);
 int splash_cache_cleanup(char **profile_save);
 int splash_send(const char *fmt, ...);
+
+/* \
+ * Link with libsplashrender if you want to use the functions
+ * below.
+ */
+int splash_render_init(bool create);
+void splash_render_cleanup();
+int splash_render_buf(struct stheme *theme, void *buffer, bool repaint, char mode);
+int splash_render_screen(struct stheme *theme, bool repaint, char mode, char effects);
+struct stheme *splash_theme_load();
+void splash_theme_free(struct stheme *theme);
 
 #endif /* __SPLASH_H */

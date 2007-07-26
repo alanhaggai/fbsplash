@@ -23,14 +23,13 @@
 #include <sys/ioctl.h>
 #include <sys/mount.h>
 
-#include <linux/kd.h>
-#include <linux/vt.h>
 #include <linux/fs.h>
 
 #if !defined(MNT_DETACH)
 	#define MNT_DETACH 2
 #endif
 
+#include "util.h"
 #include "splash.h"
 
 /* If we're not a Gentoo system, define eerror() and ewarn() */
@@ -48,7 +47,22 @@
 
 static FILE *fp_fifo = NULL;
 static int fd_tty0 = -1;
-static scfg_t config;
+scfg_t config;
+sendian_t endianess;
+
+/* A list of loaded fonts. */
+list fonts = { NULL, NULL };
+
+static void detect_endianess(sendian_t *end)
+{
+	u16 t = 0x1122;
+
+	if (*(u8*)&t == 0x22) {
+		*end = little;
+	} else {
+		*end = big;
+	}
+}
 
 /*
  * Init the splash library.
@@ -62,6 +76,7 @@ static scfg_t config;
  */
 scfg_t* splash_lib_init(stype_t type)
 {
+	detect_endianess(&endianess);
 	splash_init_config(&config, type);
 
 	/* The kernel helper cannot touch any tty devices. */
@@ -152,6 +167,14 @@ int splash_init_config(scfg_t *cfg, stype_t type)
 	return 0;
 }
 
+void splash_set_tty_silent(scfg_t *cfg, int tty)
+{
+	if (tty < 0 || tty > MAX_NR_CONSOLES)
+		cfg->tty_s = TTY_SILENT;
+	else
+		cfg->tty_s = tty;
+}
+
 /*
  * Parse the kernel command line to get splash settings
  * and save them in 'cfg'.
@@ -226,7 +249,7 @@ int splash_parse_kcmdline(scfg_t *cfg, bool sysmsg)
 		while ((opt = strsep(&t, ",")) != NULL) {
 
 			if (!strncmp(opt, "tty:", 4)) {
-				cfg->tty_v = strtol(opt+4, NULL, 0);
+				splash_set_tty_silent(cfg, strtol(opt+4, NULL, 0));
 			} else if (!strcmp(opt, "fadein")) {
 				cfg->effects |= EFF_FADEIN;
 			} else if (!strcmp(opt, "fadeout")) {

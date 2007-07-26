@@ -29,6 +29,7 @@ prefix     ?= /usr
 sbindir    = /sbin
 libdir     = /${LIB}
 usrbindir  = ${prefix}/bin
+usrlibdir  = ${prefix}/${LIB}
 mandir 	   = ${prefix}/share/man
 incdir     = ${prefix}/include
 
@@ -45,9 +46,11 @@ endif
 
 ifeq ($(strip $(QUIET)),true)
 	Q = @
+	LQ = --quiet
 	OUTPUT = /dev/null
 else
 	Q =
+	LQ = 
 	OUTPUT = /dev/stdout
 endif
 
@@ -65,32 +68,36 @@ PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_S
 
 K_LDLIBS = $(OBJDIR)/jpeglib/libjpeg.a
 K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
-		   $(KOUT)/cmd.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o $(KOUT)/libsplash.o
+		   $(KOUT)/fbsplash.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o $(KOUT)/libsplash.o \
+		   $(KOUT)/libsplashrender.o
 K_DEPS   =
 
 # Flags for the user utilities
 CFLAGS   ?= -Wall -g
-LDLIBS   = -ljpeg -lm -pthread -lrt
+LDLLIBS  = -ljpeg -lm
+LDLIBS   = -lm -pthread -lrt
 LDFLAGS  ?=
 
 # Include the klibc header files so that we can compile against fb.h
 # from a kernel thee patched with fbsplash.
 INCLUDES = -I/usr/include/freetype2 -idirafter /usr/$(LIB)/klibc/include/linux
-OBJS     = $(OBJDIR)/splash.o $(OBJDIR)/parse.o $(OBJDIR)/render.o $(OBJDIR)/image.o \
-		   $(OBJDIR)/cmd.o $(OBJDIR)/common.o $(OBJDIR)/daemon.o $(OBJDIR)/daemon_cmd.o \
-	       $(OBJDIR)/list.o $(OBJDIR)/effects.o $(OBJDIR)/libsplash.o
+LIBOBJS  = $(OBJLDIR)/parse.lo $(OBJLDIR)/image.lo \
+		   $(OBJLDIR)/render.lo $(OBJLDIR)/common.lo $(OBJLDIR)/list.lo \
+		   $(OBJLDIR)/fbsplash.lo $(OBJLDIR)/effects.lo
+
+OBJS = $(OBJDIR)/daemon.o $(OBJDIR)/daemon_cmd.o $(OBJDIR)/splash.o
 
 # Checks whether an option is set in config.h
 config_opt = $(shell if [ -e config.h -a -n "`egrep '^\#define[[:space:]]+$(1)([[:space:]]+|$$)' config.h 2>/dev/null`" ]; then echo true ; fi)
 
 ifeq ($(call config_opt,CONFIG_TTF),true)
-	OBJS   += $(OBJDIR)/ttf.o
-	LDLIBS += -lfreetype -lz
+	LIBOBJS += $(OBJLDIR)/ttf.lo
+	LDLLIBS += -lfreetype -lz
 endif
 
 ifeq ($(call config_opt,CONFIG_MNG),true)
-	OBJS   += $(OBJDIR)/mng_render.o $(OBJDIR)/mng_callbacks.o
-	LDLIBS += -lmng -llcms -ljpeg -lz -lrt
+	LIBOBJS += $(OBJLDIR)/mng_render.lo $(OBJLDIR)/mng_callbacks.lo
+	LDLLIBS += -lmng -llcms -ljpeg -lz -lrt
 endif
 
 ifeq ($(call config_opt,CONFIG_TTF_KERNEL),true)
@@ -102,7 +109,7 @@ endif
 ifeq ($(call config_opt,CONFIG_PNG),true)
 	K_LDLIBS += $(LPNGSRC)/libpng.a $(ZLIBSRC)/libz.a
 	K_DEPS	 += libpng
-	LDLIBS	 += -lpng -lz -lm
+	LDLLIBS	 += -lpng -lz -lm
 endif
 
 ifeq ($(call config_opt,CONFIG_GPM),true)
@@ -116,6 +123,7 @@ else
 endif
 
 OBJDIR	= objs
+OBJLDIR = $(OBJDIR)/lib
 KOUT	= $(OBJDIR)/kernel
 dotg    = \e[32;01m*\e[0m
 infmsg	= if [ "${QUIET}" = "true" ] ; then printf "  %-7s %s\n" $(1) $(2) ; fi
@@ -135,17 +143,24 @@ MAKEOVERRIDES=
 
 #### make rules below #####
 
-all:	objdir $(OBJDIR)/libsplash.so splash_kern splash_user
+all:	objdir $(OBJDIR)/libsplash.la $(OBJDIR)/libsplashrender.la splash_kern splash_user
 
-$(OBJDIR)/libsplash.so: $(OBJDIR)/solibsplash.o
+$(OBJDIR)/libsplash.la: $(OBJLDIR)/libsplash.lo
 	@$(call infmsg,LD,$@)
-ifeq ($(call config_opt,CONFIG_GENTOO),true)
-	$(Q)$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,libsplash.so -o $@ -leinfo $+
-else
-	$(Q)$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,libsplash.so -o $@ $+
-endif
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $(OBJDIR)/libsplash.la $+ -rpath $(libdir)
 
-splash_user: $(OBJDIR)/$(SP_UTIL)
+#ifeq ($(call config_opt,CONFIG_GENTOO),true)
+#	$(Q)$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,libsplash.so -o $@ $+ -leinfo
+#else
+#	$(Q)$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,libsplash.so -o $@ $+
+#endif
+
+$(OBJDIR)/libsplashrender.la: $(OBJLDIR)/libsplashrender.lo $(LIBOBJS)
+	@$(call infmsg,LD,$@)
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $(OBJDIR)/libsplashrender.la $+ $(LDLLIBS) $(OBJDIR)/libsplash.la -rpath $(usrlibdir)
+
+
+splash_user: $(OBJDIR)/$(SP_UTIL) $(OBJDIR)/$(SP_UTIL).static
 
 config.h:
 	@echo "Using default configuration."
@@ -157,8 +172,10 @@ config.h:
 
 $(OBJDIR)/$(SP_UTIL): $(OBJS)
 	@$(call infmsg,LD,$@)
-	$(Q)$(CC) $(LDFLAGS) $+ $(LDLIBS) -o $@
-	$(Q)$(CC) $(LDFLAGS) $+ $(LDLIBS) -L/usr/lib/nptl -static -o $@.static
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) $+ $(LDLIBS) $(OBJDIR)/libsplashrender.la $(OBJDIR)/libsplash.la -o $@
+
+$(OBJDIR)/$(SP_UTIL).static: $(OBJS)
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) -all-static $(LDFLAGS) $+ $(OBJDIR)/libsplashrender.la $(OBJDIR)/libsplash.la $(LDLIBS) -L/usr/lib/nptl -o $@
 
 objdir:
 	@if [ ! -d "$(OBJDIR)" ]; then \
@@ -167,7 +184,9 @@ objdir:
 	@if [ ! -d "$(KOUT)" ]; then \
 		mkdir "$(KOUT)" ; \
 	fi
-
+	@if [ ! -d "$(OBJLDIR)" ]; then \
+		mkdir "${OBJLDIR}" ; \
+	fi
 zlib:	config.h
 	@cd $(ZLIBSRC) ; \
 	if [ ! -e ./Makefile ]; then \
@@ -234,13 +253,17 @@ $(KOUT)/%.o: %.c config.h splash.h
 	@$(call infmsg,CC,$@)
 	$(Q)$(KLCC) $(K_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/%.o: %.c config.h splash.h daemon.h
+$(OBJDIR)/%.o: %.c config.h splash.h daemon.h util.h
 	@$(call infmsg,CC,$@)
 	$(Q)$(CC) $(CFLAGS) -DTARGET_UTIL $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -DLIBDIR=\"$(LIB)\" -c -o $@ $<
 
-$(OBJDIR)/solibsplash.o: libsplash.c splash.h config.h
+$(OBJLDIR)/%.lo: %.c config.h splash.h
 	@$(call infmsg,CC,$@)
-	$(Q)$(CC) $(CFLAGS) -fPIC $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -DLIBDIR=\"$(LIB)\" -c -o $@ $<
+	$(Q)libtool $(LQ) --mode=compile $(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -DLIBDIR=\"$(LIB)\" -c -o $@ $<
+
+#$(OBJDIR)/solibsplash.o: libsplash.c splash.h config.h
+#	@$(call infmsg,CC,$@)
+#	$(Q)$(CC) $(CFLAGS) -fPIC $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -DLIBDIR=\"$(LIB)\" -c -o $@ $<
 
 clean:	clean_all
 
@@ -250,9 +273,9 @@ clean_all:	clean_zlib clean_png
 
 clean_splash:
 	@$(call infmsg,CLEAN,splash)
-	$(Q)rm -f $(OBJDIR)/*.o
-	$(Q)rm -f $(OBJDIR)/kernel/*.o
-	$(Q)rm -f $(OBJDIR)/splash_helper splash_util splash_util.static
+	$(Q)rm -f $(OBJDIR)/{*.o,splash_util,*.so,*.lo,splash_util.static,splash_helper}
+	$(Q)rm -rf $(OBJDIR)/lib
+	$(Q)rm -rf $(OBJDIR)/kernel
 	$(Q)rm -r config.h
 
 clean_jpg:
@@ -296,12 +319,14 @@ clean_ft2:
 install: all
 	@$(call infmsg,INSTALL,$(SP_HELPER))
 	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_HELPER) $(DESTDIR)$(sbindir)/$(SP_HELPER)
-	@$(call infmsg,INSTALL,$(SP_UTIL))
-	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL) $(DESTDIR)$(sbindir)/$(SP_UTIL)
-	@$(call infmsg,INSTALL,$(SP_UTIL).static)
-	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL).static $(DESTDIR)$(sbindir)/$(SP_UTIL).static
 	@$(call infmsg,INSTALL,libsplash.so)
-	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/libsplash.so $(DESTDIR)$(libdir)/libsplash.so
+	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/libsplash.la $(DESTDIR)$(libdir)/libsplash.la
+	@$(call infmsg,INSTALL,libsplashrender.so)
+	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/libsplashrender.la $(DESTDIR)$(usrlibdir)/libsplashrender.la
+	@$(call infmsg,INSTALL,$(SP_UTIL))
+	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL) $(DESTDIR)$(sbindir)/$(SP_UTIL)
+	@$(call infmsg,INSTALL,$(SP_UTIL).static)
+	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL).static $(DESTDIR)$(sbindir)/$(SP_UTIL).static
 	@$(call infmsg,INSTALL,splash.h)
 	$(Q)$(INSTALL_PROG) -D splash.h $(DESTDIR)$(incdir)/splash.h
 	@$(call infmsg,INSTALL,splash-functions.sh)
@@ -319,7 +344,9 @@ uninstall:
 	@$(call infmsg,UNINSTALL,$(SP_UTIL).static)
 	$(Q)rm -f $(sbindir)/$(SP_UTIL).static
 	@$(call infmsg,UNINSTALL,libsplash.so)
-	$(Q)rm -f $(libdir)/libsplash.so
+	$(Q)libtool $(LQ) --mode=uninstall rm -f $(libdir)/libsplash.so
+	@$(call infmsg,UNINSTALL,libsplashrender.so)
+	$(Q)libtool $(LQ) --mode=uninstall rm -f $(usrlibdir)/libsplashrender.so
 	@$(call insmsg,UNINSTALL,splash.h)
 	$(Q)rm -f $(incdir)/splash.h
 	@$(call infmsg,UNINSTALL,splash-functions.sh)

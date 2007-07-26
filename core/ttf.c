@@ -29,7 +29,6 @@
 
 #include "util.h"
 
-TTF_Font *global_font;
 int boot_msg_width = 0;
 
 #define DEFAULT_PTSIZE  18
@@ -328,7 +327,7 @@ void TTF_Quit(void)
 	TTF_initialized = 0;
 }
 
-int TTF_SizeUNICODE(TTF_Font *font, const unsigned short *text, int *w, int *h)
+static int TTF_SizeUNICODE(TTF_Font *font, const unsigned short *text, int *w, int *h)
 {
 	int status;
 	const unsigned short *ch;
@@ -390,7 +389,7 @@ int TTF_SizeUNICODE(TTF_Font *font, const unsigned short *text, int *w, int *h)
 	return status;
 }
 
-void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
+static void TTF_RenderUNICODE_Shaded(stheme_t *theme, u8 *target, const unsigned short *text,
  			      TTF_Font* font, int x, int y, color fcol,
 			      u8 hotspot, int* swidth)
 {
@@ -454,13 +453,13 @@ void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 		current = &glyph->pixmap;
 		for(row = 0; row < ((font->style & TTF_STYLE_UNDERLINE) ? height-glyph->yoffset : current->rows); ++row) {
 			int add;
-			u8 *memlimit = target + cf.xres * cf.yres * bytespp;
+			u8 *memlimit = target + theme->xres * theme->yres * config.fbd->bytespp;
 
 			/* Sanity checks.. */
 			i = y + row + glyph->yoffset;
 			j = xstart + glyph->minx + x;
 
-			if (i < 0 || i >= cf.yres || j >= cf.xres)
+			if (i < 0 || i >= theme->yres || j >= theme->xres)
 				continue;
 
 			if (j < 0)
@@ -470,7 +469,7 @@ void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 				j -= glyph->minx;
 			}
 
-			dst = (unsigned char *)target + (i * cf.xres + j)*bytespp;
+			dst = (unsigned char *)target + (i * theme->xres + j) * config.fbd->bytespp;
 			src = current->buffer + row*current->pitch;
 
 			add = x & 1;
@@ -480,10 +479,10 @@ void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 			     col < ((font->style & TTF_STYLE_UNDERLINE && *(ch+1)) ?
 			           current->width + glyph->advance : current->width); col++) {
 
-				if (col + j >= cf.xres-1)
+				if (col + j >= theme->xres-1)
 					continue;
 
-				if (dst+bytespp-1 > memlimit)
+				if (dst + config.fbd->bytespp-1 > memlimit)
 					break;
 
 				if (row < current->rows && col < current->width && col >= 0)
@@ -497,8 +496,8 @@ void TTF_RenderUNICODE_Shaded(u8 *target, const unsigned short *text,
 					val = NUM_GRAYS-1;
 				}
 
-				put_pixel(fcol.a*val/255, fcol.r, fcol.g, fcol.b, dst, dst, add);
-				dst += bytespp;
+				put_pixel(config.fbd, fcol.a*val/255, fcol.r, fcol.g, fcol.b, dst, dst, add);
+				dst += config.fbd->bytespp;
 				add ^= 3;
 			}
 		}
@@ -513,7 +512,7 @@ next_glyph:	xstart += glyph->advance;
 
 
 
-unsigned char* TTF_RenderText_Shaded(u8 *target, const char *text,
+static unsigned char* TTF_RenderText_Shaded(stheme_t *theme, u8 *target, const char *text,
 				     TTF_Font *font, int x, int y,
 				     color col, u8 hotspot, int *width)
 {
@@ -536,14 +535,14 @@ unsigned char* TTF_RenderText_Shaded(u8 *target, const char *text,
 		if (*p == '\n') {
 			*p = 0;
 			if (p > t)
-				TTF_RenderUNICODE_Shaded(target, t, font, x, y, col, hotspot, width);
+				TTF_RenderUNICODE_Shaded(theme, target, t, font, x, y, col, hotspot, width);
 			y += font->height;
 			t = p+1;
 		}
 	}
 
 	if (*t != 0) {
-		TTF_RenderUNICODE_Shaded(target, t, font, x, y, col, hotspot, width);
+		TTF_RenderUNICODE_Shaded(theme, target, t, font, x, y, col, hotspot, width);
 	}
 
 	/* Free the text buffer and return */
@@ -551,20 +550,20 @@ unsigned char* TTF_RenderText_Shaded(u8 *target, const char *text,
 	return NULL;
 }
 
-void TTF_CloseFont(TTF_Font* font)
+static void TTF_CloseFont(TTF_Font* font)
 {
 	Flush_Cache(font);
 	FT_Done_Face(font->face);
 	free(font);
 }
 
-void TTF_SetFontStyle(TTF_Font* font, int style)
+static void TTF_SetFontStyle(TTF_Font* font, int style)
 {
 	font->style = style;
 	Flush_Cache(font);
 }
 
-TTF_Font* TTF_OpenFontIndex(const char *file, int ptsize, long index)
+static TTF_Font* TTF_OpenFontIndex(const char *file, int ptsize, long index)
 {
 	TTF_Font* font;
 	FT_Error error;
@@ -647,7 +646,7 @@ TTF_Font* TTF_OpenFontIndex(const char *file, int ptsize, long index)
 	return font;
 }
 
-TTF_Font* TTF_OpenFont(const char *file, int ptsize)
+static TTF_Font* TTF_OpenFont(const char *file, int ptsize)
 {
 	TTF_Font *a;
 
@@ -660,26 +659,26 @@ TTF_Font* TTF_OpenFont(const char *file, int ptsize)
 	return a;
 }
 
-int TTF_Render(u8 *target, char *text, TTF_Font *font, int style, int x,
+int TTF_Render(stheme_t *theme, u8 *target, char *text, TTF_Font *font, int style, int x,
 	       int y, color col, u8 hotspot, int *width)
 {
 	if (!target || !text || !font)
 		return -1;
 
 	TTF_SetFontStyle(font, style);
-	TTF_RenderText_Shaded(target, text, font, x, y, col, hotspot, width);
+	TTF_RenderText_Shaded(theme, target, text, font, x, y, col, hotspot, width);
 
 	return 0;
 }
 
-int load_fonts(void)
+int load_fonts(stheme_t *theme)
 {
 	item *i;
 
-	if (!global_font)
-		global_font = TTF_OpenFont(cf.text_font, cf.text_size);
+	if (!theme->main_font)
+		theme->main_font = TTF_OpenFont(theme->text_font, theme->text_size);
 
-	for (i = fonts.head; i != NULL; i = i->next) {
+	for (i = theme->fonts.head; i != NULL; i = i->next) {
 		font_e *fe = (font_e*) i->p;
 		if (!fe->font) {
 			fe->font = TTF_OpenFont(fe->file, fe->size);
@@ -689,16 +688,16 @@ int load_fonts(void)
 	return 0;
 }
 
-int free_fonts(void)
+int free_fonts(stheme_t *theme)
 {
 	item *i, *j;
 
-	if (global_font) {
-		TTF_CloseFont(global_font);
-		global_font = NULL;
+	if (theme->main_font) {
+		TTF_CloseFont(theme->main_font);
+		theme->main_font = NULL;
 	}
 
-	for (i = fonts.head; i != NULL;) {
+	for (i = theme->fonts.head; i != NULL;) {
 		font_e *fe = (font_e*) i->p;
 		j = i->next;
 

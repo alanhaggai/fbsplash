@@ -1,5 +1,5 @@
 /*
- * parse.c - Functions for parsing splashutils config files
+ * parse.c - Functions for parsing splashutils cfg files
  *
  * Copyright (C) 2004-2007, Michal Januszewski <spock@gentoo.org>
  *
@@ -16,7 +16,7 @@
 #include <ctype.h>
 #include "util.h"
 
-struct config_opt {
+struct cfg_opt {
 	char *name;
 	enum {
 		t_int, t_path, t_box, t_icon, t_rect, t_color, t_fontpath,
@@ -31,67 +31,57 @@ struct config_opt {
 	void *val;
 };
 
-list anims = { NULL, NULL };
-list fonts = { NULL, NULL };
-list icons = { NULL, NULL };
-list objs = { NULL, NULL };
-list rects = { NULL, NULL };
-
-char *cf_silentpic	= NULL;
-char *cf_pic		= NULL;
-char *cf_silentpic256 = NULL;		/* pictures for 8bpp modes */
-char *cf_pic256		= NULL;
-
-struct splash_config cf;
 int line = 0;
+
+stheme_t tmptheme;
 
 /* Note that pic256 and silentpic256 have to be located before pic and
  * silentpic or we are gonna get a parse error @ pic256/silentpic256. */
-struct config_opt opts[] =
+struct cfg_opt opts[] =
 {
 	{	.name = "jpeg",
 		.type = t_path,
-		.val = &cf_pic		},
+		.val = &tmptheme.pic	},
 
 	{	.name = "pic256",
 		.type = t_path,
-		.val = &cf_pic256	},
+		.val = &tmptheme.pic256	},
 
 	{	.name = "silentpic256",
 		.type = t_path,
-		.val = &cf_silentpic256	},
+		.val = &tmptheme.silentpic256	},
 
 	{	.name = "silentjpeg",
 		.type = t_path,
-		.val = &cf_silentpic	},
+		.val = &tmptheme.silentpic	},
 
 	{	.name = "pic",
 		.type = t_path,
-		.val = &cf_pic		},
+		.val = &tmptheme.pic		},
 
 	{	.name = "silentpic",
 		.type = t_path,
-		.val = &cf_silentpic	},
+		.val = &tmptheme.silentpic	},
 
 	{	.name = "bg_color",
 		.type = t_int,
-		.val = &cf.bg_color	},
+		.val = &tmptheme.bg_color	},
 
 	{	.name = "tx",
 		.type = t_int,
-		.val = &cf.tx		},
+		.val = &tmptheme.tx		},
 
 	{	.name = "ty",
 		.type = t_int,
-		.val = &cf.ty		},
+		.val = &tmptheme.ty		},
 
 	{	.name = "tw",
 		.type = t_int,
-		.val = &cf.tw		},
+		.val = &tmptheme.tw		},
 
 	{	.name = "th",
 		.type = t_int,
-		.val = &cf.th		},
+		.val = &tmptheme.th		},
 
 	{	.name = "box",
 		.type = t_box,
@@ -121,23 +111,23 @@ struct config_opt opts[] =
 #if WANT_TTF
 	{	.name = "text_x",
 		.type = t_int,
-		.val = &cf.text_x	},
+		.val = &tmptheme.text_x	},
 
 	{	.name = "text_y",
 		.type = t_int,
-		.val = &cf.text_y	},
+		.val = &tmptheme.text_y	},
 
 	{	.name = "text_size",
 		.type = t_int,
-		.val = &cf.text_size	},
+		.val = &tmptheme.text_size	},
 
 	{	.name = "text_color",
 		.type = t_color,
-		.val = &cf.text_color	},
+		.val = &tmptheme.text_color	},
 
 	{	.name = "text_font",
 		.type = t_fontpath,
-		.val = &cf.text_font	},
+		.val = &tmptheme.text_font	},
 
 	{	.name = "text",
 		.type = t_text,
@@ -151,12 +141,23 @@ do {																		\
 	iprint(MSG_ERROR, "Parse error at line %d: " msg "\n", line, ## args);	\
 } while (0)
 
-int ishexdigit(char c)
+static char *get_filepath(char *path)
+{
+	char buf[512];
+
+	if (path[0] == '/')
+		return strdup(path);
+
+	snprintf(buf, 512, THEME_DIR "/%s/%s", config.theme, path);
+	return strdup(buf);
+}
+
+static int ishexdigit(char c)
 {
 	return (isdigit(c) || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) ? 1 : 0;
 }
 
-void skip_whitespace(char **buf)
+static void skip_whitespace(char **buf)
 {
 	while (**buf == ' ' || **buf == '\t')
 		(*buf)++;
@@ -164,7 +165,7 @@ void skip_whitespace(char **buf)
 	return;
 }
 
-void skip_nonwhitespace(char **buf)
+static void skip_nonwhitespace(char **buf)
 {
 	while (**buf != ' ' && **buf != '\t')
 		(*buf)++;
@@ -172,7 +173,7 @@ void skip_nonwhitespace(char **buf)
 	return;
 }
 
-void parse_int(char *t, struct config_opt opt)
+static void parse_int(char *t, struct cfg_opt opt)
 {
 	if (*t != '=') {
 		parse_error("expected '=' instead of '%c'", *t);
@@ -183,7 +184,7 @@ void parse_int(char *t, struct config_opt opt)
 	*(u16*)opt.val = strtol(t,NULL,0);
 }
 
-void parse_path(char *t, struct config_opt opt)
+static void parse_path(char *t, struct cfg_opt opt)
 {
 	if (*t != '=') {
 		parse_error("expected '=' instead of'%c'", *t);
@@ -194,7 +195,7 @@ void parse_path(char *t, struct config_opt opt)
 	*(char**)opt.val = get_filepath(t);
 }
 
-char *get_fontpath(char *t)
+static char *get_fontpath(char *t)
 {
 	char buf[512];
 	char buf2[512];
@@ -204,7 +205,7 @@ char *get_fontpath(char *t)
 		return strdup(t);
 	}
 
-	snprintf(buf, 512, "%s/%s/%s", THEME_DIR, config->theme, t);
+	snprintf(buf, 512, "%s/%s/%s", THEME_DIR, config.theme, t);
 	snprintf(buf2, 512, "%s/%s", THEME_DIR, t);
 
 	stat(buf, &st1);
@@ -221,7 +222,7 @@ char *get_fontpath(char *t)
 	return NULL;
 }
 
-void parse_fontpath(char *t, struct config_opt opt)
+static void parse_fontpath(char *t, struct cfg_opt opt)
 {
 	if (*t != '=') {
 		parse_error("expected '=' instead of '%c'", *t);
@@ -232,7 +233,7 @@ void parse_fontpath(char *t, struct config_opt opt)
 	*(char**)opt.val = get_fontpath(t);
 }
 
-int parse_color(char **t, struct color *cl)
+static int parse_color(char **t, struct color *cl)
 {
 	u32 h, len = 0;
 	char *p;
@@ -270,7 +271,7 @@ int parse_color(char **t, struct color *cl)
 	return 0;
 }
 
-int is_in_svclist(char *svc, char *list)
+static int is_in_svclist(char *svc, char *list)
 {
 	char *data = getenv(list);
 	int l = strlen(svc);
@@ -296,7 +297,7 @@ int is_in_svclist(char *svc, char *list)
 	return 0;
 }
 
-int parse_4vec(char **t, rect *r)
+static int parse_4vec(char **t, rect *r)
 {
 	char *p;
 
@@ -369,7 +370,7 @@ int parse_svc_state(char *t, enum ESVC *state)
 	return 0;
 }
 
-void parse_icon(char *t)
+static void parse_icon(char *t)
 {
 	char *filename = NULL;
 	char *p;
@@ -509,7 +510,7 @@ void parse_icon(char *t)
 		cic->svc = strdup(t);
 	}
 
-	for (ti = icons.head ; ti != NULL; ti = ti->next) {
+	for (ti = tmptheme.icons.head ; ti != NULL; ti = ti->next) {
 		icon_img *ii = (icon_img*) ti->p;
 
 		if (!strcmp(ii->filename, filename)) {
@@ -525,7 +526,7 @@ void parse_icon(char *t)
 	cim->filename = filename;
 	cim->w = cim->h	= 0;
 	cim->picbuf = NULL;
-	list_add(&icons, cim);
+	list_add(&tmptheme.icons, cim);
 	cic->img = cim;
 
 pi_end:
@@ -537,7 +538,7 @@ pi_outm:	iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
 	cobj->type = o_icon;
 	cobj->p = cic;
 
-	list_add(&objs, cobj);
+	list_add(&tmptheme.objs, cobj);
 	return;
 
 pi_err:
@@ -550,7 +551,7 @@ pi_out:
 	return;
 }
 
-void parse_rect(char *t)
+static void parse_rect(char *t)
 {
 	char *p;
 	rect *crect = malloc(sizeof(rect));
@@ -595,16 +596,16 @@ void parse_rect(char *t)
 	t = p; skip_whitespace(&t);
 
 	/* sanity checks */
-	if (crect->x1 >= cf.xres)
-		crect->x1 = cf.xres-1;
-	if (crect->x2 >= cf.xres)
-		crect->x2 = cf.xres-1;
-	if (crect->y1 >= cf.yres)
-		crect->y1 = cf.yres-1;
-	if (crect->y2 >= cf.yres)
-		crect->y2 = cf.yres-1;
+	if (crect->x1 >= tmptheme.xres)
+		crect->x1 = tmptheme.xres-1;
+	if (crect->x2 >= tmptheme.xres)
+		crect->x2 = tmptheme.xres-1;
+	if (crect->y1 >= tmptheme.yres)
+		crect->y1 = tmptheme.yres-1;
+	if (crect->y2 >= tmptheme.yres)
+		crect->y2 = tmptheme.yres-1;
 
-	list_add(&rects, crect);
+	list_add(&tmptheme.rects, crect);
 	return;
 pr_err:
 	free(crect);
@@ -612,7 +613,7 @@ pr_err:
 }
 
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
-void parse_anim(char *t)
+static void parse_anim(char *t)
 {
 	char *p;
 	char *filename;
@@ -687,10 +688,10 @@ void parse_anim(char *t)
 	t = p; skip_whitespace(&t);
 
 	/* sanity checks */
-	if (canim->x >= cf.xres)
-		canim->x = cf.xres-1;
-	if (canim->y >= cf.yres)
-		canim->y = cf.yres-1;
+	if (canim->x >= tmptheme.xres)
+		canim->x = tmptheme.xres-1;
+	if (canim->y >= tmptheme.yres)
+		canim->y = tmptheme.yres-1;
 
 	canim->status = 0;
 
@@ -730,8 +731,8 @@ void parse_anim(char *t)
 	}
 	cobj->type = o_anim;
 	cobj->p = canim;
-	list_add(&objs, cobj);
-	list_add(&anims, canim);
+	list_add(&tmptheme.objs, cobj);
+	list_add(&tmptheme.anims, canim);
 	return;
 pa_err:
 pa_out:
@@ -740,7 +741,7 @@ pa_out:
 }
 #endif /* CONFIG_MNG */
 
-void parse_box(char *t)
+static void parse_box(char *t)
 {
 	char *p;
 	int ret;
@@ -801,14 +802,14 @@ void parse_box(char *t)
 	t = p; skip_whitespace(&t);
 
 	/* sanity checks */
-	if (cbox->x1 >= cf.xres)
-		cbox->x1 = cf.xres-1;
-	if (cbox->x2 >= cf.xres)
-		cbox->x2 = cf.xres-1;
-	if (cbox->y1 >= cf.yres)
-		cbox->y1 = cf.yres-1;
-	if (cbox->y2 >= cf.yres)
-		cbox->y2 = cf.yres-1;
+	if (cbox->x1 >= tmptheme.xres)
+		cbox->x1 = tmptheme.xres-1;
+	if (cbox->x2 >= tmptheme.xres)
+		cbox->x2 = tmptheme.xres-1;
+	if (cbox->y1 >= tmptheme.yres)
+		cbox->y1 = tmptheme.yres-1;
+	if (cbox->y2 >= tmptheme.yres)
+		cbox->y2 = tmptheme.yres-1;
 
 #define zero_color(cl) *(u32*)(&cl) = 0;
 #define is_zero_color(cl) (*(u32*)(&cl) == 0)
@@ -861,7 +862,7 @@ pb_end:
 	cobj->type = o_box;
 	cobj->p = cbox;
 
-	list_add(&objs, cobj);
+	list_add(&tmptheme.objs, cobj);
 	return;
 
 pb_err:
@@ -869,7 +870,7 @@ pb_err:
 	return;
 }
 
-char *parse_quoted_string(char *t, u8 keepvar)
+static char *parse_quoted_string(char *t, u8 keepvar)
 {
 	char *p, *out;
 	int cnt = 0;
@@ -917,7 +918,7 @@ char *parse_quoted_string(char *t, u8 keepvar)
 }
 
 #if WANT_TTF
-void parse_text(char *t)
+static void parse_text(char *t)
 {
 	char *p, *fontname = NULL, *fpath = NULL;
 	int ret, fontsize;
@@ -1041,7 +1042,7 @@ void parse_text(char *t)
 	skip_whitespace(&t);
 
 	/* Sanity checks */
-	if (ct->x >= cf.xres) {
+	if (ct->x >= tmptheme.xres) {
 		parse_error("the x position is invalid (larger than x resolution)");
 		goto pt_err;
 	}
@@ -1049,7 +1050,7 @@ void parse_text(char *t)
 	if (ct->x < 0)
 		ct->x = 0;
 
-	if (ct->y >= cf.yres) {
+	if (ct->y >= tmptheme.yres) {
 		parse_error("the y position is invalid (larger than y resolution)");
 		goto pt_err;
 	}
@@ -1089,7 +1090,7 @@ again:
 
 	fpath = get_fontpath(fontname);
 
-	for (ti = fonts.head ; ti != NULL; ti = ti->next) {
+	for (ti = tmptheme.fonts.head ; ti != NULL; ti = ti->next) {
 		fe = (font_e*) ti->p;
 
 		if (!strcmp(fe->file, fpath) && fe->size == fontsize) {
@@ -1108,7 +1109,7 @@ again:
 	fe->size = fontsize;
 	fe->font = NULL;
 
-	list_add(&fonts, fe);
+	list_add(&tmptheme.fonts, fe);
 	ct->font = fe;
 
 pt_end:	cobj = malloc(sizeof(obj));
@@ -1119,7 +1120,7 @@ pt_outm:
 	}
 	cobj->type = o_text;
 	cobj->p = ct;
-	list_add(&objs, cobj);
+	list_add(&tmptheme.objs, cobj);
 	return;
 
 pt_err:
@@ -1130,20 +1131,22 @@ pt_out:	free(ct);
 }
 #endif	/* TTF */
 
-int parse_cfg(char *cfgfile)
+int parse_cfg(char *cfgfile, stheme_t *theme)
 {
-	FILE* cfg;
+	FILE* cfgfp;
 	char buf[1024];
 	char *t;
 	int len, i;
 	bool ignore = false;
 
-	if ((cfg = fopen(cfgfile,"r")) == NULL) {
-		iprint(MSG_ERROR, "Can't open config file %s.\n", cfgfile);
+	if ((cfgfp = fopen(cfgfile,"r")) == NULL) {
+		iprint(MSG_ERROR, "Can't open cfg file %s.\n", cfgfile);
 		return 1;
 	}
 
-	while (fgets(buf, sizeof(buf), cfg)) {
+	memcpy(&tmptheme, theme, sizeof(tmptheme));
+
+	while (fgets(buf, sizeof(buf), cfgfp)) {
 
 		line++;
 
@@ -1161,7 +1164,7 @@ int parse_cfg(char *cfgfile)
 		if (*t == '#')
 			continue;
 
-		for (i = 0; i < sizeof(opts) / sizeof(struct config_opt); i++)
+		for (i = 0; i < sizeof(opts) / sizeof(struct cfg_opt); i++)
 		{
 			if (!strncmp(opts[i].name, t, strlen(opts[i].name))) {
 
@@ -1215,15 +1218,15 @@ int parse_cfg(char *cfgfile)
 					while (*t != '>') {
 						skip_whitespace(&t);
 						if (!strncmp(t, "bootup", 6)) {
-							if (config->type == bootup)
+							if (config.type == bootup)
 								ignore = false;
 							t += 6;
 						} else if (!strncmp(t, "reboot", 6)) {
-							if (config->type == reboot)
+							if (config.type == reboot)
 								ignore = false;
 							t += 6;
 						} else if (!strncmp(t, "shutdown", 8)) {
-							if (config->type == shutdown)
+							if (config.type == shutdown)
 								ignore = false;
 							t += 8;
 						} else {
@@ -1252,11 +1255,9 @@ int parse_cfg(char *cfgfile)
 		}
 	}
 
-#ifndef TARGET_KERNEL
-	theme_loaded = 1;
-#endif
-	fclose(cfg);
+	memcpy(theme, &tmptheme, sizeof(tmptheme));
+
+	fclose(cfgfp);
 	return 0;
 }
-
 

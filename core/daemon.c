@@ -44,18 +44,11 @@ int fd_tty1 = -1;
 int fd_tty0 = -1;
 int fd_evdev = -1;
 int fd_fb = -1;
-int fd_bg = -1;
 #ifdef CONFIG_GPM
 int fd_gpm = -1;
 #endif
 
-/* In-memory buffers */
-u8 *fb_mem = NULL;
-
-/* This buffer holds the image to be displayed on the screen. It
- * has the size appropriate for the current config file and uses the
- * same pixel format as the framebuffer. */
-u8 *bg_buffer = NULL;
+stheme_t *theme;
 
 /* Misc settings */
 char *notify[2];
@@ -63,7 +56,6 @@ char *evdev = NULL;
 
 /* Service list */
 list svcs = { NULL, NULL };
-u8 theme_loaded = 0;
 
 /* A container for the original settings of the silent TTY. */
 struct termios tios;
@@ -95,8 +87,8 @@ void anim_render_frame(anim *a)
 	}
 
 	if ((ret == MNG_NOERROR || ret == MNG_NEEDTIMERWAIT) && ctty == CTTY_SILENT) {
-		mng_display_buf(a->mng, bg_buffer, fb_mem, a->x, a->y,
-				fb_fix.line_length, fb_var.xres * bytespp);
+		mng_display_buf(a->mng, theme, theme->bgbuf, fb_mem, a->x, a->y,
+				config.fbd->fix.line_length, config.fbd->var.xres * config.fbd->bytespp);
 	}
 }
 
@@ -114,7 +106,7 @@ void *thf_anim(void *unused)
 	/* Render the first frame of all animations on the screen. */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 	pthread_mutex_lock(&mtx_paint);
-	for (i = anims.head; i != NULL; i = i->next) {
+	for (i = theme->anims.head; i != NULL; i = i->next) {
 		ca = i->p;
 
 		if (!(ca->flags & F_ANIM_DISPLAY) ||
@@ -132,7 +124,7 @@ void *thf_anim(void *unused)
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 		pthread_mutex_lock(&mtx_paint);
 		/* Find the shortest delay. */
-		for (i = anims.head; i != NULL; i = i->next) {
+		for (i = theme->anims.head; i != NULL; i = i->next) {
 			ca = i->p;
 
 			if (!(ca->flags & F_ANIM_DISPLAY) ||
@@ -181,7 +173,7 @@ void *thf_anim(void *unused)
 		rdelay = delay + (tsc.tv_sec - ts.tv_sec)*1000 + (tsc.tv_nsec - ts.tv_nsec)/1000000;
 
 		/* Update the wait time for all relevant animation objects. */
-		for (i = anims.head ; i != NULL; i = i->next) {
+		for (i = theme->anims.head ; i != NULL; i = i->next) {
 			ca = i->p;
 
 			if (!(ca->flags & F_ANIM_DISPLAY) ||
@@ -257,49 +249,44 @@ void switch_silent()
 	struct fb_var_screeninfo old_var;
 	struct fb_fix_screeninfo old_fix;
 
-	old_fix = fb_fix;
-	old_var = fb_var;
+	old_fix = config.fbd->fix;
+	old_var = config.fbd->var;
 
 	/* FIXME: we should use the vc<->fb map here */
-	get_fb_settings(arg_fb);
+	fb_get_settings(fd_fb);
 
 	/* Set KD_GRAPHICS if necessary. */
-	if (config->kdmode == KD_GRAPHICS)
+	if (config.kdmode == KD_GRAPHICS)
 		ioctl(fd_tty_s, KDSETMODE, KD_GRAPHICS);
 
 	/* Update CMAP if we're in a DIRECTCOLOR mode. */
-	if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR)
+	if (config.fbd->fix.visual == FB_VISUAL_DIRECTCOLOR)
 		set_directcolor_cmap(fd_fb);
 
-	old_var.yoffset = fb_var.yoffset;
-	old_var.xoffset = fb_var.xoffset;
+	old_var.yoffset = config.fbd->var.yoffset;
+	old_var.xoffset = config.fbd->var.xoffset;
 
 	/*
 	 * Has the video mode changed? If it has, we'll have to reload
 	 * the theme.
 	 */
-	if (memcmp(&fb_fix, &old_fix, sizeof(struct fb_fix_screeninfo)) ||
-	    memcmp(&fb_var, &old_var, sizeof(struct fb_var_screeninfo))) {
+	if (memcmp(&config.fbd->fix, &old_fix, sizeof(struct fb_fix_screeninfo)) ||
+	    memcmp(&config.fbd->var, &old_var, sizeof(struct fb_var_screeninfo))) {
 
 		pthread_mutex_lock(&mtx_paint);
 
 		if (reload_theme()) {
-			iprint(MSG_ERROR, "Failed to (re-)load the '%s' theme.\n", config->theme);
+			iprint(MSG_ERROR, "Failed to (re-)load the '%s' theme.\n", config.theme);
 			exit(1);
 		}
 
 		munmap(fb_mem, old_fix.line_length * old_var.yres);
-		fb_mem = mmap(NULL, fb_fix.line_length * fb_var.yres, PROT_WRITE | PROT_READ,
-			      MAP_SHARED, fd_fb, 0);
+		fb_mem = fb_mmap(fd_fb);
 
 		if (fb_mem == MAP_FAILED) {
 			iprint(MSG_ERROR, "mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
 			exit(1);
 		}
-
-		if (bg_buffer)
-			free(bg_buffer);
-		bgbuffer_alloc();
 
 		pthread_mutex_unlock(&mtx_paint);
 	}
@@ -392,9 +379,9 @@ void* thf_switch_evdev(void *unused)
 			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 			pthread_mutex_lock(&mtx_paint);
 			if (ctty == CTTY_SILENT) {
-				h = config->tty_v;
+				h = config.tty_v;
 			} else {
-				h = config->tty_s;
+				h = config.tty_s;
 			}
 			pthread_mutex_unlock(&mtx_paint);
 			pthread_setcancelstate(oldstate, NULL);
@@ -445,7 +432,7 @@ void* thf_switch_ttymon(void *unused)
 			     (endianess == big && 0x5b5b4200))) {
 				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 				pthread_mutex_lock(&mtx_tty);
-				ioctl(fd_tty0, VT_ACTIVATE, config->tty_v);
+				ioctl(fd_tty0, VT_ACTIVATE, config.tty_v);
 				pthread_mutex_unlock(&mtx_tty);
 				pthread_setcancelstate(oldstate, NULL);
 			}
@@ -477,10 +464,10 @@ void switchmon_start(int update)
 		}
 
 		/* Open a new silent TTY and initialize it. */
-		sprintf(t, PATH_DEV "/tty%d", config->tty_s);
+		sprintf(t, PATH_DEV "/tty%d", config.tty_s);
 		fd_tty_s = open(t, O_RDWR);
 		if (fd_tty_s == -1) {
-			sprintf(t, PATH_DEV "/vc/%d", config->tty_s);
+			sprintf(t, PATH_DEV "/vc/%d", config.tty_s);
 			fd_tty_s = open(t, O_RDWR);
 			if (fd_tty_s == -1) {
 				iprint(MSG_ERROR, "Can't open %s.\n", t);
@@ -509,68 +496,13 @@ void switchmon_start(int update)
 }
 
 /*
- * Free all objects.
- */
-void free_objs()
-{
-	item *i, *j;
-
-	for (i = objs.head ; i != NULL; ) {
-		obj *o = (obj*)i->p;
-
-		if (o->type == o_box) {
-			box *b = (box*)o->p;
-			if (b->curr)
-				free(b->curr);
-		}
-		
-		j = i->next;
-		free(i->p);
-		free(i);
-		i = j;
-	}
-
-	for (i = rects.head; i != NULL ; ) {
-		j = i->next;
-		free(i);
-		i = j;
-	}
-
-	for (i = icons.head; i != NULL; ) {
-		icon_img *ii = (icon_img*) i->p;
-		j = i->next;
-		if (ii->filename)
-			free(ii->filename);
-		if (ii->picbuf)
-			free(ii->picbuf);
-		free(ii);
-		free(i);
-		i = j;
-	}
-
-	list_init(objs);
-	list_init(icons);
-	list_init(rects);
-
-	if (verbose_img.data)
-		free((u8*)verbose_img.data);
-	if (verbose_img.cmap.red)
-		free(verbose_img.cmap.red);
-
-	if (silent_img.data)
-		free((u8*)silent_img.data);
-	if (silent_img.cmap.red)
-		free(silent_img.cmap.red);
-}
-
-/*
  * Update objects after a service status change.
  */
 void obj_update_status(char *svc, enum ESVC state)
 {
 	item *i;
 
-	for (i = objs.head; i != NULL; i = i->next) {
+	for (i = theme->objs.head; i != NULL; i = i->next) {
 		obj *co = (obj*)i->p;
 
 		if (co->type == o_icon) {
@@ -589,7 +521,7 @@ void obj_update_status(char *svc, enum ESVC state)
 	/* Lock the paint mutex to prevent the anim thread from
 	 * accessing the anims list while we're modifying it. */
 	pthread_mutex_lock(&mtx_paint);
-	for (i = anims.head; i != NULL; i = i->next) {
+	for (i = theme->anims.head; i != NULL; i = i->next) {
 		anim *ca = (anim*)i->p;
 
 		if (!ca->svc || strcmp(ca->svc, svc))
@@ -609,29 +541,12 @@ void obj_update_status(char *svc, enum ESVC state)
 }
 
 /*
- * Allocates a background buffer.
- */
-void bgbuffer_alloc()
-{
-	/*
-	 * Allocate a chunk of memory large enough to hold the
-	 * contents of the screen.
-	 */
-	bg_buffer = malloc(cf.xres * cf.yres * bytespp);
-	if (!bg_buffer) {
-		iprint(MSG_ERROR, "Can't allocate background image buffer.\n");
-		exit(1);
-	}
-}
-
-/*
  * Load a new theme.
  *
  */
 int reload_theme(void)
 {
 	item *i;
-	theme_loaded = 0;
 
 #ifdef CONFIG_MNG
 	/* The anim thread will be restarted when we're done
@@ -639,27 +554,9 @@ int reload_theme(void)
 	pthread_cancel(th_anim);
 #endif
 
-	if (config_file)
-		free(config_file);
+	splash_theme_free(theme);
+	theme = splash_theme_load();
 
-	config_file = get_cfg_file(config->theme);
-	if (!config_file)
-		return -1;
-
-	/* Free all objects associated with the previous theme. */
-	free_objs();
-#ifdef CONFIG_TTF
-	free_fonts();
-#endif
-
-	/* Parse a new config file. */
-	parse_cfg(config_file);
-	if (load_images('s'))
-		return -2;
-
-#ifdef CONFIG_TTF
-	load_fonts();
-#endif
 	for (i = svcs.head ; i != NULL; i = i->next) {
 		svc_state *ss = (svc_state*)i->p;
 		obj_update_status(ss->svc, ss->state);
@@ -714,7 +611,7 @@ static int daemon_check_running(const char *pname)
 /*
  * Start the splash daemon.
  */
-void daemon_start()
+void daemon_start(stheme_t *th)
 {
 	int i = 0;
 	FILE *fp_fifo = NULL;
@@ -722,25 +619,11 @@ void daemon_start()
 	struct vt_stat vtstat;
 	sigset_t sigset;
 
-	if (!config->minstances && (i = daemon_check_running("splash_util"))) {
+	theme = th;
+
+	if (!config.minstances && (i = daemon_check_running("splash_util"))) {
 		iprint(MSG_ERROR, "It looks like there's another instance of the splash daemon running (pid %d).\n", i);
 		iprint(MSG_ERROR, "Stop it first or run this program with `--minstances'.\n");
-		exit(1);
-	}
-
-	/* Create a mmap of the framebuffer */
-	fd_fb = open_fb(arg_fb, false);
-	if (!fd_fb)
-		exit(1);
-
-	bgbuffer_alloc();
-
-	fb_mem = mmap(NULL, fb_fix.line_length * fb_var.yres,
-		      PROT_WRITE | PROT_READ, MAP_SHARED, fd_fb, 0);
-
-	if (fb_mem == MAP_FAILED) {
-		iprint(MSG_ERROR, "mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
-		close(fd_fb);
 		exit(1);
 	}
 
@@ -806,10 +689,6 @@ void daemon_start()
 	dup2(i, 1);
 	dup2(i, 2);
 
-#ifdef CONFIG_TTF
-	load_fonts();
-#endif
-
 	signal(SIGABRT, SIG_IGN);
 
 	/* These signals will be handled by the sighandler thread. */
@@ -824,7 +703,7 @@ void daemon_start()
 
 	/* Check which TTY is active */
 	if (ioctl(fd_tty0, VT_GETSTATE, &vtstat) != -1) {
-		if (vtstat.v_active == config->tty_s) {
+		if (vtstat.v_active == config.tty_s) {
 			ctty = CTTY_SILENT;
 		} else {
 			ctty = CTTY_VERBOSE;

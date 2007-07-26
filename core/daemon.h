@@ -7,7 +7,6 @@
 
 /* daemon.c */
 void obj_update_status(char *svc, enum ESVC state);
-void bgbuffer_alloc(void);
 void free_objs(void);
 int reload_theme(void);
 
@@ -15,6 +14,10 @@ int reload_theme(void);
 #define UPD_MON		0x02
 #define UPD_ALL		(UPD_SILENT | UPD_MON)
 void switchmon_start(int update);
+
+extern stheme_t *theme;
+extern u8 *fb_mem;
+extern int fd_fb;
 
 /*
  * Current TTY. This effectively identifies the current splash
@@ -53,12 +56,6 @@ extern char *evdev;
 #include <gpm.h>
 extern int fd_gpm;
 #endif
-
-/*
- * Framebuffer device and background buffer.
- */
-extern int fd_fb, fd_bg;
-extern u8 *fb_mem, *bg_buffer;
 
 /*
  * Threads

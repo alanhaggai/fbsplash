@@ -32,16 +32,6 @@ copt_fbsplash_desc="Enable support for fbsplash"
 copt_fbsplash_type="bool"
 copt_fbsplash_def=y
 
-copt_themedir=THEME_DIR
-copt_themedir_desc="Specify where to look for the theme files"
-copt_themedir_type="string"
-copt_themedir_def="/etc/splash"
-
-copt_fifo=SPLASH_FIFO
-copt_fifo_desc="Specify where the splash FIFO should be located"
-copt_fifo_type="string"
-copt_fifo_def="/lib/splash/cache/.splash"
-
 copt_gpm=CONFIG_GPM
 copt_gpm_desc="Enable support for GPM"
 copt_gpm_type="bool"
