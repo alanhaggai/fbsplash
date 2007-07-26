@@ -39,7 +39,7 @@
 
 int fd_fb = -1;
 u8 *fb_mem = NULL;
-int fd_tty[MAX_NR_CONSOLES] = {-1};
+int fd_tty[MAX_NR_CONSOLES];
 
 #ifdef CONFIG_FBSPLASH
 int fd_fbsplash = -1;
@@ -50,6 +50,8 @@ int splash_render_init(bool create)
 #ifdef CONFIG_FBSPLASH
 	fd_fbsplash = fbsplash_open(create);
 #endif
+
+	memset(fd_tty, -1, sizeof(fd_tty));
 
 	/* FIXME: don't force fb to be 0 */
 	fd_fb = fb_open(0, create);
@@ -270,12 +272,12 @@ void splash_theme_free(stheme_t *theme)
 
 static void vt_cursor_disable(int fd)
 {
-	write(fd, "\e[?25l\e[?1c",11);
+	write(fd, "\e[?25l\e[?1c", 11);
 }
 
 static void vt_cursor_enable(int fd)
 {
-	write(fd, "\e[?25h\e[?0c",11);
+	write(fd, "\e[?25h\e[?0c", 11);
 }
 
 int splash_tty_silent_init()
