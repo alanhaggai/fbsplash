@@ -47,6 +47,11 @@ copt_gentoo_desc="Enable support for baselayout-2 features in libsplash."
 copt_gentoo_type="bool"
 copt_gentoo_def=n
 
+copt_helper=CONFIG_HELPER
+copt_helper_desc="Build the kernel helepr."
+copt_helper_type="bool"
+copt_helper_def=y
+
 options=`set | grep '^copt_' | sed -re 's/copt_([^_=]+)[_=].*/\1/' | uniq`
 
 write_conf()

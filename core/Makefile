@@ -141,9 +141,14 @@ SP_MNGR	  = splash_manager
 # us trouble when building against klibc.
 MAKEOVERRIDES=
 
+TARGETS   = objdir $(OBJDIR)/libsplash.la $(OBJDIR)/libsplashrender.la splash_user
+ifeq ($(call config_opt,CONFIG_HELPER),true)
+	TARGETS += splash_kern
+endif
+
 #### make rules below #####
 
-all:	objdir $(OBJDIR)/libsplash.la $(OBJDIR)/libsplashrender.la splash_kern splash_user
+all:	$(TARGETS)
 
 $(OBJDIR)/libsplash.la: $(OBJLDIR)/libsplash.lo
 	@$(call infmsg,LD,$@)
@@ -317,8 +322,11 @@ clean_ft2:
 	fi
 
 install: all
+ifeq ($(call config_opt,CONFIG_HELPER),true)
 	@$(call infmsg,INSTALL,$(SP_HELPER))
 	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_HELPER) $(DESTDIR)$(sbindir)/$(SP_HELPER)
+	$(Q)$(call install_script,$(SP_GIRAM))
+endif
 	@$(call infmsg,INSTALL,libsplash.so)
 	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/libsplash.la $(DESTDIR)$(libdir)/libsplash.la
 	@$(call infmsg,INSTALL,libsplashrender.so)
@@ -331,14 +339,17 @@ install: all
 	$(Q)$(INSTALL_PROG) -D splash.h $(DESTDIR)$(incdir)/splash.h
 	@$(call infmsg,INSTALL,splash-functions.sh)
 	$(Q)$(INSTALL_PROG) -D scripts/splash-functions.sh $(DESTDIR)$(sbindir)/splash-functions.sh
-	$(Q)$(call install_script,$(SP_GIRAM))
 	$(Q)$(call install_script,$(SP_CONV))
 	$(Q)$(call install_script,$(SP_RESIZE))
 	$(Q)$(call install_script,$(SP_MNGR))
 
 uninstall:
+ifeq ($(call config_opt,CONFIG_HELPER),true)
 	@$(call infmsg,UNINSTALL,$(SP_HELPER))
 	$(Q)rm -f $(sbindir)/$(SP_HELPER)
+	@$(call infmsg,UNINSTALL,$(SP_GIRAM))
+	$(Q)rm -f $(usrbindir)/$(SP_GIRAM)
+endif
 	@$(call infmsg,UNINSTALL,$(SP_UTIL))
 	$(Q)rm -f $(sbindir)/$(SP_UTIL)
 	@$(call infmsg,UNINSTALL,$(SP_UTIL).static)
@@ -351,8 +362,6 @@ uninstall:
 	$(Q)rm -f $(incdir)/splash.h
 	@$(call infmsg,UNINSTALL,splash-functions.sh)
 	$(Q)rm -f $(sbindir)/splash-functions.sh
-	@$(call infmsg,UNINSTALL,$(SP_GIRAM))
-	$(Q)rm -f $(usrbindir)/$(SP_GIRAM)
 	@$(call infmsg,UNINSTALL,$(SP_CONV))
 	$(Q)rm -f $(usrbindir)/$(SP_CONV)
 	@$(call infmsg,UNINSTALL,$(SP_RESIZE))
