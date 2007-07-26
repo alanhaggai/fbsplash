@@ -126,12 +126,14 @@ int splash_render_buf(stheme_t *theme, void *buffer, bool repaint, char mode)
 	return 0;
 }
 
-int splash_render_screen(stheme_t *theme, bool repaint, char mode, char effects)
+int splash_render_screen(stheme_t *theme, bool repaint, bool bgnd, char mode, char effects)
 {
 	if (!splash_render_buf(theme, theme->bgbuf, repaint, mode)) {
 		if (repaint) {
 			if (effects & EFF_FADEIN) {
-				fade(theme, fb_mem, theme->bgbuf, theme->silent_img.cmap, 1, fd_fb, 0);
+				fade(theme, fb_mem, theme->bgbuf, theme->silent_img.cmap, bgnd ? 1 : 0, fd_fb, 0);
+			} else if (effects & EFF_FADEOUT) {
+				fade(theme, fb_mem, theme->bgbuf, theme->silent_img.cmap, bgnd ? 1 : 0, fd_fb, 1);
 			} else {
 				if (config.fbd->fix.visual == FB_VISUAL_DIRECTCOLOR)
 					set_directcolor_cmap(fd_fb);

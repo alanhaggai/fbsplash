@@ -36,7 +36,7 @@ int cmd_exit(void **args)
 
 	if (ctty == CTTY_SILENT) {
 		if (config.effects & EFF_FADEOUT)
-			fade(theme, fb_mem, theme->bgbuf, theme->silent_img.cmap, 0, fd_fb, 1);
+			splash_render_screen(theme, true, false, 's', EFF_FADEOUT);
 
 		/* Switch to the verbose tty if we're in silent mode when the
 		 * 'exit' command is received. */
@@ -235,7 +235,7 @@ int cmd_paint(void **args)
 	if (ctty != CTTY_SILENT)
 		goto out;
 
-	splash_render_screen(theme, false, 's', EFF_NONE);
+	splash_render_screen(theme, false, false, 's', EFF_NONE);
 out:
 	pthread_mutex_unlock(&mtx_paint);
 	return ret;
@@ -259,7 +259,7 @@ int cmd_repaint(void **args)
 	if (ctty != CTTY_SILENT)
 		goto out;
 
-	splash_render_screen(theme, true, 's', EFF_NONE);
+	splash_render_screen(theme, true, false, 's', EFF_NONE);
 out:
 	pthread_mutex_unlock(&mtx_paint);
 

@@ -135,7 +135,7 @@ noverbose:
 	if (theme->silent_img.cmap.red)
 		ioctl(fd_fb, FBIOPUTCMAP, &theme->silent_img.cmap);
 
-	splash_render_screen(theme, true, 's', config.effects);
+	splash_render_screen(theme, true, true, 's', config.effects);
 
 #ifdef CONFIG_FBSPLASH
 	if (fbsplash && config.reqmode == 's')

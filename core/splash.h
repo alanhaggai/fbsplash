@@ -116,7 +116,7 @@ int splash_send(const char *fmt, ...);
 int splash_render_init(bool create);
 void splash_render_cleanup();
 int splash_render_buf(struct stheme *theme, void *buffer, bool repaint, char mode);
-int splash_render_screen(struct stheme *theme, bool repaint, char mode, char effects);
+int splash_render_screen(struct stheme *theme, bool repaint, bool bgnd, char mode, char effects);
 struct stheme *splash_theme_load();
 void splash_theme_free(struct stheme *theme);
 
