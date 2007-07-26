@@ -13,7 +13,7 @@ int reload_theme(void);
 #define UPD_SILENT	0x01
 #define UPD_MON		0x02
 #define UPD_ALL		(UPD_SILENT | UPD_MON)
-void switchmon_start(int update);
+void switchmon_start(int update, int stty);
 
 extern stheme_t *theme;
 extern u8 *fb_mem;
@@ -26,14 +26,6 @@ extern int fd_fb;
 #define CTTY_SILENT		0
 #define CTTY_VERBOSE	1
 extern int ctty;
-
-/*
- * Notifiers -- external programs to be run when a specific event
- * takes place.
- */
-#define NOTIFY_REPAINT	0
-#define NOTIFY_PAINT	1
-extern char *notify[];
 
 /*
  * Silent and verbose TTYs. We keep a file descriptor for the silent

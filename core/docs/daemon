@@ -50,12 +50,6 @@ FIFO. Currently, the following commands are recognized:
    Sets the main system message to <text>. This command only does anything
    when splashutils was built with CONFIG_TTF defined.
 
- - set notify <paint|repaint> <prog>
-   Sets the name of the program <prog> that is to be executed whenever the
-   screen is (re)painted. When the background buffer is exported to a file
-   (ie. the splash daemon was started with the '-e file' option), the
-   notified program can be used to draw additional objects in the buffer.
-
  - set gpm
    Makes the splash daemon a GPM client for the silent tty. This provides
    a good way to prevent the mouse cursor from messing the silent splash.

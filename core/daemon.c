@@ -202,7 +202,6 @@ void vt_silent_init(void)
 	struct vt_mode vt;
 
 	splash_tty_silent_init();
-
 	ioctl(fd_tty[config.tty_s], TIOCSCTTY, 0);
 
 	vt.mode   = VT_PROCESS;
@@ -436,33 +435,14 @@ void* thf_switch_ttymon(void *unused)
  *
  * When called with UPD_SILENT, mtx_tty should be held.
  */
-void switchmon_start(int update)
+void switchmon_start(int update, int stty)
 {
-	char t[32];
-
 	/* Has the silent TTY changed? */
 	if (update & UPD_SILENT) {
-		/*
-		 * Close the previous silent TTY and restore its
-		 * normal settings.
-		 */
-		if (fd_tty[config.tty_s] != -1) {
+		if (config.tty_s != stty) {
 			vt_silent_cleanup();
-			close(fd_tty[config.tty_s]);
+			config.tty_s = stty;
 		}
-
-		/* Open a new silent TTY and initialize it. */
-		sprintf(t, PATH_DEV "/tty%d", config.tty_s);
-		fd_tty[config.tty_s] = open(t, O_RDWR);
-		if (fd_tty[config.tty_s] == -1) {
-			sprintf(t, PATH_DEV "/vc/%d", config.tty_s);
-			fd_tty[config.tty_s] = open(t, O_RDWR);
-			if (fd_tty[config.tty_s] == -1) {
-				iprint(MSG_ERROR, "Can't open %s.\n", t);
-				exit(2);
-			}
-		}
-
 		vt_silent_init();
 	}
 
@@ -692,7 +672,7 @@ void daemon_start(stheme_t *th)
 #endif
 
 	pthread_mutex_lock(&mtx_tty);
-	switchmon_start(UPD_ALL);
+	switchmon_start(UPD_ALL, config.tty_s);
 	pthread_mutex_unlock(&mtx_tty);
 
 	daemon_comm(fp_fifo);

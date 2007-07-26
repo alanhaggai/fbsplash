@@ -146,15 +146,17 @@ int cmd_set_tty(void **args)
 		return -1;
 
 	if (!strcmp(args[0], "silent")) {
+		pthread_mutex_lock(&mtx_tty);
+
 		/* Do nothing if the new tty is the same as the old one. */
-		if (config.tty_s == *(int*)args[1])
+		if (config.tty_s == *(int*)args[1]) {
+			pthread_mutex_unlock(&mtx_tty);
 			return 0;
+		}
 
 		pthread_cancel(th_switchmon);
 
-		pthread_mutex_lock(&mtx_tty);
-		config.tty_s = *(int*)args[1];
-		switchmon_start(UPD_SILENT);
+		switchmon_start(UPD_SILENT, *(int*)args[1]);
 		pthread_mutex_unlock(&mtx_tty);
 #ifdef CONFIG_GPM
 		if (fd_gpm > 0) {
@@ -163,11 +165,15 @@ int cmd_set_tty(void **args)
 		}
 #endif
 	} else if (!strcmp(args[0], "verbose")) {
-		/* Do nothing if the new tty is the same as the old one. */
-		if (config.tty_v == *(int*)args[1])
-			return 0;
 
 		pthread_mutex_lock(&mtx_tty);
+
+		/* Do nothing if the new tty is the same as the old one. */
+		if (config.tty_v == *(int*)args[1]) {
+			pthread_mutex_unlock(&mtx_tty);
+			return 0;
+		}
+
 		config.tty_v = *(int*)args[1];
 		pthread_mutex_unlock(&mtx_tty);
 	} else {
@@ -186,33 +192,17 @@ int cmd_set_event_dev(void **args)
 {
 	if (evdev)
 		free(evdev);
+
 	evdev = strdup(args[0]);
 
 	pthread_cancel(th_switchmon);
 
+	if (fd_evdev != -1)
+		close(fd_evdev);
+
 	fd_evdev = open(evdev, O_RDONLY);
-	switchmon_start(UPD_MON);
 
-	return 0;
-}
-
-/*
- * 'set notify' command handler.
- *
- * Sets an external program to be notified on 'paint' or
- * 'repaint' events.
- */
-int cmd_set_notify(void **args)
-{
-	if (!strcmp(args[0], "repaint")) {
-		if (notify[NOTIFY_REPAINT])
-			free(notify[NOTIFY_REPAINT]);
-		notify[NOTIFY_REPAINT] = strdup(args[1]);
-	} else if (!strcmp(args[1], "paint")) {
-		if (notify[NOTIFY_PAINT])
-			free(notify[NOTIFY_PAINT]);
-		notify[NOTIFY_PAINT] = strdup(args[1]);
-	}
+	switchmon_start(UPD_MON, config.tty_s);
 
 	return 0;
 }
@@ -462,12 +452,6 @@ cmdhandler known_cmds[] =
 		.handler = cmd_set_mesg,
 		.args = 1,
 		.specs = "s"
-	},
-
-	{	.cmd = "set notify",
-		.handler = cmd_set_notify,
-		.args = 2,
-		.specs = "ss"
 	},
 
 	{	.cmd = "set gpm",
