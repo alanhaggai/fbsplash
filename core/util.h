@@ -13,7 +13,7 @@
 
 #include "splash.h"
 
-/* FIXME:
+/* XXX:
  * It should be perfectly OK to include sys/vt.h when building the kernel
  * helper, but we don't do that to avoid problems with broken klibc versions.
  */
@@ -315,11 +315,7 @@ int fb_open(int fb, bool create);
 void fb_unmap(u8 *fb);
 void* fb_mmap(int fb);
 
-int open_tty(int tty, bool create);
-void vt_cursor_enable(int fd);
-void vt_cursor_disable(int fd);
-int tty_silent_set(int tty, int fd);
-int tty_silent_unset(int fd);
+int tty_open(int tty);
 
 /* parse.c */
 int parse_svc_state(char *t, enum ESVC *state);
@@ -336,14 +332,15 @@ int load_images(stheme_t *theme, char mode);
 
 /* fbsplash.c */
 int fbsplash_open(bool create);
-int fbsplash_setstate(unsigned int state, unsigned char origin);
-int fbsplash_setpic(stheme_t *theme, unsigned char origin);
-int fbsplash_setcfg(stheme_t *theme, unsigned char origin);
-int fbsplash_getcfg();
+int fbsplash_setstate(unsigned char origin, int vc, unsigned int state);
+int fbsplash_getstate(unsigned char origin, int vc);
+int fbsplash_setpic(unsigned char origin, int vc, stheme_t *theme);
+int fbsplash_setcfg(unsigned char origin, int vc, stheme_t *theme);
+int fbsplash_getcfg(int vc);
 
 /* daemon.c */
 void daemon_start();
-	
+
 /* list.c */
 void list_add(list *l, void *obj);
 void list_free(list l, bool free_item);
@@ -359,11 +356,12 @@ void set_directcolor_cmap(int fd);
 
 extern enum TASK arg_task;
 extern int arg_fb;
-extern int arg_vc;
 extern char *arg_pidfile;
 
+extern int fd_fb;
+extern int fd_tty[MAX_NR_CONSOLES];
+extern int fd_tty0;
 extern int fd_fbsplash;
-extern u8 *bg_buffer;
 extern sendian_t endianess;
 extern scfg_t config;
 

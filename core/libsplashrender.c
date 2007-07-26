@@ -16,7 +16,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-
+#include <termios.h>
+#
 #if !defined(MNT_DETACH)
 	#define MNT_DETACH 2
 #endif
@@ -36,8 +37,10 @@
 	#include <einfo.h>
 #endif
 
-static int fd_fb = -1;
+int fd_fb = -1;
 u8 *fb_mem = NULL;
+int fd_tty[MAX_NR_CONSOLES] = {-1};
+
 #ifdef CONFIG_FBSPLASH
 int fd_fbsplash = -1;
 #endif
@@ -71,11 +74,20 @@ int splash_render_init(bool create)
 
 void splash_render_cleanup()
 {
+	int i;
+
 #if WANT_TTF
 	TTF_Quit();
 #endif
 
 	fb_unmap(fb_mem);
+
+	for (i = 0; i < MAX_NR_CONSOLES; i++) {
+		if (fd_tty[i] != -1) {
+			close(fd_tty[i]);
+			fd_tty[i] = -1;
+		}
+	}
 
 	if (config.fbd) {
 		free(config.fbd);
@@ -254,5 +266,59 @@ void splash_theme_free(stheme_t *theme)
 #endif
 
 	free(theme);
+}
+
+static void vt_cursor_disable(int fd)
+{
+	write(fd, "\e[?25l\e[?1c",11);
+}
+
+static void vt_cursor_enable(int fd)
+{
+	write(fd, "\e[?25h\e[?0c",11);
+}
+
+int splash_tty_silent_init()
+{
+	struct termios w;
+	int fd;
+
+	if (fd_tty[config.tty_s] == -1)
+		fd_tty[config.tty_s] = tty_open(config.tty_s);
+
+	fd = fd_tty[config.tty_s];
+	if (!fd)
+		return -1;
+
+	tcgetattr(fd, &w);
+	w.c_lflag &= ~(ICANON|ECHO);
+	w.c_cc[VTIME] = 0;
+	w.c_cc[VMIN] = 1;
+	tcsetattr(fd, TCSANOW, &w);
+	vt_cursor_disable(fd);
+
+	return 0;
+}
+
+int splash_tty_silent_cleanup()
+{
+	struct termios w;
+	int fd;
+
+	if (fd_tty[config.tty_s] == -1)
+		fd_tty[config.tty_s] = tty_open(config.tty_s);
+
+	fd = fd_tty[config.tty_s];
+	if (!fd)
+		return -1;
+
+	tcgetattr(fd, &w);
+	w.c_lflag &= (ICANON|ECHO);
+	w.c_cc[VTIME] = 0;
+	w.c_cc[VMIN] = 1;
+	tcsetattr(fd, TCSANOW, &w);
+	vt_cursor_enable(fd);
+
+	return 0;
 }
 

@@ -39,11 +39,7 @@ pthread_t th_switchmon, th_sighandler, th_anim;
 int ctty = CTTY_VERBOSE;
 
 /* File descriptors */
-int fd_tty_s = -1;
-int fd_tty1 = -1;
-int fd_tty0 = -1;
 int fd_evdev = -1;
-int fd_fb = -1;
 #ifdef CONFIG_GPM
 int fd_gpm = -1;
 #endif
@@ -73,7 +69,7 @@ void anim_render_frame(anim *a)
 	mng->wait_msecs = 0;
 	memset(&mng->start_time, 0, sizeof(struct timeval));
 
-	/* FIXME: This is a workaround for what seems to be a bug in libmng.
+	/* XXX: This is a workaround for what seems to be a bug in libmng.
 	 * Either we clear the canvas ourselves, or parts of the previous frame
 	 * will remain in it after rendering the current one. */
 	memset(mng->canvas, 0, mng->canvas_h * mng->canvas_w * mng->canvas_bytes_pp);
@@ -204,24 +200,17 @@ next:	pthread_mutex_unlock(&mtx_paint);
 void vt_silent_init(void)
 {
 	struct vt_mode vt;
-	struct termios w;
 
-	ioctl(fd_tty_s, TIOCSCTTY, 0);
+	splash_tty_silent_init();
+
+	ioctl(fd_tty[config.tty_s], TIOCSCTTY, 0);
 
 	vt.mode   = VT_PROCESS;
 	vt.waitv  = 0;
 	vt.relsig = SIGUSR1;
 	vt.acqsig = SIGUSR2;
-	ioctl(fd_tty_s, VT_SETMODE, &vt);
+	ioctl(fd_tty[config.tty_s], VT_SETMODE, &vt);
 
-	tcgetattr(fd_tty_s,&tios);
-	w = tios;
-	w.c_lflag &= ~(ICANON|ECHO);
-	w.c_cc[VTIME] = 0;
-	w.c_cc[VMIN] = 1;
-	tcsetattr(fd_tty_s, TCSANOW, &w);
-
-	vt_cursor_disable(fd_tty_s);
 	return;
 }
 
@@ -232,12 +221,12 @@ void vt_silent_cleanup(void)
 	vt.mode   = VT_AUTO;
 	vt.waitv  = 0;
 
-	tcsetattr(fd_tty_s, TCSANOW, &tios);
-	ioctl(fd_tty_s, VT_RELDISP, 1);
-	ioctl(fd_tty_s, KDSETMODE, KD_TEXT);
-	ioctl(fd_tty_s, VT_SETMODE, &vt);
+	tcsetattr(fd_tty[config.tty_s], TCSANOW, &tios);
+	ioctl(fd_tty[config.tty_s], VT_RELDISP, 1);
+	ioctl(fd_tty[config.tty_s], KDSETMODE, KD_TEXT);
+	ioctl(fd_tty[config.tty_s], VT_SETMODE, &vt);
 
-	vt_cursor_enable(fd_tty_s);
+	splash_tty_silent_cleanup();
 	return;
 }
 
@@ -257,7 +246,7 @@ void switch_silent()
 
 	/* Set KD_GRAPHICS if necessary. */
 	if (config.kdmode == KD_GRAPHICS)
-		ioctl(fd_tty_s, KDSETMODE, KD_GRAPHICS);
+		ioctl(fd_tty[config.tty_s], KDSETMODE, KD_GRAPHICS);
 
 	/* Update CMAP if we're in a DIRECTCOLOR mode. */
 	if (config.fbd->fix.visual == FB_VISUAL_DIRECTCOLOR)
@@ -303,7 +292,6 @@ static void do_cleanup(void)
 	}
 #endif
 	vt_silent_cleanup();
-	vt_cursor_enable(fd_tty_s);
 }
 
 /*
@@ -331,7 +319,7 @@ void* thf_sighandler(void *unusued)
 		if (sig == SIGUSR1) {
 			pthread_mutex_lock(&mtx_paint);
 			pthread_mutex_lock(&mtx_tty);
-			ioctl(fd_tty_s, VT_RELDISP, 1);
+			ioctl(fd_tty[config.tty_s], VT_RELDISP, 1);
 			pthread_mutex_unlock(&mtx_tty);
 
 			ctty = CTTY_VERBOSE;
@@ -340,7 +328,7 @@ void* thf_sighandler(void *unusued)
 		} else if (sig == SIGUSR2) {
 			pthread_mutex_lock(&mtx_paint);
 			pthread_mutex_lock(&mtx_tty);
-			ioctl(fd_tty_s, VT_RELDISP, 2);
+			ioctl(fd_tty[config.tty_s], VT_RELDISP, 2);
 			pthread_mutex_unlock(&mtx_tty);
 
 			ctty = CTTY_SILENT;
@@ -391,11 +379,11 @@ void* thf_switch_evdev(void *unused)
 			 * settings of the verbose console which will prevent
 			 * console switching from working properly.
 			 *
-			 * Don't worry about fd_tty_s not being protected by a
+			 * Don't worry about fd_tty[config.tty_s] not being protected by a
 			 * mutex -- this thread is always killed before any changes
-			 * are made to fd_tty_s.
+			 * are made to fd_tty[config.tty_s].
 			 */
-			ioctl(fd_tty_s, VT_ACTIVATE, h);
+			ioctl(fd_tty[config.tty_s], VT_ACTIVATE, h);
 		}
 	}
 
@@ -406,7 +394,7 @@ void* thf_switch_evdev(void *unused)
  * Silent TTY monitor thread.
  *
  * This thread listens for F2 keypresses on the silent TTY.
- * We don't have to worry about fd_tty_s not being protected
+ * We don't have to worry about fd_tty[config.tty_s] not being protected
  * by the mtx_tty mutex, since this thread is killed before
  * a new silent tty is opened.
  */
@@ -414,20 +402,20 @@ void* thf_switch_ttymon(void *unused)
 {
 	int flags, oldstate;
 
-	flags = fcntl(fd_tty_s, F_GETFL, 0);
+	flags = fcntl(fd_tty[config.tty_s], F_GETFL, 0);
 
 	while(1) {
 		char ret = 0xff;
 		int t = 0;
 
-		fcntl(fd_tty_s, F_SETFL, flags & (~O_NDELAY));
-		read(fd_tty_s, &ret, 1);
+		fcntl(fd_tty[config.tty_s], F_SETFL, flags & (~O_NDELAY));
+		read(fd_tty[config.tty_s], &ret, 1);
 
 		if (ret == '\x1b') {
-			fcntl(fd_tty_s, F_SETFL, flags | O_NDELAY);
+			fcntl(fd_tty[config.tty_s], F_SETFL, flags | O_NDELAY);
 
 			/* FIXME: is <F2> always 1b5b5b42? */
-			if (read(fd_tty_s, &t, 3) == 3 &&
+			if (read(fd_tty[config.tty_s], &t, 3) == 3 &&
 			    ((endianess == little && t == 0x425b5b) ||
 			     (endianess == big && 0x5b5b4200))) {
 				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
@@ -458,18 +446,18 @@ void switchmon_start(int update)
 		 * Close the previous silent TTY and restore its
 		 * normal settings.
 		 */
-		if (fd_tty_s != -1) {
+		if (fd_tty[config.tty_s] != -1) {
 			vt_silent_cleanup();
-			close(fd_tty_s);
+			close(fd_tty[config.tty_s]);
 		}
 
 		/* Open a new silent TTY and initialize it. */
 		sprintf(t, PATH_DEV "/tty%d", config.tty_s);
-		fd_tty_s = open(t, O_RDWR);
-		if (fd_tty_s == -1) {
+		fd_tty[config.tty_s] = open(t, O_RDWR);
+		if (fd_tty[config.tty_s] == -1) {
 			sprintf(t, PATH_DEV "/vc/%d", config.tty_s);
-			fd_tty_s = open(t, O_RDWR);
-			if (fd_tty_s == -1) {
+			fd_tty[config.tty_s] = open(t, O_RDWR);
+			if (fd_tty[config.tty_s] == -1) {
 				iprint(MSG_ERROR, "Can't open %s.\n", t);
 				exit(2);
 			}
@@ -630,19 +618,6 @@ void daemon_start(stheme_t *th)
 	/* No one is being notified about anything by default. */
 	for (i = 0; i < 2; i++) {
 		notify[i] = NULL;
-	}
-
-	fd_tty0 = open_tty(0, false);
-	fd_tty1 = open_tty(1, false);
-
-	if (fd_tty0 == -1) {
-		iprint(MSG_ERROR, "Failed to open /dev/tty0.\n");
-		exit(1);
-	}
-
-	if (fd_tty1 == -1) {
-		iprint(MSG_ERROR, "Failed to open /dev/tty1.\n");
-		exit(1);
 	}
 
 	/* Create the splash FIFO if it's not already in place. */

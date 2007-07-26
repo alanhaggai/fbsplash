@@ -27,7 +27,6 @@
 
 enum TASK	arg_task = none;
 int			arg_fb = 0;
-int			arg_vc = 0;
 char		*arg_pidfile = NULL;
 scfg_t		*cfg;
 
@@ -200,72 +199,33 @@ int cfg_check_sanity(stheme_t *theme, u8 mode)
 	return 0;
 }
 
-int open_tty(int tty, bool create)
+int tty_open(int tty)
 {
 	char dev[64];
-	char sys[128];
 	int c;
+#ifdef TARGET_KERNEL
+	char sys[128];
 	bool first = true;
-
 tryopen:
+#endif
+
 	snprintf(dev, 64, PATH_DEV "/tty%d", tty);
-	if ((c = open(dev, O_RDWR)) == -1) {
+	if ((c = open(dev, O_RDWR | O_NOCTTY)) == -1) {
 		snprintf(dev, 64, PATH_DEV "/vc/%d", tty);
-		c = open(dev, O_RDWR);
+		c = open(dev, O_RDWR | O_NOCTTY);
 	}
 
-	if (c == -1 && create && first) {
+#ifdef TARGET_KERNEL
+	if (c == -1 && first) {
 		first = false;
 		snprintf(dev, 64, PATH_DEV "/tty%d", tty);
 		snprintf(sys, 128, PATH_SYS "/class/tty/tty%d/dev", tty);
 		if (!dev_create(dev, sys))
 			goto tryopen;
 	}
+#endif
 
 	return c;
-}
-
-void vt_cursor_disable(int fd)
-{
-	write(fd, "\e[?25l\e[?1c",11);
-}
-
-void vt_cursor_enable(int fd)
-{
-	write(fd, "\e[?25h\e[?0c",11);
-}
-
-/* FIXME: merge this with the functions from the daemon code. */
-
-int tty_silent_set(int tty, int fd)
-{
-	struct termios w;
-
-	tcgetattr(fd, &w);
-	w.c_lflag &= ~(ICANON|ECHO);
-	w.c_cc[VTIME] = 0;
-	w.c_cc[VMIN] = 1;
-	tcsetattr(fd, TCSANOW, &w);
-	vt_cursor_disable(fd);
-
-	ioctl(fd, VT_ACTIVATE, tty);
-	ioctl(fd, VT_WAITACTIVE, tty);
-
-	return 0;
-}
-
-int tty_silent_unset(int fd)
-{
-	struct termios w;
-
-	tcgetattr(fd, &w);
-	w.c_lflag &= (ICANON|ECHO);
-	w.c_cc[VTIME] = 0;
-	w.c_cc[VMIN] = 1;
-	tcsetattr(fd, TCSANOW, &w);
-	vt_cursor_enable(fd);
-
-	return 0;
 }
 
 

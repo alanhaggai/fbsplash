@@ -22,6 +22,8 @@
 
 #include "util.h"
 
+int arg_vc;
+
 /*
  * Opens /dev/console as stdout and stderr. This will not work if console
  * is set to a serial console, because ttySx are not initialized at the
@@ -41,13 +43,8 @@ void prep_io()
 
 int handle_init(bool update)
 {
-	char sys[128];
-	char fn_fb[32];
-	char fn_vc[32];
-	char buf[1024];
-	char *t, *p;
-	int fd, fd_vc, fd_fb, h, cnt;
-	u8 created_dev = 0;
+	char buf[8];
+	int h;
 	stheme_t *theme;
 #ifdef CONFIG_FBSPLASH
 	bool fbsplash = true;
@@ -85,10 +82,10 @@ int handle_init(bool update)
 
 #ifdef CONFIG_FBSPLASH
 	if (!update && (config.reqmode == 's' || config.reqmode == 'v')) {
-		if (fbsplash_setcfg(theme, FB_SPLASH_IO_ORIG_USER))
+		if (fbsplash_setcfg(FB_SPLASH_IO_ORIG_USER, arg_vc, theme))
 			goto noverbose;
 
-		if (fbsplash_setpic(theme, FB_SPLASH_IO_ORIG_USER))
+		if (fbsplash_setpic(FB_SPLASH_IO_ORIG_USER, arg_vc, theme))
 			goto noverbose;
 	} else {
 noverbose:
@@ -103,7 +100,7 @@ noverbose:
 		/* Activate fbsplash on the first tty if the picture and
 		 * the config file were successfully loaded. */
 		if (fbsplash) {
-			fbsplash_setstate(1, FB_SPLASH_IO_ORIG_USER);
+			fbsplash_setstate(FB_SPLASH_IO_ORIG_USER, arg_vc, 1);
 			return 0;
 		} else {
 			fprintf(stderr, "Failed to get verbose splash image.\n");
@@ -119,18 +116,16 @@ noverbose:
 	if (!(theme->modes & MODE_SILENT))
 		return -1;
 
-	fd_vc = open_tty(config.tty_s, true);
+	splash_tty_silent_init();
 
 	/* Redirect all kernel messages to tty1 so that they don't get
 	 * printed over our silent splash image. */
 	buf[0] = TIOCL_SETKMSGREDIRECT;
 	buf[1] = 1;
-	ioctl(fd_vc, TIOCLINUX, buf);
-
-	tty_silent_set(config.tty_s, fd_vc);
+	ioctl(fd_tty[config.tty_s], TIOCLINUX, buf);
 
 	if (config.kdmode == KD_GRAPHICS)
-		ioctl(fd_vc, KDSETMODE, KD_GRAPHICS);
+		ioctl(fd_tty[config.tty_s], KDSETMODE, KD_GRAPHICS);
 
 	if (theme->silent_img.cmap.red)
 		ioctl(fd_fb, FBIOPUTCMAP, &theme->silent_img.cmap);
@@ -139,7 +134,7 @@ noverbose:
 
 #ifdef CONFIG_FBSPLASH
 	if (fbsplash && config.reqmode == 's')
-		fbsplash_setstate(1, FB_SPLASH_IO_ORIG_USER);
+		fbsplash_setstate(FB_SPLASH_IO_ORIG_USER, arg_vc, 1);
 #endif
 
 	/* We're the kernel helper. We try to do our task as efficiently
@@ -212,15 +207,15 @@ int main(int argc, char **argv)
 		}
 
 		if (!strcmp(argv[2],"getpic")) {
-			err = fbsplash_setpic(theme, FB_SPLASH_IO_ORIG_KERNEL);
+			err = fbsplash_setpic(FB_SPLASH_IO_ORIG_KERNEL, arg_vc, theme);
 		} else if (!strcmp(argv[2],"modechange")) {
-			if ((err = fbsplash_setcfg(theme, FB_SPLASH_IO_ORIG_KERNEL)))
+			if ((err = fbsplash_setcfg(FB_SPLASH_IO_ORIG_KERNEL, arg_vc, theme)))
 				goto out;
 
-			if ((err = fbsplash_setpic(theme, FB_SPLASH_IO_ORIG_KERNEL)))
+			if ((err = fbsplash_setpic(FB_SPLASH_IO_ORIG_KERNEL, arg_vc, theme)))
 				goto out;
 
-			err = fbsplash_setstate(1, FB_SPLASH_IO_ORIG_KERNEL);
+			err = fbsplash_setstate(FB_SPLASH_IO_ORIG_KERNEL, arg_vc, 1);
 		}
 	}
 #endif

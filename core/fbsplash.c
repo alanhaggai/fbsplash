@@ -35,10 +35,10 @@ int fbsplash_open(bool create)
 	return c;
 }
 
-int fbsplash_setstate(unsigned int state, unsigned char origin)
+int fbsplash_setstate(unsigned char origin, int vc, unsigned int state)
 {
 	struct fb_splash_iowrapper wrapper = {
-		.vc = arg_vc,
+		.vc = vc,
 		.origin = origin,
 		.data = &state,
 	};
@@ -50,10 +50,24 @@ int fbsplash_setstate(unsigned int state, unsigned char origin)
 	return 0;
 }
 
-int fbsplash_setpic(stheme_t *theme, unsigned char origin)
+int fbsplash_getstate(unsigned char origin, int vc)
+{
+	int i;
+
+	struct fb_splash_iowrapper wrapper = {
+		.vc = vc,
+		.origin = FB_SPLASH_IO_ORIG_USER,
+		.data = &i,
+	};
+
+	ioctl(fd_fbsplash, FBIOSPLASH_GETSTATE, &wrapper);
+	return i;
+}
+
+int fbsplash_setpic(unsigned char origin, int vc, stheme_t *theme)
 {
 	struct fb_splash_iowrapper wrapper = {
-		.vc = arg_vc,
+		.vc = vc,
 		.origin = origin,
 		.data = &theme->verbose_img.data,
 	};
@@ -69,14 +83,18 @@ int fbsplash_setpic(stheme_t *theme, unsigned char origin)
 	return 0;
 }
 
-int fbsplash_setcfg(stheme_t *theme, unsigned char origin)
+int fbsplash_setcfg(unsigned char origin, int vc, stheme_t *theme)
 {
 	struct vc_splash vc_cfg;
 	struct fb_splash_iowrapper wrapper = {
-		.vc = arg_vc,
+		.vc = vc,
 		.origin = origin,
 		.data = &vc_cfg,
 	};
+
+	int err = cfg_check_sanity(theme, 'v');
+	if (err)
+		return err;
 
 	vc_cfg.tx = theme->tx;
 	vc_cfg.ty = theme->ty;
@@ -92,12 +110,12 @@ int fbsplash_setcfg(stheme_t *theme, unsigned char origin)
 	return 0;
 }
 
-int fbsplash_getcfg()
+int fbsplash_getcfg(int vc)
 {
 	int err = 0;
 	struct vc_splash vc_cfg;
 	struct fb_splash_iowrapper wrapper = {
-		.vc = arg_vc,
+		.vc = vc,
 		.origin = FB_SPLASH_IO_ORIG_USER,
 		.data = &vc_cfg,
 	};
@@ -116,7 +134,7 @@ int fbsplash_getcfg()
 		strcpy(vc_cfg.theme, "<none>");
 	}
 
-	printf("Splash config on console %d:\n", arg_vc);
+	printf("Splash config on console %d:\n", vc);
 	printf("tx:       %d\n", vc_cfg.tx);
 	printf("ty:       %d\n", vc_cfg.ty);
 	printf("twidth:	  %d\n", vc_cfg.twidth);

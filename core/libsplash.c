@@ -46,7 +46,7 @@
 #endif
 
 static FILE *fp_fifo = NULL;
-static int fd_tty0 = -1;
+int fd_tty0 = -1;
 scfg_t config;
 sendian_t endianess;
 
@@ -307,7 +307,6 @@ bool splash_is_silent(void)
 
 	if (ioctl(fd_tty0, VT_GETSTATE, &vtstat) != -1) {
 		return (vtstat.v_active == config.tty_s);
-
 	} else {
 		return false;
 	}

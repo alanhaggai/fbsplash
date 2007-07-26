@@ -119,5 +119,7 @@ int splash_render_buf(struct stheme *theme, void *buffer, bool repaint, char mod
 int splash_render_screen(struct stheme *theme, bool repaint, bool bgnd, char mode, char effects);
 struct stheme *splash_theme_load();
 void splash_theme_free(struct stheme *theme);
+int splash_tty_silent_init();
+int splash_tty_silent_cleanup();
 
 #endif /* __SPLASH_H */

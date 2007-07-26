@@ -123,7 +123,8 @@ int main(int argc, char **argv)
 {
 	unsigned int c, i;
 	int fp, err = 0;
-	stheme_t *theme;
+	int arg_vc = -1;
+	stheme_t *theme = NULL;
 
 	splash_lib_init(bootup);
 	splash_render_init(false);
@@ -276,117 +277,74 @@ int main(int argc, char **argv)
 
 	switch (arg_task) {
 
+	case setmode:
+		if (config.reqmode == 's') {
+			splash_tty_silent_init();
+			splash_set_silent();
+		} else {
+			splash_tty_silent_cleanup();
+			splash_set_verbose();
+		}
+		break;
+
+	case getmode:
+		printf("Splash mode: %s\n", splash_is_silent() ? "silent" : "verbose");
+		break;
+
 #ifdef CONFIG_FBSPLASH
 	case on:
-		err = fbsplash_setstate(1, FB_SPLASH_IO_ORIG_USER);
+		err = fbsplash_setstate(FB_SPLASH_IO_ORIG_USER, arg_vc, 1);
 		break;
 
 	case off:
-		err = fbsplash_setstate(0, FB_SPLASH_IO_ORIG_USER);
+		err = fbsplash_setstate(FB_SPLASH_IO_ORIG_USER, arg_vc, 0);
 		break;
 
 	case setpic:
 	{
 		struct vt_stat stat;
 
-		if ((fp = open(PATH_DEV "/tty", O_NOCTTY)) != -1) {
-			if (ioctl(fp, VT_GETSTATE, &stat) != -1) {
-				if (arg_vc != stat.v_active - 1)
-					goto setpic_out;
-			}
-			close(fp);
+		if (ioctl(fd_tty0, VT_GETSTATE, &stat) != -1) {
+			if (arg_vc != stat.v_active - 1)
+				goto setpic_out;
 		}
+		close(fp);
 
-		err = fbsplash_setpic(theme, FB_SPLASH_IO_ORIG_USER);
+		err = fbsplash_setpic(FB_SPLASH_IO_ORIG_USER, arg_vc, theme);
 setpic_out:	break;
 	}
 
 	case getcfg:
-		err = fbsplash_getcfg(FB_SPLASH_IO_ORIG_USER);
+		err = fbsplash_getcfg(arg_vc);
 		break;
 
 	case setcfg:
-		err = cfg_check_sanity(theme, 'v');
-		if (err)
-			break;
-		err = fbsplash_setcfg(theme, FB_SPLASH_IO_ORIG_USER);
+		err = fbsplash_setcfg(FB_SPLASH_IO_ORIG_USER, arg_vc, theme);
 		break;
 
 	case getstate:
 	{
-		struct fb_splash_iowrapper wrapper = {
-			.vc = arg_vc,
-			.origin = FB_SPLASH_IO_ORIG_USER,
-			.data = &i,
-		};
-
-		ioctl(fd_fbsplash, FBIOSPLASH_GETSTATE, &wrapper);
-
-		printf("Splash state on console %d: %s\n", arg_vc, (i != 0) ? "on" : "off");
+		printf("Splash state on console %d: %s\n", arg_vc,
+				(fbsplash_getstate(FB_SPLASH_IO_ORIG_USER, arg_vc)) ? "on" : "off");
 		break;
 	}
 #endif /* CONFIG_FBSPLASH */
-
-	case setmode:
-	{
-		int t;
-
-		if (arg_vc > -1) {
-			fp = open_tty(arg_vc+1, false);
-			t = arg_vc+1;
-		} else {
-			t = (config.reqmode == 's') ? TTY_SILENT : TTY_VERBOSE;
-			fp = open_tty(t, false);
-		}
-
-		if (fp < 0)
-			break;
-
-		if (config.reqmode == 's') {
-			tty_silent_set(t, fp);
-		} else {
-			ioctl(fp, VT_ACTIVATE, t);
-			ioctl(fp, VT_WAITACTIVE, t);
-			close(fp);
-			fp = open_tty(TTY_SILENT, false);
-			if (fp < 0)
-				break;
-			tty_silent_unset(fp);
-		}
-
-		close(fp);
-		break;
-	}
-
-	case getmode:
-	{
-		struct vt_stat stat;
-		i = 0;
-
-		if ((fp = open(PATH_DEV "/tty", O_NOCTTY)) != -1) {
-			if (ioctl(fp, VT_GETSTATE, &stat) != -1) {
-				if (stat.v_active == TTY_SILENT)
-					i = 1;
-			}
-			close(fp);
-		}
-
-		printf("Splash mode: %s\n", (i) ? "silent" : "verbose");
-		break;
-	}
-
 #ifdef CONFIG_DEPRECATED
 	/* Deprecated. The daemon mode should be used instead. */
 	case paint:
-	case repaint:
-		/* FIXME: support the deprecated options here */
+		splash_render_screen(theme, false, false, 's', EFF_NONE);
+		break;
 
+	case repaint:
+		splash_render_screen(theme, true, false, 's', EFF_NONE);
+		break;
 #endif /* CONFIG_DEPRECATED */
 
 	default:
 		break;
 	}
 
+	splash_theme_free(theme);
 	splash_render_cleanup();
 	splash_lib_cleanup();
 
