@@ -439,11 +439,9 @@ void prep_bgnds(stheme_t *theme, u8 *target, u8 *bgnd, char mode)
 			if (!(b->attr & BOX_SILENT) && mode != 'v')
 				continue;
 
-			if ((b->attr & BOX_INTER) && i->next != NULL) {
-				if (b->curr) {
+			if ((b->attr & BOX_INTER)) {
+				if (b->curr)
 					prep_bgnd(theme, target, bgnd, b->curr->x1, b->curr->y1, b->curr->x2 - b->curr->x1 + 1, b->curr->y2 - b->curr->y1 + 1);
-					i = i->next;
-				}
 			}
 		} else if (o->type == o_icon && mode == 's') {
 			icon *c = (icon*)o->p;
@@ -507,108 +505,106 @@ void prep_bgnds(stheme_t *theme, u8 *target, u8 *bgnd, char mode)
 #endif
 }
 
+void render_obj(stheme_t *theme, u8 *target, char mode, unsigned char origin, obj *o)
+{
+	if (o->type == o_box) {
+		box *b = (box*)o->p;
+
+		if ((b->attr & BOX_SILENT) && mode != 's')
+			return;
+
+		if (!(b->attr & BOX_SILENT) && mode != 'v')
+			return;
+
+		if (b->attr & BOX_INTER) {
+			interpolate_box(b, b->inter);
+			render_box(theme, b->curr, target);
+		} else {
+			render_box(theme, b, target);
+		}
+	/* Icons are only allowed in silent mode. */
+	} else if (o->type == o_icon && mode == 's') {
+		icon *c;
+		c = (icon*)o->p;
+
+		if (c->status == 0)
+			return;
+
+		if (!c->img || !c->img->picbuf)
+			return;
+
+		if (c->img->w > theme->xres - c->x || c->img->h > theme->yres - c->y) {
+			iprint(MSG_WARN,"Icon %s does not fit on the screen - ignoring it.", c->img->filename);
+			return;
+		}
+
+		render_icon(theme, c, target);
+	}
+#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
+	else if (o->type == o_anim) {
+		u8 render_it = 0;
+		anim *a = (anim*)o->p;
+
+		/* We only support animations in the silent mode. */
+		if (mode != 's')
+			return;
+
+		if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_ONCE &&
+			(a->status == F_ANIM_STATUS_DONE)) {
+			render_it = 1;
+		} else if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL) {
+			int ret = mng_render_proportional(a->mng, config.progress);
+			if (ret == MNG_NEEDTIMERWAIT || ret == MNG_NOERROR)
+				render_it = 1;
+		}
+
+		if (render_it && (a->flags & F_ANIM_DISPLAY)) {
+			mng_display_buf(a->mng, theme, target, target, a->x, a->y, theme->xres * fbd.bytespp, theme->xres * fbd.bytespp);
+		}
+	}
+#endif /* CONFIG_MNG */
+#if WANT_TTF
+	else if (o->type == o_text) {
+
+		text *ct = (text*)o->p;
+		char *txt;
+
+		if (mode == 's' && !(ct->flags & F_TXT_SILENT))
+			return;
+		else if (mode == 'v' && !(ct->flags & F_TXT_VERBOSE))
+			return;
+
+		if (!ct->font || !ct->font->font)
+			return;
+
+		txt = ct->val;
+
+		if (ct->flags & F_TXT_EXEC) {
+			txt = get_program_output(ct->val, origin);
+		}
+
+		if (ct->flags & F_TXT_EVAL) {
+			txt = eval_text(txt);
+		}
+
+		if (txt) {
+			TTF_Render(theme, target, txt, ct->font->font,
+					   ct->style, ct->x, ct->y, ct->col,
+				   ct->hotspot, &ct->last_width);
+			if ((ct->flags & F_TXT_EXEC) || (ct->flags & F_TXT_EVAL))
+				free(txt);
+		}
+	}
+#endif /* TTF */
+}
+
+
 void render_objs(stheme_t *theme, u8 *target, char mode, unsigned char origin)
 {
 	item *i;
 
 	for (i = theme->objs.head; i != NULL; i = i->next) {
-		obj *o = (obj*)i->p;
-
-		if (o->type == o_box) {
-			box *b, *n;
-			b = (box*)o->p;
-
-			if ((b->attr & BOX_SILENT) && mode != 's')
-				continue;
-
-			if (!(b->attr & BOX_SILENT) && mode != 'v')
-				continue;
-
-			if ((b->attr & BOX_INTER) && i->next != NULL) {
-				if (((obj*)i->next->p)->type == o_box) {
-					n = (box*)((obj*)i->next->p)->p;
-					interpolate_box(b, n);
-					render_box(theme, b->curr, target);
-					i = i->next;
-				}
-			} else {
-				render_box(theme, b, target);
-			}
-		/* Icons are only allowed in silent mode. */
-		} else if (o->type == o_icon && mode == 's') {
-			icon *c;
-			c = (icon*)o->p;
-
-			if (c->status == 0)
-				continue;
-
-			if (!c->img || !c->img->picbuf)
-				continue;
-
-			if (c->img->w > theme->xres - c->x || c->img->h > theme->yres - c->y) {
-				iprint(MSG_WARN,"Icon %s does not fit on the screen - ignoring it.", c->img->filename);
-				continue;
-			}
-
-			render_icon(theme, c, target);
-		}
-#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
-		else if (o->type == o_anim) {
-			u8 render_it = 0;
-			anim *a = (anim*)o->p;
-
-			/* We only support animations in the silent mode. */
-			if (mode != 's')
-				continue;
-
-			if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_ONCE &&
-				(a->status == F_ANIM_STATUS_DONE)) {
-				render_it = 1;
-			} else if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL) {
-				int ret = mng_render_proportional(a->mng, config.progress);
-				if (ret == MNG_NEEDTIMERWAIT || ret == MNG_NOERROR)
-					render_it = 1;
-			}
-
-			if (render_it && (a->flags & F_ANIM_DISPLAY)) {
-				mng_display_buf(a->mng, theme, target, target, a->x, a->y, theme->xres * fbd.bytespp, theme->xres * fbd.bytespp);
-			}
-		}
-#endif /* CONFIG_MNG */
-#if WANT_TTF
-		else if (o->type == o_text) {
-
-			text *ct = (text*)o->p;
-			char *txt;
-
-			if (mode == 's' && !(ct->flags & F_TXT_SILENT))
-				continue;
-
-			if (mode == 'v' && !(ct->flags & F_TXT_VERBOSE))
-				continue;
-
-			if (!ct->font || !ct->font->font)
-				continue;
-
-			txt = ct->val;
-
-			if (ct->flags & F_TXT_EXEC) {
-				txt = get_program_output(ct->val, origin);
-			}
-
-			if (ct->flags & F_TXT_EVAL) {
-				txt = eval_text(txt);
-			}
-
-			if (txt) {
-				TTF_Render(theme, target, txt, ct->font->font,
-				           ct->style, ct->x, ct->y, ct->col,
-					   ct->hotspot, &ct->last_width);
-				if ((ct->flags & F_TXT_EXEC) || (ct->flags & F_TXT_EVAL))
-					free(txt);
-			}
-		}
-#endif /* TTF */
+		render_obj(theme, target, mode, origin, i->p);
 	}
 
 #if WANT_TTF

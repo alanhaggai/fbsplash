@@ -68,14 +68,10 @@ void paint_img(stheme_t *theme, u8 *dst, u8 *src)
 		case o_box:
 		{
 			box *b = (box*)o->p;
-			if (!(b->attr & BOX_INTER) || ti->next == NULL)
+			if (!(b->attr & BOX_INTER))
 				continue;
 
-			if (((obj*)ti->next->p)->type != o_box)
-				continue;
-
-			b = (box*)((obj*)ti->next->p)->p;
-			paint_rect(theme, dst, src, b->x1, b->y1, b->x2, b->y2);
+			paint_rect(theme, dst, src, b->curr->x1, b->curr->y1, b->curr->x2, b->curr->y2);
 			break;
 		}
 #if WANT_TTF

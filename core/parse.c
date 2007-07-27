@@ -549,7 +549,7 @@ pi_out:
 		free(filename);
 	if (cic->svc)
 		free(cic->svc);
-	free(cic);
+	free(container_of(cic));
 	return;
 pi_outm:
 	iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
@@ -734,19 +734,19 @@ static void parse_anim(char *t)
 	return;
 pa_err:
 pa_out:
-	free(canim);
+	free(container_of(canim));
 	return;
 }
 #endif /* CONFIG_MNG */
 
-static void parse_box(char *t)
+static box* parse_box(char *t)
 {
 	char *p;
 	int ret;
 	box *cbox = obj_alloc(box);
 
 	if (!cbox)
-		return;
+		return NULL;
 
 	skip_whitespace(&t);
 	cbox->attr = 0;
@@ -850,12 +850,11 @@ static void parse_box(char *t)
 		goto pb_err;
 	}
 pb_end:
-	obj_add(cbox);
-	return;
+	return cbox;
 
 pb_err:
-	free(cbox);
-	return;
+	free(container_of(cbox));
+	return NULL;
 }
 
 static char *parse_quoted_string(char *t, u8 keepvar)
@@ -1104,7 +1103,7 @@ pt_end:
 	return;
 
 pt_err:
-	free(ct);
+	free(container_of(ct));
 	if (fpath)
 		free(fpath);
 	return;
@@ -1118,6 +1117,7 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 	char *t;
 	int len, i;
 	bool ignore = false;
+	box *bprev;
 
 	if ((cfgfp = fopen(cfgfile,"r")) == NULL) {
 		iprint(MSG_ERROR, "Can't open cfg file %s.\n", cfgfile);
@@ -1182,8 +1182,20 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 					break;
 
 				case t_box:
-					parse_box(t);
+				{
+					box *tbox = parse_box(t);
+					if (tbox->attr & BOX_INTER) {
+						bprev = tbox;
+						goto box_post;
+					} else if (bprev != NULL) {
+						bprev->inter = tbox;
+						obj_add(bprev);
+						bprev = NULL;
+					} else {
+						obj_add(tbox);
+					}
 					break;
+				}
 
 				case t_icon:
 					parse_icon(t);
@@ -1233,6 +1245,15 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 				}
 			}
 		}
+
+		if (bprev) {
+			parse_error("an 'inter' box must be directly followed by another box");
+			free(container_of(bprev));
+			bprev = NULL;
+		}
+
+box_post:
+		;
 	}
 
 	memcpy(theme, &tmptheme, sizeof(tmptheme));

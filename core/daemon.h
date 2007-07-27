@@ -7,7 +7,6 @@
 
 /* daemon.c */
 void obj_update_status(char *svc, enum ESVC state);
-void free_objs(void);
 int reload_theme(void);
 
 #define UPD_SILENT	0x01

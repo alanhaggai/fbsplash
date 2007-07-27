@@ -280,6 +280,7 @@ typedef struct box {
 											   lower left, lower right */
 	u8 attr;
 	struct box *curr;						/* current interpolated box */
+	struct box *inter;
 } box;
 
 typedef struct {
@@ -338,6 +339,7 @@ int parse_cfg(char *cfgfile, stheme_t *st);
 /* render.c */
 void rgba2fb(rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha);
 void put_pixel(u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add);
+void render_obj(stheme_t *theme, u8 *target, char mode, unsigned char origin, obj *o);
 void render_objs(stheme_t *theme, u8 *target, char mode, unsigned char origin);
 void prep_bgnds(stheme_t *theme, u8 *target, u8 *bgnd, char mode);
 
