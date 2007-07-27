@@ -260,7 +260,7 @@ out:
  */
 int cmd_progress(void **args)
 {
-	splashr_progress_set(*(int*)args[0]);
+	splashr_progress_set(theme, *(int*)args[0]);
 	return 0;
 }
 
@@ -272,7 +272,7 @@ int cmd_progress(void **args)
  */
 int cmd_set_mesg(void **args)
 {
-	splashr_message_set(args[0]);
+	splashr_message_set(theme, args[0]);
 	return 0;
 }
 

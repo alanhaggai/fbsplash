@@ -134,8 +134,8 @@ typedef struct {
 	char *svc;
 	enum ESVC type;
 	u8 status;
-	u8 crop;
-	rect crop_from, crop_to;
+	bool crop;
+	rect crop_from, crop_to, crop_curr;
 } icon;
 
 typedef struct {
@@ -144,6 +144,7 @@ typedef struct {
 	void *p;				/* pointer to the type-specific data */
 	rect bnd;				/* bounding rectangle */
 	u8 *bgcache;			/* bgnd cache, directly from the bg picture if NULL */
+	bool invalid;			/* indicates whether this object has to be repainted */
 } obj;
 
 typedef struct color {
@@ -186,6 +187,10 @@ typedef struct {
 	u8 style;
 	char *val;
 	font_e *font;
+	int curr_progress;		/* if this string uses the $progress variable,
+							 * curr_progress holds it's currently used value
+							 * (i.e. the value for which the text has been
+							 * rendered), otherwise = -1 */
 } text;
 
 void text_get_xy(text *ct, int *x, int *y);
@@ -342,6 +347,10 @@ void put_pixel(u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add);
 void render_obj(stheme_t *theme, u8 *target, char mode, unsigned char origin, obj *o);
 void render_objs(stheme_t *theme, u8 *target, char mode, unsigned char origin);
 void prep_bgnds(stheme_t *theme, u8 *target, u8 *bgnd, char mode);
+void interpolate_box(box *a, box *b, box *c);
+void interpolate_rect(rect *a, rect *b, rect *c);
+void invalidate_all(stheme_t *theme);
+void invalidate_progress(stheme_t *theme);
 
 /* image.c */
 int load_images(stheme_t *theme, char mode);

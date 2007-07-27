@@ -127,26 +127,28 @@ void rgba2fb(rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha)
 	}
 }
 
+void interpolate_rect(rect *a, rect *b, rect *c)
+{
+	int h = PROGRESS_MAX - config.progress;
+
+	c->x1 = (a->x1 * h + b->x1 * config.progress) / PROGRESS_MAX;
+	c->x2 = (a->x2 * h + b->x2 * config.progress) / PROGRESS_MAX;
+	c->y1 = (a->y1 * h + b->y1 * config.progress) / PROGRESS_MAX;
+	c->y2 = (a->y2 * h + b->y2 * config.progress) / PROGRESS_MAX;
+}
+
 static void render_icon(stheme_t *theme, icon *ticon, u8 *target)
 {
 	int y, yi, xi, wi, hi;
 	u8 *out = NULL;
 	u8 *in = NULL;
 
-	int h = PROGRESS_MAX - config.progress;
-	rect rct;
-
 	/* Interpolate a cropping rectangle if necessary. */
 	if (ticon->crop) {
-		rct.x1 = (ticon->crop_from.x1 * h + ticon->crop_to.x1 * config.progress) / PROGRESS_MAX;
-		rct.x2 = (ticon->crop_from.x2 * h + ticon->crop_to.x2 * config.progress) / PROGRESS_MAX;
-		rct.y1 = (ticon->crop_from.y1 * h + ticon->crop_to.y1 * config.progress) / PROGRESS_MAX;
-		rct.y2 = (ticon->crop_from.y2 * h + ticon->crop_to.y2 * config.progress) / PROGRESS_MAX;
-
-		xi = min(rct.x1, rct.x2);
-		yi = min(rct.y1, rct.y2);
-		wi = abs(rct.x1 - rct.x2) + 1;
-		hi = abs(rct.y1 - rct.y2) + yi + 1;
+		xi = min(ticon->crop_curr.x1, ticon->crop_curr.x2);
+		yi = min(ticon->crop_curr.y1, ticon->crop_curr.y2);
+		wi = abs(ticon->crop_curr.x1 - ticon->crop_curr.x2) + 1;
+		hi = abs(ticon->crop_curr.y1 - ticon->crop_curr.y2) + yi + 1;
 	} else {
 		xi = yi = 0;
 		wi = ticon->img->w;
@@ -264,17 +266,9 @@ static void render_box(stheme_t *theme, box *box, u8 *target)
 /* Interpolates two boxes, based on the value of the config->progress variable.
  * This is a strange implementation of a progress bar, introduced by the
  * authors of Bootsplash. */
-static void interpolate_box(box *a, box *b)
+void interpolate_box(box *a, box *b, box *c)
 {
 	int h = PROGRESS_MAX - config.progress;
-
-	if (!a->curr) {
-		a->curr = malloc(sizeof(box));
-		if (!a->curr) {
-			iprint(MSG_ERROR, "Failed to allocate memory for interpolated box.\n");
-			return;
-		}
-	}
 
 #define inter_color(clo, cl1, cl2)									\
 {																	\
@@ -284,15 +278,15 @@ static void interpolate_box(box *a, box *b)
 	clo.a = (cl1.a * h + cl2.a * config.progress) / PROGRESS_MAX;	\
 }
 
-	a->curr->x1 = (a->x1 * h + b->x1 * config.progress) / PROGRESS_MAX;
-	a->curr->x2 = (a->x2 * h + b->x2 * config.progress) / PROGRESS_MAX;
-	a->curr->y1 = (a->y1 * h + b->y1 * config.progress) / PROGRESS_MAX;
-	a->curr->y2 = (a->y2 * h + b->y2 * config.progress) / PROGRESS_MAX;
+	c->x1 = (a->x1 * h + b->x1 * config.progress) / PROGRESS_MAX;
+	c->x2 = (a->x2 * h + b->x2 * config.progress) / PROGRESS_MAX;
+	c->y1 = (a->y1 * h + b->y1 * config.progress) / PROGRESS_MAX;
+	c->y2 = (a->y2 * h + b->y2 * config.progress) / PROGRESS_MAX;
 
-	inter_color(a->curr->c_ul, a->c_ul, b->c_ul);
-	inter_color(a->curr->c_ur, a->c_ur, b->c_ur);
-	inter_color(a->curr->c_ll, a->c_ll, b->c_ll);
-	inter_color(a->curr->c_lr, a->c_lr, b->c_lr);
+	inter_color(c->c_ul, a->c_ul, b->c_ul);
+	inter_color(c->c_ur, a->c_ur, b->c_ur);
+	inter_color(c->c_ll, a->c_ll, b->c_ll);
+	inter_color(c->c_lr, a->c_lr, b->c_lr);
 }
 
 static char *get_program_output(char *prg, unsigned char origin)
@@ -517,7 +511,6 @@ void render_obj(stheme_t *theme, u8 *target, char mode, unsigned char origin, ob
 			return;
 
 		if (b->attr & BOX_INTER) {
-			interpolate_box(b, b->inter);
 			render_box(theme, b->curr, target);
 		} else {
 			render_box(theme, b, target);
@@ -604,7 +597,11 @@ void render_objs(stheme_t *theme, u8 *target, char mode, unsigned char origin)
 	item *i;
 
 	for (i = theme->objs.head; i != NULL; i = i->next) {
-		render_obj(theme, target, mode, origin, i->p);
+		obj *o = i->p;
+		if (o->invalid) {
+			render_obj(theme, target, mode, origin, o);
+			o->invalid = false;
+		}
 	}
 
 #if WANT_TTF
@@ -617,5 +614,69 @@ void render_objs(stheme_t *theme, u8 *target, char mode, unsigned char origin)
 		free(t);
 	}
 #endif /* TTF */
+}
+
+void invalidate_all(stheme_t *theme)
+{
+	item *i;
+
+	for (i = theme->objs.head; i != NULL; i = i->next) {
+		obj *o = i->p;
+		o->invalid = true;
+	}
+}
+
+void invalidate_progress(stheme_t *theme)
+{
+	item *i;
+
+	for (i = theme->objs.head; i != NULL; i = i->next) {
+		obj *o = i->p;
+
+		if (o->type == o_box) {
+			box *b = o->p;
+
+			if (b->inter) {
+				box *tmp = malloc(sizeof(box));
+				if (!tmp)
+					continue;
+
+				interpolate_box(b, b->inter, tmp);
+
+				if (memcmp(tmp, b->curr, sizeof(box))) {
+					free(b->curr);
+					b->curr = tmp;
+					o->invalid = true;
+				} else {
+					free(tmp);
+				}
+			}
+		} else if (o->type == o_icon) {
+			icon *ic = o->p;
+			rect r;
+
+			if (!ic->crop)
+				continue;
+
+			interpolate_rect(&ic->crop_from, &ic->crop_to, &r);
+			if (memcmp(&ic->crop_curr, &r, sizeof(rect))) {
+				memcpy(&ic->crop_curr, &r, sizeof(rect));
+				o->invalid = true;
+			}
+		} else if (o->type == o_text) {
+			int prg;
+			text *t = o->p;
+
+			if (t->curr_progress < 0)
+				continue;
+
+			prg	= config.progress * 100 / PROGRESS_MAX;
+			if (prg == t->curr_progress)
+				continue;
+
+			t->curr_progress = prg;
+			o->invalid = true;
+		}
+	}
 }
 

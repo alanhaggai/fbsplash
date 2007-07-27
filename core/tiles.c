@@ -23,6 +23,8 @@ void obj_free(obj *o)
 		box *b = o->p;
 		if (b->inter)
 			free(container_of(b->inter));
+		if (b->curr)
+			free(b->curr);
 	}
 
 	free(o);

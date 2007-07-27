@@ -20,13 +20,7 @@ struct cfg_opt {
 	char *name;
 	enum {
 		t_int, t_path, t_box, t_icon, t_rect, t_color, t_fontpath,
-		t_type_open, t_type_close,
-#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
-		t_anim,
-#endif
-#if WANT_TTF
-		t_text,
-#endif
+		t_type_open, t_type_close, t_anim, t_text,
 	} type;
 	void *val;
 };
@@ -438,9 +432,10 @@ static void parse_icon(char *t)
 		}
 
 		skip_whitespace(&t);
-		cic->crop = 1;
+		cic->crop = true;
+		interpolate_rect(&cic->crop_from, &cic->crop_to, &cic->crop_curr);
 	} else {
-		cic->crop = 0;
+		cic->crop = false;
 	}
 
 	i = parse_svc_state(t, &cic->type);
@@ -1063,12 +1058,17 @@ again:
 		goto again;
 	}
 
-
 	skip_whitespace(&t);
 	ct->val = parse_quoted_string(t, (ct->flags & F_TXT_EVAL) ? 1 : 0);
 	if (!ct->val) {
 		parse_error("failed to parse a quoted string: '%s'", t);
 		goto pt_err;
+	}
+
+	if (strstr(ct->val, "$progress")) {
+		ct->curr_progress = config.progress;
+	} else {
+		ct->curr_progress = -1;
 	}
 
 	if (!fontname)
@@ -1189,7 +1189,15 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 						goto box_post;
 					} else if (bprev != NULL) {
 						bprev->inter = tbox;
-						obj_add(bprev);
+						bprev->curr = malloc(sizeof(box));
+						interpolate_box(bprev, tbox, bprev->curr);
+						if (!bprev->curr) {
+							free(container_of(tbox));
+							free(container_of(bprev));
+							iprint(MSG_ERROR, "Failed to allocate cache for an interpolated box.\n");
+						} else {
+							obj_add(bprev);
+						}
 						bprev = NULL;
 					} else {
 						obj_add(tbox);

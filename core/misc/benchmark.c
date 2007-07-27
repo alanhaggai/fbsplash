@@ -21,14 +21,14 @@ int main(int argc, char **argv)
 	splashr_init(false);
 	theme = splashr_theme_load();
 
-	splashr_message_set("Bechmarking splashutils.. $progress%");
+	splashr_message_set(theme, "Bechmarking splashutils.. $progress%");
 
 	splash_set_silent();
 	splashr_tty_silent_init();
 	splashr_render_screen(theme, true, false, 's', EFF_NONE);
 
 	for (i = 0; i < 65536; i += 16) {
-		splashr_progress_set(i);
+		splashr_progress_set(theme, i);
 		splashr_render_screen(theme, false, false, 's', EFF_NONE);
 	}
 

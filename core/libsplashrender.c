@@ -218,6 +218,7 @@ stheme_t *splashr_theme_load()
 	/* Parse the config file. It will also load all mng files, so
 	 * we don't have to load them explicitly later. */
 	parse_cfg(buf, st);
+	invalidate_all(st);
 
 	/* Check for config file sanity for the given splash mode and
 	 * load background images and icons. */
@@ -252,15 +253,6 @@ void splashr_theme_free(stheme_t *theme)
 
 	for (i = theme->objs.head ; i != NULL; ) {
 		obj *o = (obj*)i->p;
-
-		if (o->type == o_box) {
-			box *b = (box*)o->p;
-
-			/* Free the cached interpolated box. */
-			if (b->curr)
-				free(b->curr);
-		}
-
 		j = i->next;
 		obj_free(o);
 		free(i);
@@ -370,12 +362,12 @@ int splashr_tty_silent_set(int tty)
 	return 0;
 }
 
-void splashr_message_set(char *msg)
+void splashr_message_set(stheme_t *theme, char *msg)
 {
 	splash_message_set(msg);
 }
 
-void splashr_progress_set(int progress)
+void splashr_progress_set(stheme_t *theme, int progress)
 {
 	if (progress < 0)
 		progress = 0;
@@ -384,4 +376,5 @@ void splashr_progress_set(int progress)
 		progress = PROGRESS_MAX;
 
 	config.progress = progress;
+	invalidate_progress(theme);
 }
