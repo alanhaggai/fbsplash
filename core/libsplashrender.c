@@ -262,7 +262,7 @@ void splashr_theme_free(stheme_t *theme)
 		}
 
 		j = i->next;
-		free(i->p);
+		free_obj(o);
 		free(i);
 		i = j;
 	}
