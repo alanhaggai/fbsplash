@@ -1,6 +1,8 @@
 # This is where object files go
 objs
 config.h
+misc/benchmark
+misc/splashtest
 
 libs/zlib-1.2.3/*.o
 libs/libpng-1.2.8/*.o
