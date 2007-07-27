@@ -322,8 +322,8 @@ int parse_svc_state(char *t, enum ESVC *state);
 int parse_cfg(char *cfgfile, stheme_t *st);
 
 /* render.c */
-void rgba2fb (struct fb_data *fbd, rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha);
-void put_pixel (struct fb_data *fbd, u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add);
+void rgba2fb(rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha);
+void put_pixel(u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add);
 void render_objs(stheme_t *theme, u8 *target, char mode, unsigned char origin);
 void prep_bgnds(stheme_t *theme, u8 *target, u8 *bgnd, char mode);
 
@@ -359,10 +359,13 @@ extern int arg_fb;
 extern char *arg_pidfile;
 
 extern int fd_fb;
-extern int fd_tty[MAX_NR_CONSOLES];
 extern int fd_tty0;
 extern int fd_fbsplash;
 extern sendian_t endianess;
 extern scfg_t config;
+
+/* libsplashrender */
+extern int fd_tty[MAX_NR_CONSOLES];
+extern struct fb_data fbd;
 
 #endif /* __UTIL_H */

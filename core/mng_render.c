@@ -219,7 +219,7 @@ int mng_display_buf(mng_handle mngh, stheme_t *theme, u8* bg, u8* dest, int x, i
 	src = (rgbacolor*)mng->canvas;
 
 	for (line = 0; line < dispheight; line++) {
-		rgba2fb(config.fbd, src, bg + (x * config.fbd->bytespp), dest + (x * config.fbd->bytespp), dispwidth, y + line, 1);
+		rgba2fb(src, bg + (x * fbd.bytespp), dest + (x * fbd.bytespp), dispwidth, y + line, 1);
 		dest += stride;
 		bg   += bgstride;
 		src  += mng->canvas_w;

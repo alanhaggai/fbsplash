@@ -89,64 +89,54 @@ tryopen:
 
 void* fb_mmap(int fb)
 {
-	return mmap(NULL, config.fbd->fix.line_length * config.fbd->var.yres,
+	return mmap(NULL, fbd.fix.line_length * fbd.var.yres,
 			PROT_WRITE | PROT_READ, MAP_SHARED, fb,
-			config.fbd->var.yoffset * config.fbd->fix.line_length);
+			fbd.var.yoffset * fbd.fix.line_length);
 }
 
 void fb_unmap(u8 *fb)
 {
-	munmap(fb, config.fbd->fix.line_length * config.fbd->var.yres);
+	munmap(fb, fbd.fix.line_length * fbd.var.yres);
 }
 
 int fb_get_settings(int fb)
 {
-	struct fb_data *fbd;
-
-	if (!config.fbd) {
-		config.fbd = calloc(1, sizeof(*fbd));
-		if (!config.fbd)
-			return -1;
-	}
-
-	fbd = config.fbd;
-
-	if (ioctl(fb, FBIOGET_VSCREENINFO, &fbd->var) == -1) {
+	if (ioctl(fb, FBIOGET_VSCREENINFO, &fbd.var) == -1) {
 		iprint(MSG_ERROR, "Failed to get fb_var info. (errno=%d)\n", errno);
 		return 2;
 	}
 
-	if (ioctl(fb, FBIOGET_FSCREENINFO, &fbd->fix) == -1) {
+	if (ioctl(fb, FBIOGET_FSCREENINFO, &fbd.fix) == -1) {
 		iprint(MSG_ERROR, "Failed to get fb_fix info. (errno=%d)\n", errno);
 		return 3;
 	}
 
-	fbd->bytespp = (fbd->var.bits_per_pixel + 7) >> 3;
+	fbd.bytespp = (fbd.var.bits_per_pixel + 7) >> 3;
 
 	/* Check if optimized code can be used. We use special optimizations for
 	 * 24/32bpp modes in which all color components have a length of 8 bits. */
-	if (fbd->bytespp < 3 || fbd->var.blue.length != 8 || fbd->var.green.length != 8 || fbd->var.red.length != 8) {
-		fbd->opt = false;
+	if (fbd.bytespp < 3 || fbd.var.blue.length != 8 || fbd.var.green.length != 8 || fbd.var.red.length != 8) {
+		fbd.opt = false;
 
-		if (fbd->fix.visual == FB_VISUAL_DIRECTCOLOR) {
-			fbd->blen = fbd->glen = fbd->rlen = min(min(fbd->var.red.length, fbd->var.green.length),fbd->var.blue.length);
+		if (fbd.fix.visual == FB_VISUAL_DIRECTCOLOR) {
+			fbd.blen = fbd.glen = fbd.rlen = min(min(fbd.var.red.length, fbd.var.green.length),fbd.var.blue.length);
 		} else {
-			fbd->rlen = fbd->var.red.length;
-			fbd->glen = fbd->var.green.length;
-			fbd->blen = fbd->var.blue.length;
+			fbd.rlen = fbd.var.red.length;
+			fbd.glen = fbd.var.green.length;
+			fbd.blen = fbd.var.blue.length;
 		}
 	} else {
-		fbd->opt = true;
+		fbd.opt = true;
 
 		/* Compute component offsets (ie. indexes in an array of u8's) */
-		fbd->ro = (fbd->var.red.offset >> 3);
-		fbd->go = (fbd->var.green.offset >> 3);
-		fbd->bo = (fbd->var.blue.offset >> 3);
+		fbd.ro = (fbd.var.red.offset >> 3);
+		fbd.go = (fbd.var.green.offset >> 3);
+		fbd.bo = (fbd.var.blue.offset >> 3);
 
 		if (endianess == big) {
-			fbd->ro = fbd->bytespp - 1 - fbd->ro;
-			fbd->go = fbd->bytespp - 1 - fbd->go;
-			fbd->bo = fbd->bytespp - 1 - fbd->bo;
+			fbd.ro = fbd.bytespp - 1 - fbd.ro;
+			fbd.go = fbd.bytespp - 1 - fbd.go;
+			fbd.bo = fbd.bytespp - 1 - fbd.bo;
 		}
 	}
 
@@ -155,32 +145,28 @@ int fb_get_settings(int fb)
 
 int cfg_check_sanity(stheme_t *theme, u8 mode)
 {
-	struct fb_data *fbd = config.fbd;
 	char *pic;
-
-	if (!fbd)
-		return -1;
 
 	/* Verbose mode needs a config file for the exact video mode that is
 	 * currently in use. */
-	if (mode == 'v' && (fbd->var.xres != theme->xres || fbd->var.yres != theme->yres))
+	if (mode == 'v' && (fbd.var.xres != theme->xres || fbd.var.yres != theme->yres))
 		return -1;
 
 	/* If the user specified invalid values for the text field - correct it.
 	 * Also setup default values (text field covering the whole screen). */
-	if (theme->tx > fbd->var.xres)
+	if (theme->tx > fbd.var.xres)
 		theme->tx = 0;
 
-	if (theme->ty > fbd->var.yres)
+	if (theme->ty > fbd.var.yres)
 		theme->ty = 0;
 
-	if (theme->tw > fbd->var.xres || theme->tw == 0)
-		theme->tw = fbd->var.xres;
+	if (theme->tw > fbd.var.xres || theme->tw == 0)
+		theme->tw = fbd.var.xres;
 
-	if (theme->th > fbd->var.yres || theme->th == 0)
-		theme->th = fbd->var.yres;
+	if (theme->th > fbd.var.yres || theme->th == 0)
+		theme->th = fbd.var.yres;
 
-	if (fbd->var.bits_per_pixel == 8) {
+	if (fbd.var.bits_per_pixel == 8) {
 		pic = (mode == 'v') ? theme->pic256 : theme->silentpic256;
 
 		if (!pic) {

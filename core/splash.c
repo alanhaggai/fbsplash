@@ -247,8 +247,8 @@ int main(int argc, char **argv)
 	switch (arg_task) {
 	case getres:
 	{
-		int xres = config.fbd->var.xres;
-		int yres = config.fbd->var.yres;
+		int xres = fbd.var.xres;
+		int yres = fbd.var.yres;
 		splash_get_res(config.theme, &xres, &yres);
 		printf("%dx%d\n", xres, yres);
 		return 0;

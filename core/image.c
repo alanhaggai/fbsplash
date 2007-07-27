@@ -39,7 +39,7 @@ static int load_png(stheme_t *theme, char *filename, u8 **data, struct fb_cmap *
 	png_bytep	row_pointer;
 	png_colorp	palette;
 	int			rowbytes, num_palette;
-	int			i, j, bytespp = config.fbd->bytespp;
+	int			i, j, bytespp = fbd.bytespp;
 	u8 *buf = NULL;
 	u8 *t;
 
@@ -100,7 +100,7 @@ static int load_png(stheme_t *theme, char *filename, u8 **data, struct fb_cmap *
 		*height = info_ptr->height;
 	}
 
-	*data = malloc(theme->xres * theme->yres * config.fbd->bytespp);
+	*data = malloc(theme->xres * theme->yres * fbd.bytespp);
 	if (!*data) {
 		iprint(MSG_CRITICAL, "Failed to allocate memory for image: %s.\n", filename);
 		return -4;
@@ -139,7 +139,7 @@ static int load_png(stheme_t *theme, char *filename, u8 **data, struct fb_cmap *
 		/* We only need to convert the image if the alpha channel is not required */
 		} else if (!want_alpha) {
 			u8 *tmp = *data + info_ptr->width * bytespp * i;
-			rgba2fb(config.fbd, (rgbacolor*)buf, tmp, tmp, info_ptr->width, i, 0);
+			rgba2fb((rgbacolor*)buf, tmp, tmp, info_ptr->width, i, 0);
 		}
 	}
 
@@ -207,7 +207,7 @@ static int load_jpeg(char *filename, u8 **data, unsigned int *width, unsigned in
 		return -1;
 	}
 
-	*data = malloc(cinfo.output_width * cinfo.output_height * config.fbd->bytespp);
+	*data = malloc(cinfo.output_width * cinfo.output_height * fbd.bytespp);
 	if (!*data) {
 		iprint(MSG_ERROR, "Failed to allocate memory for image: %s.\n", filename);
 		return -4;
@@ -216,8 +216,8 @@ static int load_jpeg(char *filename, u8 **data, unsigned int *width, unsigned in
 	for (i = 0; i < cinfo.output_height; i++) {
 		u8 *tmp;
 		jpeg_read_scanlines(&cinfo, (JSAMPARRAY) &buf, 1);
-		tmp = *data + cinfo.output_width * config.fbd->bytespp * i;
-		rgba2fb(config.fbd, (rgbacolor*)buf, tmp, tmp, cinfo.output_width, i, 0);
+		tmp = *data + cinfo.output_width * fbd.bytespp * i;
+		rgba2fb((rgbacolor*)buf, tmp, tmp, cinfo.output_width, i, 0);
 	}
 
 	jpeg_finish_decompress(&cinfo);
@@ -236,11 +236,11 @@ static int load_bg_images(stheme_t *theme, char mode)
 
 	img->width = theme->xres;
 	img->height = theme->yres;
-	img->depth = config.fbd->var.bits_per_pixel;
+	img->depth = fbd.var.bits_per_pixel;
 
 	/* Deal with 8bpp modes. Only PNGs can be loaded, and pic256
 	 * option has to be used to specify the filename of the image */
-	if (config.fbd->var.bits_per_pixel == 8) {
+	if (fbd.var.bits_per_pixel == 8) {
 		pic = (mode == 'v') ? theme->pic256 : theme->silentpic256;
 
 		if (!pic)

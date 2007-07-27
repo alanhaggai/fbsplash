@@ -453,7 +453,7 @@ static void TTF_RenderUNICODE_Shaded(stheme_t *theme, u8 *target, const unsigned
 		current = &glyph->pixmap;
 		for(row = 0; row < ((font->style & TTF_STYLE_UNDERLINE) ? height-glyph->yoffset : current->rows); ++row) {
 			int add;
-			u8 *memlimit = target + theme->xres * theme->yres * config.fbd->bytespp;
+			u8 *memlimit = target + theme->xres * theme->yres * fbd.bytespp;
 
 			/* Sanity checks.. */
 			i = y + row + glyph->yoffset;
@@ -469,7 +469,7 @@ static void TTF_RenderUNICODE_Shaded(stheme_t *theme, u8 *target, const unsigned
 				j -= glyph->minx;
 			}
 
-			dst = (unsigned char *)target + (i * theme->xres + j) * config.fbd->bytespp;
+			dst = (unsigned char *)target + (i * theme->xres + j) * fbd.bytespp;
 			src = current->buffer + row*current->pitch;
 
 			add = x & 1;
@@ -482,7 +482,7 @@ static void TTF_RenderUNICODE_Shaded(stheme_t *theme, u8 *target, const unsigned
 				if (col + j >= theme->xres-1)
 					continue;
 
-				if (dst + config.fbd->bytespp-1 > memlimit)
+				if (dst + fbd.bytespp-1 > memlimit)
 					break;
 
 				if (row < current->rows && col < current->width && col >= 0)
@@ -496,8 +496,8 @@ static void TTF_RenderUNICODE_Shaded(stheme_t *theme, u8 *target, const unsigned
 					val = NUM_GRAYS-1;
 				}
 
-				put_pixel(config.fbd, fcol.a*val/255, fcol.r, fcol.g, fcol.b, dst, dst, add);
-				dst += config.fbd->bytespp;
+				put_pixel(fcol.a*val/255, fcol.r, fcol.g, fcol.b, dst, dst, add);
+				dst += fbd.bytespp;
 				add ^= 3;
 			}
 		}

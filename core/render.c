@@ -29,44 +29,44 @@
 #include <fcntl.h>
 #include "util.h"
 
-void put_pixel (struct fb_data *fbd, u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add)
+void put_pixel(u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add)
 {
 	/* Can we use optimized code for 24/32bpp modes? */
-	if (fbd->opt) {
+	if (fbd.opt) {
 		if (a == 0) {
-			dst[fbd->ro] = src[fbd->ro];
-			dst[fbd->go] = src[fbd->go];
-			dst[fbd->bo] = src[fbd->bo];
+			dst[fbd.ro] = src[fbd.ro];
+			dst[fbd.go] = src[fbd.go];
+			dst[fbd.bo] = src[fbd.bo];
 		} else if (a == 255) {
-			dst[fbd->ro] = r;
-			dst[fbd->go] = g;
-			dst[fbd->bo] = b;
+			dst[fbd.ro] = r;
+			dst[fbd.go] = g;
+			dst[fbd.bo] = b;
 		} else {
-			dst[fbd->ro] = (src[fbd->ro]*(255-a) + r*a) / 255;
-			dst[fbd->go] = (src[fbd->go]*(255-a) + g*a) / 255;
-			dst[fbd->bo] = (src[fbd->bo]*(255-a) + b*a) / 255;
+			dst[fbd.ro] = (src[fbd.ro]*(255-a) + r*a) / 255;
+			dst[fbd.go] = (src[fbd.go]*(255-a) + g*a) / 255;
+			dst[fbd.bo] = (src[fbd.bo]*(255-a) + b*a) / 255;
 		}
 	} else {
 		u32 i;
 		u8 tr, tg, tb;
 
 		if (a != 255) {
-			if (fbd->var.bits_per_pixel == 16) {
+			if (fbd.var.bits_per_pixel == 16) {
 				i = *(u16*)src;
-			} else if (fbd->var.bits_per_pixel == 24) {
+			} else if (fbd.var.bits_per_pixel == 24) {
 				i = *(u32*)src & 0xffffff;
-			} else if (fbd->var.bits_per_pixel == 32) {
+			} else if (fbd.var.bits_per_pixel == 32) {
 				i = *(u32*)src;
 			} else {
-				i = *(u32*)src & ((2 << fbd->var.bits_per_pixel)-1);
+				i = *(u32*)src & ((2 << fbd.var.bits_per_pixel)-1);
 			}
 
-			tr = (( (i >> fbd->var.red.offset & ((1 << fbd->rlen)-1))
-			      << (8 - fbd->rlen)) * (255 - a) + r * a) / 255;
-			tg = (( (i >> fbd->var.green.offset & ((1 << fbd->glen)-1))
-			      << (8 - fbd->glen)) * (255 - a) + g * a) / 255;
-			tb = (( (i >> fbd->var.blue.offset & ((1 << fbd->blen)-1))
-			      << (8 - fbd->blen)) * (255 - a) + b * a) / 255;
+			tr = (( (i >> fbd.var.red.offset & ((1 << fbd.rlen)-1))
+			      << (8 - fbd.rlen)) * (255 - a) + r * a) / 255;
+			tg = (( (i >> fbd.var.green.offset & ((1 << fbd.glen)-1))
+			      << (8 - fbd.glen)) * (255 - a) + g * a) / 255;
+			tb = (( (i >> fbd.var.blue.offset & ((1 << fbd.blen)-1))
+			      << (8 - fbd.blen)) * (255 - a) + b * a) / 255;
 		} else {
 			tr = r;
 			tg = g;
@@ -74,23 +74,23 @@ void put_pixel (struct fb_data *fbd, u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u
 		}
 
 		/* We only need to do dithering if depth is <24bpp */
-		if (fbd->var.bits_per_pixel < 24) {
+		if (fbd.var.bits_per_pixel < 24) {
 			tr = CLAMP(tr + add*2 + 1);
 			tg = CLAMP(tg + add);
 			tb = CLAMP(tb + add*2 + 1);
 		}
 
-		tr >>= (8 - fbd->rlen);
-		tg >>= (8 - fbd->glen);
-		tb >>= (8 - fbd->blen);
+		tr >>= (8 - fbd.rlen);
+		tg >>= (8 - fbd.glen);
+		tb >>= (8 - fbd.blen);
 
-		i = (tr << fbd->var.red.offset) |
-		    (tg << fbd->var.green.offset) |
-		    (tb << fbd->var.blue.offset);
+		i = (tr << fbd.var.red.offset) |
+		    (tg << fbd.var.green.offset) |
+		    (tb << fbd.var.blue.offset);
 
-		if (fbd->var.bits_per_pixel == 16) {
+		if (fbd.var.bits_per_pixel == 16) {
 			*(u16*)dst = i;
-		} else if (fbd->var.bits_per_pixel == 24) {
+		} else if (fbd.var.bits_per_pixel == 24) {
 			if (endianess == little) {
 				*(u16*)dst = i & 0xffff;
 				dst[2] = (i >> 16) & 0xff;
@@ -98,14 +98,14 @@ void put_pixel (struct fb_data *fbd, u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u
 				*(u16*)dst = (i >> 8) & 0xffff;
 				dst[2] = i & 0xff;
 			}
-		} else if (fbd->var.bits_per_pixel == 32) {
+		} else if (fbd.var.bits_per_pixel == 32) {
 			*(u32*)dst = i;
 		}
 	}
 }
 
 /* Converts a RGBA/RGB image to whatever format the framebuffer uses */
-void rgba2fb (struct fb_data *fbd, rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha)
+void rgba2fb(rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha)
 {
 	int i, add = 0;
 	rgbcolor* rgb = (rgbcolor*)data;
@@ -114,15 +114,15 @@ void rgba2fb (struct fb_data *fbd, rgbacolor* data, u8 *bg, u8* out, int len, in
 
 	for (i = 0; i < len; i++) {
 		if (alpha) {
-			put_pixel(fbd, data->a, data->r, data->g, data->b, bg, out, add);
+			put_pixel(data->a, data->r, data->g, data->b, bg, out, add);
 			data++;
 		} else {
-			put_pixel(fbd, 255, rgb->r, rgb->g, rgb->b, bg, out, add);
+			put_pixel(255, rgb->r, rgb->g, rgb->b, bg, out, add);
 			rgb++;
 		}
 
-		out += fbd->bytespp;
-		bg += fbd->bytespp;
+		out += fbd.bytespp;
+		bg += fbd.bytespp;
 		add ^= 3;
 	}
 }
@@ -154,9 +154,9 @@ static void render_icon(stheme_t *theme, icon *ticon, u8 *target)
 	}
 
 	for (y = ticon->y + yi; yi < hi; yi++, y++) {
-		out = target + (ticon->x + xi + y * theme->xres) * config.fbd->bytespp;
+		out = target + (ticon->x + xi + y * theme->xres) * fbd.bytespp;
 		in = ticon->img->picbuf + (xi + yi * ticon->img->w) * 4;
-		rgba2fb(config.fbd, (rgbacolor*)in, out, out, wi, y, 1);
+		rgba2fb((rgbacolor*)in, out, out, wi, y, 1);
 	}
 }
 
@@ -183,7 +183,7 @@ static void render_box(stheme_t *theme, box *box, u8 *target)
 		u8  opt = 0;
 		float hr, hg, hb, ha, fr, fg, fb, fa;
 
-		pic = target + (box->x1 + y * theme->xres) * config.fbd->bytespp;
+		pic = target + (box->x1 + y * theme->xres) * fbd.bytespp;
 
 		/* Do a nice 2x2 ordered dithering, like it was done in bootsplash;
 		 * this makes the pics in 15/16bpp modes look much nicer;
@@ -254,8 +254,8 @@ static void render_box(stheme_t *theme, box *box, u8 *target)
 				r = (u8)fr;
 			}
 
-			put_pixel(config.fbd, a, r, g, b, pic, pic, add);
-			pic += config.fbd->bytespp;
+			put_pixel(a, r, g, b, pic, pic, add);
+			pic += fbd.bytespp;
 			add ^= 3;
 		}
 	}
@@ -409,10 +409,10 @@ static void prep_bgnd(stheme_t *theme, u8 *target, u8 *src, int x, int y, int w,
 	if (y + h > theme->yres)
 		h = theme->yres - y;
 
-	t = target + (y * theme->xres + x) * config.fbd->bytespp;
-	s = src    + (y * theme->xres + x) * config.fbd->bytespp;
-	j = w * config.fbd->bytespp;
-	i = theme->xres * config.fbd->bytespp;
+	t = target + (y * theme->xres + x) * fbd.bytespp;
+	s = src    + (y * theme->xres + x) * fbd.bytespp;
+	j = w * fbd.bytespp;
+	i = theme->xres * fbd.bytespp;
 
 	for (y = 0; y < h; y++) {
 		memcpy(t, s, j);
@@ -571,7 +571,7 @@ void render_objs(stheme_t *theme, u8 *target, char mode, unsigned char origin)
 			}
 
 			if (render_it && (a->flags & F_ANIM_DISPLAY)) {
-				mng_display_buf(a->mng, theme, target, target, a->x, a->y, theme->xres * config.fbd->bytespp, theme->xres * config.fbd->bytespp);
+				mng_display_buf(a->mng, theme, target, target, a->x, a->y, theme->xres * fbd.bytespp, theme->xres * fbd.bytespp);
 			}
 		}
 #endif /* CONFIG_MNG */

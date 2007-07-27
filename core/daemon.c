@@ -84,7 +84,7 @@ void anim_render_frame(anim *a)
 
 	if ((ret == MNG_NOERROR || ret == MNG_NEEDTIMERWAIT) && ctty == CTTY_SILENT) {
 		mng_display_buf(a->mng, theme, theme->bgbuf, fb_mem, a->x, a->y,
-				config.fbd->fix.line_length, config.fbd->var.xres * config.fbd->bytespp);
+				fbd.fix.line_length, fbd.var.xres * fbd.bytespp);
 	}
 }
 
@@ -237,8 +237,8 @@ void switch_silent()
 	struct fb_var_screeninfo old_var;
 	struct fb_fix_screeninfo old_fix;
 
-	old_fix = config.fbd->fix;
-	old_var = config.fbd->var;
+	old_fix = fbd.fix;
+	old_var = fbd.var;
 
 	fb_get_settings(fd_fb);
 
@@ -247,18 +247,18 @@ void switch_silent()
 		ioctl(fd_tty[config.tty_s], KDSETMODE, KD_GRAPHICS);
 
 	/* Update CMAP if we're in a DIRECTCOLOR mode. */
-	if (config.fbd->fix.visual == FB_VISUAL_DIRECTCOLOR)
+	if (fbd.fix.visual == FB_VISUAL_DIRECTCOLOR)
 		set_directcolor_cmap(fd_fb);
 
-	old_var.yoffset = config.fbd->var.yoffset;
-	old_var.xoffset = config.fbd->var.xoffset;
+	old_var.yoffset = fbd.var.yoffset;
+	old_var.xoffset = fbd.var.xoffset;
 
 	/*
 	 * Has the video mode changed? If it has, we'll have to reload
 	 * the theme.
 	 */
-	if (memcmp(&config.fbd->fix, &old_fix, sizeof(struct fb_fix_screeninfo)) ||
-	    memcmp(&config.fbd->var, &old_var, sizeof(struct fb_var_screeninfo))) {
+	if (memcmp(&fbd.fix, &old_fix, sizeof(struct fb_fix_screeninfo)) ||
+	    memcmp(&fbd.var, &old_var, sizeof(struct fb_var_screeninfo))) {
 
 		pthread_mutex_lock(&mtx_paint);
 

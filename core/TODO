@@ -9,7 +9,6 @@ Fixes
   in a more sensible way
 - handle DIRECTCOLOR modes in libsplashrender
 - handle KDGRAPHICS in libsplashrender (?)
-- remove fbd from config
 
 Clenanups
 =========

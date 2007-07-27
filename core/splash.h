@@ -88,8 +88,6 @@ typedef struct
 	bool minstances;	/* allow multiple instances of the splash daemon? */
 	int progress;		/* current value of progress */
 	char verbosity;		/* verbosity level */
-
-	struct fb_data* fbd;
 } scfg_t;
 
 scfg_t* splash_lib_init(stype_t type);

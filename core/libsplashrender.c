@@ -17,7 +17,7 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <termios.h>
-#
+
 #if !defined(MNT_DETACH)
 	#define MNT_DETACH 2
 #endif
@@ -42,6 +42,7 @@ static int fb = -1;
 int fd_fb = -1;
 u8 *fb_mem = NULL;
 int fd_tty[MAX_NR_CONSOLES];
+struct fb_data fbd;
 
 #ifdef CONFIG_FBSPLASH
 int fd_fbsplash = -1;
@@ -125,11 +126,6 @@ void splash_render_cleanup()
 		}
 	}
 
-	if (config.fbd) {
-		free(config.fbd);
-		config.fbd = NULL;
-	}
-
 #ifdef CONFIG_FBSPLASH
 	if (fd_fbsplash != -1) {
 		close(fd_fbsplash);
@@ -149,7 +145,7 @@ int splash_render_buf(stheme_t *theme, void *buffer, bool repaint, char mode)
 	u8 *img;
 
 	/* FIXME: 8bpp modes aren't supported yet */
-	if (config.fbd->var.bits_per_pixel == 8)
+	if (fbd.var.bits_per_pixel == 8)
 		return 0;
 
 	if (mode == 'v') {
@@ -165,7 +161,7 @@ int splash_render_buf(stheme_t *theme, void *buffer, bool repaint, char mode)
 	}
 
 	if (repaint) {
-		memcpy(buffer, img, theme->xres * theme->yres * config.fbd->bytespp);
+		memcpy(buffer, img, theme->xres * theme->yres * fbd.bytespp);
 	} else {
 		prep_bgnds(theme, buffer, img, mode);
 	}
@@ -183,7 +179,7 @@ int splash_render_screen(stheme_t *theme, bool repaint, bool bgnd, char mode, ch
 			} else if (effects & EFF_FADEOUT) {
 				fade(theme, fb_mem, theme->bgbuf, theme->silent_img.cmap, bgnd ? 1 : 0, fd_fb, 1);
 			} else {
-				if (config.fbd->fix.visual == FB_VISUAL_DIRECTCOLOR)
+				if (fbd.fix.visual == FB_VISUAL_DIRECTCOLOR)
 					set_directcolor_cmap(fd_fb);
 
 				put_img(theme, fb_mem, theme->bgbuf);
@@ -210,14 +206,14 @@ stheme_t *splash_theme_load()
 		return NULL;
 
 	st->modes = MODE_SILENT | MODE_VERBOSE;
-	st->xres = config.fbd->var.xres;
-	st->yres = config.fbd->var.yres;
+	st->xres = fbd.var.xres;
+	st->yres = fbd.var.yres;
 
 	splash_get_res(config.theme, &st->xres, &st->yres);
 	snprintf(buf, 512, THEME_DIR "/%s/%dx%d.cfg", config.theme, st->xres, st->yres);
 
-	st->xmarg = (config.fbd->var.xres - st->xres) / 2;
-	st->ymarg = (config.fbd->var.yres - st->yres) / 2;
+	st->xmarg = (fbd.var.xres - st->xres) / 2;
+	st->ymarg = (fbd.var.yres - st->yres) / 2;
 
 	/* Parse the config file. It will also load all mng files, so
 	 * we don't have to load them explicitly later. */
@@ -241,7 +237,7 @@ stheme_t *splash_theme_load()
 	load_fonts(st);
 #endif
 
-	st->bgbuf = malloc(st->xres * st->yres * config.fbd->bytespp);
+	st->bgbuf = malloc(st->xres * st->yres * fbd.bytespp);
 	return st;
 }
 
