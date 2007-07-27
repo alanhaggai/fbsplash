@@ -370,14 +370,24 @@ int parse_svc_state(char *t, enum ESVC *state)
 	return 0;
 }
 
+void obj_add(void *x) {
+	obj *o = container_of(x);
+
+	if (tmptheme.objs.tail)
+		o->id = ((obj*)(tmptheme.objs.tail->p))->id + 1;
+	else
+		o->id =0;
+
+	list_add(&tmptheme.objs, o);
+}
+
 static void parse_icon(char *t)
 {
 	char *filename = NULL;
 	char *p;
-	icon *cic = malloc(sizeof(icon));
+	icon *cic = obj_alloc(icon);
 	icon_img *cim;
 	item *ti;
-	obj *cobj;
 	int i;
 
 	if (!cic) {
@@ -530,15 +540,7 @@ static void parse_icon(char *t)
 	cic->img = cim;
 
 pi_end:
-	cobj = malloc(sizeof(obj));
-	if (!cobj) {
-pi_outm:	iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
-		goto pi_out;
-	}
-	cobj->type = o_icon;
-	cobj->p = cic;
-
-	list_add(&tmptheme.objs, cobj);
+	obj_add(cic);
 	return;
 
 pi_err:
@@ -549,6 +551,9 @@ pi_out:
 		free(cic->svc);
 	free(cic);
 	return;
+pi_outm:
+	iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
+	goto pi_out;
 }
 
 static void parse_rect(char *t)
@@ -617,8 +622,7 @@ static void parse_anim(char *t)
 {
 	char *p;
 	char *filename;
-	obj *cobj = NULL;
-	anim *canim = malloc(sizeof(anim));
+	anim *canim = obj_alloc(anim);
 	int i;
 
 	if (!canim) {
@@ -724,15 +728,9 @@ static void parse_anim(char *t)
 
 	free(filename);
 
-	cobj = malloc(sizeof(obj));
-	if (!cobj) {
-		iprint(MSG_ERROR, "%s: failed to allocate memory for cobj\n", __func__);
-		goto pa_out;
-	}
-	cobj->type = o_anim;
-	cobj->p = canim;
-	list_add(&tmptheme.objs, cobj);
 	list_add(&tmptheme.anims, canim);
+	obj_add(canim);
+		goto pa_err;
 	return;
 pa_err:
 pa_out:
@@ -745,8 +743,7 @@ static void parse_box(char *t)
 {
 	char *p;
 	int ret;
-	box *cbox = malloc(sizeof(box));
-	obj *cobj = NULL;
+	box *cbox = obj_alloc(box);
 
 	if (!cbox)
 		return;
@@ -853,16 +850,7 @@ static void parse_box(char *t)
 		goto pb_err;
 	}
 pb_end:
-	cobj = malloc(sizeof(obj));
-	if (!cobj) {
-		free(cbox);
-		iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
-		return;
-	}
-	cobj->type = o_box;
-	cobj->p = cbox;
-
-	list_add(&tmptheme.objs, cobj);
+	obj_add(cbox);
 	return;
 
 pb_err:
@@ -922,8 +910,7 @@ static void parse_text(char *t)
 {
 	char *p, *fontname = NULL, *fpath = NULL;
 	int ret, fontsize;
-	text *ct = malloc(sizeof(text));
-	obj *cobj = NULL;
+	text *ct = obj_alloc(text);
 	item *ti;
 	font_e *fe;
 
@@ -1103,7 +1090,7 @@ again:
 	fe = malloc(sizeof(font_e));
 	if (!fe) {
 		iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
-		goto pt_outm;
+		goto pt_err;
 	}
 	fe->file = fpath;
 	fe->size = fontsize;
@@ -1112,19 +1099,12 @@ again:
 	list_add(&tmptheme.fonts, fe);
 	ct->font = fe;
 
-pt_end:	cobj = malloc(sizeof(obj));
-	if (!cobj) {
-pt_outm:
-		iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
-		goto pt_out;
-	}
-	cobj->type = o_text;
-	cobj->p = ct;
-	list_add(&tmptheme.objs, cobj);
+pt_end:
+	obj_add(ct);
 	return;
 
 pt_err:
-pt_out:	free(ct);
+	free(ct);
 	if (fpath)
 		free(fpath);
 	return;

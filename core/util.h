@@ -99,25 +99,25 @@ typedef struct item {
 } item;
 
 typedef struct {
-	item *head, *tail; 
+	item *head, *tail;
 } list;
 
 #define list_init(list)		{ list.head = list.tail = NULL; }
 
 /* ************************************************************************
- * 				Enums
+ *				Enums
  * ************************************************************************ */
 
-enum TASK { getres, setpic, init, on, off, setcfg, getcfg, getstate, none, paint, 
+enum TASK { getres, setpic, init, on, off, setcfg, getcfg, getstate, none, paint,
 	    setmode, getmode, repaint, start_daemon };
-enum ESVC { e_display, e_svc_inact_start, e_svc_inact_stop, e_svc_start, 
-	    e_svc_started, e_svc_stop, e_svc_stopped, e_svc_stop_failed, 
+enum ESVC { e_display, e_svc_inact_start, e_svc_inact_stop, e_svc_start,
+	    e_svc_started, e_svc_stop, e_svc_stopped, e_svc_stop_failed,
 	    e_svc_start_failed };
 
 /* ************************************************************************
- * 				Structures
+ *				Structures
  * ************************************************************************ */
-
+enum otype { o_box, o_icon, o_text, o_anim };
 typedef struct {
 	char *filename;
 	unsigned int w, h;
@@ -138,9 +138,12 @@ typedef struct {
 	rect crop_from, crop_to;
 } icon;
 
-typedef struct obj {
-	enum { o_box, o_icon, o_text, o_anim } type;
-	void *p;
+typedef struct {
+	int id;					/* monotonically increased ID */
+	enum otype type;		/* object type */
+	void *p;				/* pointer to the type-specific data */
+	rect bnd;				/* bounding rectangle */
+	u8 *bgcache;			/* bgnd cache, directly from the bg picture if NULL */
 } obj;
 
 typedef struct color {
@@ -318,6 +321,17 @@ void* fb_mmap(int fb);
 int tty_open(int tty);
 
 /* parse.c */
+#define obj_alloc(__type) ({							\
+	u8* __mptr = malloc(sizeof(obj) + sizeof(__type));	\
+	(__mptr) ? ({										\
+		((obj*)__mptr)->p = __mptr + sizeof(obj);		\
+		((obj*)__mptr)->type = o_##__type;				\
+		(__type*)(__mptr + sizeof(obj));				\
+		}) : NULL; })
+
+#define container_of(x) (obj*)((u8*)(x) - sizeof(obj))
+
+
 int parse_svc_state(char *t, enum ESVC *state);
 int parse_cfg(char *cfgfile, stheme_t *st);
 
@@ -351,6 +365,10 @@ void put_img(stheme_t *theme, u8 *dst, u8 *src);
 void paint_img(stheme_t *theme, u8 *dst, u8 *src);
 void fade(stheme_t *theme, u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd, char type);
 void set_directcolor_cmap(int fd);
+
+
+/* tiles.c */
+void obj_free(obj *o);
 
 /* common.c */
 
