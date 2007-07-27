@@ -37,6 +37,8 @@
 	#include <einfo.h>
 #endif
 
+static int fd_fb0 = -1;
+static int fb = -1;
 int fd_fb = -1;
 u8 *fb_mem = NULL;
 int fd_tty[MAX_NR_CONSOLES];
@@ -44,6 +46,43 @@ int fd_tty[MAX_NR_CONSOLES];
 #ifdef CONFIG_FBSPLASH
 int fd_fbsplash = -1;
 #endif
+
+static int fb_init(int tty, bool create)
+{
+	struct fb_con2fbmap con2fb;
+
+	con2fb.console = config.tty_s;
+	con2fb.framebuffer = 0;
+
+	ioctl(fd_fb0, FBIOGET_CON2FBMAP, &con2fb);
+
+	if (con2fb.framebuffer == fb)
+		return 0;
+
+	fb = con2fb.framebuffer;
+	if (fd_fb != -1) {
+		close(fd_fb);
+		fd_fb = -1;
+	}
+
+	fd_fb = fb_open(fb, create);
+	if (fd_fb < 0)
+		return -1;
+
+	if (fb_get_settings(fd_fb))
+		return -1;
+
+	if (fb_mem) {
+		fb_unmap(fb_mem);
+		fb_mem = NULL;
+	}
+
+	fb_mem = fb_mmap(fd_fb);
+	if (!fb_mem)
+		return -1;
+
+	return 0;
+}
 
 int splash_render_init(bool create)
 {
@@ -53,22 +92,17 @@ int splash_render_init(bool create)
 
 	memset(fd_tty, -1, sizeof(fd_tty));
 
-	/* FIXME: don't force fb to be 0 */
-	fd_fb = fb_open(0, create);
-	if (fd_fb < 0)
+	fd_fb0 = fb_open(0, create);
+	if (fd_fb0 < 0)
 		return -1;
 
-	if (fb_get_settings(fd_fb))
-		return -1;
-
-	fb_mem = fb_mmap(fd_fb);
-	if (!fb_mem)
-		return -1;
+	if (fb_init(config.tty_s, create))
+		return -2;
 
 #ifdef WANT_TTF
 	if (TTF_Init() < 0) {
 		eerror("Couldn't initialize TTF.");
-		return -1;
+		return -3;
 	}
 #endif
 	return 0;
@@ -185,6 +219,8 @@ stheme_t *splash_theme_load()
 	st->xmarg = (config.fbd->var.xres - st->xres) / 2;
 	st->ymarg = (config.fbd->var.yres - st->yres) / 2;
 
+	/* Parse the config file. It will also load all mng files, so
+	 * we don't have to load them explicitly later. */
 	parse_cfg(buf, st);
 
 	/* Check for config file sanity for the given splash mode and
@@ -200,8 +236,6 @@ stheme_t *splash_theme_load()
 		st->modes &= ~MODE_SILENT;
 	else
 		load_images(st, 's');
-
-	/* FIXME: also load anims here */
 
 #if WANT_TTF
 	load_fonts(st);
@@ -324,3 +358,18 @@ int splash_tty_silent_cleanup()
 	return 0;
 }
 
+int splash_tty_silent_set(int tty)
+{
+	if (tty < 0 || tty > MAX_NR_CONSOLES)
+		return -1;
+
+	if (fd_tty[tty] == -1)
+		fd_tty[tty] = tty_open(tty);
+
+	if (fb_init(tty, false))
+		return -1;
+
+	config.tty_s = tty;
+
+	return 0;
+}

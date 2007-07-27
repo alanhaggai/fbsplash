@@ -121,5 +121,6 @@ struct stheme *splash_theme_load();
 void splash_theme_free(struct stheme *theme);
 int splash_tty_silent_init();
 int splash_tty_silent_cleanup();
+int splash_tty_silent_set(int);
 
 #endif /* __SPLASH_H */

@@ -240,7 +240,6 @@ void switch_silent()
 	old_fix = config.fbd->fix;
 	old_var = config.fbd->var;
 
-	/* FIXME: we should use the vc<->fb map here */
 	fb_get_settings(fd_fb);
 
 	/* Set KD_GRAPHICS if necessary. */
@@ -441,7 +440,7 @@ void switchmon_start(int update, int stty)
 	if (update & UPD_SILENT) {
 		if (config.tty_s != stty) {
 			vt_silent_cleanup();
-			config.tty_s = stty;
+			splash_tty_silent_set(stty);
 		}
 		vt_silent_init();
 	}
