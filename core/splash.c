@@ -127,7 +127,7 @@ int main(int argc, char **argv)
 	stheme_t *theme = NULL;
 
 	splash_lib_init(bootup);
-	splash_render_init(false);
+	splashr_init(false);
 
 	arg_task = none;
 	arg_vc = -1;
@@ -262,7 +262,7 @@ int main(int argc, char **argv)
 	case paint:
 	case repaint:
 #endif
-		theme = splash_theme_load();
+		theme = splashr_theme_load();
 	default:
 		break;
 	}
@@ -279,10 +279,10 @@ int main(int argc, char **argv)
 
 	case setmode:
 		if (config.reqmode == 's') {
-			splash_tty_silent_init();
+			splashr_tty_silent_init();
 			splash_set_silent();
 		} else {
-			splash_tty_silent_cleanup();
+			splashr_tty_silent_cleanup();
 			splash_set_verbose();
 		}
 		break;
@@ -332,11 +332,11 @@ setpic_out:	break;
 #ifdef CONFIG_DEPRECATED
 	/* Deprecated. The daemon mode should be used instead. */
 	case paint:
-		splash_render_screen(theme, false, false, 's', EFF_NONE);
+		splashr_render_screen(theme, false, false, 's', EFF_NONE);
 		break;
 
 	case repaint:
-		splash_render_screen(theme, true, false, 's', EFF_NONE);
+		splashr_render_screen(theme, true, false, 's', EFF_NONE);
 		break;
 #endif /* CONFIG_DEPRECATED */
 
@@ -344,8 +344,8 @@ setpic_out:	break;
 		break;
 	}
 
-	splash_theme_free(theme);
-	splash_render_cleanup();
+	splashr_theme_free(theme);
+	splashr_cleanup();
 	splash_lib_cleanup();
 
 	return err;

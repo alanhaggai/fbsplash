@@ -85,7 +85,7 @@ static int fb_init(int tty, bool create)
 	return 0;
 }
 
-int splash_render_init(bool create)
+int splashr_init(bool create)
 {
 #ifdef CONFIG_FBSPLASH
 	fd_fbsplash = fbsplash_open(create);
@@ -109,7 +109,7 @@ int splash_render_init(bool create)
 	return 0;
 }
 
-void splash_render_cleanup()
+void splashr_cleanup()
 {
 	int i;
 
@@ -140,7 +140,7 @@ void splash_render_cleanup()
 #define ORIGIN FB_SPLASH_IO_ORIG_USER
 #endif
 
-int splash_render_buf(stheme_t *theme, void *buffer, bool repaint, char mode)
+int splashr_render_buf(stheme_t *theme, void *buffer, bool repaint, char mode)
 {
 	u8 *img;
 
@@ -170,9 +170,9 @@ int splash_render_buf(stheme_t *theme, void *buffer, bool repaint, char mode)
 	return 0;
 }
 
-int splash_render_screen(stheme_t *theme, bool repaint, bool bgnd, char mode, char effects)
+int splashr_render_screen(stheme_t *theme, bool repaint, bool bgnd, char mode, char effects)
 {
-	if (!splash_render_buf(theme, theme->bgbuf, repaint, mode)) {
+	if (!splashr_render_buf(theme, theme->bgbuf, repaint, mode)) {
 		if (repaint) {
 			if (effects & EFF_FADEIN) {
 				fade(theme, fb_mem, theme->bgbuf, theme->silent_img.cmap, bgnd ? 1 : 0, fd_fb, 0);
@@ -193,7 +193,7 @@ int splash_render_screen(stheme_t *theme, bool repaint, bool bgnd, char mode, ch
 	}
 }
 
-stheme_t *splash_theme_load()
+stheme_t *splashr_theme_load()
 {
 	char buf[512];
 	stheme_t *st;
@@ -241,7 +241,7 @@ stheme_t *splash_theme_load()
 	return st;
 }
 
-void splash_theme_free(stheme_t *theme)
+void splashr_theme_free(stheme_t *theme)
 {
 	item *i, *j;
 
@@ -310,7 +310,7 @@ static void vt_cursor_enable(int fd)
 	write(fd, "\e[?25h\e[?0c", 11);
 }
 
-int splash_tty_silent_init()
+int splashr_tty_silent_init()
 {
 	struct termios w;
 	int fd;
@@ -332,7 +332,7 @@ int splash_tty_silent_init()
 	return 0;
 }
 
-int splash_tty_silent_cleanup()
+int splashr_tty_silent_cleanup()
 {
 	struct termios w;
 	int fd;
@@ -354,7 +354,7 @@ int splash_tty_silent_cleanup()
 	return 0;
 }
 
-int splash_tty_silent_set(int tty)
+int splashr_tty_silent_set(int tty)
 {
 	if (tty < 0 || tty > MAX_NR_CONSOLES)
 		return -1;
@@ -368,4 +368,23 @@ int splash_tty_silent_set(int tty)
 	config.tty_s = tty;
 
 	return 0;
+}
+
+void splashr_message_set(char *msg)
+{
+	if (config.message)
+		free(config.message);
+
+	config.message = strdup(msg);
+}
+
+void splashr_progress_set(int progress)
+{
+	if (progress < 0)
+		progress = 0;
+
+	if (progress > PROGRESS_MAX)
+		progress = PROGRESS_MAX;
+
+	config.progress = progress;
 }

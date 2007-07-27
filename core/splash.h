@@ -102,23 +102,24 @@ int splash_set_silent(void);
 bool splash_set_evdev(void);
 int splash_check_daemon(int *pid_daemon, bool verbose);
 bool splash_check_sanity(void);
-
 int splash_cache_prep(void);
 int splash_cache_cleanup(char **profile_save);
 int splash_send(const char *fmt, ...);
 
-/* \
+/*
  * Link with libsplashrender if you want to use the functions
  * below.
  */
-int splash_render_init(bool create);
-void splash_render_cleanup();
-int splash_render_buf(struct stheme *theme, void *buffer, bool repaint, char mode);
-int splash_render_screen(struct stheme *theme, bool repaint, bool bgnd, char mode, char effects);
-struct stheme *splash_theme_load();
-void splash_theme_free(struct stheme *theme);
-int splash_tty_silent_init();
-int splash_tty_silent_cleanup();
-int splash_tty_silent_set(int);
+int splashr_init(bool create);
+void splashr_cleanup();
+int splashr_render_buf(struct stheme *theme, void *buffer, bool repaint, char mode);
+int splashr_render_screen(struct stheme *theme, bool repaint, bool bgnd, char mode, char effects);
+struct stheme *splashr_theme_load();
+void splashr_theme_free(struct stheme *theme);
+int splashr_tty_silent_init();
+int splashr_tty_silent_cleanup();
+int splashr_tty_silent_set(int);
+void splashr_message_set(char *msg);
+void splashr_progress_set(int progress);
 
 #endif /* __SPLASH_H */

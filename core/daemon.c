@@ -201,7 +201,7 @@ void vt_silent_init(void)
 {
 	struct vt_mode vt;
 
-	splash_tty_silent_init();
+	splashr_tty_silent_init();
 	ioctl(fd_tty[config.tty_s], TIOCSCTTY, 0);
 
 	vt.mode   = VT_PROCESS;
@@ -225,7 +225,7 @@ void vt_silent_cleanup(void)
 	ioctl(fd_tty[config.tty_s], KDSETMODE, KD_TEXT);
 	ioctl(fd_tty[config.tty_s], VT_SETMODE, &vt);
 
-	splash_tty_silent_cleanup();
+	splashr_tty_silent_cleanup();
 	return;
 }
 
@@ -440,7 +440,7 @@ void switchmon_start(int update, int stty)
 	if (update & UPD_SILENT) {
 		if (config.tty_s != stty) {
 			vt_silent_cleanup();
-			splash_tty_silent_set(stty);
+			splashr_tty_silent_set(stty);
 		}
 		vt_silent_init();
 	}
@@ -521,8 +521,8 @@ int reload_theme(void)
 	pthread_cancel(th_anim);
 #endif
 
-	splash_theme_free(theme);
-	theme = splash_theme_load();
+	splashr_theme_free(theme);
+	theme = splashr_theme_load();
 
 	for (i = svcs.head ; i != NULL; i = i->next) {
 		svc_state *ss = (svc_state*)i->p;

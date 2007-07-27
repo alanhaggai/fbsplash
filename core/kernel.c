@@ -55,7 +55,7 @@ int handle_init(bool update)
 	if (!update)
 		prep_io();
 
-	splash_render_init(true);
+	splashr_init(true);
 
 	/* Parse the kernel command line to get splash settings. */
 	mkdir(PATH_PROC,0700);
@@ -76,7 +76,7 @@ int handle_init(bool update)
 #endif
 	}
 
-	theme = splash_theme_load();
+	theme = splashr_theme_load();
 	if (!theme)
 		return -1;
 
@@ -116,7 +116,7 @@ noverbose:
 	if (!(theme->modes & MODE_SILENT))
 		return -1;
 
-	splash_tty_silent_init();
+	splashr_tty_silent_init();
 
 	/* Redirect all kernel messages to tty1 so that they don't get
 	 * printed over our silent splash image. */
@@ -130,7 +130,7 @@ noverbose:
 	if (theme->silent_img.cmap.red)
 		ioctl(fd_fb, FBIOPUTCMAP, &theme->silent_img.cmap);
 
-	splash_render_screen(theme, true, true, 's', config.effects);
+	splashr_render_screen(theme, true, true, 's', config.effects);
 
 #ifdef CONFIG_FBSPLASH
 	if (fbsplash && config.reqmode == 's')
@@ -199,8 +199,8 @@ int main(int argc, char **argv)
 	else if (config.theme) {
 		stheme_t *theme;
 
-		splash_render_init(false);
-		theme = splash_theme_load();
+		splashr_init(false);
+		theme = splashr_theme_load();
 		if (!theme) {
 			err = -1;
 			goto out;

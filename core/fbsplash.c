@@ -72,7 +72,7 @@ int fbsplash_setpic(unsigned char origin, int vc, stheme_t *theme)
 		.data = &theme->verbose_img.data,
 	};
 
-	if (splash_render_buf(theme, (u8*)theme->verbose_img.data, true, 'v'))
+	if (splashr_render_buf(theme, (u8*)theme->verbose_img.data, true, 'v'))
 		return -1;
 
 	if (ioctl(fd_fbsplash, FBIOSPLASH_SETPIC, &wrapper)) {

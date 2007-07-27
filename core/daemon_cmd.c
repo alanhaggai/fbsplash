@@ -36,7 +36,7 @@ int cmd_exit(void **args)
 
 	if (ctty == CTTY_SILENT) {
 		if (config.effects & EFF_FADEOUT)
-			splash_render_screen(theme, true, false, 's', EFF_FADEOUT);
+			splashr_render_screen(theme, true, false, 's', EFF_FADEOUT);
 
 		/* Switch to the verbose tty if we're in silent mode when the
 		 * 'exit' command is received. */
@@ -45,8 +45,8 @@ int cmd_exit(void **args)
 
 	pthread_mutex_unlock(&mtx_paint);
 
-	splash_theme_free(theme);
-	splash_render_cleanup();
+	splashr_theme_free(theme);
+	splashr_cleanup();
 	splash_lib_cleanup();
 
 	for (i = svcs.head; i != NULL; ) {
@@ -225,7 +225,7 @@ int cmd_paint(void **args)
 	if (ctty != CTTY_SILENT)
 		goto out;
 
-	splash_render_screen(theme, false, false, 's', EFF_NONE);
+	splashr_render_screen(theme, false, false, 's', EFF_NONE);
 out:
 	pthread_mutex_unlock(&mtx_paint);
 	return ret;
@@ -249,7 +249,7 @@ int cmd_repaint(void **args)
 	if (ctty != CTTY_SILENT)
 		goto out;
 
-	splash_render_screen(theme, true, false, 's', EFF_NONE);
+	splashr_render_screen(theme, true, false, 's', EFF_NONE);
 out:
 	pthread_mutex_unlock(&mtx_paint);
 
@@ -264,10 +264,7 @@ out:
  */
 int cmd_progress(void **args)
 {
-	if (*(int*)args[0] < 0 || *(int*)args[0] > PROGRESS_MAX)
-		return -1;
-
-	config.progress = *(int*)args[0];
+	splashr_progress_set(*(int*)args[0]);
 	return 0;
 }
 
@@ -279,11 +276,7 @@ int cmd_progress(void **args)
  */
 int cmd_set_mesg(void **args)
 {
-#ifdef CONFIG_TTF
-	if (config.message)
-		free(config.message);
-	config.message = strdup(args[0]);
-#endif
+	splashr_message_set(args[0]);
 	return 0;
 }
 

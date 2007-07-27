@@ -21,23 +21,23 @@ int main(int argc, char **argv)
 		free(config->theme);
 	config->theme = strdup("livecd-2007.0");
 
-	splash_render_init(false);
-	theme = splash_theme_load();
+	splashr_init(false);
+	theme = splashr_theme_load();
 
 	splash_set_silent();
-	splash_tty_silent_init();
-	splash_render_screen(theme, true, false, 's', EFF_NONE);
+	splashr_tty_silent_init();
+	splashr_render_screen(theme, true, false, 's', EFF_NONE);
 
 	for (i = 0; i < 65536; i += 16) {
 		config->progress = i;
-		splash_render_screen(theme, false, false, 's', EFF_NONE);
+		splashr_render_screen(theme, false, false, 's', EFF_NONE);
 	}
 
-	splash_tty_silent_cleanup();
+	splashr_tty_silent_cleanup();
 	splash_set_verbose();
 
-	splash_theme_free(theme);
-	splash_render_cleanup();
+	splashr_theme_free(theme);
+	splashr_cleanup();
 	splash_lib_cleanup();
 
 	return 0;
