@@ -69,11 +69,7 @@ int cmd_exit(void **args)
  */
 int cmd_set_theme(void **args)
 {
-	if (config.theme)
-		free(config.theme);
-
-	config.theme = strdup(args[0]);
-
+	splash_theme_set(args[0]);
 	pthread_mutex_lock(&mtx_paint);
 	reload_theme();
 	pthread_mutex_unlock(&mtx_paint);

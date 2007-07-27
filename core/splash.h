@@ -92,12 +92,14 @@ typedef struct
 
 scfg_t* splash_lib_init(stype_t type);
 int splash_lib_cleanup();
-int splash_init_config(scfg_t *cfg, stype_t type);
-int splash_parse_kcmdline(scfg_t *cfg, bool sysmsg);
+int splash_init_config(stype_t type);
+int splash_parse_kcmdline(bool sysmsg);
 void splash_get_res(char *theme, int *xres, int *yres);
 int splash_profile(const char *fmt, ...);
 bool splash_is_silent(void);
 int splash_set_verbose(void);
+void splash_theme_set(char *theme);
+void splash_message_set(char *msg);
 int splash_set_silent(void);
 bool splash_set_evdev(void);
 int splash_check_daemon(int *pid_daemon, bool verbose);
@@ -105,7 +107,6 @@ bool splash_check_sanity(void);
 int splash_cache_prep(void);
 int splash_cache_cleanup(char **profile_save);
 int splash_send(const char *fmt, ...);
-
 /*
  * Link with libsplashrender if you want to use the functions
  * below.

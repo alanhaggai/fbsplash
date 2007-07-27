@@ -150,9 +150,7 @@ int main(int argc, char **argv)
 
 		case 0x103:
 		case 't':
-			if (config.theme)
-				free(config.theme);
-			config.theme = strdup(optarg);
+			splash_theme_set(optarg);
 			break;
 
 		case 0x102:

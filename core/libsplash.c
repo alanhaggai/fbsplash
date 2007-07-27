@@ -77,7 +77,7 @@ static void detect_endianess(sendian_t *end)
 scfg_t* splash_lib_init(stype_t type)
 {
 	detect_endianess(&endianess);
-	splash_init_config(&config, type);
+	splash_init_config(type);
 
 	/* The kernel helper cannot touch any tty devices. */
 #ifndef TARGET_KERNEL
@@ -117,69 +117,69 @@ int splash_lib_cleanup(void)
 }
 
 /*
- * Initialize the 'cfg' structure with default values.
+ * Initialize the config structure with default values.
  */
-int splash_init_config(scfg_t *cfg, stype_t type)
+int splash_init_config(stype_t type)
 {
 	char *s;
 
-	cfg->tty_s = TTY_SILENT;
-	cfg->tty_v = TTY_VERBOSE;
-	cfg->theme = strdup(DEFAULT_THEME);
-	cfg->kdmode = KD_TEXT;
-	cfg->insane = false;
-	cfg->profile = false;
-	cfg->vonerr = false;
-	cfg->reqmode = 'o';
-	cfg->minstances = false;
-	cfg->progress = 0;
-	cfg->effects = EFF_NONE;
-	cfg->verbosity = VERB_NORMAL;
-	cfg->type = type;
+	config.tty_s = TTY_SILENT;
+	config.tty_v = TTY_VERBOSE;
+	config.kdmode = KD_TEXT;
+	config.insane = false;
+	config.profile = false;
+	config.vonerr = false;
+	config.reqmode = 'o';
+	config.minstances = false;
+	config.progress = 0;
+	config.effects = EFF_NONE;
+	config.verbosity = VERB_NORMAL;
+	config.type = type;
+	splash_message_set(DEFAULT_THEME);
 
 	s = getenv("PROGRESS");
 	if (s)
-		cfg->progress = atoi(s);
+		config.progress = atoi(s);
 
 	s = getenv("BOOT_MSG");
 	if (s) {
-		cfg->message = strdup(s);
+		config.message = strdup(s);
 	} else {
 		switch (type) {
 		case reboot:
-			cfg->message = strdup(SYSMSG_REBOOT);
+			config.message = strdup(SYSMSG_REBOOT);
 			break;
 
 		case shutdown:
-			cfg->message = strdup(SYSMSG_SHUTDOWN);
+			config.message = strdup(SYSMSG_SHUTDOWN);
 			break;
 
 		case bootup:
-			cfg->message = strdup(SYSMSG_BOOTUP);
+			config.message = strdup(SYSMSG_BOOTUP);
 			break;
 
 		case undef:
 		default:
-			cfg->message = strdup(SYSMSG_DEFAULT);
+			config.message = strdup(SYSMSG_DEFAULT);
 			break;
 		}
 	}
 	return 0;
 }
 
-void splash_set_tty_silent(scfg_t *cfg, int tty)
+void splash_set_tty_silent(int tty)
 {
 	if (tty < 0 || tty > MAX_NR_CONSOLES)
-		cfg->tty_s = TTY_SILENT;
+		config.tty_s = TTY_SILENT;
 	else
-		cfg->tty_s = tty;
+		config.tty_s = tty;
 }
 
 /*
  * Parse the kernel command line to get splash settings
- * and save them in 'cfg'.
+ * and save them in 'config'.
  */
-int splash_parse_kcmdline(scfg_t *cfg, bool sysmsg)
+int splash_parse_kcmdline(bool sysmsg)
 {
 	FILE *fp;
 	char *p, *t, *opt, *pbuf;
@@ -219,9 +219,7 @@ int splash_parse_kcmdline(scfg_t *cfg, bool sysmsg)
 				}
 			}
 			t[i] = 0;
-			if (cfg->message)
-				free(cfg->message);
-			cfg->message = strdup(t);
+			splash_message_set(t);
 			t[i] = '"';
 		}
 	}
@@ -249,29 +247,27 @@ int splash_parse_kcmdline(scfg_t *cfg, bool sysmsg)
 		while ((opt = strsep(&t, ",")) != NULL) {
 
 			if (!strncmp(opt, "tty:", 4)) {
-				splash_set_tty_silent(cfg, strtol(opt+4, NULL, 0));
+				splash_set_tty_silent(strtol(opt+4, NULL, 0));
 			} else if (!strcmp(opt, "fadein")) {
-				cfg->effects |= EFF_FADEIN;
+				config.effects |= EFF_FADEIN;
 			} else if (!strcmp(opt, "fadeout")) {
-				cfg->effects |= EFF_FADEOUT;
+				config.effects |= EFF_FADEOUT;
 			} else if (!strcmp(opt, "verbose")) {
-				cfg->reqmode = 'v';
+				config.reqmode = 'v';
 			} else if (!strcmp(opt, "silent")) {
-				cfg->reqmode = 's';
+				config.reqmode = 's';
 			} else if (!strcmp(opt, "silentonly")) {
-				cfg->reqmode = 't';
+				config.reqmode = 't';
 			} else if (!strcmp(opt, "off")) {
-				cfg->reqmode = 'o';
+				config.reqmode = 'o';
 			} else if (!strcmp(opt, "insane")) {
-				cfg->insane = true;
+				config.insane = true;
 			} else if (!strncmp(opt, "theme:", 6)) {
-				if (cfg->theme)
-					free(cfg->theme);
-				cfg->theme = strdup(opt+6);
+				splash_theme_set(opt+6);
 			} else if (!strcmp(opt, "kdgraphics")) {
-				cfg->kdmode = KD_GRAPHICS;
+				config.kdmode = KD_GRAPHICS;
 			} else if (!strcmp(opt, "profile")) {
-				cfg->profile = true;
+				config.profile = true;
 			}
 		}
 	}
@@ -360,6 +356,22 @@ void splash_get_res(char *theme, int *xres, int *yres)
 	} else {
 		fclose(fp);
 	}
+}
+
+void splash_theme_set(char *theme)
+{
+	if (config.theme)
+		free(config.theme);
+
+	config.theme = strdup(theme);
+}
+
+void splash_message_set(char *msg)
+{
+	if (config.message)
+		free(config.message);
+
+	config.message = strdup(msg);
 }
 
 #ifndef TARGET_KERNEL

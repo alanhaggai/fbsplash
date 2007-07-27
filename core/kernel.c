@@ -60,7 +60,7 @@ int handle_init(bool update)
 	/* Parse the kernel command line to get splash settings. */
 	mkdir(PATH_PROC,0700);
 	h = mount("proc", PATH_PROC, "proc", 0, NULL);
-	splash_parse_kcmdline(&config, true);
+	splash_parse_kcmdline(true);
 	if (h == 0)
 		umount(PATH_PROC);
 
@@ -181,9 +181,7 @@ int main(int argc, char **argv)
 	/* On 'init' the theme isn't defined yet, and thus NULL is passed
 	 * instead of any meaningful value. */
 	if (argc > i && argv[i]) {
-		if (config.theme)
-			free(config.theme);
-		config.theme = strdup(argv[i]);
+		splash_theme_set(argv[i]);
 	}
 	mkdir(PATH_SYS, 0700);
 	if (!mount("sysfs", PATH_SYS, "sysfs", 0, NULL))

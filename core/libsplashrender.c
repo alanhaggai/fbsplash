@@ -372,10 +372,7 @@ int splashr_tty_silent_set(int tty)
 
 void splashr_message_set(char *msg)
 {
-	if (config.message)
-		free(config.message);
-
-	config.message = strdup(msg);
+	splash_message_set(msg);
 }
 
 void splashr_progress_set(int progress)
