@@ -168,11 +168,8 @@ static int splash_config_gentoo(scfg_t *cfg, stype_t type)
 	}
 
 	t = rc_get_config_entry(confd, "SPLASH_THEME");
-	if (t) {
-		if (cfg->theme)
-			free(cfg->theme);
-		cfg->theme = strdup(t);
-	}
+	if (t)
+		splash_theme_set(t);
 
 	t = rc_get_config_entry(confd, "SPLASH_MODE_REQ");
 	if (t) {
@@ -184,39 +181,27 @@ static int splash_config_gentoo(scfg_t *cfg, stype_t type)
 	}
 
 	t = rc_get_config_entry(confd, "SPLASH_VERBOSE_ON_ERRORS");
-	if (t) {
-		if (!strcasecmp(t, "on") || !strcasecmp(t, "yes")) {
-			cfg->vonerr = true;
-		}
-	}
+	if (t && (!strcasecmp(t, "on") || !strcasecmp(t, "yes")))
+		cfg->vonerr = true;
 
 	switch(type) {
 	case reboot:
 		t = rc_get_config_entry(confd, "SPLASH_REBOOT_MESSAGE");
-		if (t) {
-			if (cfg->message)
-				free(cfg->message);
-			cfg->message = strdup(t);
-		}
+		if (t)
+			splash_message_set(t);
 		break;
 
 	case shutdown:
 		t = rc_get_config_entry(confd, "SPLASH_SHUTDOWN_MESSAGE");
-		if (t) {
-			if (cfg->message)
-				free(cfg->message);
-			cfg->message = strdup(t);
-		}
+		if (t)
+			splash_message_set(t);
 		break;
 
 	case bootup:
 	default:
 		t = rc_get_config_entry(confd, "SPLASH_BOOT_MESSAGE");
-		if (t) {
-			if (cfg->message)
-				free(cfg->message);
-			cfg->message = strdup(t);
-		}
+		if (t)
+			splash_message_set(t);
 		break;
 	}
 
@@ -673,7 +658,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	if (!config) {
 		config = splash_lib_init(type);
 		splash_config_gentoo(config, type);
-		splash_parse_kcmdline(config, false);
+		splash_parse_kcmdline(false);
 	}
 
 	/* Extremely weird.. should never happen. */
