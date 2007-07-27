@@ -273,7 +273,7 @@ Silent mode directives
   be displayed.
 
   The animations are displayed only when the screen is painted by the
-  splash daemon, they won't work with the kernel helper (ie. the animations
+  splash daemon, they won't work with the kernel helper (i.e. the animations
   won't work from an initrd).
 
 Deprecated settings
