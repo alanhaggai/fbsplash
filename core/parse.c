@@ -1108,6 +1108,68 @@ pt_err:
 		free(fpath);
 	return;
 }
+
+void add_main_msg()
+{
+	char *fpath;
+	text *ct = obj_alloc(text);
+	item *ti;
+	font_e *fe;
+
+	if (!ct) {
+		iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
+		return;
+	}
+
+	ct->flags = F_TXT_EVAL | F_TXT_SILENT;;
+	ct->hotspot = F_HS_LEFT | F_HS_TOP;
+	ct->style = TTF_STYLE_NORMAL;
+	ct->x = tmptheme.text_x;
+	ct->y = tmptheme.text_y;
+	ct->col = tmptheme.text_color;
+	ct->val = config.message;
+
+	if (strstr(ct->val, "$progress")) {
+		ct->curr_progress = config.progress;
+	} else {
+		ct->curr_progress = -1;
+	}
+
+	fpath = tmptheme.text_font;
+
+	for (ti = tmptheme.fonts.head ; ti != NULL; ti = ti->next) {
+		fe = (font_e*) ti->p;
+
+		if (!strcmp(fe->file, fpath) && fe->size == tmptheme.text_size) {
+			ct->font = fe;
+			goto mm_end;
+		}
+	}
+
+	/* Allocate a new entry in the fonts list */
+	fe = malloc(sizeof(font_e));
+	if (!fe) {
+		iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
+		goto mm_err;
+	}
+	fe->file = fpath;
+	fe->size = tmptheme.text_size;
+	fe->font = NULL;
+
+	list_add(&tmptheme.fonts, fe);
+	ct->font = fe;
+
+mm_end:
+	obj_add(ct);
+	return;
+
+mm_err:
+	free(container_of(ct));
+	return;
+}
+
+
+
 #endif	/* TTF */
 
 int parse_cfg(char *cfgfile, stheme_t *theme)
@@ -1264,9 +1326,13 @@ box_post:
 		;
 	}
 
+#ifdef WANT_TTF
+	add_main_msg();
+#endif
 	memcpy(theme, &tmptheme, sizeof(tmptheme));
 
 	fclose(cfgfp);
 	return 0;
 }
+
 

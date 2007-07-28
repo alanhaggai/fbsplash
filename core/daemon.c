@@ -477,6 +477,8 @@ void obj_update_status(char *svc, enum ESVC state)
 			if (!ci->svc || strcmp(ci->svc, svc))
 				continue;
 
+			co->invalid = true;
+
 			if (ci->type == state)
 				ci->status = 1;
 			else
@@ -490,9 +492,13 @@ void obj_update_status(char *svc, enum ESVC state)
 	pthread_mutex_lock(&mtx_paint);
 	for (i = theme->anims.head; i != NULL; i = i->next) {
 		anim *ca = (anim*)i->p;
+		obj *co;
 
 		if (!ca->svc || strcmp(ca->svc, svc))
 			continue;
+
+		co = container_of(ca);
+		co->invalid = true;
 
 		if (ca->type == state) {
 			ca->flags |= F_ANIM_DISPLAY;

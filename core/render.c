@@ -424,6 +424,9 @@ void prep_bgnds(stheme_t *theme, u8 *target, u8 *bgnd, char mode)
 	for (i = theme->objs.head; i != NULL; i = i->next) {
 		obj *o = (obj*)i->p;
 
+		if (!o->invalid)
+			continue;
+
 		if (o->type == o_box) {
 			box *b = o->p;
 
@@ -491,12 +494,6 @@ void prep_bgnds(stheme_t *theme, u8 *target, u8 *bgnd, char mode)
 		}
 #endif
 	}
-
-#if WANT_TTF
-	if (mode == 's') {
-		prep_bgnd(theme, target, bgnd, theme->text_x, theme->text_y, boot_msg_width, theme->main_font->height);
-	}
-#endif
 }
 
 void render_obj(stheme_t *theme, u8 *target, char mode, unsigned char origin, obj *o)
@@ -603,17 +600,6 @@ void render_objs(stheme_t *theme, u8 *target, char mode, unsigned char origin)
 			o->invalid = false;
 		}
 	}
-
-#if WANT_TTF
-	if (mode == 's') {
-		char *t;
-		t = eval_text(config.message);
-		TTF_Render(theme, target, t, theme->main_font, TTF_STYLE_NORMAL,
-			   theme->text_x, theme->text_y, theme->text_color,
-			   F_HS_LEFT | F_HS_TOP, &boot_msg_width);
-		free(t);
-	}
-#endif /* TTF */
 }
 
 void invalidate_all(stheme_t *theme)

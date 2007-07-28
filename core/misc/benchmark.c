@@ -21,7 +21,7 @@ int main(int argc, char **argv)
 	splashr_init(false);
 	theme = splashr_theme_load();
 
-	splashr_message_set(theme, "Bechmarking splashutils.. $progress%");
+	splashr_message_set(theme, "Benchmarking splashutils.. $progress%");
 
 	splash_set_silent();
 	splashr_tty_silent_init();

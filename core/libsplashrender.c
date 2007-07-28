@@ -364,7 +364,17 @@ int splashr_tty_silent_set(int tty)
 
 void splashr_message_set(stheme_t *theme, char *msg)
 {
+	obj *o;
+	text *t;
+
 	splash_message_set(msg);
+
+	o = theme->objs.tail->p;
+	t = o->p;
+
+	/* FIXME: invalidate the main message */
+	o->invalid = true;
+	t->val = config.message;
 }
 
 void splashr_progress_set(stheme_t *theme, int progress)
