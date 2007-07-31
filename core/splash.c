@@ -122,7 +122,7 @@ void usage(void)
 int main(int argc, char **argv)
 {
 	unsigned int c, i;
-	int fp, err = 0;
+	int err = 0;
 	int arg_vc = -1;
 	stheme_t *theme = NULL;
 
@@ -306,7 +306,6 @@ int main(int argc, char **argv)
 			if (arg_vc != stat.v_active - 1)
 				goto setpic_out;
 		}
-		close(fp);
 
 		err = fbsplash_setpic(FB_SPLASH_IO_ORIG_USER, arg_vc, theme);
 setpic_out:	break;
