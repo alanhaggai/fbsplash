@@ -38,6 +38,7 @@ splash_geninitramfs/splashutils-%PKG_VERSION%
 Usage: splash_manager [options] -c <command>
 
 Commands:
+ benchmark
  demo    test a splash theme
  list    list available splash themes
  set     set a splash theme on a specific tty
@@ -48,19 +49,19 @@ Commands:
 Options:
  -c, --cmd=CMD      execute CMD
  -h, --help         display this message
- -t, --theme=THEME  [dehsr] theme name
-     --steps=N      [d    ] use N steps when testing the silent splash
-     --delay=N      [d    ] delay each step by N seconds
- -m, --mode=(v|s)   [d h  ] specify which mode to use (verbose/silent)
-     --tty=N        [deh  ] set the theme on the Nth tty
- -e, --exec=CMD     [  h  ] run CMD on the tty where splash is being tested
-     --progress=N   [  h  ] set progress to N (0-65535)
-     --msg=MSG      [d h  ] set the main system message to MSG
-     --profile=FILE [    r] read splash profile data from FILE
+ -t, --theme=THEME  [bdehsr] theme name
+     --steps=N      [ d    ] use N steps when testing the silent splash
+     --delay=N      [ d    ] delay each step by N seconds
+ -m, --mode=(v|s)   [ d h  ] specify which mode to use (verbose/silent)
+     --tty=N        [bdeh  ] set the theme on the Nth tty
+ -e, --exec=CMD     [   h  ] run CMD on the tty where splash is being tested
+     --progress=N   [   h  ] set progress to N (0-65535)
+     --msg=MSG      [bd h  ] set the main system message to MSG
+     --profile=FILE [     r] read splash profile data from FILE
 
 The letters in the square brackets indicate the commands with which
-specific options can be used: d (demo), e (set), h (shot), s (switch),
-r (replay).
+specific options can be used: b (bechmark) d (demo), e (set), h (shot),
+s (switch), r (replay).
 
 Examples:
  splash_manager -c switch -t livecd-2005.0
@@ -233,9 +234,24 @@ exit_silent() {
 	done
 }
 
+benchmark() {
+	check_silent "${theme}" "${res}"
+	set_silent
+
+	step=16
+	timestart=$(date +"%s.%N")
+	for ((i=0;i<65536;i=$i+$step)) ; do
+		echo "progress $i" > ${spl_fifo}
+		echo "paint" > ${spl_fifo}
+	done
+	timeend=$(date +"%s.%N")
+	exit_silent
+	
+	echo "Test took $(echo "$timeend - $timestart" | bc) seconds."
+}
+
 demo_theme_silent() {
 	check_silent "${theme}" "${res}"
-
 	set_silent
 
 	# Try to configure an event input device so that F2 can work both ways.
@@ -912,6 +928,16 @@ case "${op}" in
 		else
 			demo_theme_verbose
 		fi
+		;;
+
+	'benchmark')
+		mode='s'
+		if [ -z "$(which bc)" ]; then
+			err "Benchmarking requires the 'bc' command-line calculator."
+			exit 1
+		fi
+		theme_sanity_check "${theme}"
+		benchmark
 		;;
 
 	'shot')
