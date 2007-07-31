@@ -378,10 +378,6 @@ void paint_img(stheme_t *theme, u8 *dst, u8 *src);
 void fade(stheme_t *theme, u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int fd, char type);
 void set_directcolor_cmap(int fd);
 
-
-/* tiles.c */
-void obj_free(obj *o);
-
 /* common.c */
 
 extern enum TASK arg_task;

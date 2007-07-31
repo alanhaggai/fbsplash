@@ -48,6 +48,26 @@ struct fb_data fbd;
 int fd_fbsplash = -1;
 #endif
 
+static void obj_free(obj *o)
+{
+	if (!o)
+		return;
+
+	if (o->bgcache)
+		free(o->bgcache);
+
+	if (o->type == o_box) {
+		box *b = o->p;
+		if (b->inter)
+			free(container_of(b->inter));
+		if (b->curr)
+			free(b->curr);
+	}
+
+	free(o);
+	return;
+}
+
 static int fb_init(int tty, bool create)
 {
 	struct fb_con2fbmap con2fb;
