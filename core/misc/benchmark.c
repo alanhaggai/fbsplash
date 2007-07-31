@@ -27,7 +27,7 @@ int main(int argc, char **argv)
 	splashr_tty_silent_init();
 	splashr_render_screen(theme, true, false, 's', EFF_NONE);
 
-	for (i = 0; i < 65536; i += 16) {
+	for (i = 0; i < 65536; i += 64) {
 		splashr_progress_set(theme, i);
 		splashr_render_screen(theme, false, false, 's', EFF_NONE);
 	}
