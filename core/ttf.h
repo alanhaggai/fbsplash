@@ -16,7 +16,7 @@
 /* Handy routines for converting from fixed point */
 #define FT_FLOOR(X)     ((X & -64) / 64)
 #define FT_CEIL(X)      (((X + 63) & -64) / 64)
-  
+
 /* Cached glyph information */
 typedef struct cached_glyph {
 	int stored;
@@ -61,15 +61,15 @@ struct _TTF_Font {
 
 typedef struct _TTF_Font TTF_Font;
 
-extern int boot_msg_width;
-
 int TTF_Init(void);
 void TTF_Quit(void);
 
 struct stheme;
+struct text;
 
-int TTF_Render(struct stheme *theme, u8 *target, char *text, TTF_Font *font, int style, int x,
-	       int y, color col, u8 hotspot, int *width);
+void text_render(struct stheme *theme, struct text *ct, u8 *target);
+void text_update(struct stheme *theme, struct text *ct);
+
 int load_fonts(struct stheme *theme);
 int free_fonts(struct stheme *theme);
 

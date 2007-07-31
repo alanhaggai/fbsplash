@@ -73,10 +73,18 @@ K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
 K_DEPS   =
 
 # Flags for the user utilities
-CFLAGS   ?= -Wall -g
 LDLLIBS  = -ljpeg -lm
 LDLIBS   = -lm -pthread -lrt
 LDFLAGS  ?=
+
+ifeq ($(strip $(DEBUG)),true)
+	STRIP = true
+	CFLAGS ?= -Wall -g
+else
+	STRIP = strip --strip-all -R .comment -R .note
+	CFLAGS ?= -Wall -O2
+endif
+
 
 # Include the klibc header files so that we can compile against fb.h
 # from a kernel thee patched with fbsplash.
@@ -114,12 +122,6 @@ endif
 
 ifeq ($(call config_opt,CONFIG_GPM),true)
 	LDLIBS	 += -lgpm
-endif
-
-ifeq ($(strip $(DEBUG)),true)
-	STRIP = true
-else
-	STRIP = strip --strip-all -R .comment -R .note
 endif
 
 OBJDIR	= objs

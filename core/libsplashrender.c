@@ -134,12 +134,6 @@ void splashr_cleanup()
 #endif
 }
 
-#ifdef TARGET_KERNEL
-#define ORIGIN FB_SPLASH_IO_ORIG_KERNEL
-#else
-#define ORIGIN FB_SPLASH_IO_ORIG_USER
-#endif
-
 int splashr_render_buf(stheme_t *theme, void *buffer, bool repaint, char mode)
 {
 	u8 *img;
@@ -162,11 +156,9 @@ int splashr_render_buf(stheme_t *theme, void *buffer, bool repaint, char mode)
 
 	if (repaint) {
 		memcpy(buffer, img, theme->xres * theme->yres * fbd.bytespp);
-	} else {
-		prep_bgnds(theme, buffer, img, mode);
 	}
 
-	render_objs(theme, buffer, mode, ORIGIN);
+	render_objs(theme, buffer, (mode == 'v') ? MODE_VERBOSE : MODE_SILENT);
 	return 0;
 }
 
@@ -215,10 +207,16 @@ stheme_t *splashr_theme_load()
 	st->xmarg = (fbd.var.xres - st->xres) / 2;
 	st->ymarg = (fbd.var.yres - st->yres) / 2;
 
+	list_init(st->blit);
+	list_init(st->objs);
+	list_init(st->anims);
+	list_init(st->icons);
+	list_init(st->fonts);
+	list_init(st->rects);
+
 	/* Parse the config file. It will also load all mng files, so
 	 * we don't have to load them explicitly later. */
 	parse_cfg(buf, st);
-	invalidate_all(st);
 
 	/* Check for config file sanity for the given splash mode and
 	 * load background images and icons. */
@@ -238,7 +236,12 @@ stheme_t *splashr_theme_load()
 	load_fonts(st);
 #endif
 
+	invalidate_all(st);
 	st->bgbuf = malloc(st->xres * st->yres * fbd.bytespp);
+
+	/* Initialize the bouding rectangles. */
+	bnd_init(st);
+
 	return st;
 }
 
@@ -372,7 +375,7 @@ void splashr_message_set(stheme_t *theme, char *msg)
 	o = theme->objs.tail->p;
 	t = o->p;
 
-	/* FIXME: invalidate the main message */
+	/* FIXME: invalidate the main message, reinit the bg cache */
 	o->invalid = true;
 	t->val = config.message;
 }

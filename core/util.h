@@ -144,8 +144,14 @@ typedef struct {
 	void *p;				/* pointer to the type-specific data */
 	rect bnd;				/* bounding rectangle */
 	u8 *bgcache;			/* bgnd cache, directly from the bg picture if NULL */
+	u8 modes;
 	bool invalid;			/* indicates whether this object has to be repainted */
 } obj;
+
+typedef struct {
+	rect re;
+	obj *o;
+} orect;
 
 typedef struct color {
 	u8 r, g, b, a;
@@ -156,10 +162,8 @@ struct colorf {
 };
 
 #if WANT_TTF
-#define F_TXT_SILENT  	1
-#define F_TXT_VERBOSE	2
-#define F_TXT_EXEC 	4
-#define F_TXT_EVAL	8	
+#define F_TXT_EXEC 	1
+#define F_TXT_EVAL	2	
 
 #define F_HS_HORIZ_MASK	7
 #define F_HS_VERT_MASK	56
@@ -179,21 +183,20 @@ typedef struct {
 	TTF_Font *font;
 } font_e;
 
-typedef struct {
+typedef struct text {
 	int x, y, last_width;
 	u8 hotspot;
 	color col;
 	u8 flags;
 	u8 style;
 	char *val;
+	u16 *cache;
 	font_e *font;
 	int curr_progress;		/* if this string uses the $progress variable,
 							 * curr_progress holds it's currently used value
 							 * (i.e. the value for which the text has been
 							 * rendered), otherwise = -1 */
 } text;
-
-void text_get_xy(text *ct, int *x, int *y);
 
 #endif /* TTF */
 
@@ -206,10 +209,6 @@ typedef struct stheme {
 	u16 ty;
 	u16 tw;
 	u16 th;
-	u16 text_x, text_y;
-	u16 text_size;
-	color text_color;
-	char *text_font;
 
 	u8 modes;				/* bitmask of supported splash modes */
 
@@ -241,25 +240,21 @@ typedef struct stheme {
 	 * only describe a special area on the screen and are not renderable. */
 	list rects;
 
-#if WANT_TTF
-	TTF_Font *main_font;
-#endif
-
 	int xres;		/* Resolution for which this theme has been designed. */
 	int yres;
 	int xmarg;		/* Margins. Non-zero only if using a config file
 					 * designed for a different resolution than the one
 					 * currently in use. */
 	int ymarg;
+
+	list blit;		/* List of rectangular regions (rect's) that need to be re-blit to the
+					   screen. */
+	list render;	/* List of rectangular regions (orect's) that need to be re-rendered
+					   to update the screen image. */
 } stheme_t;
 
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
 #include "mng_splash.h"
-
-#if 0
-#define F_ANIM_SILENT		1
-#define F_ANIM_VERBOSE		2
-#endif
 
 #define F_ANIM_METHOD_MASK	12
 #define F_ANIM_ONCE			0
@@ -280,7 +275,7 @@ typedef struct {
 #endif	/* CONFIG_MNG */
 
 typedef struct box {
-	int x1, x2, y1, y2;
+	rect re;
 	struct color c_ul, c_ur, c_ll, c_lr;	/* upper left, upper right,
 											   lower left, lower right */
 	u8 attr;
@@ -298,7 +293,11 @@ typedef struct {
 
 #define BOX_NOOVER 0x01
 #define BOX_INTER 0x02
-#define BOX_SILENT 0x04
+
+/* internal attributes */
+#define BOX_SOLID  0x80
+#define BOX_VGRAD  0x40
+#define BOX_HGRAD  0x20
 
 struct fb_data {
 	struct fb_var_screeninfo   var;
@@ -327,16 +326,18 @@ void* fb_mmap(int fb);
 int tty_open(int tty);
 
 /* parse.c */
-#define obj_alloc(__type) ({							\
-	u8* __mptr = malloc(sizeof(obj) + sizeof(__type));	\
+#define obj_alloc(__type, __mode) ({					\
+	u8* __mptr = calloc(1, sizeof(obj) + sizeof(__type));	\
 	(__mptr) ? ({										\
 		((obj*)__mptr)->p = __mptr + sizeof(obj);		\
+		((obj*)__mptr)->modes = __mode;					\
 		((obj*)__mptr)->type = o_##__type;				\
 		(__type*)(__mptr + sizeof(obj));				\
 		}) : NULL; })
 
 #define container_of(x) (obj*)((u8*)(x) - sizeof(obj))
 
+#define obj_setmode(__obj, __mode) { ((obj*)__obj)->modes = __mode; }
 
 int parse_svc_state(char *t, enum ESVC *state);
 int parse_cfg(char *cfgfile, stheme_t *st);
@@ -344,13 +345,12 @@ int parse_cfg(char *cfgfile, stheme_t *st);
 /* render.c */
 void rgba2fb(rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha);
 void put_pixel(u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add);
-void render_obj(stheme_t *theme, u8 *target, char mode, unsigned char origin, obj *o);
-void render_objs(stheme_t *theme, u8 *target, char mode, unsigned char origin);
-void prep_bgnds(stheme_t *theme, u8 *target, u8 *bgnd, char mode);
-void interpolate_box(box *a, box *b, box *c);
-void interpolate_rect(rect *a, rect *b, rect *c);
 void invalidate_all(stheme_t *theme);
 void invalidate_progress(stheme_t *theme);
+void rect_interpolate(rect *a, rect *b, rect *c);
+void box_interpolate(box *a, box *b, box *c);
+void render_objs(stheme_t *theme, u8 *target, u8 mode);
+void bnd_init(stheme_t *theme);
 
 /* image.c */
 int load_images(stheme_t *theme, char mode);
@@ -369,6 +369,7 @@ void daemon_start();
 /* list.c */
 void list_add(list *l, void *obj);
 void list_free(list l, bool free_item);
+void list_del(list *l, item *prev, item *curr);
 
 /* effects.c */
 void paint_rect(stheme_t *theme, u8 *dst, u8 *src, int x1, int y1, int x2, int y2);

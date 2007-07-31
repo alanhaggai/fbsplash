@@ -25,7 +25,7 @@ void list_add(list *l, void *obj)
 	}
 }
 
-void list_free(list l, bool free_item) 
+void list_free(list l, bool free_item)
 {
 	item *i, *j;
 
@@ -36,4 +36,16 @@ void list_free(list l, bool free_item)
 		free(i);
 		i = j;
 	}
+
+	list_init(l);
+}
+
+void list_del(list *l, item *prev, item *curr)
+{
+	prev->next = curr->next;
+
+	if (l->tail == curr)
+		l->tail = prev;
+
+	free(curr);
 }

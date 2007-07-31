@@ -27,6 +27,11 @@ struct cfg_opt {
 
 int line = 0;
 
+u16 text_x, text_y;
+u16 text_size;
+color text_color;
+char *text_font;
+
 stheme_t tmptheme;
 
 /* Note that pic256 and silentpic256 have to be located before pic and
@@ -105,23 +110,23 @@ struct cfg_opt opts[] =
 #if WANT_TTF
 	{	.name = "text_x",
 		.type = t_int,
-		.val = &tmptheme.text_x	},
+		.val = &text_x	},
 
 	{	.name = "text_y",
 		.type = t_int,
-		.val = &tmptheme.text_y	},
+		.val = &text_y	},
 
 	{	.name = "text_size",
 		.type = t_int,
-		.val = &tmptheme.text_size	},
+		.val = &text_size	},
 
 	{	.name = "text_color",
 		.type = t_color,
-		.val = &tmptheme.text_color	},
+		.val = &text_color	},
 
 	{	.name = "text_font",
 		.type = t_fontpath,
-		.val = &tmptheme.text_font	},
+		.val = &text_font	},
 
 	{	.name = "text",
 		.type = t_text,
@@ -379,7 +384,7 @@ static void parse_icon(char *t)
 {
 	char *filename = NULL;
 	char *p;
-	icon *cic = obj_alloc(icon);
+	icon *cic = obj_alloc(icon, MODE_SILENT);
 	icon_img *cim;
 	item *ti;
 	int i;
@@ -433,7 +438,7 @@ static void parse_icon(char *t)
 
 		skip_whitespace(&t);
 		cic->crop = true;
-		interpolate_rect(&cic->crop_from, &cic->crop_to, &cic->crop_curr);
+		rect_interpolate(&cic->crop_from, &cic->crop_to, &cic->crop_curr);
 	} else {
 		cic->crop = false;
 	}
@@ -617,7 +622,7 @@ static void parse_anim(char *t)
 {
 	char *p;
 	char *filename;
-	anim *canim = obj_alloc(anim);
+	anim *canim = obj_alloc(anim, MODE_SILENT);
 	int i;
 
 	if (!canim) {
@@ -738,7 +743,7 @@ static box* parse_box(char *t)
 {
 	char *p;
 	int ret;
-	box *cbox = obj_alloc(box);
+	box *cbox = obj_alloc(box, MODE_VERBOSE);
 
 	if (!cbox)
 		return NULL;
@@ -755,7 +760,7 @@ static box* parse_box(char *t)
 			cbox->attr |= BOX_INTER;
 			t += 5;
 		} else if (!strncmp(t, "silent", 6)) {
-			cbox->attr |= BOX_SILENT;
+			obj_setmode(container_of(cbox), MODE_SILENT);
 			t += 6;
 		} else {
 			parse_error("expected 'noover', 'inter' or 'silent' instead of '%s'", t);
@@ -765,28 +770,28 @@ static box* parse_box(char *t)
 		skip_whitespace(&t);
 	}
 
-	cbox->x1 = strtol(t,&p,0);
+	cbox->re.x1 = strtol(t,&p,0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pb_err;
 	}
 	t = p; skip_whitespace(&t);
 
-	cbox->y1 = strtol(t,&p,0);
+	cbox->re.y1 = strtol(t,&p,0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pb_err;
 	}
 	t = p; skip_whitespace(&t);
 
-	cbox->x2 = strtol(t,&p,0);
+	cbox->re.x2 = strtol(t,&p,0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pb_err;
 	}
 	t = p; skip_whitespace(&t);
 
-	cbox->y2 = strtol(t,&p,0);
+	cbox->re.y2 = strtol(t,&p,0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pb_err;
@@ -794,14 +799,14 @@ static box* parse_box(char *t)
 	t = p; skip_whitespace(&t);
 
 	/* sanity checks */
-	if (cbox->x1 >= tmptheme.xres)
-		cbox->x1 = tmptheme.xres-1;
-	if (cbox->x2 >= tmptheme.xres)
-		cbox->x2 = tmptheme.xres-1;
-	if (cbox->y1 >= tmptheme.yres)
-		cbox->y1 = tmptheme.yres-1;
-	if (cbox->y2 >= tmptheme.yres)
-		cbox->y2 = tmptheme.yres-1;
+	if (cbox->re.x1 >= tmptheme.xres)
+		cbox->re.x1 = tmptheme.xres-1;
+	if (cbox->re.x2 >= tmptheme.xres)
+		cbox->re.x2 = tmptheme.xres-1;
+	if (cbox->re.y1 >= tmptheme.yres)
+		cbox->re.y1 = tmptheme.yres-1;
+	if (cbox->re.y2 >= tmptheme.yres)
+		cbox->re.y2 = tmptheme.yres-1;
 
 #define zero_color(cl) *(u32*)(&cl) = 0;
 #define is_zero_color(cl) (*(u32*)(&cl) == 0)
@@ -904,9 +909,10 @@ static void parse_text(char *t)
 {
 	char *p, *fontname = NULL, *fpath = NULL;
 	int ret, fontsize;
-	text *ct = obj_alloc(text);
+	text *ct = obj_alloc(text, 0);
 	item *ti;
 	font_e *fe;
+	int mode = 0;
 
 	if (!ct) {
 		iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
@@ -921,11 +927,11 @@ static void parse_text(char *t)
 
 	while (!isdigit(*t) && ret) {
 		if (!strncmp(t, "silent", 6)) {
-			ct->flags |= F_TXT_SILENT;
+			mode |= MODE_SILENT;
 			t += 6;
 			ret = 1;
 		} else if (!strncmp(t, "verbose", 7)) {
-			ct->flags |= F_TXT_VERBOSE;
+			mode |= MODE_VERBOSE;
 			t += 7;
 			ret = 1;
 		} else {
@@ -935,8 +941,10 @@ static void parse_text(char *t)
 		skip_whitespace(&t);
 	}
 
-	if (ct->flags == 0)
-		ct->flags = F_TXT_VERBOSE | F_TXT_SILENT;
+	if (!mode)
+		mode = MODE_SILENT | MODE_VERBOSE;
+
+	obj_setmode(container_of(ct), mode);
 
 	if (!isdigit(*t)) {
 		p = t;
@@ -1112,7 +1120,7 @@ pt_err:
 void add_main_msg()
 {
 	char *fpath;
-	text *ct = obj_alloc(text);
+	text *ct = obj_alloc(text, MODE_SILENT);
 	item *ti;
 	font_e *fe;
 
@@ -1121,12 +1129,11 @@ void add_main_msg()
 		return;
 	}
 
-	ct->flags = F_TXT_EVAL | F_TXT_SILENT;;
 	ct->hotspot = F_HS_LEFT | F_HS_TOP;
 	ct->style = TTF_STYLE_NORMAL;
-	ct->x = tmptheme.text_x;
-	ct->y = tmptheme.text_y;
-	ct->col = tmptheme.text_color;
+	ct->x = text_x;
+	ct->y = text_y;
+	ct->col = text_color;
 	ct->val = config.message;
 
 	if (strstr(ct->val, "$progress")) {
@@ -1135,12 +1142,12 @@ void add_main_msg()
 		ct->curr_progress = -1;
 	}
 
-	fpath = tmptheme.text_font;
+	fpath = text_font;
 
 	for (ti = tmptheme.fonts.head ; ti != NULL; ti = ti->next) {
 		fe = (font_e*) ti->p;
 
-		if (!strcmp(fe->file, fpath) && fe->size == tmptheme.text_size) {
+		if (!strcmp(fe->file, fpath) && fe->size == text_size) {
 			ct->font = fe;
 			goto mm_end;
 		}
@@ -1153,7 +1160,7 @@ void add_main_msg()
 		goto mm_err;
 	}
 	fe->file = fpath;
-	fe->size = tmptheme.text_size;
+	fe->size = text_size;
 	fe->font = NULL;
 
 	list_add(&tmptheme.fonts, fe);
@@ -1179,7 +1186,7 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 	char *t;
 	int len, i;
 	bool ignore = false;
-	box *bprev;
+	box *bprev = NULL;
 
 	if ((cfgfp = fopen(cfgfile,"r")) == NULL) {
 		iprint(MSG_ERROR, "Can't open cfg file %s.\n", cfgfile);
@@ -1252,13 +1259,25 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 					} else if (bprev != NULL) {
 						bprev->inter = tbox;
 						bprev->curr = malloc(sizeof(box));
-						interpolate_box(bprev, tbox, bprev->curr);
+						box_interpolate(bprev, tbox, bprev->curr);
 						if (!bprev->curr) {
 							free(container_of(tbox));
 							free(container_of(bprev));
 							iprint(MSG_ERROR, "Failed to allocate cache for an interpolated box.\n");
 						} else {
 							obj_add(bprev);
+
+							if (!memcmp(&bprev->c_ul, &bprev->c_ur, sizeof(color))) {
+								if (!memcmp(&bprev->c_ll, &bprev->c_lr, sizeof(color))) {
+									if (!memcmp(&bprev->c_ll, &bprev->c_ul, sizeof(color)))
+										bprev->attr |= BOX_SOLID;
+									else
+										bprev->attr |= BOX_VGRAD;
+								}
+							} else if (!memcmp(&bprev->c_ul, &bprev->c_ll, sizeof(color)) &&
+									   !memcmp(&bprev->c_ur, &bprev->c_lr, sizeof(color))) {
+								bprev->attr |= BOX_HGRAD;
+							}
 						}
 						bprev = NULL;
 					} else {

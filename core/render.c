@@ -29,7 +29,10 @@
 #include <fcntl.h>
 #include "util.h"
 
-void put_pixel(u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add)
+/*
+ * Lower level graphics fucntions
+ */
+inline void put_pixel(u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add)
 {
 	/* Can we use optimized code for 24/32bpp modes? */
 	if (fbd.opt) {
@@ -127,7 +130,24 @@ void rgba2fb(rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha)
 	}
 }
 
-void interpolate_rect(rect *a, rect *b, rect *c)
+void blit(u8 *src, rect *bnd, int src_w, u8 *dst, int x, int y, int dst_w)
+{
+	u8 *to;
+	int cy, j;
+
+	to = dst + (y * dst_w + x) * fbd.bytespp;
+
+	j = (bnd->x2 - bnd->x1 + 1) * fbd.bytespp;
+	for (cy = bnd->y1; cy <= bnd->y2; cy++) {
+		memcpy(to, src + (cy * src_w + bnd->x1) * fbd.bytespp, j);
+		to += dst_w * fbd.bytespp;
+	}
+}
+
+/*
+ *  Rectangle-related functions
+ */
+void rect_interpolate(rect *a, rect *b, rect *c)
 {
 	int h = PROGRESS_MAX - config.progress;
 
@@ -137,55 +157,212 @@ void interpolate_rect(rect *a, rect *b, rect *c)
 	c->y2 = (a->y2 * h + b->y2 * config.progress) / PROGRESS_MAX;
 }
 
-static void render_icon(stheme_t *theme, icon *ticon, u8 *target)
+/*
+ * Set 'c' to a rectangle encompassing both 'a' and 'b'.
+ */
+void rect_bnd(rect *a, rect *b, rect *c)
 {
-	int y, yi, xi, wi, hi;
-	u8 *out = NULL;
-	u8 *in = NULL;
+	c->x1 = min(a->x1, b->x1);
+	c->x2 = max(a->x2, b->x2);
+	c->y1 = min(a->y1, b->y1);
+	c->y2 = max(a->y2, b->y2);
+}
 
-	/* Interpolate a cropping rectangle if necessary. */
-	if (ticon->crop) {
-		xi = min(ticon->crop_curr.x1, ticon->crop_curr.x2);
-		yi = min(ticon->crop_curr.y1, ticon->crop_curr.y2);
-		wi = abs(ticon->crop_curr.x1 - ticon->crop_curr.x2) + 1;
-		hi = abs(ticon->crop_curr.y1 - ticon->crop_curr.y2) + yi + 1;
-	} else {
-		xi = yi = 0;
-		wi = ticon->img->w;
-		hi = ticon->img->h;
-	}
+void rect_min(rect *a, rect *b, rect *c)
+{
+	c->x1 = max(a->x1, b->x1);
+	c->x2 = min(a->x2, b->x2);
+	c->y1 = max(a->y1, b->y1);
+	c->y2 = min(a->y2, b->y2);
+}
 
-	for (y = ticon->y + yi; yi < hi; yi++, y++) {
-		out = target + (ticon->x + xi + y * theme->xres) * fbd.bytespp;
-		in = ticon->img->picbuf + (xi + yi * ticon->img->w) * 4;
-		rgba2fb((rgbacolor*)in, out, out, wi, y, 1);
+bool rect_intersect(rect *a, rect *b)
+{
+	if (a->x2 < b->x1 || a->x1 > b->x2 || a->y1 > b->y2 || a->y2 < b->y1)
+		return false;
+	else
+		return true;
+}
+
+/*
+ * Returns true if rect a contains rect b.
+ */
+bool rect_contains(rect *a, rect *b)
+{
+	if (a->x1 <= b->x1 && a->y1 <= b->y1 && a->x2 >= b->x2 && a->y2 >= b->y2)
+		return true;
+	else
+		return false;
+}
+
+void blit_add(stheme_t *theme, rect *a)
+{
+	rect *re = malloc(sizeof(rect));
+	if (!re)
+		return;
+
+	memcpy(re, a, sizeof(rect));
+
+	list_add(&theme->blit, re);
+}
+
+void blit_normalize(stheme_t *theme)
+{
+	item *i, *j, *prev;
+	rect *a, *b;
+
+	for (i = theme->blit.head; i; i = i->next) {
+start:	a = i->p;
+		prev = i;
+
+		for (j = i->next; j; j = j->next) {
+			b = j->p;
+
+			if (rect_contains(a, b)) {
+				list_del(&theme->blit, prev, j);
+				free(b);
+			} else if (rect_contains(b, a)) {
+				i->p = b;
+				list_del(&theme->blit, prev, j);
+				free(a);
+				goto start;
+			}
+			prev = j;
+		}
 	}
 }
 
-static void render_box(stheme_t *theme, box *box, u8 *target)
+void render_add(stheme_t *theme, obj *o, rect *a)
+{
+	return;
+}
+
+/*
+ * Interpolates two boxes, based on the value of the config->progress variable.
+ * This is a strange implementation of a progress bar, introduced by the
+ * authors of Bootsplash.
+ */
+void box_interpolate(box *a, box *b, box *c)
+{
+	int h = PROGRESS_MAX - config.progress;
+
+#define inter_color(clo, cl1, cl2)									\
+{																	\
+	clo.r = (cl1.r * h + cl2.r * config.progress) / PROGRESS_MAX;	\
+	clo.g = (cl1.g * h + cl2.g * config.progress) / PROGRESS_MAX;	\
+	clo.b = (cl1.b * h + cl2.b * config.progress) / PROGRESS_MAX;	\
+	clo.a = (cl1.a * h + cl2.a * config.progress) / PROGRESS_MAX;	\
+}
+
+	rect_interpolate(&a->re, &b->re, &c->re);
+
+	inter_color(c->c_ul, a->c_ul, b->c_ul);
+	inter_color(c->c_ur, a->c_ur, b->c_ur);
+	inter_color(c->c_ll, a->c_ll, b->c_ll);
+	inter_color(c->c_lr, a->c_lr, b->c_lr);
+}
+
+void box_prerender(stheme_t *theme, box *b)
+{
+	obj *o = container_of(b);
+
+	if (b->attr & BOX_INTER) {
+		box *tb = malloc(sizeof(box));
+		if (!tb)
+			return;
+
+		box_interpolate(b, b->inter, tb);
+
+		if (!memcmp(tb, b->curr, sizeof(box))) {
+			free(tb);
+			return;
+		}
+
+		if (b->attr & (BOX_VGRAD | BOX_SOLID) && b->curr->re.y1 == tb->re.y1 && b->curr->re.y2 == tb->re.y2) {
+			rect re;
+
+			re.y1 = tb->re.y1;
+			re.y2 = tb->re.y2;
+
+			if (b->curr->re.x1 != tb->re.x1) {
+				re.x1 = min(b->curr->re.x1, tb->re.x1);
+				re.x2 = max(b->curr->re.x1, tb->re.x1);
+				blit_add(theme, &re);
+				render_add(theme, o, &re);
+			}
+
+			if (b->curr->re.x2 != tb->re.x2) {
+				re.x1 = min(b->curr->re.x2, tb->re.x2);
+				re.x2 = max(b->curr->re.x2, tb->re.x2);
+				blit_add(theme, &re);
+				render_add(theme, o, &re);
+			}
+
+			if (memcmp(&tb->re, &o->bnd, sizeof(rect))) {
+				memcpy(&o->bnd, &tb->re, sizeof(rect));
+			}
+
+		} else if (b->attr & (BOX_HGRAD | BOX_SOLID) && b->curr->re.x1 == tb->re.x1 && b->curr->re.x2 == tb->re.x2) {
+			rect re;
+
+			re.x1 = tb->re.x1;
+			re.x2 = tb->re.x2;
+
+			if (b->curr->re.y1 != tb->re.y1) {
+				re.y1 = min(b->curr->re.y1, tb->re.y1);
+				re.y2 = max(b->curr->re.y1, tb->re.y1);
+				blit_add(theme, &re);
+				render_add(theme, o, &re);
+			}
+
+			if (b->curr->re.y2 != tb->re.y2) {
+				re.y1 = min(b->curr->re.y2, tb->re.y2);
+				re.y2 = max(b->curr->re.y2, tb->re.y2);
+				blit_add(theme, &re);
+				render_add(theme, o, &re);
+			}
+
+			if (memcmp(&tb->re, &o->bnd, sizeof(rect))) {
+				memcpy(&o->bnd, &tb->re, sizeof(rect));
+			}
+		} else {
+			if (memcmp(&tb->re, &o->bnd, sizeof(rect))) {
+				blit_add(theme, &o->bnd);
+				render_add(theme, o, &o->bnd);
+				memcpy(&o->bnd, &tb->re, sizeof(rect));
+			}
+
+		/* TODO: add some more optimizations for here? */
+			blit_add(theme, &tb->re);
+			render_add(theme, o, &tb->re);
+		}
+
+		free(b->curr);
+		b->curr = tb;
+
+	} else {
+		blit_add(theme, &o->bnd);
+		render_add(theme, o, &o->bnd);
+	}
+}
+
+void box_render(stheme_t *theme, box *box, rect *re, u8 *target)
 {
 	int x, y, a, r, g, b;
 	int add;
 	u8 *pic;
-	u8 solid = 0;
 
-	int b_width = box->x2 - box->x1 + 1;
-	int b_height = box->y2 - box->y1 + 1;
+	int b_width = box->re.x2 - box->re.x1 + 1;
+	int b_height = box->re.y2 - box->re.y1 + 1;
 
-	if (!memcmp(&box->c_ul, &box->c_ur, sizeof(color)) &&
-	    !memcmp(&box->c_ul, &box->c_ll, sizeof(color)) &&
-	    !memcmp(&box->c_ul, &box->c_lr, sizeof(color))) {
-		solid = 1;
-	}
-
-	for (y = box->y1; y <= box->y2; y++) {
+	for (y = re->y1; y <= re->y2; y++) {
 
 		int r1, r2, g1, g2, b1, b2, a1, a2;
 		int h1, h2, h;
 		u8  opt = 0;
 		float hr, hg, hb, ha, fr, fg, fb, fa;
 
-		pic = target + (box->x1 + y * theme->xres) * fbd.bytespp;
+		pic = target + (re->x1 + y * theme->xres) * fbd.bytespp;
 
 		/* Do a nice 2x2 ordered dithering, like it was done in bootsplash;
 		 * this makes the pics in 15/16bpp modes look much nicer;
@@ -193,18 +370,18 @@ static void render_box(stheme_t *theme, box *box, u8 *target)
 		 * 303030303..
 		 * 121212121..
 		 */
-		add = (box->x1 & 1);
+		add = (box->re.x1 & 1);
 		add ^= (add ^ y) & 1 ? 1 : 3;
 
-		if (solid) {
+		if (box->attr & BOX_SOLID) {
 			r = box->c_ul.r;
 			g = box->c_ul.g;
 			b = box->c_ul.b;
 			a = box->c_ul.a;
 			opt = 1;
 		} else {
-			h1 = box->y2 - y;
-			h2 = y - box->y1;
+			h1 = box->re.y2 - y;
+			h2 = y - box->re.y1;
 
 			if (b_height > 1)
 				h = b_height -1;
@@ -237,18 +414,18 @@ static void render_box(stheme_t *theme, box *box, u8 *target)
 				ha = 1.0/b_width * a2;
 			}
 
-			r = r1; fr = (float)r1;
-			g = g1; fg = (float)g1;
-			b = b1; fb = (float)b1;
-			a = a1; fa = (float)a1;
+			r = r1; fr = (float)r1 + hr * (re->x1 - box->re.x1);
+			g = g1; fg = (float)g1 + hg * (re->x1 - box->re.x1);
+			b = b1; fb = (float)b1 + hb * (re->x1 - box->re.x1);
+			a = a1; fa = (float)a1 + ha * (re->x1 - box->re.x1);
 		}
 
-		for (x = box->x1; x <= box->x2; x++) {
+		for (x = re->x1; x <= re->x2; x++) {
 			if (!opt) {
 				fa += ha;
 				fr += hr;
 				fg += hg;
-				fa += hb;
+				fb += hb;
 
 				a = (u8)fa;
 				b = (u8)fb;
@@ -263,273 +440,90 @@ static void render_box(stheme_t *theme, box *box, u8 *target)
 	}
 }
 
-/* Interpolates two boxes, based on the value of the config->progress variable.
- * This is a strange implementation of a progress bar, introduced by the
- * authors of Bootsplash. */
-void interpolate_box(box *a, box *b, box *c)
+void icon_render(stheme_t *theme, icon *ticon, rect *re, u8 *target)
 {
-	int h = PROGRESS_MAX - config.progress;
+//	rect crop, work;
 
-#define inter_color(clo, cl1, cl2)									\
-{																	\
-	clo.r = (cl1.r * h + cl2.r * config.progress) / PROGRESS_MAX;	\
-	clo.g = (cl1.g * h + cl2.g * config.progress) / PROGRESS_MAX;	\
-	clo.b = (cl1.b * h + cl2.b * config.progress) / PROGRESS_MAX;	\
-	clo.a = (cl1.a * h + cl2.a * config.progress) / PROGRESS_MAX;	\
-}
+	int y, yi, xi, wi, hi;
+	u8 *out = NULL;
+	u8 *in = NULL;
 
-	c->x1 = (a->x1 * h + b->x1 * config.progress) / PROGRESS_MAX;
-	c->x2 = (a->x2 * h + b->x2 * config.progress) / PROGRESS_MAX;
-	c->y1 = (a->y1 * h + b->y1 * config.progress) / PROGRESS_MAX;
-	c->y2 = (a->y2 * h + b->y2 * config.progress) / PROGRESS_MAX;
-
-	inter_color(c->c_ul, a->c_ul, b->c_ul);
-	inter_color(c->c_ur, a->c_ur, b->c_ur);
-	inter_color(c->c_ll, a->c_ll, b->c_ll);
-	inter_color(c->c_lr, a->c_lr, b->c_lr);
-}
-
-static char *get_program_output(char *prg, unsigned char origin)
-{
-	char *buf = malloc(1024);
-	fd_set rfds;
-	struct timeval tv;
-	int pfds[2];
-	pid_t pid;
-	int i;
-
-	if (!buf)
-		return NULL;
-
-	pipe(pfds);
-	pid = fork();
-	buf[0] = 0;
-
-	if (pid == 0) {
-		if (origin != FB_SPLASH_IO_ORIG_KERNEL) {
-			/* Only play with stdout if we are NOT the kernel helper.
-			 * Otherwise, things will break horribly and we'll end up
-			 * with a deadlock. */
-			close(1);
-		}
-		dup(pfds[1]);
-		close(pfds[0]);
-		execlp("sh", "sh", "-c", prg, NULL);
+#if 0
+	/* Interpolate a cropping rectangle if necessary. */
+	if (ticon->crop) {
+		memcpy(&crop, &ticon->crop_curr, sizeof(rect));
+		crop.x1 += ticon->x;
+		crop.x2 += ticon->x;
+		crop.y1 += ticon->y;
+		crop.y2 += ticon->y;
 	} else {
-		FD_ZERO(&rfds);
-		FD_SET(pfds[0], &rfds);
-		tv.tv_sec = 0;
-		tv.tv_usec = 250000;
-		i = select(pfds[0]+1, &rfds, NULL, NULL, &tv);
-		if (i != -1 && i != 0) {
-			i = read(pfds[0], buf, 1024);
-			if (i > 0)
-				buf[i] = 0;
-		}
-
-		close(pfds[0]);
-		close(pfds[1]);
+		crop.x1 = ticon->x;
+		crop.y1 = ticon->y;
+		crop.x2 = crop.x1 + ticon->img->w - 1;
+		crop.y2 = crop.y1 + ticon->img->h = 1;
 	}
-
-	return buf;
-}
-
-static char *eval_text(char *txt)
-{
-	char *p, *t, *ret, *d;
-	int len, i;
-
-	i = len = strlen(txt);
-	p = txt;
-
-	while ((t = strstr(p, "$progress")) != NULL) {
-		len += 3;
-		p = t+1;
-	}
-
-	ret = malloc(len+1);
-
-	p = txt;
-	d = ret;
-
-	while (*p != 0) {
-		if (*p == '\\') {
-			/* to allow literal "$progress" i.e. \$progress */
-			p++;
-
-			/* might have reached end of string */
-			if (*p == 0)
-				break;
-
-			if (*p == 'n')
-				*d = '\n';
-			else
-				*d = *p;
-			p++;
-			d++;
-			continue;
-		}
-
-		*d = *p;
-
-		if (!strncmp(p, "$progress", 9)) {
-			d += sprintf(d, "%d", config.progress * 100 / PROGRESS_MAX);
-			p += 9;
-		} else {
-			p++;
-			d++;
-		}
-	}
-
-	*d = 0; /* NULL-terminate */
-
-	return ret;
-}
-
-static void prep_bgnd(stheme_t *theme, u8 *target, u8 *src, int x, int y, int w, int h)
-{
-	u8 *t, *s;
-	int j, i;
-
-	/* Sanity checks */
-	if (!w || !h)
-		return;
-	if (x < 0)
-		x = 0;
-	if (y < 0)
-		y = 0;
-	if (x + w > theme->xres)
-		w = theme->xres - x;
-	if (y + h > theme->yres)
-		h = theme->yres - y;
-
-	t = target + (y * theme->xres + x) * fbd.bytespp;
-	s = src    + (y * theme->xres + x) * fbd.bytespp;
-	j = w * fbd.bytespp;
-	i = theme->xres * fbd.bytespp;
-
-	for (y = 0; y < h; y++) {
-		memcpy(t, s, j);
-		t += i;
-		s += i;
-	}
-}
-
-/* Prepares the backgroud underneath objects that will be rendered in
- * render_objs() */
-void prep_bgnds(stheme_t *theme, u8 *target, u8 *bgnd, char mode)
-{
-	item *i;
-
-	for (i = theme->objs.head; i != NULL; i = i->next) {
-		obj *o = (obj*)i->p;
-
-		if (!o->invalid)
-			continue;
-
-		if (o->type == o_box) {
-			box *b = o->p;
-
-			if (b->attr & BOX_SILENT && mode != 's')
-				continue;
-
-			if (!(b->attr & BOX_SILENT) && mode != 'v')
-				continue;
-
-			if ((b->attr & BOX_INTER)) {
-				if (b->curr)
-					prep_bgnd(theme, target, bgnd, b->curr->x1, b->curr->y1, b->curr->x2 - b->curr->x1 + 1, b->curr->y2 - b->curr->y1 + 1);
-			}
-		} else if (o->type == o_icon && mode == 's') {
-			icon *c = (icon*)o->p;
-
-			if (c->status == 0)
-				continue;
-
-			if (!c->img || !c->img->picbuf)
-				continue;
-
-			if (c->img->w > theme->xres - c->x || c->img->h > theme->yres - c->y)
-				continue;
-
-			prep_bgnd(theme, target, bgnd, c->x, c->y, c->img->w, c->img->h);
-		}
-#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
-		else if (o->type == o_anim) {
-			u8 render_it = 0;
-			anim *a = (anim*)o->p;
-
-			/* We only support animations in the silent mode. */
-			if (mode != 's')
-				continue;
-
-			if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_ONCE &&
-				(a->status == F_ANIM_STATUS_DONE)) {
-				render_it = 1;
-			} else if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL) {
-				render_it = 1;
-			}
-
-			if (render_it)
-				prep_bgnd(theme, target, bgnd, a->x, a->y, a->w, a->h);
-		}
-#endif /* CONFIG_MNG */
-#if WANT_TTF
-		else if (o->type == o_text) {
-			text *ct = (text*)o->p;
-			int x, y;
-
-			if (mode == 's' && !(ct->flags & F_TXT_SILENT))
-				continue;
-
-			if (mode == 'v' && !(ct->flags & F_TXT_VERBOSE))
-				continue;
-
-			/* FIXME: this shouldn't even be in the list! */
-			if (!ct->font || !ct->font->font)
-				continue;
-
-			text_get_xy(ct, &x, &y);
-			prep_bgnd(theme, target, bgnd, x, y, ct->last_width, ct->font->font->height);
-		}
 #endif
+
+//	rect_min(&crop, re, &work);
+
+	xi = re->x1 - ticon->x;
+	yi = re->y1 - ticon->y;
+	wi = re->x2 - re->x1 + 1;
+	hi = yi + re->y2 - re->y1 + 1;
+
+	for (y = ticon->y + yi; yi < hi; yi++, y++) {
+		out = target + (ticon->x + xi + y * theme->xres) * fbd.bytespp;
+		in = ticon->img->picbuf + (xi + yi * ticon->img->w) * 4;
+		rgba2fb((rgbacolor*)in, out, out, wi, y, 1);
 	}
 }
 
-void render_obj(stheme_t *theme, u8 *target, char mode, unsigned char origin, obj *o)
+void icon_prerender(stheme_t *theme, icon *c)
 {
-	if (o->type == o_box) {
-		box *b = (box*)o->p;
+	obj *o = container_of(c);
 
-		if ((b->attr & BOX_SILENT) && mode != 's')
-			return;
+	if (c->status == 0)
+		return;
 
-		if (!(b->attr & BOX_SILENT) && mode != 'v')
-			return;
+	if (!c->img || !c->img->picbuf)
+		return;
 
-		if (b->attr & BOX_INTER) {
-			render_box(theme, b->curr, target);
-		} else {
-			render_box(theme, b, target);
-		}
-	/* Icons are only allowed in silent mode. */
-	} else if (o->type == o_icon && mode == 's') {
-		icon *c;
-		c = (icon*)o->p;
-
-		if (c->status == 0)
-			return;
-
-		if (!c->img || !c->img->picbuf)
-			return;
-
-		if (c->img->w > theme->xres - c->x || c->img->h > theme->yres - c->y) {
-			iprint(MSG_WARN,"Icon %s does not fit on the screen - ignoring it.", c->img->filename);
-			return;
-		}
-
-		render_icon(theme, c, target);
+	if (c->img->w > theme->xres - c->x || c->img->h > theme->yres - c->y) {
+		iprint(MSG_WARN,"Icon %s does not fit on the screen - ignoring it.", c->img->filename);
+		return;
 	}
+
+	if (c->crop) {
+		rect crn;
+
+		/* If the cropping rectangle is unchanged, don't render anything */
+		rect_interpolate(&c->crop_from, &c->crop_to, &crn);
+		if (!memcmp(&crn, &c->crop_curr, sizeof(rect)))
+			return;
+
+		/* TODO: add optimization: repaint only a part of the icon */
+		memcpy(&c->crop_curr, &crn, sizeof(rect));
+
+		crn.x1 += c->x;
+		crn.x2 += c->x;
+		crn.y1 += c->y;
+		crn.y2 += c->y;
+
+		blit_add(theme, &o->bnd);
+		render_add(theme, o, &o->bnd);
+
+		blit_add(theme, &crn);
+		render_add(theme, o, &crn);
+
+		memcpy(&o->bnd, &crn, sizeof(rect));
+	} else {
+		blit_add(theme, &o->bnd);
+		render_add(theme, o, &o->bnd);
+	}
+}
+#if 0
+void render_obj(stheme_t *theme, u8 *target, char mode, unsigned char origin, obj *o, bool force)
+{
 #if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
 	else if (o->type == o_anim) {
 		u8 render_it = 0;
@@ -556,27 +550,6 @@ void render_obj(stheme_t *theme, u8 *target, char mode, unsigned char origin, ob
 #if WANT_TTF
 	else if (o->type == o_text) {
 
-		text *ct = (text*)o->p;
-		char *txt;
-
-		if (mode == 's' && !(ct->flags & F_TXT_SILENT))
-			return;
-		else if (mode == 'v' && !(ct->flags & F_TXT_VERBOSE))
-			return;
-
-		if (!ct->font || !ct->font->font)
-			return;
-
-		txt = ct->val;
-
-		if (ct->flags & F_TXT_EXEC) {
-			txt = get_program_output(ct->val, origin);
-		}
-
-		if (ct->flags & F_TXT_EVAL) {
-			txt = eval_text(txt);
-		}
-
 		if (txt) {
 			TTF_Render(theme, target, txt, ct->font->font,
 					   ct->style, ct->x, ct->y, ct->col,
@@ -587,17 +560,115 @@ void render_obj(stheme_t *theme, u8 *target, char mode, unsigned char origin, ob
 	}
 #endif /* TTF */
 }
+#endif
 
-
-void render_objs(stheme_t *theme, u8 *target, char mode, unsigned char origin)
+void obj_render(stheme_t *theme, obj *o, rect *re, u8 *tg)
 {
-	item *i;
+	switch (o->type) {
 
+	case o_icon:
+		icon_render(theme, o->p, re, tg);
+		break;
+
+	case o_box:
+	{
+		box *t = o->p;
+		if (t->curr)
+			box_render(theme, t->curr, re, tg);
+		else
+			box_render(theme, t, re, tg);
+		break;
+	}
+
+	default:
+		break;
+	}
+}
+
+void obj_update(stheme_t *theme, obj *o)
+{
+	switch (o->type) {
+#if WANT_TTF
+	case o_text:
+		text_update(theme, o->p);
+		break;
+#endif
+	default:
+		break;
+	}
+}
+
+void obj_prerender(stheme_t *theme, obj *o)
+{
+	switch (o->type) {
+
+	case o_icon:
+		icon_prerender(theme, o->p);
+		break;
+
+	case o_box:
+		box_prerender(theme, o->p);
+		break;
+
+	default:
+		break;
+	}
+}
+
+void render_objs(stheme_t *theme, u8 *target, u8 mode)
+{
+	item *i, *j;
+
+	/*
+	 * First pass: update the bounding rectangles
+	 *
+	 * For text objects with 'eval' or 'exec' flags, their content is evaluated.
+	 */
 	for (i = theme->objs.head; i != NULL; i = i->next) {
 		obj *o = i->p;
+		if (!(o->modes & mode))
+			continue;
+
 		if (o->invalid) {
-			render_obj(theme, target, mode, origin, o);
+			obj_update(theme, o);
+		}
+	}
+
+	/*
+	 * Second pass: mark rectangles for reblitting and rerendering
+	 * via object specific rendering routines.
+	 */
+	for (i = theme->objs.head; i != NULL; i = i->next) {
+		obj *o = i->p;
+		if (!(o->modes & mode))
+			continue;
+
+		if (o->invalid) {
+			obj_prerender(theme, o);
 			o->invalid = false;
+		}
+	}
+
+	blit_normalize(theme);
+
+	for (i = theme->blit.head; i != NULL; i = i->next) {
+		rect *re = i->p;
+
+		blit((u8*)theme->silent_img.data, re, theme->xres, target, re->x1, re->y1, theme->xres);
+
+		for (j = theme->objs.head; j != NULL; j = j->next) {
+			obj *o = j->p;
+			rect tmp;
+
+			if (!(o->modes & mode))
+				continue;
+
+			rect_min(&o->bnd, re, &tmp);
+
+			if (tmp.x2 < tmp.x1 || tmp.y2 < tmp.y1)
+				continue;
+
+			obj_render(theme, o, &tmp, target);
 		}
 	}
 }
@@ -622,33 +693,13 @@ void invalidate_progress(stheme_t *theme)
 		if (o->type == o_box) {
 			box *b = o->p;
 
-			if (b->inter) {
-				box *tmp = malloc(sizeof(box));
-				if (!tmp)
-					continue;
-
-				interpolate_box(b, b->inter, tmp);
-
-				if (memcmp(tmp, b->curr, sizeof(box))) {
-					free(b->curr);
-					b->curr = tmp;
-					o->invalid = true;
-				} else {
-					free(tmp);
-				}
-			}
+			if (b->inter)
+				o->invalid = true;
 		} else if (o->type == o_icon) {
 			icon *ic = o->p;
-			rect r;
 
-			if (!ic->crop)
-				continue;
-
-			interpolate_rect(&ic->crop_from, &ic->crop_to, &r);
-			if (memcmp(&ic->crop_curr, &r, sizeof(rect))) {
-				memcpy(&ic->crop_curr, &r, sizeof(rect));
+			if (ic->crop)
 				o->invalid = true;
-			}
 		} else if (o->type == o_text) {
 			int prg;
 			text *t = o->p;
@@ -665,4 +716,95 @@ void invalidate_progress(stheme_t *theme)
 		}
 	}
 }
+
+void bnd_init(stheme_t *theme)
+{
+	item *i;
+
+	/* Initialize the bounding rectangles */
+	for (i = theme->objs.head; i != NULL; i = i->next) {
+		obj *a = i->p;
+
+		switch (a->type) {
+
+		case o_box:
+		{
+			box *t = a->p;
+
+			if (t->inter) {
+				rect_bnd(&t->re, &t->inter->re, &a->bnd);
+			} else {
+				memcpy(&a->bnd, &t->re, sizeof(rect));
+			}
+
+			break;
+		}
+
+		case o_icon:
+		{
+			icon *t = a->p;
+
+			if (t->crop) {
+				rect_bnd(&t->crop_from, &t->crop_to, &a->bnd);
+				a->bnd.x1 += t->x;
+				a->bnd.x2 += t->x;
+				a->bnd.y1 += t->y;
+				a->bnd.y2 += t->y;
+			} else {
+				a->bnd.x1 = t->x;
+				a->bnd.y1 = t->y;
+				a->bnd.x2 = a->bnd.x1 + t->img->w - 1;
+				a->bnd.y2 = a->bnd.y1 + t->img->h - 1;
+			}
+		}
+/*
+		case o_anim:
+		{
+			anim *t = a->p;
+			a->bnd.x1 = t->x;
+			a->bnd.y1 = t->y;
+			a->bnd.x2 = t->x + t->w - 1;
+			a->bnd.y2 = t->y + t->h - 1;
+		}
+*/
+		default:
+			break;
+		}
+	}
+}
+
+#if 0
+int bgcache_init(stheme_t *theme)
+{
+	item *i, *j;
+
+	/* Prepare the background image */
+	memcpy(theme->bgbuf, theme->silent_img.data, theme->xres * theme->yres * fbd.bytespp);
+
+	/*
+	 * If we intersect another object, we will need to allocate a background
+	 * buffer to avoid unnecessary redrawing later.  If we don't intersect
+	 * anything, there's no need for a buffer as we will get our background
+	 * directly from silent_img
+	 */
+	for (i = theme->objs.head; i != NULL; i = i->next) {
+		obj *a = i->p;
+
+		for (j = theme->objs.head; j != i; j = j->next) {
+			obj *b = j->p;
+
+			if (rect_intersect(&a->bnd, &b->bnd)) {
+				a->bgcache = malloc(fbd.bytespp * (a->bnd.x2 - a->bnd.x1 + 1) * (a->bnd.y2 - a->bnd.y1 + 1));
+				blit(theme->bgbuf, &a->bnd, theme->xres, a->bgcache, 0, 0, (a->bnd.x2 - a->bnd.x1 + 1));
+				break;
+			}
+		}
+
+		render_obj(theme, theme->bgbuf, 's', a, true);
+	}
+
+	return 0;
+}
+#endif
+
 

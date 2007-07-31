@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <assert.h>
 
 #include <ft2build.h>
@@ -390,8 +391,7 @@ static int TTF_SizeUNICODE(TTF_Font *font, const unsigned short *text, int *w, i
 }
 
 static void TTF_RenderUNICODE_Shaded(stheme_t *theme, u8 *target, const unsigned short *text,
- 			      TTF_Font* font, int x, int y, color fcol,
-			      u8 hotspot, int* swidth)
+			      TTF_Font* font, int x, int y, color fcol)
 {
 	int xstart, width, height, i, j, row_underline;
 	unsigned int val;
@@ -408,22 +408,6 @@ static void TTF_RenderUNICODE_Shaded(stheme_t *theme, u8 *target, const unsigned
 		return;
 	}
 	height = font->height;
-
-	/* Save the width if the pointer is not NULL */
-	if (swidth)
-		*swidth = width;
-
-	i = hotspot & F_HS_HORIZ_MASK;
-	if (i == F_HS_HMIDDLE)
-		x -= width/2;
-	else if (i == F_HS_RIGHT)
-		x -= width;
-
-	i = hotspot & F_HS_VERT_MASK;
-	if (i == F_HS_VMIDDLE)
-		y -= height/2;
-	else if (i == F_HS_BOTTOM)
-		y -= height;
 
 	/*
 	 * The underline stuff below is a little hackish. The characters
@@ -508,46 +492,6 @@ next_glyph:	xstart += glyph->advance;
 		}
 	}
 	return;
-}
-
-
-
-static unsigned char* TTF_RenderText_Shaded(stheme_t *theme, u8 *target, const char *text,
-				     TTF_Font *font, int x, int y,
-				     color col, u8 hotspot, int *width)
-{
-	unsigned short *p, *t, *unicode_text;
-	int unicode_len;
-
-	/* Copy the Latin-1 text to a UNICODE text buffer */
-	unicode_len = strlen(text);
-	unicode_text = (unsigned short *)malloc((unicode_len+1)*(sizeof*unicode_text));
-
-	if (unicode_text == NULL) {
-		iprint(MSG_ERROR, "Out of memory\n");
-		return(NULL);
-	}
-
-	UTF8_to_UNICODE(unicode_text, text, unicode_len);
-//	ASCII_to_UNICODE(unicode_text, text, unicode_len);
-
-	for (t = p = unicode_text; *p != 0; p++) {
-		if (*p == '\n') {
-			*p = 0;
-			if (p > t)
-				TTF_RenderUNICODE_Shaded(theme, target, t, font, x, y, col, hotspot, width);
-			y += font->height;
-			t = p+1;
-		}
-	}
-
-	if (*t != 0) {
-		TTF_RenderUNICODE_Shaded(theme, target, t, font, x, y, col, hotspot, width);
-	}
-
-	/* Free the text buffer and return */
-	free(unicode_text);
-	return NULL;
 }
 
 static void TTF_CloseFont(TTF_Font* font)
@@ -659,24 +603,9 @@ static TTF_Font* TTF_OpenFont(const char *file, int ptsize)
 	return a;
 }
 
-int TTF_Render(stheme_t *theme, u8 *target, char *text, TTF_Font *font, int style, int x,
-	       int y, color col, u8 hotspot, int *width)
-{
-	if (!target || !text || !font)
-		return -1;
-
-	TTF_SetFontStyle(font, style);
-	TTF_RenderText_Shaded(theme, target, text, font, x, y, col, hotspot, width);
-
-	return 0;
-}
-
 int load_fonts(stheme_t *theme)
 {
 	item *i;
-
-	if (!theme->main_font)
-		theme->main_font = TTF_OpenFont(theme->text_font, theme->text_size);
 
 	for (i = theme->fonts.head; i != NULL; i = i->next) {
 		font_e *fe = (font_e*) i->p;
@@ -691,11 +620,6 @@ int load_fonts(stheme_t *theme)
 int free_fonts(stheme_t *theme)
 {
 	item *i, *j;
-
-	if (theme->main_font) {
-		TTF_CloseFont(theme->main_font);
-		theme->main_font = NULL;
-	}
 
 	for (i = theme->fonts.head; i != NULL;) {
 		font_e *fe = (font_e*) i->p;
@@ -715,7 +639,135 @@ int free_fonts(stheme_t *theme)
 	return 0;
 }
 
-void text_get_xy(text *ct, int *x, int *y)
+static char *text_get_output(char *prg)
+{
+	char *buf = malloc(1024);
+	fd_set rfds;
+	struct timeval tv;
+	int pfds[2];
+	pid_t pid;
+	int i;
+
+	if (!buf)
+		return NULL;
+
+	pipe(pfds);
+	pid = fork();
+	buf[0] = 0;
+
+	if (pid == 0) {
+#ifndef TARGET_KERNEL
+		/* Only play with stdout if we are NOT the kernel helper.
+		 * Otherwise, things will break horribly and we'll end up
+		 * with a deadlock. */
+		close(1);
+#endif
+		dup(pfds[1]);
+		close(pfds[0]);
+		execlp("sh", "sh", "-c", prg, NULL);
+	} else {
+		FD_ZERO(&rfds);
+		FD_SET(pfds[0], &rfds);
+		tv.tv_sec = 0;
+		tv.tv_usec = 250000;
+		i = select(pfds[0]+1, &rfds, NULL, NULL, &tv);
+		if (i != -1 && i != 0) {
+			i = read(pfds[0], buf, 1024);
+			if (i > 0)
+				buf[i] = 0;
+		}
+
+		close(pfds[0]);
+		close(pfds[1]);
+	}
+
+	return buf;
+}
+
+static char *text_eval(char *txt)
+{
+	char *p, *t, *ret, *d;
+	int len, i;
+
+	i = len = strlen(txt);
+	p = txt;
+
+	while ((t = strstr(p, "$progress")) != NULL) {
+		len += 3;
+		p = t+1;
+	}
+
+	ret = malloc(len+1);
+
+	p = txt;
+	d = ret;
+
+	while (*p != 0) {
+		if (*p == '\\') {
+			/* to allow literal "$progress" i.e. \$progress */
+			p++;
+
+			/* might have reached end of string */
+			if (*p == 0)
+				break;
+
+			if (*p == 'n')
+				*d = '\n';
+			else
+				*d = *p;
+			p++;
+			d++;
+			continue;
+		}
+
+		*d = *p;
+
+		if (!strncmp(p, "$progress", 9)) {
+			d += sprintf(d, "%d", config.progress * 100 / PROGRESS_MAX);
+			p += 9;
+		} else {
+			p++;
+			d++;
+		}
+	}
+
+	*d = 0; /* NULL-terminate */
+
+	return ret;
+}
+
+void text_render(stheme_t *theme, text *ct, u8 *target)
+{
+	u16 *t, *p;
+	obj *o = container_of(ct);
+	int x, y;
+
+	if (!target || !ct || !ct->font || !ct->font->font)
+		return;
+
+	x = o->bnd.x1;
+	y = o->bnd.y1;
+
+	TTF_SetFontStyle(ct->font->font, ct->style);
+
+	/* Render the unicode text line by line. */
+	for (t = p = ct->cache; *p != 0; p++) {
+		if (*p == '\n') {
+			*p = 0;
+			if (p > t)
+				TTF_RenderUNICODE_Shaded(theme, target, t, ct->font->font, x, y, ct->col);
+			y += ct->font->font->height;
+			*p = '\n';
+			t = p+1;
+		}
+	}
+
+	if (*t != 0) {
+		TTF_RenderUNICODE_Shaded(theme, target, t, ct->font->font, x, y, ct->col);
+	}
+}
+
+static void text_get_xy(text *ct, int *x, int *y)
 {
 	int t;
 	*x = ct->x;
@@ -734,3 +786,72 @@ void text_get_xy(text *ct, int *x, int *y)
 	return;
 }
 
+void text_update(stheme_t *theme, text *ct)
+{
+	obj *o;
+	rect bnd;
+	char *txt, *txt2;
+	u16 *p;
+	int unicode_len;
+	int lines = 1;
+
+	o = container_of(ct);
+
+	if (!ct->font || !ct->font->font)
+		return;
+
+	if (ct->cache)
+		free(ct->cache);
+
+	txt = ct->val;
+
+	if (ct->flags & F_TXT_EXEC) {
+		txt = text_get_output(txt);
+	}
+
+	if (ct->flags & F_TXT_EVAL) {
+		if (txt) {
+			txt2 = text_eval(txt);
+			free(txt);
+			txt = txt2;
+		} else {
+			txt = text_eval(ct->val);
+		}
+	}
+
+	if (ct->curr_progress >= 0)
+		ct->curr_progress = config.progress;
+
+	/* Copy the Latin-1 text to a UNICODE text buffer */
+	unicode_len = strlen(txt);
+	ct->cache = (u16 *)malloc((unicode_len+1) * sizeof(*ct->cache));
+
+	if (ct->cache == NULL) {
+		iprint(MSG_ERROR, "Out of memory\n");
+		return;
+	}
+
+	UTF8_to_UNICODE(ct->cache, txt, unicode_len);
+	TTF_SetFontStyle(ct->font->font, ct->style);
+
+	text_get_xy(ct, &bnd.x1, &bnd.y1);
+
+	/* Get the dimensions of the text surface */
+	if ((TTF_SizeUNICODE(ct->font->font, ct->cache, &bnd.x2, NULL) < 0) || !bnd.x2) {
+		iprint(MSG_ERROR, "Text has zero width\n");
+		return;
+	}
+	bnd.x2 += bnd.x1 - 1;
+
+	for (p = ct->cache; *p; p++) {
+		if (*p == '\n')
+			lines++;
+	}
+
+	bnd.y2 = bnd.y1 + ct->font->font->height * lines - 1;
+
+	/* TODO: compare w/ the old bounding rectangle here, reallocate
+	 * the background buffer if necessary */
+
+
+}

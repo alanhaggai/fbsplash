@@ -19,3 +19,5 @@ New features
 ============
 - automatic theme resizing
 - add effects (fadein/fadeout/blendin) for icon/anim
+- geninitramfs: -o, --overlay, suspend2 support?
+

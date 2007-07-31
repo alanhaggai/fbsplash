@@ -52,49 +52,23 @@ void paint_rect(stheme_t *theme, u8 *dst, u8 *src, int x1, int y1, int x2, int y
 
 void paint_img(stheme_t *theme, u8 *dst, u8 *src)
 {
-	item *ti;
+	item *i, *j;
 
-	for (ti = theme->rects.head ; ti != NULL; ti = ti->next) {
-		rect *re;
-		re = (rect*)ti->p;
+	for (i = theme->blit.head; i != NULL;) {
+		rect *re = i->p;
+		
+		printf("%d %d %d %d\n", re->x1, re->y1, re->x2, re->y2);
+		
 		paint_rect(theme, dst, src, re->x1, re->y1, re->x2, re->y2);
+
+		j = i->next;
+		free(i);
+		free(re);
+		i = j;
 	}
 
-	for (ti = theme->objs.head; ti != NULL; ti = ti->next) {
-		obj *o;
-		o = (obj*)ti->p;
-
-		switch (o->type) {
-		case o_box:
-		{
-			box *b = (box*)o->p;
-			if (!(b->attr & BOX_INTER))
-				continue;
-
-			paint_rect(theme, dst, src, b->curr->x1, b->curr->y1, b->curr->x2, b->curr->y2);
-			break;
-		}
-#if WANT_TTF
-		case o_text:
-		{
-			int x, y;
-			text *t = (text*)o->p;
-			text_get_xy(t, &x, &y);
-			paint_rect(theme, dst, src, x, y, x + t->last_width, y + t->font->font->height);
-			break;
-		}
-#endif
-		default:
-			continue;
-		}
-	}
-
-#if WANT_TTF
-	paint_rect(theme, dst, src,
-			theme->text_x, theme->text_y,
-			theme->text_x + boot_msg_width,
-			theme->text_y + theme->main_font->height);
-#endif
+	printf("\n");
+	list_init(theme->blit);
 }
 
 /*

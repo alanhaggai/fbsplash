@@ -184,7 +184,7 @@ int splash_parse_kcmdline(bool sysmsg)
 	FILE *fp;
 	char *p, *t, *opt, *pbuf;
 	char *buf = malloc(1024);
-	char quot;
+	char quot = 0;
 	int err = 0, i, len;
 
 	if (!buf)
