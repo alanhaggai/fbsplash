@@ -384,6 +384,7 @@ static void parse_icon(char *t)
 {
 	char *filename = NULL;
 	char *p;
+	obj *o;
 	icon *cic = obj_alloc(icon, MODE_SILENT);
 	icon_img *cim;
 	item *ti;
@@ -394,6 +395,7 @@ static void parse_icon(char *t)
 		return;
 	}
 
+	o = container_of(cic);
 	cic->svc = NULL;
 
 	skip_whitespace(&t);
@@ -508,12 +510,9 @@ static void parse_icon(char *t)
 		if (!i)
 			goto pi_out;
 
-		cic->status = 1;
 	} else {
-		if (cic->type == e_display)
-			cic->status = 1;
-		else
-			cic->status = 0;
+		if (cic->type != e_display)
+			o->visible = false;
 	}
 
 	if (cic->type != e_display) {
@@ -623,6 +622,7 @@ static void parse_anim(char *t)
 	char *p;
 	char *filename;
 	anim *canim = obj_alloc(anim, MODE_SILENT);
+	obj *o;
 	int i;
 
 	if (!canim) {
@@ -630,6 +630,7 @@ static void parse_anim(char *t)
 		return;
 	}
 
+	o = container_of(canim);
 	obj_setmode(container_of(canim), MODE_SILENT);
 
 	skip_whitespace(&t);
@@ -693,11 +694,10 @@ static void parse_anim(char *t)
 	t[i] = 0;
 	i = 0;
 
-	if (canim->type == e_display)
-		canim->flags |= F_ANIM_DISPLAY;
-
-	if (canim->type != e_display)
+	if (canim->type != e_display) {
 		canim->svc = strdup(t);
+		o->visible = false;
+	}
 
 	filename = get_filepath(filename);
 
@@ -1115,7 +1115,7 @@ void add_main_msg()
 	ct->x = text_x;
 	ct->y = text_y;
 	ct->col = text_color;
-	ct->val = config.message;
+	ct->val = strdup(config.message);
 
 	if (strstr(ct->val, "$progress")) {
 		ct->curr_progress = config.progress;

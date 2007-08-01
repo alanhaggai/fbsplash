@@ -238,6 +238,16 @@ void render_add(stheme_t *theme, obj *o, rect *a)
 	return;
 }
 
+void obj_visibility_set(stheme_t *theme, obj *o, bool visible)
+{
+	if (!visible && o->visible) {
+		blit_add(theme, &o->bnd);
+		render_add(theme, o, &o->bnd);
+	}
+
+	o->visible = visible;
+}
+
 /*
  * Interpolates two boxes, based on the value of the config->progress variable.
  * This is a strange implementation of a progress bar, introduced by the
@@ -350,20 +360,24 @@ void box_prerender(stheme_t *theme, box *b, bool force)
 
 void box_render(stheme_t *theme, box *box, rect *re, u8 *target)
 {
-	int x, y, a, r, g, b;
+	int x, y, a, r, g, b, h;
 	int add;
 	u8 *pic;
+	float hr, hg, hb, ha, fr, fg, fb, fa;
+	int r1, r2, g1, g2, b1, b2, a1, a2;
+	int h1, h2;
 
 	int b_width = box->re.x2 - box->re.x1 + 1;
 	int b_height = box->re.y2 - box->re.y1 + 1;
 
+	if (b_height > 1)
+		h = b_height -1;
+	else
+		h = 1;
+
 	for (y = re->y1; y <= re->y2; y++) {
 
-		int r1, r2, g1, g2, b1, b2, a1, a2;
-		int h1, h2, h;
-		u8  opt = 0;
-		float hr, hg, hb, ha, fr, fg, fb, fa;
-
+		bool opt = false;
 		pic = target + (re->x1 + y * theme->xres) * fbd.bytespp;
 
 		/* Do a nice 2x2 ordered dithering, like it was done in bootsplash;
@@ -380,15 +394,10 @@ void box_render(stheme_t *theme, box *box, rect *re, u8 *target)
 			g = box->c_ul.g;
 			b = box->c_ul.b;
 			a = box->c_ul.a;
-			opt = 1;
+			opt = true;
 		} else {
 			h1 = box->re.y2 - y;
 			h2 = y - box->re.y1;
-
-			if (b_height > 1)
-				h = b_height -1;
-			else
-				h = 1;
 
 			r1 = (h1 * box->c_ul.r + h2 * box->c_ll.r)/h;
 			r2 = (h1 * box->c_ur.r + h2 * box->c_lr.r)/h;
@@ -403,8 +412,9 @@ void box_render(stheme_t *theme, box *box, rect *re, u8 *target)
 			a2 = (h1 * box->c_ur.a + h2 * box->c_lr.a)/h;
 
 			if (r1 == r2 && g1 == g2 && b1 == b2 && a1 == a2) {
-				opt = 1;
+				opt = true;
 			} else {
+				opt = false;
 				r2 -= r1;
 				g2 -= g1;
 				b2 -= b1;
@@ -444,32 +454,13 @@ void box_render(stheme_t *theme, box *box, rect *re, u8 *target)
 
 void icon_render(stheme_t *theme, icon *ticon, rect *re, u8 *target)
 {
-//	rect crop, work;
-
+	obj *o = container_of(ticon);
 	int y, yi, xi, wi, hi;
 	u8 *out = NULL;
 	u8 *in = NULL;
 
-	if (ticon->status == 0)
+	if (!o->visible)
 		return;
-
-#if 0
-	/* Interpolate a cropping rectangle if necessary. */
-	if (ticon->crop) {
-		memcpy(&crop, &ticon->crop_curr, sizeof(rect));
-		crop.x1 += ticon->x;
-		crop.x2 += ticon->x;
-		crop.y1 += ticon->y;
-		crop.y2 += ticon->y;
-	} else {
-		crop.x1 = ticon->x;
-		crop.y1 = ticon->y;
-		crop.x2 = crop.x1 + ticon->img->w - 1;
-		crop.y2 = crop.y1 + ticon->img->h = 1;
-	}
-#endif
-
-//	rect_min(&crop, re, &work);
 
 	xi = re->x1 - ticon->x;
 	yi = re->y1 - ticon->y;
@@ -487,7 +478,7 @@ void icon_prerender(stheme_t *theme, icon *c, bool force)
 {
 	obj *o = container_of(c);
 
-	if (c->status == 0)
+	if (!o->visible)
 		return;
 
 	if (!c->img || !c->img->picbuf)
@@ -656,12 +647,7 @@ void invalidate_service(stheme_t *theme, char *svc, enum ESVC state)
 				continue;
 
 			o->invalid = true;
-
-			if (t->type == state)
-				t->status = 1;
-			else
-				t->status = 0;
-
+			obj_visibility_set(theme, o, t->type == state);
 			break;
 		}
 
@@ -673,12 +659,7 @@ void invalidate_service(stheme_t *theme, char *svc, enum ESVC state)
 				continue;
 
 			o->invalid = true;
-
-			if (t->type == state)
-				t->flags |= F_ANIM_DISPLAY;
-			else
-				t->flags &= ~F_ANIM_DISPLAY;
-
+			obj_visibility_set(theme, o, t->type == state);
 			break;
 		}
 #endif

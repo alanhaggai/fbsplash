@@ -15,7 +15,7 @@ int main(int argc, char **argv)
 	struct stheme *theme;
 
 	config = splash_lib_init(bootup);
-	splash_theme_set("livecd-2007.0");
+	splash_theme_set("test");
 
 	splashr_init(false);
 	theme = splashr_theme_load();

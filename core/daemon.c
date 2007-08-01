@@ -95,6 +95,7 @@ void anim_render_frame(anim *a)
 void *thf_anim(void *unused)
 {
 	anim *ca;
+	obj *co;
 	item *i;
 	mng_anim *mng;
 	int delay = 10000, rdelay, oldstate;
@@ -105,8 +106,9 @@ void *thf_anim(void *unused)
 	pthread_mutex_lock(&mtx_paint);
 	for (i = theme->anims.head; i != NULL; i = i->next) {
 		ca = i->p;
+		co = container_of(ca);
 
-		if (!(ca->flags & F_ANIM_DISPLAY) ||
+		if (!co->visible ||
 			(ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL)
 			continue;
 
@@ -127,8 +129,9 @@ void *thf_anim(void *unused)
 		/* Find the shortest delay. */
 		for (i = theme->anims.head; i != NULL; i = i->next) {
 			ca = i->p;
+			co = container_of(ca);
 
-			if (!(ca->flags & F_ANIM_DISPLAY) ||
+			if (!co->visible ||
 				(ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL ||
 			    ca->status == F_ANIM_STATUS_DONE)
 				continue;
@@ -180,9 +183,9 @@ void *thf_anim(void *unused)
 		/* Update the wait time for all relevant animation objects. */
 		for (i = theme->anims.head ; i != NULL; i = i->next) {
 			ca = i->p;
+			co = container_of(ca);
 
-			if (!(ca->flags & F_ANIM_DISPLAY) ||
-				(ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL ||
+			if (!co->visible || (ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL ||
 			    ca->status == F_ANIM_STATUS_DONE)
 				continue;
 
@@ -471,57 +474,6 @@ void switchmon_start(int update, int stty)
 			exit(3);
 		}
 	}
-}
-
-/*
- * Update objects after a service status change.
- */
-void obj_update_status(char *svc, enum ESVC state)
-{
-	item *i;
-
-	for (i = theme->objs.head; i != NULL; i = i->next) {
-		obj *co = (obj*)i->p;
-
-		if (co->type == o_icon) {
-			icon *ci = (icon*)co->p;
-			if (!ci->svc || strcmp(ci->svc, svc))
-				continue;
-
-			co->invalid = true;
-
-			if (ci->type == state)
-				ci->status = 1;
-			else
-				ci->status = 0;
-		}
-	}
-
-#ifdef CONFIG_MNG
-	/* Lock the paint mutex to prevent the anim thread from
-	 * accessing the anims list while we're modifying it. */
-	pthread_mutex_lock(&mtx_paint);
-	for (i = theme->anims.head; i != NULL; i = i->next) {
-		anim *ca = (anim*)i->p;
-		obj *co;
-
-		if (!ca->svc || strcmp(ca->svc, svc))
-			continue;
-
-		co = container_of(ca);
-		co->invalid = true;
-
-		if (ca->type == state) {
-			ca->flags |= F_ANIM_DISPLAY;
-			pthread_mutex_lock(&mtx_anim);
-			pthread_cond_signal(&cnd_anim);
-			pthread_mutex_unlock(&mtx_anim);
-		} else {
-			ca->flags &= ~F_ANIM_DISPLAY;
-		}
-	}
-	pthread_mutex_unlock(&mtx_paint);
-#endif
 }
 
 /*

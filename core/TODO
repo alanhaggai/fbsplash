@@ -5,15 +5,9 @@ Documentation
 
 Fixes
 =====
-- dirty rects: when an icon is disabled, add a rect area for repaint
 - render: move all sanity checks (position on screen) to bndrect calculation
 - handle DIRECTCOLOR modes in libsplashrender
 - handle KDGRAPHICS in libsplashrender (?)
-
-Clenanups
-=========
-- general code cleanup
-- use popen to get program output (?)
 
 New features
 ============

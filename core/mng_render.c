@@ -199,7 +199,7 @@ void anim_prerender(stheme_t *theme, anim *a, bool force)
 {
 	obj *o = container_of(a);
 
-	if (!(a->flags & F_ANIM_DISPLAY))
+	if (!o->visible)
 		return;
 
 	if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL) {
@@ -224,9 +224,10 @@ void anim_render(stheme_t *theme, anim *a, rect *re, u8* tg)
 {
 	rgbacolor *src;
 	mng_anim *mng = mng_get_userdata(a->mng);
+	obj *o = container_of(a);
 	int line;
 
-	if (!(a->flags & F_ANIM_DISPLAY))
+	if (!o->visible)
 		return;
 
 	src = (rgbacolor*)mng->canvas;

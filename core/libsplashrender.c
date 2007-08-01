@@ -343,6 +343,9 @@ int splashr_tty_silent_init()
 	tcsetattr(fd, TCSANOW, &w);
 	vt_cursor_disable(fd);
 
+	/* Clear display */
+	write(fd, "\e[H\e[2J", 7);
+
 	return 0;
 }
 
@@ -394,9 +397,11 @@ void splashr_message_set(stheme_t *theme, char *msg)
 	o = theme->objs.tail->p;
 	t = o->p;
 
-	/* FIXME: invalidate the main message, reinit the bg cache */
+	if (t->val)
+		free(t->val);
+
 	o->invalid = true;
-	t->val = config.message;
+	t->val = strdup(config.message);
 }
 
 void splashr_progress_set(stheme_t *theme, int progress)

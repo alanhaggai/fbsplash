@@ -82,7 +82,7 @@ ifeq ($(strip $(DEBUG)),true)
 	CFLAGS ?= -Wall -g
 else
 	STRIP = strip --strip-all -R .comment -R .note
-	CFLAGS ?= -Wall -O2
+	CFLAGS ?= -O2
 endif
 
 

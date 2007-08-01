@@ -147,6 +147,7 @@ typedef struct {
 	u8 *bgcache;			/* bgnd cache, directly from the bg picture if NULL */
 	u8 modes;
 	bool invalid;			/* indicates whether this object has to be repainted */
+	bool visible;			/* is this object to be rendered? */
 } obj;
 
 typedef struct {
@@ -261,7 +262,6 @@ typedef struct stheme {
 #define F_ANIM_ONCE			0
 #define F_ANIM_LOOP			4
 #define F_ANIM_PROPORTIONAL	8
-#define F_ANIM_DISPLAY		16
 
 #define F_ANIM_STATUS_DONE 1
 
@@ -333,6 +333,8 @@ int tty_open(int tty);
 	(__mptr) ? ({										\
 		((obj*)__mptr)->p = __mptr + sizeof(obj);		\
 		((obj*)__mptr)->modes = __mode;					\
+		((obj*)__mptr)->visible = true;					\
+		((obj*)__mptr)->invalid = true;					\
 		((obj*)__mptr)->type = o_##__type;				\
 		(__type*)(__mptr + sizeof(obj));				\
 		}) : NULL; })
