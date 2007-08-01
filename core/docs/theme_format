@@ -257,14 +257,6 @@ Silent mode directives
                     variable. Note that in this case, the animation
                     isn't smooth and only single frames are displayed.
 
-  WARNING: Animation support in splashutils isn't complete yet and the
-  following is subject to change in future versions of the program.
-
-  Currently, all animations are displayed on a separate 'layer' located
-  above all other objects. An animation object will always cover icons,
-  boxes, etc. Overlapping animations with other objects should currently
-  be avoided as it may lead to unexpected flickering.
-
   Depending on how the mng file is constructed 'once' and 'proportional'
   might not work as aspected. When the file is internally looped, the
   animation will always be displayed in an infinite loop (even when
