@@ -202,7 +202,6 @@ void blit_add(stheme_t *theme, rect *a)
 		return;
 
 	memcpy(re, a, sizeof(rect));
-
 	list_add(&theme->blit, re);
 }
 
@@ -221,6 +220,7 @@ start:	a = i->p;
 			if (rect_contains(a, b)) {
 				list_del(&theme->blit, prev, j);
 				free(b);
+				j = prev;
 			} else if (rect_contains(b, a)) {
 				i->p = b;
 				list_del(&theme->blit, prev, j);
@@ -234,7 +234,7 @@ start:	a = i->p;
 
 void render_add(stheme_t *theme, obj *o, rect *a)
 {
-	return;
+	printf("blit add: %d %d %d %d %x\n ", a->x1, a->y1, a->x2, a->y2, o->type);
 }
 
 /*
@@ -253,6 +253,7 @@ void box_interpolate(box *a, box *b, box *c)
 	clo.b = (cl1.b * h + cl2.b * config.progress) / PROGRESS_MAX;	\
 	clo.a = (cl1.a * h + cl2.a * config.progress) / PROGRESS_MAX;	\
 }
+	c->attr = a->attr;
 
 	rect_interpolate(&a->re, &b->re, &c->re);
 
@@ -332,7 +333,7 @@ void box_prerender(stheme_t *theme, box *b)
 				memcpy(&o->bnd, &tb->re, sizeof(rect));
 			}
 
-		/* TODO: add some more optimizations for here? */
+			/* TODO: add some more optimizations here? */
 			blit_add(theme, &tb->re);
 			render_add(theme, o, &tb->re);
 		}
@@ -580,19 +581,12 @@ void obj_render(stheme_t *theme, obj *o, rect *re, u8 *tg)
 		break;
 	}
 
-	default:
-		break;
-	}
-}
-
-void obj_update(stheme_t *theme, obj *o)
-{
-	switch (o->type) {
 #if WANT_TTF
 	case o_text:
-		text_update(theme, o->p);
+		text_render(theme, o->p, re, tg);
 		break;
 #endif
+
 	default:
 		break;
 	}
@@ -610,6 +604,12 @@ void obj_prerender(stheme_t *theme, obj *o)
 		box_prerender(theme, o->p);
 		break;
 
+#if WANT_TTF
+	case o_text:
+		text_prerender(theme, o->p);
+		break;
+#endif
+
 	default:
 		break;
 	}
@@ -620,22 +620,7 @@ void render_objs(stheme_t *theme, u8 *target, u8 mode)
 	item *i, *j;
 
 	/*
-	 * First pass: update the bounding rectangles
-	 *
-	 * For text objects with 'eval' or 'exec' flags, their content is evaluated.
-	 */
-	for (i = theme->objs.head; i != NULL; i = i->next) {
-		obj *o = i->p;
-		if (!(o->modes & mode))
-			continue;
-
-		if (o->invalid) {
-			obj_update(theme, o);
-		}
-	}
-
-	/*
-	 * Second pass: mark rectangles for reblitting and rerendering
+	 * First pass: mark rectangles for reblitting and rerendering
 	 * via object specific rendering routines.
 	 */
 	for (i = theme->objs.head; i != NULL; i = i->next) {
@@ -756,7 +741,13 @@ void bnd_init(stheme_t *theme)
 				a->bnd.x2 = a->bnd.x1 + t->img->w - 1;
 				a->bnd.y2 = a->bnd.y1 + t->img->h - 1;
 			}
+			break;
 		}
+#if WANT_TTF
+		case o_text:
+			text_bnd(theme, a->p, &a->bnd);
+			break;
+#endif
 /*
 		case o_anim:
 		{

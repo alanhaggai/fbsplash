@@ -391,7 +391,7 @@ static int TTF_SizeUNICODE(TTF_Font *font, const unsigned short *text, int *w, i
 }
 
 static void TTF_RenderUNICODE_Shaded(stheme_t *theme, u8 *target, const unsigned short *text,
-			      TTF_Font* font, int x, int y, color fcol)
+			      TTF_Font* font, int x, int y, color fcol, rect *re)
 {
 	int xstart, width, height, i, j, row_underline;
 	unsigned int val;
@@ -428,11 +428,24 @@ static void TTF_RenderUNICODE_Shaded(stheme_t *theme, u8 *target, const unsigned
 	xstart = 0;
 	for(ch = text; *ch; ++ch) {
 		FT_Bitmap* current;
+		rect tre;
 
 		error = Find_Glyph(font, *ch, CACHED_METRICS|CACHED_PIXMAP);
 		if (error)
 			return;
 		glyph = font->current;
+
+		tre.x1 = xstart + x;
+		tre.x2 = tre.x1 + glyph->advance;
+		tre.y1 = y;
+		tre.y2 = y + height;
+
+		if (tre.x1 < 0)
+			goto next_glyph;
+
+		/* TODO: optimize rect-based rendering (?) */
+		if (!rect_intersect(re, &tre))
+			goto next_glyph;
 
 		current = &glyph->pixmap;
 		for(row = 0; row < ((font->style & TTF_STYLE_UNDERLINE) ? height-glyph->yoffset : current->rows); ++row) {
@@ -441,13 +454,13 @@ static void TTF_RenderUNICODE_Shaded(stheme_t *theme, u8 *target, const unsigned
 
 			/* Sanity checks.. */
 			i = y + row + glyph->yoffset;
-			j = xstart + glyph->minx + x;
+			j = tre.x1;
 
-			if (i < 0 || i >= theme->yres || j >= theme->xres)
+			if (i < re->y1 || i > re->y2)
 				continue;
 
-			if (j < 0)
-				goto next_glyph;
+			if (j >= theme->xres)
+				continue;
 
 			if (font->style & TTF_STYLE_UNDERLINE && glyph->minx > 0) {
 				j -= glyph->minx;
@@ -459,9 +472,12 @@ static void TTF_RenderUNICODE_Shaded(stheme_t *theme, u8 *target, const unsigned
 			add = x & 1;
 			add ^= (add ^ (row+y)) & 1 ? 1 : 3;
 
-			for (col= ((font->style & TTF_STYLE_UNDERLINE && glyph->minx > 0) ? -glyph->minx : 0);
+			for (col = ((font->style & TTF_STYLE_UNDERLINE && glyph->minx > 0) ? -glyph->minx : 0);
 			     col < ((font->style & TTF_STYLE_UNDERLINE && *(ch+1)) ?
-			           current->width + glyph->advance : current->width); col++) {
+			           current->width + glyph->advance : current->width); col++, j++) {
+
+				if (j < re->x1 || j > re->x2)
+					continue;
 
 				if (col + j >= theme->xres-1)
 					continue;
@@ -470,9 +486,9 @@ static void TTF_RenderUNICODE_Shaded(stheme_t *theme, u8 *target, const unsigned
 					break;
 
 				if (row < current->rows && col < current->width && col >= 0)
-					val=*src++;
+					val = *src++;
 				else
-					val=0;
+					val = 0;
 
 				/* Handle underline */
 				if (font->style & TTF_STYLE_UNDERLINE && row+glyph->yoffset >= row_underline &&
@@ -486,7 +502,9 @@ static void TTF_RenderUNICODE_Shaded(stheme_t *theme, u8 *target, const unsigned
 			}
 		}
 
-next_glyph:	xstart += glyph->advance;
+next_glyph:
+
+		xstart += glyph->advance;
 		if (font->style & TTF_STYLE_BOLD) {
 			xstart += font->glyph_overhang;
 		}
@@ -736,7 +754,7 @@ static char *text_eval(char *txt)
 	return ret;
 }
 
-void text_render(stheme_t *theme, text *ct, u8 *target)
+void text_render(stheme_t *theme, text *ct, rect *re, u8 *target)
 {
 	u16 *t, *p;
 	obj *o = container_of(ct);
@@ -755,7 +773,7 @@ void text_render(stheme_t *theme, text *ct, u8 *target)
 		if (*p == '\n') {
 			*p = 0;
 			if (p > t)
-				TTF_RenderUNICODE_Shaded(theme, target, t, ct->font->font, x, y, ct->col);
+				TTF_RenderUNICODE_Shaded(theme, target, t, ct->font->font, x, y, ct->col, re);
 			y += ct->font->font->height;
 			*p = '\n';
 			t = p+1;
@@ -763,7 +781,7 @@ void text_render(stheme_t *theme, text *ct, u8 *target)
 	}
 
 	if (*t != 0) {
-		TTF_RenderUNICODE_Shaded(theme, target, t, ct->font->font, x, y, ct->col);
+		TTF_RenderUNICODE_Shaded(theme, target, t, ct->font->font, x, y, ct->col, re);
 	}
 }
 
@@ -786,11 +804,10 @@ static void text_get_xy(text *ct, int *x, int *y)
 	return;
 }
 
-void text_update(stheme_t *theme, text *ct)
+void text_bnd(stheme_t *theme, text *ct, rect *bnd)
 {
 	obj *o;
-	rect bnd;
-	char *txt, *txt2;
+	char *txt = NULL, *txt2;
 	u16 *p;
 	int unicode_len;
 	int lines = 1;
@@ -803,10 +820,8 @@ void text_update(stheme_t *theme, text *ct)
 	if (ct->cache)
 		free(ct->cache);
 
-	txt = ct->val;
-
 	if (ct->flags & F_TXT_EXEC) {
-		txt = text_get_output(txt);
+		txt = text_get_output(ct->val);
 	}
 
 	if (ct->flags & F_TXT_EVAL) {
@@ -818,6 +833,9 @@ void text_update(stheme_t *theme, text *ct)
 			txt = text_eval(ct->val);
 		}
 	}
+
+	if (!txt)
+		txt = ct->val;
 
 	if (ct->curr_progress >= 0)
 		ct->curr_progress = config.progress;
@@ -834,24 +852,38 @@ void text_update(stheme_t *theme, text *ct)
 	UTF8_to_UNICODE(ct->cache, txt, unicode_len);
 	TTF_SetFontStyle(ct->font->font, ct->style);
 
-	text_get_xy(ct, &bnd.x1, &bnd.y1);
+	text_get_xy(ct, &bnd->x1, &bnd->y1);
 
 	/* Get the dimensions of the text surface */
-	if ((TTF_SizeUNICODE(ct->font->font, ct->cache, &bnd.x2, NULL) < 0) || !bnd.x2) {
+	if ((TTF_SizeUNICODE(ct->font->font, ct->cache, &bnd->x2, NULL) < 0) || !bnd->x2) {
 		iprint(MSG_ERROR, "Text has zero width\n");
 		return;
 	}
-	bnd.x2 += bnd.x1 - 1;
+	bnd->x2 += bnd->x1 - 1;
 
 	for (p = ct->cache; *p; p++) {
 		if (*p == '\n')
 			lines++;
 	}
 
-	bnd.y2 = bnd.y1 + ct->font->font->height * lines - 1;
+	bnd->y2 = bnd->y1 + ct->font->font->height * lines - 1;
+}
+
+void text_prerender(stheme_t *theme, text *ct)
+{
+	rect bnd;
+	obj *o = container_of(ct);
+
+	text_bnd(theme, ct, &bnd);
+
+	blit_add(theme, &bnd);
+	render_add(theme, o, &bnd);
+
+	blit_add(theme, &o->bnd);
+	render_add(theme, o, &o->bnd);
 
 	/* TODO: compare w/ the old bounding rectangle here, reallocate
 	 * the background buffer if necessary */
 
-
+	memcpy(&o->bnd, &bnd, sizeof(rect));
 }

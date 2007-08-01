@@ -1138,6 +1138,7 @@ void add_main_msg()
 
 	if (strstr(ct->val, "$progress")) {
 		ct->curr_progress = config.progress;
+		ct->flags = F_TXT_EVAL;
 	} else {
 		ct->curr_progress = -1;
 	}

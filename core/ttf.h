@@ -67,8 +67,9 @@ void TTF_Quit(void);
 struct stheme;
 struct text;
 
-void text_render(struct stheme *theme, struct text *ct, u8 *target);
-void text_update(struct stheme *theme, struct text *ct);
+void text_render(struct stheme *theme, struct text *ct, rect *re, u8 *target);
+void text_prerender(struct stheme *theme, struct text *ct);
+void text_bnd(struct stheme *theme, struct text *ct, rect *bnd);
 
 int load_fonts(struct stheme *theme);
 int free_fonts(struct stheme *theme);

@@ -162,19 +162,19 @@ struct colorf {
 };
 
 #if WANT_TTF
-#define F_TXT_EXEC 	1
-#define F_TXT_EVAL	2	
+#define F_TXT_EXEC		1
+#define F_TXT_EVAL		2
 
 #define F_HS_HORIZ_MASK	7
 #define F_HS_VERT_MASK	56
 
-#define F_HS_TOP	8
+#define F_HS_TOP		8
 #define F_HS_VMIDDLE	16
-#define F_HS_BOTTOM	32
+#define F_HS_BOTTOM		32
 
-#define F_HS_LEFT	1
+#define F_HS_LEFT		1
 #define F_HS_HMIDDLE	2
-#define F_HS_RIGHT	4
+#define F_HS_RIGHT		4
 
 #include "ttf.h"
 typedef struct {
@@ -348,9 +348,12 @@ void put_pixel(u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add);
 void invalidate_all(stheme_t *theme);
 void invalidate_progress(stheme_t *theme);
 void rect_interpolate(rect *a, rect *b, rect *c);
+bool rect_intersect(rect *a, rect *b);
 void box_interpolate(box *a, box *b, box *c);
 void render_objs(stheme_t *theme, u8 *target, u8 mode);
 void bnd_init(stheme_t *theme);
+void blit_add(stheme_t *theme, rect *a);
+void render_add(stheme_t *theme, obj *o, rect *a);
 
 /* image.c */
 int load_images(stheme_t *theme, char mode);

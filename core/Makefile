@@ -69,7 +69,7 @@ PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_S
 K_LDLIBS = $(OBJDIR)/jpeglib/libjpeg.a
 K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
 		   $(KOUT)/fbsplash.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o $(KOUT)/libsplash.o \
-		   $(KOUT)/tiles.o $(KOUT)/libsplashrender.o
+		   $(KOUT)/libsplashrender.o
 K_DEPS   =
 
 # Flags for the user utilities
@@ -91,7 +91,7 @@ endif
 INCLUDES = -I/usr/include/freetype2 -idirafter /usr/$(LIB)/klibc/include/linux
 LIBOBJS  = $(OBJLDIR)/parse.lo $(OBJLDIR)/image.lo \
 		   $(OBJLDIR)/render.lo $(OBJLDIR)/common.lo $(OBJLDIR)/list.lo \
-		   $(OBJLDIR)/fbsplash.lo $(OBJLDIR)/effects.lo $(OBJLDIR)/tiles.lo
+		   $(OBJLDIR)/fbsplash.lo $(OBJLDIR)/effects.lo
 
 OBJS = $(OBJDIR)/daemon.o $(OBJDIR)/daemon_cmd.o $(OBJDIR)/splash.o
 

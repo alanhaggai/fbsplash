@@ -166,9 +166,7 @@ int splashr_render_buf(stheme_t *theme, void *buffer, bool repaint, char mode)
 		if (!(theme->modes & MODE_VERBOSE))
 			return -1;
 		img = (u8*) theme->verbose_img.data;
-	}
-
-	if (mode == 's') {
+	} else {
 		if (!(theme->modes & MODE_SILENT))
 			return -1;
 		img = (u8*) theme->silent_img.data;
@@ -176,6 +174,7 @@ int splashr_render_buf(stheme_t *theme, void *buffer, bool repaint, char mode)
 
 	if (repaint) {
 		memcpy(buffer, img, theme->xres * theme->yres * fbd.bytespp);
+		invalidate_all(theme);
 	}
 
 	render_objs(theme, buffer, (mode == 'v') ? MODE_VERBOSE : MODE_SILENT);

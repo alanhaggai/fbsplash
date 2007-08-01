@@ -56,9 +56,6 @@ void paint_img(stheme_t *theme, u8 *dst, u8 *src)
 
 	for (i = theme->blit.head; i != NULL;) {
 		rect *re = i->p;
-		
-		printf("%d %d %d %d\n", re->x1, re->y1, re->x2, re->y2);
-		
 		paint_rect(theme, dst, src, re->x1, re->y1, re->x2, re->y2);
 
 		j = i->next;
@@ -67,7 +64,6 @@ void paint_img(stheme_t *theme, u8 *dst, u8 *src)
 		i = j;
 	}
 
-	printf("\n");
 	list_init(theme->blit);
 }
 
