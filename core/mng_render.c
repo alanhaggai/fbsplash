@@ -195,37 +195,50 @@ mng_retcode mng_render_proportional(mng_handle mngh, int progress)
 	return ret;
 }
 
-int mng_display_buf(mng_handle mngh, stheme_t *theme, u8* bg, u8* dest, int x, int y, int stride, int bgstride)
+void anim_prerender(stheme_t *theme, anim *a, bool force)
+{
+	obj *o = container_of(a);
+
+	if (!(a->flags & F_ANIM_DISPLAY))
+		return;
+
+	if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_ONCE &&
+		(a->status == F_ANIM_STATUS_DONE)) {
+		blit_add(theme, &o->bnd);
+		render_add(theme, o, &o->bnd);
+	} else if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL) {
+		if (a->curr_progress == config.progress && !force)
+			return;
+
+		a->curr_progress = config.progress;
+
+		int ret = mng_render_proportional(a->mng, config.progress);
+
+		if (ret == MNG_NEEDTIMERWAIT || ret == MNG_NOERROR) {
+			blit_add(theme, &o->bnd);
+			render_add(theme, o, &o->bnd);
+		}
+	}
+}
+
+void anim_render(stheme_t *theme, anim *a, rect *re, u8* tg)
 {
 	rgbacolor *src;
-	mng_anim *mng = mng_get_userdata(mngh);
-	int dispwidth, dispheight, line;
+	mng_anim *mng = mng_get_userdata(a->mng);
+	int line;
 
-	if (x + mng->canvas_w > theme->xres)
-		dispwidth = theme->xres - x;
-	else
-		dispwidth = mng->canvas_w;
-
-	if (y + mng->canvas_h > theme->yres)
-		dispheight = theme->yres - y;
-	else
-		dispheight = mng->canvas_h;
-
-	x += theme->xmarg;
-	y += theme->ymarg;
-
-	dest += y * stride;
-	bg += y * bgstride;
 	src = (rgbacolor*)mng->canvas;
 
-	for (line = 0; line < dispheight; line++) {
-		rgba2fb(src, bg + (x * fbd.bytespp), dest + (x * fbd.bytespp), dispwidth, y + line, 1);
-		dest += stride;
-		bg   += bgstride;
+	src += mng->canvas_w * (re->y1 - a->y) + (re->x1 - a->x);
+	tg += ((theme->xres * re->y1) + re->x1) * fbd.bytespp;
+
+	for (line = re->y1; line <= re->y2; line++) {
+		rgba2fb(src, tg, tg,  re->x2 - re->x1 + 1, line, 1);
+		tg   += theme->xres * fbd.bytespp;
 		src  += mng->canvas_w;
 	}
 
-	return 1;
+	return;
 }
 
 mng_retcode mng_display_restart(mng_handle mngh)

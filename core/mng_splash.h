@@ -19,11 +19,14 @@ typedef struct {
 	int num_frames;
 } mng_anim;
 
+struct anim;
+
 /* mng_render.c */
 extern mng_handle mng_load(char *filename, int *w, int *h);
 extern void mng_done(mng_handle mngh);
 extern mng_retcode mng_render_next(mng_handle mngh);
-extern int mng_display_buf(mng_handle mngh, stheme_t*, u8* bg, u8* dest, int x, int y, int stride, int bgstride);
+extern void anim_prerender(struct stheme *theme, struct anim *a, bool force);
+extern void anim_render(struct stheme *theme, struct anim *a, rect *re, u8* tg);
 extern mng_retcode mng_render_proportional(mng_handle mngh, int progress);
 
 /* mng_callbacks.c */

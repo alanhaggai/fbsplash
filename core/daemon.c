@@ -64,6 +64,7 @@ void anim_render_frame(anim *a)
 {
 	int ret;
 	mng_anim *mng;
+	obj *o;
 
 	mng = mng_get_userdata(a->mng);
 	mng->wait_msecs = 0;
@@ -82,9 +83,9 @@ void anim_render_frame(anim *a)
 		}
 	}
 
-	if ((ret == MNG_NOERROR || ret == MNG_NEEDTIMERWAIT) && ctty == CTTY_SILENT) {
-		mng_display_buf(a->mng, theme, theme->bgbuf, fb_mem, a->x, a->y,
-				fbd.fix.line_length, fbd.var.xres * fbd.bytespp);
+	if (ret == MNG_NOERROR || ret == MNG_NEEDTIMERWAIT) {
+		o = container_of(a);
+		o->invalid = true;
 	}
 }
 
@@ -110,8 +111,12 @@ void *thf_anim(void *unused)
 			continue;
 
 		mng = mng_get_userdata(ca->mng);
-		if (!mng->displayed_first)
+		if (!mng->displayed_first) {
 			anim_render_frame(ca);
+
+			if (ctty == TTY_SILENT)
+				splashr_render_screen(theme, true, false, 's', EFF_NONE);
+		}
 	}
 	pthread_mutex_unlock(&mtx_paint);
 	pthread_setcancelstate(oldstate, NULL);
@@ -132,8 +137,12 @@ void *thf_anim(void *unused)
 
 			/* If this is a new animation (activated by a service),
 			 * display it immediately. */
-			if (!mng->displayed_first)
+			if (!mng->displayed_first) {
 				anim_render_frame(ca);
+
+				if (ctty == TTY_SILENT)
+					splashr_render_screen(theme, true, false, 's', EFF_NONE);
+			}
 
 			if (mng->wait_msecs < delay && mng->wait_msecs > 0) {
 				delay = mng->wait_msecs;

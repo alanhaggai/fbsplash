@@ -869,10 +869,13 @@ void text_bnd(stheme_t *theme, text *ct, rect *bnd)
 	bnd->y2 = bnd->y1 + ct->font->font->height * lines - 1;
 }
 
-void text_prerender(stheme_t *theme, text *ct)
+void text_prerender(stheme_t *theme, text *ct, bool force)
 {
 	rect bnd;
 	obj *o = container_of(ct);
+
+	if (ct->curr_progress == config.progress && !force)
+		return;
 
 	text_bnd(theme, ct, &bnd);
 

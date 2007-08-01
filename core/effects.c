@@ -143,7 +143,7 @@ void fade_truecolor(stheme_t *theme, u8 *dst, u8 *image, char type)
 			h = *(u16*)pic;
 		} else if (fbd.bytespp == 3) {
 			h = *(u32*)pic & 0xffffff;
-		} else if (fbd.bytespp == 4) {
+		} else {
 			h = *(u32*)pic;
 		}
 

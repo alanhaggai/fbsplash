@@ -234,7 +234,8 @@ start:	a = i->p;
 
 void render_add(stheme_t *theme, obj *o, rect *a)
 {
-	printf("blit add: %d %d %d %d %x\n ", a->x1, a->y1, a->x2, a->y2, o->type);
+//	printf("blit add: %d %d %d %d %x\n ", a->x1, a->y1, a->x2, a->y2, o->type);
+	return;
 }
 
 /*
@@ -263,7 +264,7 @@ void box_interpolate(box *a, box *b, box *c)
 	inter_color(c->c_lr, a->c_lr, b->c_lr);
 }
 
-void box_prerender(stheme_t *theme, box *b)
+void box_prerender(stheme_t *theme, box *b, bool force)
 {
 	obj *o = container_of(b);
 
@@ -274,12 +275,12 @@ void box_prerender(stheme_t *theme, box *b)
 
 		box_interpolate(b, b->inter, tb);
 
-		if (!memcmp(tb, b->curr, sizeof(box))) {
+		if (!memcmp(tb, b->curr, sizeof(box)) && !force) {
 			free(tb);
 			return;
 		}
 
-		if (b->attr & (BOX_VGRAD | BOX_SOLID) && b->curr->re.y1 == tb->re.y1 && b->curr->re.y2 == tb->re.y2) {
+		if (b->attr & (BOX_VGRAD | BOX_SOLID) && b->curr->re.y1 == tb->re.y1 && b->curr->re.y2 == tb->re.y2 && !force) {
 			rect re;
 
 			re.y1 = tb->re.y1;
@@ -303,7 +304,7 @@ void box_prerender(stheme_t *theme, box *b)
 				memcpy(&o->bnd, &tb->re, sizeof(rect));
 			}
 
-		} else if (b->attr & (BOX_HGRAD | BOX_SOLID) && b->curr->re.x1 == tb->re.x1 && b->curr->re.x2 == tb->re.x2) {
+		} else if (b->attr & (BOX_HGRAD | BOX_SOLID) && b->curr->re.x1 == tb->re.x1 && b->curr->re.x2 == tb->re.x2 && !force) {
 			rect re;
 
 			re.x1 = tb->re.x1;
@@ -479,7 +480,7 @@ void icon_render(stheme_t *theme, icon *ticon, rect *re, u8 *target)
 	}
 }
 
-void icon_prerender(stheme_t *theme, icon *c)
+void icon_prerender(stheme_t *theme, icon *c, bool force)
 {
 	obj *o = container_of(c);
 
@@ -499,7 +500,7 @@ void icon_prerender(stheme_t *theme, icon *c)
 
 		/* If the cropping rectangle is unchanged, don't render anything */
 		rect_interpolate(&c->crop_from, &c->crop_to, &crn);
-		if (!memcmp(&crn, &c->crop_curr, sizeof(rect)))
+		if (!memcmp(&crn, &c->crop_curr, sizeof(rect)) && !force)
 			return;
 
 		/* TODO: add optimization: repaint only a part of the icon */
@@ -522,46 +523,6 @@ void icon_prerender(stheme_t *theme, icon *c)
 		render_add(theme, o, &o->bnd);
 	}
 }
-#if 0
-void render_obj(stheme_t *theme, u8 *target, char mode, unsigned char origin, obj *o, bool force)
-{
-#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
-	else if (o->type == o_anim) {
-		u8 render_it = 0;
-		anim *a = (anim*)o->p;
-
-		/* We only support animations in the silent mode. */
-		if (mode != 's')
-			return;
-
-		if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_ONCE &&
-			(a->status == F_ANIM_STATUS_DONE)) {
-			render_it = 1;
-		} else if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL) {
-			int ret = mng_render_proportional(a->mng, config.progress);
-			if (ret == MNG_NEEDTIMERWAIT || ret == MNG_NOERROR)
-				render_it = 1;
-		}
-
-		if (render_it && (a->flags & F_ANIM_DISPLAY)) {
-			mng_display_buf(a->mng, theme, target, target, a->x, a->y, theme->xres * fbd.bytespp, theme->xres * fbd.bytespp);
-		}
-	}
-#endif /* CONFIG_MNG */
-#if WANT_TTF
-	else if (o->type == o_text) {
-
-		if (txt) {
-			TTF_Render(theme, target, txt, ct->font->font,
-					   ct->style, ct->x, ct->y, ct->col,
-				   ct->hotspot, &ct->last_width);
-			if ((ct->flags & F_TXT_EXEC) || (ct->flags & F_TXT_EVAL))
-				free(txt);
-		}
-	}
-#endif /* TTF */
-}
-#endif
 
 void obj_render(stheme_t *theme, obj *o, rect *re, u8 *tg)
 {
@@ -586,36 +547,44 @@ void obj_render(stheme_t *theme, obj *o, rect *re, u8 *tg)
 		text_render(theme, o->p, re, tg);
 		break;
 #endif
-
+#if WANT_MNG
+	case o_anim:
+		anim_render(theme, o->p, re, tg);
+		break;
+#endif
 	default:
 		break;
 	}
 }
 
-void obj_prerender(stheme_t *theme, obj *o)
+void obj_prerender(stheme_t *theme, obj *o, bool force)
 {
 	switch (o->type) {
 
 	case o_icon:
-		icon_prerender(theme, o->p);
+		icon_prerender(theme, o->p, force);
 		break;
 
 	case o_box:
-		box_prerender(theme, o->p);
+		box_prerender(theme, o->p, force);
 		break;
 
 #if WANT_TTF
 	case o_text:
-		text_prerender(theme, o->p);
+		text_prerender(theme, o->p, force);
 		break;
 #endif
-
+#if WANT_MNG
+	case o_anim:
+		anim_prerender(theme, o->p, force);
+		break;
+#endif
 	default:
 		break;
 	}
 }
 
-void render_objs(stheme_t *theme, u8 *target, u8 mode)
+void render_objs(stheme_t *theme, u8 *target, u8 mode, bool force)
 {
 	item *i, *j;
 
@@ -629,7 +598,7 @@ void render_objs(stheme_t *theme, u8 *target, u8 mode)
 			continue;
 
 		if (o->invalid) {
-			obj_prerender(theme, o);
+			obj_prerender(theme, o, force);
 			o->invalid = false;
 		}
 	}
@@ -675,29 +644,45 @@ void invalidate_progress(stheme_t *theme)
 	for (i = theme->objs.head; i != NULL; i = i->next) {
 		obj *o = i->p;
 
-		if (o->type == o_box) {
+		switch (o->type) {
+
+		case o_box:
+		{
 			box *b = o->p;
 
 			if (b->inter)
 				o->invalid = true;
-		} else if (o->type == o_icon) {
+			break;
+		}
+
+		case o_icon:
+		{
 			icon *ic = o->p;
 
 			if (ic->crop)
 				o->invalid = true;
-		} else if (o->type == o_text) {
-			int prg;
+			break;
+		}
+#if WANT_TTF
+		case o_text:
+		{
 			text *t = o->p;
 
-			if (t->curr_progress < 0)
-				continue;
+			if (t->curr_progress >= 0)
+				o->invalid = true;
+			break;
+		}
+#endif
+#if WANT_MNG
+		case o_anim:
+		{
+			anim *t = o->p;
 
-			prg	= config.progress * 100 / PROGRESS_MAX;
-			if (prg == t->curr_progress)
-				continue;
-
-			t->curr_progress = prg;
-			o->invalid = true;
+			if ((t->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL)
+				o->invalid = true;
+			break;
+		}
+#endif
 		}
 	}
 }
@@ -748,7 +733,7 @@ void bnd_init(stheme_t *theme)
 			text_bnd(theme, a->p, &a->bnd);
 			break;
 #endif
-/*
+#if WANT_MNG
 		case o_anim:
 		{
 			anim *t = a->p;
@@ -756,8 +741,9 @@ void bnd_init(stheme_t *theme)
 			a->bnd.y1 = t->y;
 			a->bnd.x2 = t->x + t->w - 1;
 			a->bnd.y2 = t->y + t->h - 1;
+			break;
 		}
-*/
+#endif
 		default:
 			break;
 		}

@@ -89,6 +89,7 @@ typedef enum { little, big } sendian_t;
 #define DEBUG(x...)
 
 #define WANT_TTF	((defined(CONFIG_TTF_KERNEL) && defined(TARGET_KERNEL)) || (defined(CONFIG_TTF) && !defined(TARGET_KERNEL)))
+#define WANT_MNG	(defined(CONFIG_MNG) && !defined(TARGET_KERNEL))
 
 /* ************************************************************************
  *				Lists
@@ -264,11 +265,12 @@ typedef struct stheme {
 
 #define F_ANIM_STATUS_DONE 1
 
-typedef struct {
+typedef struct anim {
 	int x, y, w, h;
 	mng_handle mng;
 	char *svc;
 	enum ESVC type;
+	int curr_progress;
 	u8 status;
 	u8 flags;
 } anim;
@@ -350,7 +352,7 @@ void invalidate_progress(stheme_t *theme);
 void rect_interpolate(rect *a, rect *b, rect *c);
 bool rect_intersect(rect *a, rect *b);
 void box_interpolate(box *a, box *b, box *c);
-void render_objs(stheme_t *theme, u8 *target, u8 mode);
+void render_objs(stheme_t *theme, u8 *target, u8 mode, bool force);
 void bnd_init(stheme_t *theme);
 void blit_add(stheme_t *theme, rect *a);
 void render_add(stheme_t *theme, obj *o, rect *a);

@@ -177,7 +177,7 @@ int splashr_render_buf(stheme_t *theme, void *buffer, bool repaint, char mode)
 		invalidate_all(theme);
 	}
 
-	render_objs(theme, buffer, (mode == 'v') ? MODE_VERBOSE : MODE_SILENT);
+	render_objs(theme, buffer, (mode == 'v') ? MODE_VERBOSE : MODE_SILENT, repaint);
 	return 0;
 }
 

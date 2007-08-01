@@ -102,7 +102,7 @@ struct cfg_opt opts[] =
 		.type = t_type_close,
 		.val = NULL		},
 
-#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
+#if WANT_MNG
 	{	.name = "anim",
 		.type = t_anim,
 		.val = NULL		},
@@ -617,7 +617,7 @@ pr_err:
 	return;
 }
 
-#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
+#if WANT_MNG
 static void parse_anim(char *t)
 {
 	char *p;
@@ -630,28 +630,10 @@ static void parse_anim(char *t)
 		return;
 	}
 
+	obj_setmode(container_of(canim), MODE_SILENT);
+
 	skip_whitespace(&t);
 	canim->flags = 0;
-
-#if 0
-	while (1) {
-		if (!strncmp(t, "verbose", 7)) {
-			canim->flags |= F_ANIM_VERBOSE;
-			t += 7;
-		} else if (!strncmp(t, "silent", 6)) {
-			canim->flags |= F_ANIM_SILENT;
-			t += 6;
-		} else {
-			skip_whitespace(&t);
-			break;
-		}
-
-		skip_whitespace(&t);
-	}
-
-	if (canim->flags == 0)
-	    canim->flags = F_ANIM_SILENT | F_ANIM_VERBOSE;
-#endif
 
 	if (!strncmp(t, "once", 4)) {
 		canim->flags |= F_ANIM_ONCE;
@@ -730,7 +712,6 @@ static void parse_anim(char *t)
 
 	list_add(&tmptheme.anims, canim);
 	obj_add(canim);
-		goto pa_err;
 	return;
 pa_err:
 pa_out:
@@ -1322,7 +1303,7 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 					ignore = false;
 					break;
 
-#if defined(CONFIG_MNG) && !defined(TARGET_KERNEL)
+#if WANT_MNG
 				case t_anim:
 					parse_anim(t);
 					break;
