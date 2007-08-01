@@ -355,6 +355,8 @@ int cmd_update_svc(void **args)
 	enum ESVC state;
 	struct timespec ts;
 
+	printf("update_svc received\n");
+
 	if (!parse_svc_state(args[1], &state))
 		return -1;
 
@@ -386,7 +388,14 @@ cus_update:
 		}
 	}
 
-	obj_update_status(args[0], state);
+	pthread_mutex_lock(&mtx_paint);
+	invalidate_service(theme, args[0], state);
+#if WANT_MNG
+	pthread_mutex_lock(&mtx_anim);
+	pthread_cond_signal(&cnd_anim);
+	pthread_mutex_unlock(&mtx_anim);
+#endif
+	pthread_mutex_unlock(&mtx_paint);
 
 	return 0;
 }

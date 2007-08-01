@@ -5,7 +5,6 @@ Documentation
 
 Fixes
 =====
-- invalidation: handle service status changes
 - dirty rects: when an icon is disabled, add a rect area for repaint
 - render: move all sanity checks (position on screen) to bndrect calculation
 - handle DIRECTCOLOR modes in libsplashrender

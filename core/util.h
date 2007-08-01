@@ -348,6 +348,7 @@ int parse_cfg(char *cfgfile, stheme_t *st);
 void rgba2fb(rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha);
 void put_pixel(u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add);
 void invalidate_all(stheme_t *theme);
+void invalidate_service(stheme_t *theme, char *svc, enum ESVC state);
 void invalidate_progress(stheme_t *theme);
 void rect_interpolate(rect *a, rect *b, rect *c);
 bool rect_intersect(rect *a, rect *b);

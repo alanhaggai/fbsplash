@@ -56,7 +56,7 @@ list svcs = { NULL, NULL };
 /* A container for the original settings of the silent TTY. */
 struct termios tios;
 
-#ifdef CONFIG_MNG
+#if WANT_MNG
 /*
  * Renders an animation frame directly to the screen.
  */
@@ -193,6 +193,8 @@ void *thf_anim(void *unused)
 					anim_render_frame(ca);
 			}
 		}
+		splashr_render_screen(theme, true, false, 's', EFF_NONE);
+
 next:	pthread_mutex_unlock(&mtx_paint);
 		pthread_setcancelstate(oldstate, NULL);
 
@@ -541,7 +543,7 @@ int reload_theme(void)
 
 	for (i = svcs.head ; i != NULL; i = i->next) {
 		svc_state *ss = (svc_state*)i->p;
-		obj_update_status(ss->svc, ss->state);
+		invalidate_service(theme, ss->svc, ss->state);
 	}
 
 #ifdef CONFIG_MNG

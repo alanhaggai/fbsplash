@@ -202,11 +202,7 @@ void anim_prerender(stheme_t *theme, anim *a, bool force)
 	if (!(a->flags & F_ANIM_DISPLAY))
 		return;
 
-	if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_ONCE &&
-		(a->status == F_ANIM_STATUS_DONE)) {
-		blit_add(theme, &o->bnd);
-		render_add(theme, o, &o->bnd);
-	} else if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL) {
+	if ((a->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL) {
 		if (a->curr_progress == config.progress && !force)
 			return;
 
@@ -218,6 +214,9 @@ void anim_prerender(stheme_t *theme, anim *a, bool force)
 			blit_add(theme, &o->bnd);
 			render_add(theme, o, &o->bnd);
 		}
+	} else {
+		blit_add(theme, &o->bnd);
+		render_add(theme, o, &o->bnd);
 	}
 }
 
@@ -226,6 +225,9 @@ void anim_render(stheme_t *theme, anim *a, rect *re, u8* tg)
 	rgbacolor *src;
 	mng_anim *mng = mng_get_userdata(a->mng);
 	int line;
+
+	if (!(a->flags & F_ANIM_DISPLAY))
+		return;
 
 	src = (rgbacolor*)mng->canvas;
 

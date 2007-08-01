@@ -450,6 +450,9 @@ void icon_render(stheme_t *theme, icon *ticon, rect *re, u8 *target)
 	u8 *out = NULL;
 	u8 *in = NULL;
 
+	if (ticon->status == 0)
+		return;
+
 #if 0
 	/* Interpolate a cropping rectangle if necessary. */
 	if (ticon->crop) {
@@ -634,6 +637,54 @@ void invalidate_all(stheme_t *theme)
 	for (i = theme->objs.head; i != NULL; i = i->next) {
 		obj *o = i->p;
 		o->invalid = true;
+	}
+}
+
+void invalidate_service(stheme_t *theme, char *svc, enum ESVC state)
+{
+	item *i;
+
+	for (i = theme->objs.head; i != NULL; i = i->next) {
+		obj *o = i->p;
+
+		switch (o->type) {
+
+		case o_icon:
+		{
+			icon *t = o->p;
+			if (!t->svc || strcmp(t->svc, svc))
+				continue;
+
+			o->invalid = true;
+
+			if (t->type == state)
+				t->status = 1;
+			else
+				t->status = 0;
+
+			break;
+		}
+
+#if WANT_MNG
+		case o_anim:
+		{
+			anim *t = o->p;
+			if (!t->svc || strcmp(t->svc, svc))
+				continue;
+
+			o->invalid = true;
+
+			if (t->type == state)
+				t->flags |= F_ANIM_DISPLAY;
+			else
+				t->flags &= ~F_ANIM_DISPLAY;
+
+			break;
+		}
+#endif
+		default:
+			break;
+		}
 	}
 }
 
