@@ -1327,7 +1327,7 @@ box_post:
 		;
 	}
 
-#ifdef WANT_TTF
+#if WANT_TTF
 	add_main_msg();
 #endif
 	memcpy(theme, &tmptheme, sizeof(tmptheme));

@@ -42,11 +42,6 @@ copt_deprecated_desc="Enable support for deprecated features."
 copt_deprecated_type="bool"
 copt_deprecated_def=n
 
-copt_gentoo=CONFIG_GENTOO
-copt_gentoo_desc="Enable support for baselayout-2 features in libsplash."
-copt_gentoo_type="bool"
-copt_gentoo_def=n
-
 copt_helper=CONFIG_HELPER
 copt_helper_desc="Build the kernel helepr."
 copt_helper_type="bool"

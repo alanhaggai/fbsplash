@@ -18,24 +18,11 @@
 #include <sys/ioctl.h>
 #include <termios.h>
 
-#if !defined(MNT_DETACH)
-	#define MNT_DETACH 2
-#endif
-
 #include "util.h"
 #include "splash.h"
 
-/* If we're not a Gentoo system, define eerror() and ewarn() */
-#if !defined(CONFIG_GENTOO) || defined(TARGET_UTIL) || defined(TARGET_KERNEL)
-	#if !defined(eerror)
-		#define eerror(args...)		fprintf(stderr, ## args); fprintf(stdout, "\n");
-	#endif
-	#if !defined(ewarn)
-		#define ewarn(args...)		fprintf(stdout, ## args); fprintf(stdout, "\n");
-	#endif
-#else
-	#include <einfo.h>
-#endif
+#define eerror(args...)		fprintf(stderr, ## args); fprintf(stdout, "\n");
+#define ewarn(args...)		fprintf(stdout, ## args); fprintf(stdout, "\n");
 
 static int fd_fb0 = -1;
 static int fb = -1;
@@ -145,7 +132,7 @@ int splashr_init(bool create)
 	if (fb_init(config.tty_s, create))
 		return -2;
 
-#ifdef WANT_TTF
+#if WANT_TTF
 	if (TTF_Init() < 0) {
 		eerror("Couldn't initialize TTF.");
 		return -3;
@@ -447,10 +434,11 @@ bool splashr_tty_silent_update()
 
 void splashr_message_set(stheme_t *theme, char *msg)
 {
+	splash_message_set(msg);
+
+#if WANT_TTF
 	obj *o;
 	text *t;
-
-	splash_message_set(msg);
 
 	o = theme->objs.tail->p;
 	t = o->p;
@@ -460,6 +448,7 @@ void splashr_message_set(stheme_t *theme, char *msg)
 
 	o->invalid = true;
 	t->val = strdup(config.message);
+#endif
 }
 
 void splashr_progress_set(stheme_t *theme, int progress)

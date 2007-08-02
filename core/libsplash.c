@@ -32,18 +32,8 @@
 #include "util.h"
 #include "splash.h"
 
-/* If we're not a Gentoo system, define eerror() and ewarn() */
-
-#if !defined(CONFIG_GENTOO) || defined(TARGET_UTIL) || defined(TARGET_KERNEL)
-	#if !defined(eerror)
-		#define eerror(args...)		fprintf(stderr, ## args); fprintf(stdout, "\n");
-	#endif
-	#if !defined(ewarn)
-		#define ewarn(args...)		fprintf(stdout, ## args); fprintf(stdout, "\n");
-	#endif
-#else
-	#include <einfo.h>
-#endif
+#define eerror(args...)		fprintf(stderr, ## args); fprintf(stdout, "\n");
+#define ewarn(args...)		fprintf(stdout, ## args); fprintf(stdout, "\n");
 
 static FILE *fp_fifo = NULL;
 int fd_tty0 = -1;

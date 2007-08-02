@@ -156,12 +156,6 @@ $(OBJDIR)/libsplash.la: $(OBJLDIR)/libsplash.lo
 	@$(call infmsg,LD,$@)
 	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $(OBJDIR)/libsplash.la $+ -rpath $(libdir)
 
-#ifeq ($(call config_opt,CONFIG_GENTOO),true)
-#	$(Q)$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,libsplash.so -o $@ $+ -leinfo
-#else
-#	$(Q)$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,libsplash.so -o $@ $+
-#endif
-
 $(OBJDIR)/libsplashrender.la: $(OBJLDIR)/libsplashrender.lo $(LIBOBJS)
 	@$(call infmsg,LD,$@)
 	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $(OBJDIR)/libsplashrender.la $+ $(LDLLIBS) $(OBJDIR)/libsplash.la -rpath $(usrlibdir)
