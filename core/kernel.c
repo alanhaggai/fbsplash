@@ -117,6 +117,7 @@ noverbose:
 		return -1;
 
 	splashr_tty_silent_init();
+	splashr_tty_silent_update();
 
 	/* Redirect all kernel messages to tty1 so that they don't get
 	 * printed over our silent splash image. */
@@ -126,9 +127,6 @@ noverbose:
 
 	if (config.kdmode == KD_GRAPHICS)
 		ioctl(fd_tty[config.tty_s], KDSETMODE, KD_GRAPHICS);
-
-	if (theme->silent_img.cmap.red)
-		ioctl(fd_fb, FBIOPUTCMAP, &theme->silent_img.cmap);
 
 	splashr_render_screen(theme, true, true, 's', config.effects);
 

@@ -355,8 +355,6 @@ int cmd_update_svc(void **args)
 	enum ESVC state;
 	struct timespec ts;
 
-	printf("update_svc received\n");
-
 	if (!parse_svc_state(args[1], &state))
 		return -1;
 

@@ -248,50 +248,20 @@ void vt_silent_cleanup(void)
  */
 void switch_silent()
 {
-	struct fb_var_screeninfo old_var;
-	struct fb_fix_screeninfo old_fix;
+	pthread_mutex_lock(&mtx_paint);
 
-	old_fix = fbd.fix;
-	old_var = fbd.var;
-
-	fb_get_settings(fd_fb);
+	if (splashr_tty_silent_update()) {
+		if (reload_theme()) {
+			iprint(MSG_ERROR, "Failed to (re-)load the '%s' theme.\n", config.theme);
+			exit(1);
+		}
+	}
 
 	/* Set KD_GRAPHICS if necessary. */
 	if (config.kdmode == KD_GRAPHICS)
 		ioctl(fd_tty[config.tty_s], KDSETMODE, KD_GRAPHICS);
 
-	/* Update CMAP if we're in a DIRECTCOLOR mode. */
-	if (fbd.fix.visual == FB_VISUAL_DIRECTCOLOR)
-		set_directcolor_cmap(fd_fb);
-
-	old_var.yoffset = fbd.var.yoffset;
-	old_var.xoffset = fbd.var.xoffset;
-
-	/*
-	 * Has the video mode changed? If it has, we'll have to reload
-	 * the theme.
-	 */
-	if (memcmp(&fbd.fix, &old_fix, sizeof(struct fb_fix_screeninfo)) ||
-	    memcmp(&fbd.var, &old_var, sizeof(struct fb_var_screeninfo))) {
-
-		pthread_mutex_lock(&mtx_paint);
-
-		if (reload_theme()) {
-			iprint(MSG_ERROR, "Failed to (re-)load the '%s' theme.\n", config.theme);
-			exit(1);
-		}
-
-		munmap(fb_mem, old_fix.line_length * old_var.yres);
-		fb_mem = fb_mmap(fd_fb);
-
-		if (fb_mem == MAP_FAILED) {
-			iprint(MSG_ERROR, "mmap() " PATH_DEV "/fb%d failed.\n", arg_fb);
-			exit(1);
-		}
-
-		pthread_mutex_unlock(&mtx_paint);
-	}
-
+	pthread_mutex_unlock(&mtx_paint);
 	cmd_repaint(NULL);
 }
 

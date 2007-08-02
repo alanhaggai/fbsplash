@@ -105,6 +105,31 @@ static int fb_init(int tty, bool create)
 	return 0;
 }
 
+static void fb_cmap_directcolor_set(int fd)
+{
+	int len, i;
+	struct fb_cmap cmap;
+
+	len = min(min(fbd.var.red.length, fbd.var.green.length), fbd.var.blue.length);
+
+	cmap.start = 0;
+	cmap.len = (1 << len);
+	cmap.transp = NULL;
+	cmap.red = malloc(2 * 256 * 3);
+	if (!cmap.red)
+		return;
+
+	cmap.green = cmap.red + 256;
+	cmap.blue = cmap.green + 256;
+
+	for (i = 0; i < cmap.len; i++) {
+		cmap.red[i] = cmap.green[i] = cmap.blue[i] = (0xffff * i)/(cmap.len-1);
+	}
+
+	ioctl(fd, FBIOPUTCMAP, &cmap);
+	free(cmap.red);
+}
+
 int splashr_init(bool create)
 {
 #ifdef CONFIG_FBSPLASH
@@ -190,8 +215,8 @@ int splashr_render_screen(stheme_t *theme, bool repaint, bool bgnd, char mode, c
 			} else if (effects & EFF_FADEOUT) {
 				fade(theme, fb_mem, theme->bgbuf, theme->silent_img.cmap, bgnd ? 1 : 0, fd_fb, 1);
 			} else {
-				if (fbd.fix.visual == FB_VISUAL_DIRECTCOLOR)
-					set_directcolor_cmap(fd_fb);
+				if (theme->silent_img.cmap.red)
+					ioctl(fd_fb, FBIOPUTCMAP, &theme->silent_img.cmap);
 
 				put_img(theme, fb_mem, theme->bgbuf);
 			}
@@ -385,6 +410,39 @@ int splashr_tty_silent_set(int tty)
 	config.tty_s = tty;
 
 	return 0;
+}
+
+bool splashr_tty_silent_update()
+{
+	struct fb_var_screeninfo old_var;
+	struct fb_fix_screeninfo old_fix;
+	bool ret = false;
+
+	memcpy(&old_fix, &fbd.fix, sizeof(old_fix));
+	memcpy(&old_var, &fbd.var, sizeof(old_var));
+
+	fb_get_settings(fd_fb);
+
+	old_var.yoffset = fbd.var.yoffset;
+	old_var.xoffset = fbd.var.xoffset;
+
+	/*
+	 * Has the video mode changed? If it has, we'll have to reload
+	 * the theme.
+	 */
+	if (memcmp(&fbd.fix, &old_fix, sizeof(struct fb_fix_screeninfo)) ||
+	    memcmp(&fbd.var, &old_var, sizeof(struct fb_var_screeninfo))) {
+
+		munmap(fb_mem, old_fix.line_length * old_var.yres);
+		fb_mem = fb_mmap(fd_fb);
+		ret = true;
+	}
+
+	/* Update CMAP if we're in a DIRECTCOLOR mode. */
+	if (fbd.fix.visual == FB_VISUAL_DIRECTCOLOR)
+		fb_cmap_directcolor_set(fd_fb);
+
+	return ret;
 }
 
 void splashr_message_set(stheme_t *theme, char *msg)

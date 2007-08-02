@@ -22,6 +22,7 @@ int main(int argc, char **argv)
 
 	splash_set_silent();
 	splashr_tty_silent_init();
+	splashr_tty_silent_update();
 	splashr_render_screen(theme, true, false, 's', EFF_FADEIN);
 	sleep(2);
 	splashr_render_screen(theme, true, false, 's', EFF_FADEOUT);

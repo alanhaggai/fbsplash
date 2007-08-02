@@ -249,28 +249,4 @@ void fade(stheme_t *theme, u8 *dst, u8 *image, struct fb_cmap cmap, u8 bgnd, int
 	return;
 }
 
-void set_directcolor_cmap(int fd)
-{
-	int len, i;
-	struct fb_cmap cmap;
-
-	len = min(min(fbd.var.red.length, fbd.var.green.length), fbd.var.blue.length);
-
-	cmap.start = 0;
-	cmap.len = (1 << len);
-	cmap.transp = NULL;
-	cmap.red = malloc(2 * 256 * 3);
-	if (!cmap.red)
-		return;
-
-	cmap.green = cmap.red + 256;
-	cmap.blue = cmap.green + 256;
-
-	for (i = 0; i < cmap.len; i++) {
-		cmap.red[i] = cmap.green[i] = cmap.blue[i] = (0xffff * i)/(cmap.len-1);
-	}
-
-	ioctl(fd, FBIOPUTCMAP, &cmap);
-	free(cmap.red);
-}
 

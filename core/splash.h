@@ -120,6 +120,7 @@ void splashr_theme_free(struct stheme *theme);
 int splashr_tty_silent_init();
 int splashr_tty_silent_cleanup();
 int splashr_tty_silent_set(int);
+bool splashr_tty_silent_update();
 void splashr_message_set(struct stheme *theme, char *msg);
 void splashr_progress_set(struct stheme *theme, int progress);
 
