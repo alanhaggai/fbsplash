@@ -261,6 +261,8 @@ int main(int argc, char **argv)
 	case repaint:
 #endif
 		theme = splashr_theme_load();
+		if (arg_task != start_daemon && !theme)
+			exit(1);
 	default:
 		break;
 	}
