@@ -69,7 +69,7 @@ int fbsplash_setpic(unsigned char origin, int vc, stheme_t *theme)
 	struct fb_splash_iowrapper wrapper = {
 		.vc = vc,
 		.origin = origin,
-		.data = &theme->verbose_img.data,
+		.data = &theme->verbose_img,
 	};
 
 	if (splashr_render_buf(theme, (u8*)theme->verbose_img.data, true, 'v'))
