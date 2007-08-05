@@ -147,7 +147,7 @@ static char *get_filepath(char *path)
 	if (path[0] == '/')
 		return strdup(path);
 
-	snprintf(buf, 512, THEME_DIR "/%s/%s", config.theme, path);
+	snprintf(buf, 512, SPL_THEME_DIR "/%s/%s", config.theme, path);
 	return strdup(buf);
 }
 
@@ -204,8 +204,8 @@ static char *get_fontpath(char *t)
 		return strdup(t);
 	}
 
-	snprintf(buf, 512, "%s/%s/%s", THEME_DIR, config.theme, t);
-	snprintf(buf2, 512, "%s/%s", THEME_DIR, t);
+	snprintf(buf, 512, "%s/%s/%s", SPL_THEME_DIR, config.theme, t);
+	snprintf(buf2, 512, "%s/%s", SPL_THEME_DIR, t);
 
 	stat(buf, &st1);
 	stat(buf2, &st2);
@@ -1281,15 +1281,15 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 					while (*t != '>') {
 						skip_whitespace(&t);
 						if (!strncmp(t, "bootup", 6)) {
-							if (config.type == bootup)
+							if (config.type == spl_bootup)
 								ignore = false;
 							t += 6;
 						} else if (!strncmp(t, "reboot", 6)) {
-							if (config.type == reboot)
+							if (config.type == spl_reboot)
 								ignore = false;
 							t += 6;
 						} else if (!strncmp(t, "shutdown", 8)) {
-							if (config.type == shutdown)
+							if (config.type == spl_shutdown)
 								ignore = false;
 							t += 8;
 						} else {

@@ -198,9 +198,9 @@ int splashr_render_screen(stheme_t *theme, bool repaint, bool bgnd, char mode, c
 {
 	if (!splashr_render_buf(theme, theme->bgbuf, repaint, mode)) {
 		if (repaint) {
-			if (effects & EFF_FADEIN) {
+			if (effects & SPL_EFF_FADEIN) {
 				fade(theme, fb_mem, theme->bgbuf, theme->silent_img.cmap, bgnd ? 1 : 0, fd_fb, 0);
-			} else if (effects & EFF_FADEOUT) {
+			} else if (effects & SPL_EFF_FADEOUT) {
 				fade(theme, fb_mem, theme->bgbuf, theme->silent_img.cmap, bgnd ? 1 : 0, fd_fb, 1);
 			} else {
 				if (theme->silent_img.cmap.red)
@@ -234,7 +234,7 @@ stheme_t *splashr_theme_load()
 	st->yres = fbd.var.yres;
 
 	splash_get_res(config.theme, &st->xres, &st->yres);
-	snprintf(buf, 512, THEME_DIR "/%s/%dx%d.cfg", config.theme, st->xres, st->yres);
+	snprintf(buf, 512, SPL_THEME_DIR "/%s/%dx%d.cfg", config.theme, st->xres, st->yres);
 
 	st->xmarg = (fbd.var.xres - st->xres) / 2;
 	st->ymarg = (fbd.var.yres - st->yres) / 2;
@@ -457,8 +457,8 @@ void splashr_progress_set(stheme_t *theme, int progress)
 	if (progress < 0)
 		progress = 0;
 
-	if (progress > PROGRESS_MAX)
-		progress = PROGRESS_MAX;
+	if (progress > SPL_PROGRESS_MAX)
+		progress = SPL_PROGRESS_MAX;
 
 	config.progress = progress;
 	invalidate_progress(theme);

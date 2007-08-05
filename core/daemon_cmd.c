@@ -35,8 +35,8 @@ int cmd_exit(void **args)
 	pthread_mutex_lock(&mtx_paint);
 
 	if (ctty == CTTY_SILENT) {
-		if (config.effects & EFF_FADEOUT)
-			splashr_render_screen(theme, true, false, 's', EFF_FADEOUT);
+		if (config.effects & SPL_EFF_FADEOUT)
+			splashr_render_screen(theme, true, false, 's', SPL_EFF_FADEOUT);
 
 		/* Switch to the verbose tty if we're in silent mode when the
 		 * 'exit' command is received. */
@@ -221,7 +221,7 @@ int cmd_paint(void **args)
 	if (ctty != CTTY_SILENT)
 		goto out;
 
-	splashr_render_screen(theme, false, false, 's', EFF_NONE);
+	splashr_render_screen(theme, false, false, 's', SPL_EFF_NONE);
 out:
 	pthread_mutex_unlock(&mtx_paint);
 	return ret;
@@ -245,7 +245,7 @@ int cmd_repaint(void **args)
 	if (ctty != CTTY_SILENT)
 		goto out;
 
-	splashr_render_screen(theme, true, false, 's', EFF_NONE);
+	splashr_render_screen(theme, true, false, 's', SPL_EFF_NONE);
 out:
 	pthread_mutex_unlock(&mtx_paint);
 

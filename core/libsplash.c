@@ -37,7 +37,7 @@
 
 static FILE *fp_fifo = NULL;
 int fd_tty0 = -1;
-scfg_t config;
+spl_cfg_t config;
 sendian_t endianess;
 
 /* A list of loaded fonts. */
@@ -64,7 +64,7 @@ static void detect_endianess(sendian_t *end)
  *  - pointer to a config structure used by all routines
  *    in libsplash.
  */
-scfg_t* splash_lib_init(stype_t type)
+spl_cfg_t* splash_lib_init(spl_type_t type)
 {
 	detect_endianess(&endianess);
 	splash_init_config(type);
@@ -109,7 +109,7 @@ int splash_lib_cleanup(void)
 /*
  * Initialize the config structure with default values.
  */
-int splash_init_config(stype_t type)
+int splash_init_config(spl_type_t type)
 {
 	char *s;
 
@@ -122,10 +122,10 @@ int splash_init_config(stype_t type)
 	config.reqmode = 'o';
 	config.minstances = false;
 	config.progress = 0;
-	config.effects = EFF_NONE;
+	config.effects = SPL_EFF_NONE;
 	config.verbosity = VERB_NORMAL;
 	config.type = type;
-	splash_message_set(DEFAULT_THEME);
+	splash_message_set(SPL_DEFAULT_THEME);
 
 	s = getenv("PROGRESS");
 	if (s)
@@ -136,19 +136,19 @@ int splash_init_config(stype_t type)
 		config.message = strdup(s);
 	} else {
 		switch (type) {
-		case reboot:
+		case spl_reboot:
 			config.message = strdup(SYSMSG_REBOOT);
 			break;
 
-		case shutdown:
+		case spl_shutdown:
 			config.message = strdup(SYSMSG_SHUTDOWN);
 			break;
 
-		case bootup:
+		case spl_bootup:
 			config.message = strdup(SYSMSG_BOOTUP);
 			break;
 
-		case undef:
+		case spl_undef:
 		default:
 			config.message = strdup(SYSMSG_DEFAULT);
 			break;
@@ -239,9 +239,9 @@ int splash_parse_kcmdline(bool sysmsg)
 			if (!strncmp(opt, "tty:", 4)) {
 				splash_set_tty_silent(strtol(opt+4, NULL, 0));
 			} else if (!strcmp(opt, "fadein")) {
-				config.effects |= EFF_FADEIN;
+				config.effects |= SPL_EFF_FADEIN;
 			} else if (!strcmp(opt, "fadeout")) {
-				config.effects |= EFF_FADEOUT;
+				config.effects |= SPL_EFF_FADEOUT;
 			} else if (!strcmp(opt, "verbose")) {
 				config.reqmode = 'v';
 			} else if (!strcmp(opt, "silent")) {
@@ -311,7 +311,7 @@ void splash_get_res(char *theme, int *xres, int *yres)
 
 	oxres = *xres;
 	oyres = *yres;
-	snprintf(buf, 512, THEME_DIR "/%s/%dx%d.cfg", theme, oxres, oyres);
+	snprintf(buf, 512, SPL_THEME_DIR "/%s/%dx%d.cfg", theme, oxres, oyres);
 
 	fp = fopen(buf, "r");
 	if (!fp) {
@@ -319,7 +319,7 @@ void splash_get_res(char *theme, int *xres, int *yres)
 		struct dirent *dent;
 		DIR *tdir;
 
-		snprintf(buf, 512, THEME_DIR "/%s", theme);
+		snprintf(buf, 512, SPL_THEME_DIR "/%s", theme);
 		tdir = opendir(buf);
 		while ((dent = readdir(tdir))) {
 			if (sscanf(dent->d_name, "%dx%d.cfg", &tx, &ty) != 2)

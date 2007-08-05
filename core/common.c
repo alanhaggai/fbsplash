@@ -28,7 +28,7 @@
 enum TASK	arg_task = none;
 int			arg_fb = 0;
 char		*arg_pidfile = NULL;
-scfg_t		*cfg;
+spl_cfg_t		*cfg;
 
 int dev_create(char *fn, char *sys)
 {

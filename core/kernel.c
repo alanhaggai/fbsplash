@@ -70,7 +70,7 @@ int handle_init(bool update)
 	/* We don't want to use any effects if we're just updating the image.
 	 * Nor do we want to mess with the verbose mode. */
 	if (update) {
-		config.effects = EFF_NONE;
+		config.effects = SPL_EFF_NONE;
 #ifdef CONFIG_FBSPLASH
 		fbsplash = false;
 #endif
@@ -149,7 +149,7 @@ int main(int argc, char **argv)
 	if (argc < 3)
 		goto out;
 
-	splash_lib_init(undef);
+	splash_lib_init(spl_undef);
 
 	if (strcmp(argv[1],"2") && strcmp(argv[1], "1")) {
 		fprintf(stderr, "Splash protocol mismatch: %s\n", argv[1]);

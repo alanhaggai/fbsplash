@@ -45,6 +45,17 @@
 	#endif
 #endif
 
+/* Common paths */
+#define PATH_DEV	"/dev"
+#define PATH_PROC	"/proc"
+#define PATH_SYS	"/sys"
+#define SPLASH_DEV	PATH_DEV"/fbsplash"
+
+#if defined(TARGET_KERNEL)
+	#define PATH_SYS	"/lib/splash/sys"
+	#define PATH_PROC	"/lib/splash/proc"
+#endif
+
 /* Necessary to avoid compilation errors when fbsplash support is
    disabled. */
 #if !defined(CONFIG_FBSPLASH)
@@ -69,6 +80,24 @@ typedef enum { little, big } sendian_t;
 #define MSG_ERROR		1
 #define MSG_WARN		2
 #define MSG_INFO		3
+
+/* Verbosity levels */
+#define VERB_QUIET		0
+#define VERB_NORMAL		1
+#define VERB_HIGH	    2
+
+#define SYSMSG_DEFAULT  "Initializing the kernel..."
+#define SYSMSG_BOOTUP	"Booting the system ($progress%)... Press F2 for verbose mode."
+#define SYSMSG_REBOOT	"Rebooting the system ($progress%)... Press F2 for verbose mode."
+#define SYSMSG_SHUTDOWN	"Shutting down the system ($progress%)... Press F2 for verbose mode."
+
+#define DEFAULT_FONT	"luxisri.ttf"
+#define TTF_DEFAULT		SPL_THEME_DIR"/"DEFAULT_FONT
+#define DAEMON_NAME		"splash_util"
+
+/* Default TTYs for silent and verbose modes. */
+#define TTY_SILENT		8
+#define TTY_VERBOSE		1
 
 /* Useful macros */
 #define min(a,b)		((a) < (b) ? (a) : (b))
@@ -205,7 +234,7 @@ typedef struct text {
 #define MODE_VERBOSE 0x01
 #define MODE_SILENT  0x02
 
-typedef struct stheme {
+typedef struct spl_theme {
 	u8 bg_color;
 	u16 tx;
 	u16 ty;
@@ -396,7 +425,7 @@ extern int fd_fb;
 extern int fd_tty0;
 extern int fd_fbsplash;
 extern sendian_t endianess;
-extern scfg_t config;
+extern spl_cfg_t config;
 
 /* libsplashrender */
 extern int fd_tty[MAX_NR_CONSOLES];

@@ -7,15 +7,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <splash.h>
+#include "../splash.h"
 
 int main(int argc, char **argv)
 {
 	int i;
-	scfg_t *config;
-	struct stheme *theme;
+	spl_cfg_t *config;
+	struct spl_theme *theme;
 
-	config = splash_lib_init(bootup);
+	config = splash_lib_init(spl_bootup);
 	splash_theme_set("test");
 
 	splashr_init(false);
@@ -26,11 +26,11 @@ int main(int argc, char **argv)
 	splash_set_silent();
 	splashr_tty_silent_init();
 	splashr_tty_silent_update();
-	splashr_render_screen(theme, true, false, 's', EFF_NONE);
+	splashr_render_screen(theme, true, false, 's', SPL_EFF_NONE);
 
 	for (i = 0; i < 65536; i += 64) {
 		splashr_progress_set(theme, i);
-		splashr_render_screen(theme, false, false, 's', EFF_NONE);
+		splashr_render_screen(theme, false, false, 's', SPL_EFF_NONE);
 	}
 
 	splashr_tty_silent_cleanup();

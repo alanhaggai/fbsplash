@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 	int arg_vc = -1;
 	stheme_t *theme = NULL;
 
-	splash_lib_init(bootup);
+	splash_lib_init(spl_bootup);
 	splashr_init(false);
 
 	arg_task = none;
@@ -206,20 +206,20 @@ int main(int argc, char **argv)
 
 			while ((topt = strsep(&optarg, ",")) != NULL) {
 				if (!strcmp(topt, "fadein"))
-					config.effects |= EFF_FADEIN;
+					config.effects |= SPL_EFF_FADEIN;
 				else if (!strcmp(topt, "fadeout"))
-					config.effects |= EFF_FADEOUT;
+					config.effects |= SPL_EFF_FADEOUT;
 			}
 			break;
 		}
 
 		case 0x10d:
 			if (!strcmp(optarg, "reboot"))
-				config.type = reboot;
+				config.type = spl_reboot;
 			else if (!strcmp(optarg, "shutdown"))
-				config.type = shutdown;
+				config.type = spl_shutdown;
 			else
-				config.type = bootup;
+				config.type = spl_bootup;
 			break;
 
 		case 'd':
@@ -331,11 +331,11 @@ setpic_out:	break;
 #ifdef CONFIG_DEPRECATED
 	/* Deprecated. The daemon mode should be used instead. */
 	case paint:
-		splashr_render_screen(theme, false, false, 's', EFF_NONE);
+		splashr_render_screen(theme, false, false, 's', SPL_EFF_NONE);
 		break;
 
 	case repaint:
-		splashr_render_screen(theme, true, false, 's', EFF_NONE);
+		splashr_render_screen(theme, true, false, 's', SPL_EFF_NONE);
 		break;
 #endif /* CONFIG_DEPRECATED */
 

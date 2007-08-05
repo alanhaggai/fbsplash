@@ -152,7 +152,7 @@ mng_retcode mng_render_proportional(mng_handle mngh, int progress)
 	mng_retcode ret = MNG_NOERROR;
 	int frame_num, current_frame;
 
-	frame_num = ((progress * mng->num_frames) / PROGRESS_MAX) + 1;
+	frame_num = ((progress * mng->num_frames) / SPL_PROGRESS_MAX) + 1;
 	if (!mng->displayed_first) {
 		ret = mng_display(mngh);
 		mng->displayed_first = 1;

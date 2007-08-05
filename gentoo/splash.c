@@ -37,7 +37,7 @@ static char		**svcs_done = NULL;
 static int		svcs_cnt = 0;
 static int		svcs_done_cnt = 0;
 static pid_t	pid_daemon = 0;
-static scfg_t	*config = NULL;
+static spl_cfg_t	*config = NULL;
 
 static int		xres = 0;
 static int		yres = 0;
@@ -137,7 +137,7 @@ static char **get_list(char **list, const char *file)
 /*
  * Get splash settings from /etc/conf.d/splash
  */
-static int splash_config_gentoo(scfg_t *cfg, stype_t type)
+static int splash_config_gentoo(spl_cfg_t *cfg, spl_type_t type)
 {
 	char **confd;
 	char *t;
@@ -185,19 +185,19 @@ static int splash_config_gentoo(scfg_t *cfg, stype_t type)
 		cfg->vonerr = true;
 
 	switch(type) {
-	case reboot:
+	case spl_reboot:
 		t = rc_get_config_entry(confd, "SPLASH_REBOOT_MESSAGE");
 		if (t)
 			splash_message_set(t);
 		break;
 
-	case shutdown:
+	case spl_shutdown:
 		t = rc_get_config_entry(confd, "SPLASH_SHUTDOWN_MESSAGE");
 		if (t)
 			splash_message_set(t);
 		break;
 
-	case bootup:
+	case spl_bootup:
 	default:
 		t = rc_get_config_entry(confd, "SPLASH_BOOT_MESSAGE");
 		if (t)
@@ -388,7 +388,7 @@ static int splash_svc_handle(const char *name, const char *state, bool skip)
 	}
 
 	/* Recalculate progress */
-	config->progress = svcs_done_cnt * PROGRESS_MAX / svcs_cnt;
+	config->progress = svcs_done_cnt * SPL_PROGRESS_MAX / svcs_cnt;
 
 	splash_theme_hook(state, "pre", name);
 	splash_svc_state(name, state, 0);
@@ -533,9 +533,9 @@ static int splash_start(const char *runlevel)
 	/* Start the splash daemon */
 	snprintf(buf, 2048, "BOOT_MSG='%s' " SPLASH_EXEC " -d --theme=\"%s\" --pidfile=" SPLASH_PIDFILE " --type=%s %s %s",
 			 config->message, config->theme,
-			 (config->type == reboot) ? "reboot" : ((config->type == shutdown) ? "shutdown" : "bootup"),
+			 (config->type == spl_reboot) ? "reboot" : ((config->type == spl_shutdown) ? "shutdown" : "bootup"),
 			 (config->kdmode == KD_GRAPHICS) ? "--kdgraphics" : "",
-			 (config->effects & EFF_FADEOUT) ? "--effects=fadeout" : "");
+			 (config->effects & SPL_EFF_FADEOUT) ? "--effects=fadeout" : "");
 
 	err = system(buf);
 	if (err == -1 || WEXITSTATUS(err) != 0) {
@@ -593,15 +593,15 @@ static int splash_stop(const char *runlevel)
 int _splash_hook (rc_hook_t hook, const char *name)
 {
 	int i = 0;
-	stype_t type = bootup;
+	spl_type_t type = spl_bootup;
 	char *runlev;
 	bool skip = false;
 
 	runlev = rc_get_runlevel();
 	if (!strcmp(runlev, RC_LEVEL_REBOOT))
-		type = reboot;
+		type = spl_reboot;
 	else if (!strcmp(runlev, RC_LEVEL_SHUTDOWN))
-		type = shutdown;
+		type = spl_shutdown;
 
 	/* We generally do nothing if we're in sysinit. Except if the
 	 * autoconfig service is present, when we get a list of services
@@ -699,7 +699,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
 			if (splash_check_daemon(&pid_daemon, false))
 				return -1;
-			splash_send("progress %d\n", PROGRESS_MAX);
+			splash_send("progress %d\n", SPL_PROGRESS_MAX);
 			splash_send("paint\n");
 			splash_cache_cleanup(NULL);
 		}
@@ -729,7 +729,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 
 			/* Make sure the progress indicator reaches 100%, even if
 			 * something went wrong along the way. */
-			splash_send("progress %d\n", PROGRESS_MAX);
+			splash_send("progress %d\n", SPL_PROGRESS_MAX);
 			splash_send("paint\n");
 			splash_theme_hook("rc_exit", "pre", name);
 			i = splash_stop(name);
