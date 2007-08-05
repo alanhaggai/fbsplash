@@ -2,7 +2,7 @@
 #
 # splash_geninitramfs -- an utility to create initramfs images for use with fbsplash
 #
-# Copyright (C) 2004-2005, Michal Januszewski <spock@gentoo.org>
+# Copyright (C) 2004-2007, Michal Januszewski <spock@gentoo.org>
 #
 # This file is a part of the splashutils package.
 #
@@ -28,6 +28,7 @@ Main operation modes:
                       to an initramfs image
   -c, --copy=DIR      copy all necessary files into the specified directory;
                       DIR should point to the root directory of an initramfs
+  -o, --overlay=DIR   include the contents of DIR in the initramfs image
   -h, --help          show this help message
 
 Options:
@@ -64,12 +65,13 @@ declare -a themes
 mode="h"
 splash_hlp="/sbin/splash_helper"
 res=""
+overlay=""
 verbose=0
 index=0
 no8bpp=0
 
 args="$@"
-temp=`getopt -l no8bpp,all,generate:,append:,copy:,help,verbose,res: a:g:c:r:hv "$@"`
+temp=`getopt -l no8bpp,all,generate:,append:,copy:,overlay:,help,verbose,res: a:g:c:r:o:hv "$@"`
 
 if [ $? != 0 ]; then
 	usage; exit 2
@@ -81,13 +83,13 @@ for i ; do
 	case "$i" in
 		-a|--append) 	mode='a'; img="$2"; shift; shift;;
 		-g|--generate)	mode='g'; img="$2"; shift; shift;;
-		-c|--copy)	mode='c'; destdir="$2"; shift; shift;;
-		-h|--help)	usage; exit 2;;
-#		-d)		splash_hlp="/sbin/splash_helper.dyn"; shift;;
-		-r|--res)	res=${2/,/ }; shift; shift;;
+		-c|--copy)		mode='c'; destdir="$2"; shift; shift;;
+		-h|--help)		usage; exit 2;;
+		-r|--res)		res=${2/,/ }; shift; shift;;
 		-v|--verbose)	verbose=$(($verbose + 1)); shift;;
-		--no8bpp)	no8bpp=1; shift;;
-		--)		shift; break;;
+		-o|--overlay)	overlay="$2"; shift; shift;;
+		--no8bpp)		no8bpp=1; shift;;
+		--)				shift; break;;
 		--all)
 				shift;
 				for i in ${themedir}/* ; do
@@ -218,6 +220,11 @@ for (( i=0 ; i < index ; i++ )) ; do
 		fi
 	done
 done
+
+if [ -n "${overlay}" ]; then
+	printv "o Adding files from overlay: $overlay"
+	cp -pRH ${overlay}/* "${imgdir}"
+fi
 
 printv "o Creating initramfs image.."
 if [ "$mode" == "g" ] || [ "$mode" == "a" ]; then
