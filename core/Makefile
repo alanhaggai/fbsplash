@@ -23,7 +23,7 @@ LPNGSRC ?= libs/libpng-1.2.8
 ZLIBSRC ?= libs/zlib-1.2.3
 FT2SRC  ?= libs/freetype-2.1.9
 
-LIB		?= lib
+LIB = $(shell grep 'define LIBDIR' splash.h | sed -e 's/.*"\([^"]*\)".*/\1/g')
 
 prefix     ?= /usr
 sbindir    = /sbin
@@ -256,15 +256,11 @@ $(KOUT)/%.o: %.c config.h splash.h
 
 $(OBJDIR)/%.o: %.c config.h splash.h daemon.h util.h
 	@$(call infmsg,CC,$@)
-	$(Q)$(CC) $(CFLAGS) -DTARGET_UTIL $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -DLIBDIR=\"$(LIB)\" -c -o $@ $<
+	$(Q)$(CC) $(CFLAGS) -DTARGET_UTIL $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
 
 $(OBJLDIR)/%.lo: %.c config.h splash.h
 	@$(call infmsg,CC,$@)
-	$(Q)libtool $(LQ) --mode=compile $(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -DLIBDIR=\"$(LIB)\" -c -o $@ $<
-
-#$(OBJDIR)/solibsplash.o: libsplash.c splash.h config.h
-#	@$(call infmsg,CC,$@)
-#	$(Q)$(CC) $(CFLAGS) -fPIC $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -DLIBDIR=\"$(LIB)\" -c -o $@ $<
+	$(Q)libtool $(LQ) --mode=compile $(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
 
 clean:	clean_all
 

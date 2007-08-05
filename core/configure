@@ -43,9 +43,14 @@ copt_deprecated_type="bool"
 copt_deprecated_def=n
 
 copt_helper=CONFIG_HELPER
-copt_helper_desc="Build the kernel helepr."
+copt_helper_desc="Build the kernel helper."
 copt_helper_type="bool"
 copt_helper_def=y
+
+copt_libdir=CONFIG_LIBDIR
+copt_libdir_desc="Set the location of splash libraries."
+copt_libdir_type="string"
+copt_libdir_def="/lib"
 
 options=`set | grep '^copt_' | sed -re 's/copt_([^_=]+)[_=].*/\1/' | uniq`
 
@@ -57,6 +62,11 @@ write_conf()
 		eval vval=\$copt_$i\_val
 		eval vtype=\$copt_$i\_type
 		eval vname=\$copt_$i
+
+		if [[ "$vname" == "CONFIG_LIBDIR" ]]; then
+			sed -i -e "s!#define LIBDIR.*!#define LIBDIR \"$vval\"!" splash.h
+			continue
+		fi
 
 		if [[ "$vtype" == "bool" ]]; then
 			if [[ "$vval" == "y" ]]; then
@@ -93,9 +103,7 @@ EOTB
 			with="--with-${i}"
 		fi
 
-#	if [[ ${vtype} == "bool" ]]; then
-			vdesc="${vdesc} (default: $vdef)"
-#	fi
+		vdesc="${vdesc} (default: $vdef)"
 
 		printf "  %-20s %-s\n" ${with} "${vdesc}"
 	done

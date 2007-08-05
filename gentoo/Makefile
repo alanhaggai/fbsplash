@@ -14,7 +14,7 @@ test: test.o
 	$(CC) $+ -o $@ -leinfo -lrc -ldl
 
 %.o: %.c
-	$(CC) $(CFLAGS) $(INCLUDES) -DLIBDIR=\"$(LIB)\" -fPIC -c -o $@ $<
+	$(CC) $(CFLAGS) $(INCLUDES) -fPIC -c -o $@ $<
 
 install:
 	install -D splash.so $(DESTDIR)/$(LIB)/rcscripts/plugins/splash.so
