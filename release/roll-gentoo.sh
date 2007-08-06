@@ -20,23 +20,12 @@ fi
 
 cdir=`pwd`
 
-ebegin Exporting data from repository
-tmpdir=`mktemp -d /tmp/splexp.XXXXXXXXXX`
-rmdir ${tmpdir}
 cd ..
-cg-export ${tmpdir}
-eend $?
-cd ${tmpdir}
 
 ver=${major}.${minor}.${sub}
-mv gentoo "splashutils-gentoo-${ver}"
 
 ebegin Creating a tarball
-tar cf - "splashutils-gentoo-${ver}" | bzip2 -f > "${cdir}/splashutils-gentoo-${ver}.tar.bz2"
-eend $?
-
-ebegin Removing the working copy
-rm -rf ${tmpdir}
+git archive --prefix=splashutils-gentoo-${ver}/ HEAD:gentoo/ | bzip2 -f > "${cdir}/splashutils-gentoo-${ver}.tar.bz2"
 eend $?
 
 cd ${cdir}
