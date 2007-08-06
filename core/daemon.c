@@ -25,7 +25,7 @@
 #include <dirent.h>
 #include <time.h>
 
-#include "splash.h"
+#include "objs/splash.h"
 #include "daemon.h"
 
 /* Threading structures */

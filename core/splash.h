@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <linux/kd.h>
 
-#define LIBDIR "/lib64"
+#define LIBDIR "/lib"
 #define SPLASH_CACHEDIR		LIBDIR"/splash/cache"
 #define SPLASH_TMPDIR		LIBDIR"/splash/tmp"
 #define SPLASH_PIDFILE		SPLASH_CACHEDIR"/daemon.pid"

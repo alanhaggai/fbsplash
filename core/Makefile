@@ -23,7 +23,7 @@ LPNGSRC ?= libs/libpng-1.2.8
 ZLIBSRC ?= libs/zlib-1.2.3
 FT2SRC  ?= libs/freetype-2.1.9
 
-LIB = $(shell grep 'define LIBDIR' splash.h | sed -e 's/.*"\([^"]*\)".*/\1/g' -e 's!^/!!')
+LIB = $(shell grep 'define LIBDIR' objs/splash.h | sed -e 's/.*"\([^"]*\)".*/\1/g' -e 's!^/!!')
 
 prefix 	  ?= /usr
 sbindir    = /sbin
@@ -250,15 +250,15 @@ $(OBJDIR)/$(SP_HELPER): $(K_OBJS)
 	$(Q)$(KLCC) $(K_LDFLAGS) -o $@ $+ $(K_LDLIBS)
 	$(Q)$(STRIP) $@
 
-$(KOUT)/%.o: %.c config.h splash.h
+$(KOUT)/%.o: %.c config.h objs/splash.h
 	@$(call infmsg,CC,$@)
 	$(Q)$(KLCC) $(K_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/%.o: %.c config.h splash.h daemon.h util.h
+$(OBJDIR)/%.o: %.c config.h objs/splash.h daemon.h util.h
 	@$(call infmsg,CC,$@)
 	$(Q)$(CC) $(CFLAGS) -DTARGET_UTIL $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
 
-$(OBJLDIR)/%.lo: %.c config.h splash.h
+$(OBJLDIR)/%.lo: %.c config.h objs/splash.h
 	@$(call infmsg,CC,$@)
 	$(Q)libtool $(LQ) --mode=compile $(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
 
@@ -328,20 +328,22 @@ endif
 	@$(call infmsg,INSTALL,$(SP_UTIL).static)
 	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL).static $(DESTDIR)$(sbindir)/$(SP_UTIL).static
 	@$(call infmsg,INSTALL,splash.h)
-	$(Q)$(INSTALL_PROG) -D splash.h $(DESTDIR)$(incdir)/splash.h
+	$(Q)$(INSTALL_PROG) -D objs/splash.h $(DESTDIR)$(incdir)/splash.h
 	@$(call infmsg,INSTALL,splash-functions.sh)
 	$(Q)$(INSTALL_PROG) -D scripts/splash-functions.sh $(DESTDIR)$(sbindir)/splash-functions.sh
 	$(Q)$(call install_script,$(SP_CONV))
 	$(Q)$(call install_script,$(SP_RESIZE))
 	$(Q)$(call install_script,$(SP_MNGR))
-	$(Q)sed -i -e 's#prefix=.*#prefix=$(prefix)#' libsplash*.pc
-	$(Q)sed -i -e 's#libdir=.*#libdir=$(libdir)#' libsplash.pc
-	$(Q)sed -i -e 's#libdir=.*#libdir=$(usrlibdir)#' libsplashrender.pc
-	$(Q)sed -i -e 's#Libs.private: .*#Libs.private: -lsplash $(LDLLIBS)#' libsplashrender.pc
+	$(Q)cp -f libsplash.pc libsplashrender.pc $(OBJDIR)/
+	$(Q)sed -i -e 's#prefix=.*#prefix=$(prefix)#' $(OBJDIR)/libsplash.pc
+	$(Q)sed -i -e 's#prefix=.*#prefix=$(prefix)#' $(OBJDIR)/libsplashrender.pc
+	$(Q)sed -i -e 's#libdir=.*#libdir=$(libdir)#' $(OBJDIR)/libsplash.pc
+	$(Q)sed -i -e 's#libdir=.*#libdir=$(usrlibdir)#' $(OBJDIR)/libsplashrender.pc
+	$(Q)sed -i -e 's#Libs.private: .*#Libs.private: -lsplash $(LDLLIBS)#' $(OBJDIR)/libsplashrender.pc
 	@$(call infmsg,INSTALL,libsplash.pc)
-	$(Q)$(INSTALL_PROG) -D -m 0664 libsplash.pc $(DESTDIR)$(usrlibdir)/pkgconfig/libsplash.pc
+	$(Q)$(INSTALL_PROG) -D -m 0664 $(OBJDIR)/libsplash.pc $(DESTDIR)$(usrlibdir)/pkgconfig/libsplash.pc
 	@$(call infmsg,INSTALL,libsplashrender.pc)
-	$(Q)$(INSTALL_PROG) -D -m 0664 libsplashrender.pc $(DESTDIR)$(usrlibdir)/pkgconfig/libsplashrender.pc
+	$(Q)$(INSTALL_PROG) -D -m 0664 $(OBJDIR)/libsplashrender.pc $(DESTDIR)$(usrlibdir)/pkgconfig/libsplashrender.pc
 
 uninstall:
 ifeq ($(call config_opt,CONFIG_HELPER),true)

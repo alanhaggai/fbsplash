@@ -11,7 +11,7 @@
 #include <linux/input.h>
 #include <limits.h>
 
-#include "splash.h"
+#include "objs/splash.h"
 
 /* XXX:
  * It should be perfectly OK to include sys/vt.h when building the kernel
