@@ -26,8 +26,9 @@ FT2SRC  ?= libs/freetype-2.1.9
 LIB = $(shell grep 'define LIBDIR' objs/splash.h | sed -e 's/.*"\([^"]*\)".*/\1/g' -e 's!^/!!')
 
 prefix 	  ?= /usr
-sbindir    = /sbin
-libdir     = /${LIB}
+prefix2	  ?= /
+sbindir    = ${prefix2}/sbin
+libdir     = ${prefix2}/${LIB}
 usrbindir  = ${prefix}/bin
 usrlibdir  = ${prefix}/${LIB}
 mandir 	   = ${prefix}/share/man
