@@ -169,7 +169,7 @@ static int splash_config_gentoo(spl_cfg_t *cfg, spl_type_t type)
 
 	t = rc_get_config_entry(confd, "SPLASH_THEME");
 	if (t)
-		splash_theme_set(t);
+		splash_acc_theme_set(t);
 
 	t = rc_get_config_entry(confd, "SPLASH_MODE_REQ");
 	if (t) {
@@ -188,20 +188,20 @@ static int splash_config_gentoo(spl_cfg_t *cfg, spl_type_t type)
 	case spl_reboot:
 		t = rc_get_config_entry(confd, "SPLASH_REBOOT_MESSAGE");
 		if (t)
-			splash_message_set(t);
+			splash_acc_message_set(t);
 		break;
 
 	case spl_shutdown:
 		t = rc_get_config_entry(confd, "SPLASH_SHUTDOWN_MESSAGE");
 		if (t)
-			splash_message_set(t);
+			splash_acc_message_set(t);
 		break;
 
 	case spl_bootup:
 	default:
 		t = rc_get_config_entry(confd, "SPLASH_BOOT_MESSAGE");
 		if (t)
-			splash_message_set(t);
+			splash_acc_message_set(t);
 		break;
 	}
 

@@ -438,7 +438,7 @@ bool splashr_tty_silent_update()
 
 void splashr_message_set(stheme_t *theme, char *msg)
 {
-	splash_message_set(msg);
+	splash_acc_message_set(msg);
 
 #if WANT_TTF
 	obj *o;

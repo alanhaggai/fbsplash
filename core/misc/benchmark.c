@@ -16,7 +16,7 @@ int main(int argc, char **argv)
 	struct spl_theme *theme;
 
 	config = splash_lib_init(spl_bootup);
-	splash_theme_set("test2");
+	splash_acc_theme_set("test2");
 
 	splashr_init(false);
 	theme = splashr_theme_load();

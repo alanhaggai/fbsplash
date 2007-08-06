@@ -150,7 +150,7 @@ int main(int argc, char **argv)
 
 		case 0x103:
 		case 't':
-			splash_theme_set(optarg);
+			splash_acc_theme_set(optarg);
 			break;
 
 		case 0x102:

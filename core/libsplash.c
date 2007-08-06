@@ -58,7 +58,7 @@ static void detect_endianess(sendian_t *end)
  * Init the splash library.
  *
  * Arguments:
- *  - type: undef, bootup, reboot, shutdown
+ *  @type: spl_undef, spl_bootup, spl_reboot, spl_shutdown
  *
  * Returns:
  *  - pointer to a config structure used by all routines
@@ -125,7 +125,7 @@ int splash_init_config(spl_type_t type)
 	config.effects = SPL_EFF_NONE;
 	config.verbosity = VERB_NORMAL;
 	config.type = type;
-	splash_message_set(SPL_DEFAULT_THEME);
+	splash_acc_message_set(SPL_DEFAULT_THEME);
 
 	s = getenv("PROGRESS");
 	if (s)
@@ -209,7 +209,7 @@ int splash_parse_kcmdline(bool sysmsg)
 				}
 			}
 			t[i] = 0;
-			splash_message_set(t);
+			splash_acc_message_set(t);
 			t[i] = '"';
 		}
 	}
@@ -253,7 +253,7 @@ int splash_parse_kcmdline(bool sysmsg)
 			} else if (!strcmp(opt, "insane")) {
 				config.insane = true;
 			} else if (!strncmp(opt, "theme:", 6)) {
-				splash_theme_set(opt+6);
+				splash_acc_theme_set(opt+6);
 			} else if (!strcmp(opt, "kdgraphics")) {
 				config.kdmode = KD_GRAPHICS;
 			} else if (!strcmp(opt, "profile")) {
@@ -354,7 +354,7 @@ void splash_get_res(char *theme, int *xres, int *yres)
 	}
 }
 
-void splash_theme_set(char *theme)
+void splash_acc_theme_set(char *theme)
 {
 	if (config.theme)
 		free(config.theme);
@@ -362,7 +362,7 @@ void splash_theme_set(char *theme)
 	config.theme = strdup(theme);
 }
 
-void splash_message_set(char *msg)
+void splash_acc_message_set(char *msg)
 {
 	if (config.message)
 		free(config.message);

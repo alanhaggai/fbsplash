@@ -179,7 +179,7 @@ int main(int argc, char **argv)
 	/* On 'init' the theme isn't defined yet, and thus NULL is passed
 	 * instead of any meaningful value. */
 	if (argc > i && argv[i]) {
-		splash_theme_set(argv[i]);
+		splash_acc_theme_set(argv[i]);
 	}
 	mkdir(PATH_SYS, 0700);
 	if (!mount("sysfs", PATH_SYS, "sysfs", 0, NULL))
