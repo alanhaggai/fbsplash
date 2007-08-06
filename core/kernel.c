@@ -116,6 +116,7 @@ noverbose:
 	if (!(theme->modes & MODE_SILENT))
 		return -1;
 
+	splash_set_silent(NULL);
 	splashr_tty_silent_init();
 	splashr_tty_silent_update();
 

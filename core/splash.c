@@ -280,10 +280,10 @@ int main(int argc, char **argv)
 	case setmode:
 		if (config.reqmode == 's') {
 			splashr_tty_silent_init();
-			splash_set_silent();
+			splash_set_silent(NULL);
 		} else {
 			splashr_tty_silent_cleanup();
-			splash_set_verbose();
+			splash_set_verbose(0);
 		}
 		break;
 

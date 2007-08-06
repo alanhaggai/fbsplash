@@ -579,7 +579,7 @@ static int splash_stop(const char *runlevel)
 
 	/* Just to be sure we aren't stuck in a black ex-silent tty.. */
 	if (splash_is_silent())
-		splash_set_verbose();
+		splash_set_verbose(0);
 
 	/* If we don't get a runlevel argument, then we're being executed
 	 * because of a rc-abort event and we don't save any data. */
@@ -675,7 +675,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		 * from splash_start(). */
 		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
 			if ((i = splash_start(name))) {
-				splash_set_verbose();
+				splash_set_verbose(0);
 				return i;
 			} else {
 				if (rc_service_state("gpm", rc_service_started)) {
@@ -712,7 +712,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		 * scripts. */
 		if (strcmp(name, bootlevel) == 0) {
 			if ((i = splash_start(RC_LEVEL_SYSINIT)))
-				splash_set_verbose();
+				splash_set_verbose(0);
 			splash_theme_hook("rc_init", "post", RC_LEVEL_SYSINIT);
 			splash_theme_hook("rc_exit", "pre", RC_LEVEL_SYSINIT);
 			splash_theme_hook("rc_exit", "post", RC_LEVEL_SYSINIT);
@@ -794,7 +794,7 @@ do_start:
 		} else {
 			i = splash_svc_state(name, "svc_start_failed", 1);
 			if (config->vonerr) {
-				splash_set_verbose();
+				splash_set_verbose(0);
 			}
 		}
 		splash_lib_cleanup();
@@ -827,7 +827,7 @@ do_start:
 		} else {
 			i = splash_svc_state(name, "svc_stop_failed", 1);
 			if (config->vonerr) {
-				splash_set_verbose();
+				splash_set_verbose(0);
 			}
 		}
 		splash_lib_cleanup();

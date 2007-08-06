@@ -274,12 +274,18 @@ fail:
 
 /**
  * Switch to verbose mode.
+ *
+ * @param old_tty If larger than 0, switch to old_tty instead of the verbose tty
+ *                defined by config.tty_v.
  */
-int splash_set_verbose(void)
+int splash_set_verbose(int old_tty)
 {
 	if (fd_tty0 == -1)
 		return -1;
-	return ioctl(fd_tty0, VT_ACTIVATE, config.tty_v);
+	if (old_tty > 0)
+		return ioctl(fd_tty0, VT_ACTIVATE, old_tty);
+	else
+		return ioctl(fd_tty0, VT_ACTIVATE, config.tty_v);
 }
 
 /**
@@ -385,20 +391,33 @@ void splash_acc_message_set(char *msg)
 	config.message = strdup(msg);
 }
 
-#ifndef TARGET_KERNEL
 /**
  * Switch to silent mode.
+ *
+ * @param tty_prev Previous tty. If not NULL, the tty used before the switch to silent
+ *                 mode will be saved in it.
  */
-int splash_set_silent(void)
+int splash_set_silent(int *tty_prev)
 {
+	struct vt_stat vtstat;
+
+	if (tty_prev && fd_tty0 != -1) {
+		if (ioctl(fd_tty0, VT_GETSTATE, &vtstat) != -1) {
+			*tty_prev = vtstat.v_active;
+		}
+	}
+
+#ifndef TARGET_KERNEL
 	if (fd_tty0 == -1) {
-		splash_send("set mode silent\n");
-		return 0;
-	} else {
+		return splash_send("set mode silent\n");
+	} else
+#endif
+	{
 		return ioctl(fd_tty0, VT_ACTIVATE, config.tty_s);
 	}
 }
 
+#ifndef TARGET_KERNEL
 /**
  * Prepare a writable splash cache.
  */

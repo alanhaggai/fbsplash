@@ -11,12 +11,13 @@
 
 int main(int argc, char **argv)
 {
+	int tty = 0;
 	int i;
 	spl_cfg_t *config;
 	struct spl_theme *theme;
 
 	config = splash_lib_init(spl_bootup);
-	splash_acc_theme_set("test2");
+	splash_acc_theme_set("test");
 
 	splashr_init(false);
 	theme = splashr_theme_load();
@@ -27,7 +28,7 @@ int main(int argc, char **argv)
 
 	splashr_message_set(theme, "Benchmarking splashutils.. $progress%");
 
-	splash_set_silent();
+	splash_set_silent(&tty);
 	splashr_tty_silent_init();
 	splashr_tty_silent_update();
 	splashr_render_screen(theme, true, false, 's', SPL_EFF_NONE);
@@ -38,7 +39,7 @@ int main(int argc, char **argv)
 	}
 
 	splashr_tty_silent_cleanup();
-	splash_set_verbose();
+	splash_set_verbose(tty);
 
 	splashr_theme_free(theme);
 	splashr_cleanup();
