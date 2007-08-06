@@ -67,7 +67,6 @@ bool splash_is_silent(void);
 int splash_set_verbose(void);
 void splash_acc_theme_set(char *theme);
 void splash_acc_message_set(char *msg);
-int splash_set_silent(void);
 bool splash_set_evdev(void);
 int splash_check_daemon(int *pid_daemon, bool verbose);
 bool splash_check_sanity(void);

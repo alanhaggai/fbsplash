@@ -54,15 +54,14 @@ static void detect_endianess(sendian_t *end)
 	}
 }
 
-/*
+/**
  * Init the splash library.
  *
- * Arguments:
- *  @type: spl_undef, spl_bootup, spl_reboot, spl_shutdown
- *
- * Returns:
- *  - pointer to a config structure used by all routines
- *    in libsplash.
+ * @param  type One of: spl_undef, spl_bootup, spl_reboot, spl_shutdown
+ * @return Pointer to a config structure used by all routines in libsplash.
+ *         You should not attempt to free this pointer.  If a splash_acc_*
+ *         function exists to set a members of this config structure, use it
+ *         instead of setting the member directly.
  */
 spl_cfg_t* splash_lib_init(spl_type_t type)
 {
@@ -78,7 +77,7 @@ spl_cfg_t* splash_lib_init(spl_type_t type)
 	return &config;
 }
 
-/*
+/**
  * Clean up after splash_lib_init() and subsequent calls
  * to any libsplash routines.
  */
@@ -106,8 +105,10 @@ int splash_lib_cleanup(void)
 	return 0;
 }
 
-/*
+/**
  * Initialize the config structure with default values.
+ *
+ * @param type One of spl_reboot, spl_shutdown, spl_bootup, spl_undef.
  */
 int splash_init_config(spl_type_t type)
 {
@@ -157,17 +158,12 @@ int splash_init_config(spl_type_t type)
 	return 0;
 }
 
-void splash_set_tty_silent(int tty)
-{
-	if (tty < 0 || tty > MAX_NR_CONSOLES)
-		config.tty_s = TTY_SILENT;
-	else
-		config.tty_s = tty;
-}
-
-/*
- * Parse the kernel command line to get splash settings
- * and save them in 'config'.
+/**
+ * Parse the kernel command line to get splash settings and save
+ * them in 'config'.
+ *
+ * @param sysmsg If true, the command line will be scanned for the BOOT_MSG
+ *               splash message override.
  */
 int splash_parse_kcmdline(bool sysmsg)
 {
@@ -237,7 +233,12 @@ int splash_parse_kcmdline(bool sysmsg)
 		while ((opt = strsep(&t, ",")) != NULL) {
 
 			if (!strncmp(opt, "tty:", 4)) {
-				splash_set_tty_silent(strtol(opt+4, NULL, 0));
+				int tty = strtol(opt+4, NULL, 0);
+				if (tty < 0 || tty > MAX_NR_CONSOLES) {
+					config.tty_s = TTY_SILENT;
+				} else {
+					config.tty_s = tty;
+				}
 			} else if (!strcmp(opt, "fadein")) {
 				config.effects |= SPL_EFF_FADEIN;
 			} else if (!strcmp(opt, "fadeout")) {
@@ -271,7 +272,7 @@ fail:
 	goto out;
 }
 
-/*
+/**
  * Switch to verbose mode.
  */
 int splash_set_verbose(void)
@@ -281,8 +282,10 @@ int splash_set_verbose(void)
 	return ioctl(fd_tty0, VT_ACTIVATE, config.tty_v);
 }
 
-/*
- * Returns true if the silent splash screen is currently displayed.
+/**
+ * Check whether the silent splash screen is being displayed.
+ *
+ * @return True if the silent splash is displayed, false otherwise.
  */
 bool splash_is_silent(void)
 {
@@ -298,10 +301,12 @@ bool splash_is_silent(void)
 	}
 }
 
-/*
- * Get the resolution that the splash will use.
- *  @xres - preferred xres (e.g. fb_var.xres)
- *  @yres - preferred yres (e.g. fb_var.yres)
+/**
+ * Get the resolution that the splash screen will use.
+ *
+ * @param theme Theme name.
+ * @param xres Preferred horizontal resolution (e.g. fb_var.xres).
+ * @param yres Preferred vertical resolution (e.g. fb_var.yres).
  */
 void splash_get_res(char *theme, int *xres, int *yres)
 {
@@ -354,6 +359,11 @@ void splash_get_res(char *theme, int *xres, int *yres)
 	}
 }
 
+/**
+ * Accessor function for config.theme
+ *
+ * @param theme The new theme setting.
+ */
 void splash_acc_theme_set(char *theme)
 {
 	if (config.theme)
@@ -362,6 +372,11 @@ void splash_acc_theme_set(char *theme)
 	config.theme = strdup(theme);
 }
 
+/**
+ * Accessor function for config.message
+ *
+ * @param msg The new message setting.
+ */
 void splash_acc_message_set(char *msg)
 {
 	if (config.message)
@@ -371,7 +386,7 @@ void splash_acc_message_set(char *msg)
 }
 
 #ifndef TARGET_KERNEL
-/*
+/**
  * Switch to silent mode.
  */
 int splash_set_silent(void)
@@ -384,7 +399,7 @@ int splash_set_silent(void)
 	}
 }
 
-/*
+/**
  * Prepare a writable splash cache.
  */
 int splash_cache_prep(void)
@@ -397,11 +412,11 @@ int splash_cache_prep(void)
 	return 0;
 }
 
-/*
+/**
  * Clean the splash cache.
  *
- * profile_save is a strlist of files that should be saved on the hdd
- * if profiling is enabled.
+ * @param profile_save A strlist of files that should be saved on the hdd
+ *                     if profiling is enabled.
  */
 int splash_cache_cleanup(char **profile_save)
 {
@@ -446,9 +461,12 @@ nosave:
 	return err;
 }
 
-/*
- * Check that the splash daemon is running. Sets 'pid_daemon'
- * to the PID of the splash daemon if it's found running.
+/**
+ * Check that the splash daemon is running.
+ *
+ * @param pid_daemon Will be set to the PID of the splash daemon if
+ *                   it is found to be running.
+ * @param verbose    Print errors if true, be silent otherwise.
  */
 int splash_check_daemon(int *pid_daemon, bool verbose)
 {
@@ -491,7 +509,7 @@ stale:
 	goto out;
 }
 
-/*
+/**
  * Perform sanity checks to make sure that it's safe to start the
  * splash daemon.
  */
@@ -529,7 +547,7 @@ err:
 	return false;
 }
 
-/*
+/**
  * Try to set the event device for the splash daemon.
  */
 bool splash_set_evdev(void)
@@ -569,8 +587,10 @@ bool splash_set_evdev(void)
 	}
 }
 
-/*
+/**
  * Save splash profiling data.
+ *
+ * @param fmt Format of the data to be saved (printf style).
  */
 int splash_profile(const char *fmt, ...)
 {
@@ -598,8 +618,10 @@ int splash_profile(const char *fmt, ...)
 	return 0;
 }
 
-/*
+/**
  * Send stuff to the splash daemon using the splash FIFO.
+ *
+ * @param fmt Format of the data to be sent (printf style).
  */
 int splash_send(const char *fmt, ...)
 {

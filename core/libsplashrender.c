@@ -118,6 +118,11 @@ static void fb_cmap_directcolor_set(int fd)
 	free(cmap.red);
 }
 
+/**
+ * Init the splashrender library.
+ *
+ * @param create Create device nodes if they're missing.
+ */
 int splashr_init(bool create)
 {
 #ifdef CONFIG_FBSPLASH
@@ -142,6 +147,10 @@ int splashr_init(bool create)
 	return 0;
 }
 
+/**
+ * Cleanup after splashr_init() and subsequent calls to any
+ * libsplashrender routines.
+ */
 void splashr_cleanup()
 {
 	int i;
@@ -167,13 +176,30 @@ void splashr_cleanup()
 #endif
 }
 
+/**
+ * Render the splash screen to a buffer.
+ *
+ * @param theme Theme for which the screen is to be rendered.
+ * @param buffer Buffer when the rendered image is to be stored.  The image
+ *               will be in the same format as that used by the fb device
+ *               which handles the silent splash tty.  The buffer should be
+ *               long enough to contain the whole image (xres * yres * bytes per pixel)
+ *               where xres and yres are the horizontal and vertical resolution
+ *               of the current theme or of the video mode active on the framebuffer
+ *               device.
+ * @param repaint The whole screen is rendered if true, only updated parts otherwise.
+ * @param mode   'v' if the verbose splash screen is to be rendered, 's' if the silent
+ *               splash screen is to be rendered.
+ *
+ * @return 0 on success, a negative value otherwise.
+ */
 int splashr_render_buf(stheme_t *theme, void *buffer, bool repaint, char mode)
 {
 	u8 *img;
 
 	/* FIXME: 8bpp modes aren't supported yet */
 	if (fbd.var.bits_per_pixel == 8)
-		return 0;
+		return -2;
 
 	if (mode == 'v') {
 		if (!(theme->modes & MODE_VERBOSE))
@@ -194,6 +220,21 @@ int splashr_render_buf(stheme_t *theme, void *buffer, bool repaint, char mode)
 	return 0;
 }
 
+/**
+ * Render the splash directly to the screen.
+ *
+ * @param theme Theme for which the screen is to be rendered.
+ * @param repaint The whole screeen is rendered if true, only updated parts otherwise.
+ * @param bgnd Return immediately if true, wait for all effects to be rendered otherwise.
+ *             Effects such as fadein/fadeout take some time to be fully displayed. If this
+ *             parameter is set to true, they will be rendered from a separate, forked process.
+ * @param mode 'v' if the verbose splash screen is to be rendered, 's' if the silent
+ *             splash screen is to be rendered.
+ * @param effects Indicates which effects are to be used to display the image.  Valid values
+ *                constants named prefixed with SPL_EFF_.
+ *
+ * @return 0 on success, a negative value otherwise.
+ */
 int splashr_render_screen(stheme_t *theme, bool repaint, bool bgnd, char mode, char effects)
 {
 	if (!splashr_render_buf(theme, theme->bgbuf, repaint, mode)) {
@@ -217,6 +258,12 @@ int splashr_render_screen(stheme_t *theme, bool repaint, bool bgnd, char mode, c
 	}
 }
 
+/**
+ * Load a splash theme specified by config.theme.
+ *
+ * @return A pointer to a theme descriptor, which is then passed to any
+ *         libsplashrender functions.
+ */
 stheme_t *splashr_theme_load()
 {
 	char buf[512];
@@ -280,6 +327,11 @@ stheme_t *splashr_theme_load()
 	return st;
 }
 
+/**
+ * Free a theme descriptor struct returned by splashr_theme_load().
+ *
+ * @param theme Theme descriptor to be freed.
+ */
 void splashr_theme_free(stheme_t *theme)
 {
 	item *i, *j;
@@ -340,6 +392,9 @@ static void vt_cursor_enable(int fd)
 	write(fd, "\e[?25h\e[?0c", 11);
 }
 
+/**
+ * Prepare the silent tty (config.tty_s) for displaying the silent splash screen.
+ */
 int splashr_tty_silent_init()
 {
 	struct termios w;
@@ -365,6 +420,9 @@ int splashr_tty_silent_init()
 	return 0;
 }
 
+/**
+ * Restore the silent tty to its previous settings after a call to splashr_tty_silent_init().
+ */
 int splashr_tty_silent_cleanup()
 {
 	struct termios w;
@@ -387,6 +445,11 @@ int splashr_tty_silent_cleanup()
 	return 0;
 }
 
+/**
+ * Set a new silent tty.
+ *
+ * @param tty The new silent tty.
+ */
 int splashr_tty_silent_set(int tty)
 {
 	if (tty < 0 || tty > MAX_NR_CONSOLES)
@@ -403,6 +466,11 @@ int splashr_tty_silent_set(int tty)
 	return 0;
 }
 
+/**
+ * Update all internal settings related to the silent tty.
+ *
+ * To be called when switching to the silent tty.
+ */
 bool splashr_tty_silent_update()
 {
 	struct fb_var_screeninfo old_var;
@@ -436,6 +504,12 @@ bool splashr_tty_silent_update()
 	return ret;
 }
 
+/**
+ * Set a new main message.
+ *
+ * @param theme Theme descriptor.
+ * @param msg The new main message.
+ */
 void splashr_message_set(stheme_t *theme, char *msg)
 {
 	splash_acc_message_set(msg);
@@ -455,6 +529,12 @@ void splashr_message_set(stheme_t *theme, char *msg)
 #endif
 }
 
+/**
+ * Set a new progress value.
+ *
+ * @param theme Theme descriptor.
+ * @param progress The new progress value.
+ */
 void splashr_progress_set(stheme_t *theme, int progress)
 {
 	if (progress < 0)

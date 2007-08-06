@@ -262,6 +262,9 @@ $(OBJLDIR)/%.lo: %.c config.h objs/splash.h
 	@$(call infmsg,CC,$@)
 	$(Q)libtool $(LQ) --mode=compile $(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
 
+doc:
+	doxygen
+
 clean:	clean_all
 
 clean_all:	clean_zlib clean_png

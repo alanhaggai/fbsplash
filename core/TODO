@@ -7,7 +7,6 @@ Fixes
 =====
 - render: move all sanity checks (position on screen) to bndrect calculation
 - optimize rect-based rendering
-- document libsplash and libsplashrender
 
 New features
 ============
