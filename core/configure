@@ -27,10 +27,10 @@ copt_mng_desc="Enable support for MNG animations"
 copt_mng_type="bool"
 copt_mng_def=n
 
-copt_fbsplash=CONFIG_FBSPLASH
-copt_fbsplash_desc="Enable support for fbsplash"
-copt_fbsplash_type="bool"
-copt_fbsplash_def=y
+copt_fbcondecor=CONFIG_FBCON_DECOR
+copt_fbcondecor_desc="Enable support for fbcondecor"
+copt_fbcondecor_type="bool"
+copt_fbcondecor_def=y
 
 copt_gpm=CONFIG_GPM
 copt_gpm_desc="Enable support for GPM"

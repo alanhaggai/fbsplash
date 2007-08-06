@@ -69,7 +69,7 @@ PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_S
 
 K_LDLIBS = $(OBJDIR)/jpeglib/libjpeg.a
 K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
-		   $(KOUT)/fbsplash.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o $(KOUT)/libsplash.o \
+		   $(KOUT)/fbcon_decor.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o $(KOUT)/libsplash.o \
 		   $(KOUT)/libsplashrender.o
 K_DEPS   =
 
@@ -88,11 +88,11 @@ endif
 
 
 # Include the klibc header files so that we can compile against fb.h
-# from a kernel thee patched with fbsplash.
+# from a kernel thee patched with fbcondecor.
 INCLUDES = -I/usr/include/freetype2 -idirafter /usr/$(LIB)/klibc/include/linux
 LIBOBJS  = $(OBJLDIR)/parse.lo $(OBJLDIR)/image.lo \
 		   $(OBJLDIR)/render.lo $(OBJLDIR)/common.lo $(OBJLDIR)/list.lo \
-		   $(OBJLDIR)/fbsplash.lo $(OBJLDIR)/effects.lo
+		   $(OBJLDIR)/fbcon_decor.lo $(OBJLDIR)/effects.lo
 
 OBJS = $(OBJDIR)/daemon.o $(OBJDIR)/daemon_cmd.o $(OBJDIR)/splash.o
 
@@ -133,7 +133,7 @@ infmsg	= if [ "${QUIET}" = "true" ] ; then printf "  %-7s %s\n" $(1) $(2) ; fi
 install_script = $(call infmsg,INSTALL,$(1)) ; $(INSTALL_PROG) -D scripts/$(1) $(DESTDIR)$(usrbindir)/$(1) ; \
 		 sed -e 's/%PKG_VERSION%/$(PKG_VERSION)/g' -i $(DESTDIR)$(usrbindir)/$(1)
 
-SP_HELPER = splash_helper
+SP_HELPER = fbcondecor_helper
 SP_UTIL   = splash_util
 SP_GIRAM  = splash_geninitramfs
 SP_RESIZE = splash_resize
@@ -274,7 +274,7 @@ clean_all:	clean_zlib clean_png
 
 clean_splash:
 	@$(call infmsg,CLEAN,splash)
-	$(Q)rm -f $(OBJDIR)/{*.o,splash_util,*.so,*.lo,splash_util.static,splash_helper}
+	$(Q)rm -f $(OBJDIR)/{*.o,splash_util,*.so,*.lo,splash_util.static,fbcondecor_helper}
 	$(Q)rm -rf $(OBJDIR)/lib
 	$(Q)rm -rf $(OBJDIR)/kernel
 	$(Q)rm -r config.h

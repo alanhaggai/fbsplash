@@ -1,6 +1,6 @@
-In order for fbsplash to be activated during early stages of the boot-up
-process, the kernel has to get access to the splash_helper program and
-theme data files. There are several ways to make this happen.
+In order for fbsplash or fbcondecor to be activated during early stages of 
+the boot-up process, the kernel has to get access to the fbcondecor_helper 
+program and theme data files. There are several ways to make this happen.
 
 1. Initramfs
 
@@ -16,9 +16,9 @@ which is used before the main root filesystem is mounted.
 An initramfs image can be either compiled directly into the kernel, or used
 as an initrd.
 
-To make your initramfs useful for fbsplash, you need to put two things into
-it: the splash helper and a theme (config files + pics). The splash helper
-should be located at /sbin/splash_helper, as usual. You also have to make
+To make your initramfs useful for fbcondecor, you need to put two things into
+it: the fbcondecor helper and a theme (config files + pics). The fbcondecor helper
+should be located at /sbin/fbcondecor_helper, as usual. You also have to make
 sure that the appropriate mount points exist in the image (/sys, /dev).
 If you want to save some memory and you aren't planning to use
 all available resolutions, you'd probably want to copy the config file and
@@ -48,13 +48,13 @@ kernel from overwriting your initramfs image with its own default image.
 
 2. What about the good old initrds?
 
-Initrds aren't of much use for fbsplash as their contents aren't directly
+Initrds aren't of much use for fbcondecor as their contents aren't directly
 accessible (ie. mounted) at the time fbcon is initialized.
 
 It's theoretically possible to store the theme data in a classical initrd
 and still make use of it, though. You would have to create a wrapper
-/sbin/splash_helper script/program that would mount initrd.image, copy
-the theme data to the rootfs and then call the real splash_helper. As far
+/sbin/fbcondecor_helper script/program that would mount initrd.image, copy
+the theme data to the rootfs and then call the real fbcondecor_helper. As far
 as I know, it has never been tried so far.
 
 --

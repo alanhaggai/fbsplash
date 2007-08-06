@@ -1,5 +1,5 @@
 /*
- * fbsplash.c - Functions for handling communication with the kernel
+ * fbcon_decor.c - Functions for handling communication with the kernel
  *
  * Copyright (C) 2004-2007 Michal Januszewski <spock@gentoo.org>
  *
@@ -21,52 +21,52 @@
 #include <errno.h>
 #include "util.h"
 
-#ifdef CONFIG_FBSPLASH
-int fbsplash_open(bool create)
+#ifdef CONFIG_FBCON_DECOR
+int fbcon_decor_open(bool create)
 {
 	int c;
-	c = open(SPLASH_DEV, O_RDWR);
+	c = open(FBCON_DECOR_DEV, O_RDWR);
 
 	if (c == -1 && create) {
-		if (!dev_create(SPLASH_DEV, PATH_SYS "/class/misc/fbsplash/dev"))
-			c = open(SPLASH_DEV, O_RDWR);
+		if (!dev_create(FBCON_DECOR_DEV, PATH_SYS "/class/misc/fbcondecor/dev"))
+			c = open(FBCON_DECOR_DEV, O_RDWR);
 	}
 
 	return c;
 }
 
-int fbsplash_setstate(unsigned char origin, int vc, unsigned int state)
+int fbcon_decor_setstate(unsigned char origin, int vc, unsigned int state)
 {
-	struct fb_splash_iowrapper wrapper = {
+	struct fbcon_decor_iowrapper wrapper = {
 		.vc = vc,
 		.origin = origin,
 		.data = &state,
 	};
 
-	if (ioctl(fd_fbsplash, FBIOSPLASH_SETSTATE, &wrapper)) {
-		iprint(MSG_ERROR, "FBIOSPLASH_SETSTATE failed, error code %d.\n", errno);
+	if (ioctl(fd_fbcondecor, FBIOCONDECOR_SETSTATE, &wrapper)) {
+		iprint(MSG_ERROR, "FBIOCONDECOR_SETSTATE failed, error code %d.\n", errno);
 		return -1;
 	}
 	return 0;
 }
 
-int fbsplash_getstate(unsigned char origin, int vc)
+int fbcon_decor_getstate(unsigned char origin, int vc)
 {
 	int i;
 
-	struct fb_splash_iowrapper wrapper = {
+	struct fbcon_decor_iowrapper wrapper = {
 		.vc = vc,
-		.origin = FB_SPLASH_IO_ORIG_USER,
+		.origin = FBCON_DECOR_IO_ORIG_USER,
 		.data = &i,
 	};
 
-	ioctl(fd_fbsplash, FBIOSPLASH_GETSTATE, &wrapper);
+	ioctl(fd_fbcondecor, FBIOCONDECOR_GETSTATE, &wrapper);
 	return i;
 }
 
-int fbsplash_setpic(unsigned char origin, int vc, stheme_t *theme)
+int fbcon_decor_setpic(unsigned char origin, int vc, stheme_t *theme)
 {
-	struct fb_splash_iowrapper wrapper = {
+	struct fbcon_decor_iowrapper wrapper = {
 		.vc = vc,
 		.origin = origin,
 		.data = &theme->verbose_img,
@@ -75,18 +75,18 @@ int fbsplash_setpic(unsigned char origin, int vc, stheme_t *theme)
 	if (splashr_render_buf(theme, (u8*)theme->verbose_img.data, true, 'v'))
 		return -1;
 
-	if (ioctl(fd_fbsplash, FBIOSPLASH_SETPIC, &wrapper)) {
-		iprint(MSG_ERROR, "FBIOSPLASH_SETPIC failed, error code %d.\n", errno);
+	if (ioctl(fd_fbcondecor, FBIOCONDECOR_SETPIC, &wrapper)) {
+		iprint(MSG_ERROR, "FBIOCONDECOR_SETPIC failed, error code %d.\n", errno);
 		iprint(MSG_ERROR, "Hint: are you calling 'setpic' for the current virtual console?\n");
 		return -1;
 	}
 	return 0;
 }
 
-int fbsplash_setcfg(unsigned char origin, int vc, stheme_t *theme)
+int fbcon_decor_setcfg(unsigned char origin, int vc, stheme_t *theme)
 {
-	struct vc_splash vc_cfg;
-	struct fb_splash_iowrapper wrapper = {
+	struct vc_decor vc_cfg;
+	struct fbcon_decor_iowrapper wrapper = {
 		.vc = vc,
 		.origin = origin,
 		.data = &vc_cfg,
@@ -103,29 +103,29 @@ int fbsplash_setcfg(unsigned char origin, int vc, stheme_t *theme)
 	vc_cfg.bg_color = theme->bg_color;
 	vc_cfg.theme = config.theme;
 
-	if (ioctl(fd_fbsplash, FBIOSPLASH_SETCFG, &wrapper)) {
-		iprint(MSG_ERROR, "FBIOSPLASH_SETCFG failed, error code %d.\n", errno);
+	if (ioctl(fd_fbcondecor, FBIOCONDECOR_SETCFG, &wrapper)) {
+		iprint(MSG_ERROR, "FBIOCONDECOR_SETCFG failed, error code %d.\n", errno);
 		return -1;
 	}
 	return 0;
 }
 
-int fbsplash_getcfg(int vc)
+int fbcon_decor_getcfg(int vc)
 {
 	int err = 0;
-	struct vc_splash vc_cfg;
-	struct fb_splash_iowrapper wrapper = {
+	struct vc_decor vc_cfg;
+	struct fbcon_decor_iowrapper wrapper = {
 		.vc = vc,
-		.origin = FB_SPLASH_IO_ORIG_USER,
+		.origin = FBCON_DECOR_IO_ORIG_USER,
 		.data = &vc_cfg,
 	};
 
-	vc_cfg.theme = malloc(FB_SPLASH_THEME_LEN);
+	vc_cfg.theme = malloc(FBCON_DECOR_THEME_LEN);
 	if (!vc_cfg.theme)
 		return -1;
 
-	if (ioctl(fd_fbsplash, FBIOSPLASH_GETCFG, &wrapper)) {
-		iprint(MSG_ERROR, "FBIOSPLASH_GETCFG failed, error code %d.\n", errno);
+	if (ioctl(fd_fbcondecor, FBIOCONDECOR_GETCFG, &wrapper)) {
+		iprint(MSG_ERROR, "FBIOCONDECOR_GETCFG failed, error code %d.\n", errno);
 		err = -2;
 		goto out;
 	}
@@ -134,7 +134,7 @@ int fbsplash_getcfg(int vc)
 		strcpy(vc_cfg.theme, "<none>");
 	}
 
-	printf("Splash config on console %d:\n", vc);
+	printf("Fbcon decorations config on console %d:\n", vc);
 	printf("tx:       %d\n", vc_cfg.tx);
 	printf("ty:       %d\n", vc_cfg.ty);
 	printf("twidth:	  %d\n", vc_cfg.twidth);

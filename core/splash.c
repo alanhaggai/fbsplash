@@ -113,8 +113,8 @@ void usage(void)
 "      --effects=LIST  a comma-separated list of effects to use;\n"
 "                      supported effects: fadein, fadeout\n"
 "      --type=TYPE     TYPE can be: bootup, reboot, shutdown\n"
-#ifndef CONFIG_FBSPLASH
-"\nThis version of splashutils has been compiled without support for fbsplash.\n"
+#ifndef CONFIG_FBCON_DECOR
+"\nThis version of splashutils has been compiled without support for fbcondecor.\n"
 #endif
 );
 }
@@ -291,13 +291,13 @@ int main(int argc, char **argv)
 		printf("Splash mode: %s\n", splash_is_silent() ? "silent" : "verbose");
 		break;
 
-#ifdef CONFIG_FBSPLASH
+#ifdef CONFIG_FBCON_DECOR
 	case on:
-		err = fbsplash_setstate(FB_SPLASH_IO_ORIG_USER, arg_vc, 1);
+		err = fbcon_decor_setstate(FBCON_DECOR_IO_ORIG_USER, arg_vc, 1);
 		break;
 
 	case off:
-		err = fbsplash_setstate(FB_SPLASH_IO_ORIG_USER, arg_vc, 0);
+		err = fbcon_decor_setstate(FBCON_DECOR_IO_ORIG_USER, arg_vc, 0);
 		break;
 
 	case setpic:
@@ -309,25 +309,25 @@ int main(int argc, char **argv)
 				goto setpic_out;
 		}
 
-		err = fbsplash_setpic(FB_SPLASH_IO_ORIG_USER, arg_vc, theme);
+		err = fbcon_decor_setpic(FBCON_DECOR_IO_ORIG_USER, arg_vc, theme);
 setpic_out:	break;
 	}
 
 	case getcfg:
-		err = fbsplash_getcfg(arg_vc);
+		err = fbcon_decor_getcfg(arg_vc);
 		break;
 
 	case setcfg:
-		err = fbsplash_setcfg(FB_SPLASH_IO_ORIG_USER, arg_vc, theme);
+		err = fbcon_decor_setcfg(FBCON_DECOR_IO_ORIG_USER, arg_vc, theme);
 		break;
 
 	case getstate:
 	{
-		printf("Splash state on console %d: %s\n", arg_vc,
-				(fbsplash_getstate(FB_SPLASH_IO_ORIG_USER, arg_vc)) ? "on" : "off");
+		printf("Fbcon decorations state on console %d: %s\n", arg_vc,
+				(fbcon_decor_getstate(FBCON_DECOR_IO_ORIG_USER, arg_vc)) ? "on" : "off");
 		break;
 	}
-#endif /* CONFIG_FBSPLASH */
+#endif /* CONFIG_FBCON_DECOR */
 #ifdef CONFIG_DEPRECATED
 	/* Deprecated. The daemon mode should be used instead. */
 	case paint:

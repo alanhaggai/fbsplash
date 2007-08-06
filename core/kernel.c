@@ -1,5 +1,5 @@
 /*
- * kernel.c - the core of splash_helper
+ * kernel.c - the core of fbcondecor_helper
  *
  * Copyright (C) 2004-2007, Michal Januszewski <spock@gentoo.org>
  *
@@ -46,8 +46,8 @@ int handle_init(bool update)
 	char buf[8];
 	int h;
 	stheme_t *theme;
-#ifdef CONFIG_FBSPLASH
-	bool fbsplash = true;
+#ifdef CONFIG_FBCON_DECOR
+	bool fbcon_decor = true;
 #endif
 
 	/* If possible, make sure that the error messages don't go straight
@@ -71,8 +71,8 @@ int handle_init(bool update)
 	 * Nor do we want to mess with the verbose mode. */
 	if (update) {
 		config.effects = SPL_EFF_NONE;
-#ifdef CONFIG_FBSPLASH
-		fbsplash = false;
+#ifdef CONFIG_FBCON_DECOR
+		fbcon_decor = false;
 #endif
 	}
 
@@ -80,34 +80,34 @@ int handle_init(bool update)
 	if (!theme)
 		return -1;
 
-#ifdef CONFIG_FBSPLASH
+#ifdef CONFIG_FBCON_DECOR
 	if (!update && (config.reqmode == 's' || config.reqmode == 'v')) {
-		if (fbsplash_setcfg(FB_SPLASH_IO_ORIG_USER, arg_vc, theme))
+		if (fbcon_decor_setcfg(FBCON_DECOR_IO_ORIG_USER, arg_vc, theme))
 			goto noverbose;
 
-		if (fbsplash_setpic(FB_SPLASH_IO_ORIG_USER, arg_vc, theme))
+		if (fbcon_decor_setpic(FBCON_DECOR_IO_ORIG_USER, arg_vc, theme))
 			goto noverbose;
 	} else {
 noverbose:
-		fbsplash = false;
+		fbcon_decor = false;
 	}
 #endif
 	/* Activate verbose mode if it was explicitly requested. If silent mode
 	 * was requested, the verbose background image will be set after the
 	 * switch to the silent tty is complete. */
 	if (config.reqmode == 'v') {
-#ifdef CONFIG_FBSPLASH
-		/* Activate fbsplash on the first tty if the picture and
+#ifdef CONFIG_FBCON_DECOR
+		/* Activate fbcon_decor on the first tty if the picture and
 		 * the config file were successfully loaded. */
-		if (fbsplash) {
-			fbsplash_setstate(FB_SPLASH_IO_ORIG_USER, arg_vc, 1);
+		if (fbcon_decor) {
+			fbcon_decor_setstate(FBCON_DECOR_IO_ORIG_USER, arg_vc, 1);
 			return 0;
 		} else {
-			fprintf(stderr, "Failed to get verbose splash image.\n");
+			fprintf(stderr, "Failed to get background decoration image.\n");
 			return -1;
 		}
 #else
-		fprintf(stderr, "This version of splashutils was compiled without support for fbsplash\n"
+		fprintf(stderr, "This version of splashutils was compiled without support for fbcondecor.\n"
 						"Verbose mode will not be activated\n");
 		return -1;
 #endif
@@ -131,9 +131,9 @@ noverbose:
 
 	splashr_render_screen(theme, true, true, 's', config.effects);
 
-#ifdef CONFIG_FBSPLASH
-	if (fbsplash && config.reqmode == 's')
-		fbsplash_setstate(FB_SPLASH_IO_ORIG_USER, arg_vc, 1);
+#ifdef CONFIG_FBCON_DECOR
+	if (fbcon_decor && config.reqmode == 's')
+		fbcon_decor_setstate(FBCON_DECOR_IO_ORIG_USER, arg_vc, 1);
 #endif
 
 	/* We're the kernel helper. We try to do our task as efficiently
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 	} else if (!strcmp(argv[2],"repaint")) {
 		err = handle_init(true);
 	}
-#ifdef CONFIG_FBSPLASH
+#ifdef CONFIG_FBCON_DECOR
 	else if (config.theme) {
 		stheme_t *theme;
 
@@ -204,15 +204,15 @@ int main(int argc, char **argv)
 		}
 
 		if (!strcmp(argv[2],"getpic")) {
-			err = fbsplash_setpic(FB_SPLASH_IO_ORIG_KERNEL, arg_vc, theme);
+			err = fbcon_decor_setpic(FBCON_DECOR_IO_ORIG_KERNEL, arg_vc, theme);
 		} else if (!strcmp(argv[2],"modechange")) {
-			if ((err = fbsplash_setcfg(FB_SPLASH_IO_ORIG_KERNEL, arg_vc, theme)))
+			if ((err = fbcon_decor_setcfg(FBCON_DECOR_IO_ORIG_KERNEL, arg_vc, theme)))
 				goto out;
 
-			if ((err = fbsplash_setpic(FB_SPLASH_IO_ORIG_KERNEL, arg_vc, theme)))
+			if ((err = fbcon_decor_setpic(FBCON_DECOR_IO_ORIG_KERNEL, arg_vc, theme)))
 				goto out;
 
-			err = fbsplash_setstate(FB_SPLASH_IO_ORIG_KERNEL, arg_vc, 1);
+			err = fbcon_decor_setstate(FBCON_DECOR_IO_ORIG_KERNEL, arg_vc, 1);
 		}
 	}
 #endif

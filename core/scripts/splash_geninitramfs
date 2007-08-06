@@ -63,7 +63,7 @@ put_item()
 themedir="/etc/splash"
 declare -a themes
 mode="h"
-splash_hlp="/sbin/splash_helper"
+splash_hlp="/sbin/fbcondecor_helper"
 res=""
 overlay=""
 verbose=0

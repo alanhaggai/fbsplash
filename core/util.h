@@ -35,13 +35,13 @@
  */
 #ifdef TARGET_KERNEL
 	#include <linux/fb.h>
-	#ifdef CONFIG_FBSPLASH
-		#include <linux/console_splash.h>
+	#ifdef CONFIG_FBCON_DECOR
+		#include <linux/console_decor.h>
 	#endif
 #else
 	#include <fb.h>
-	#ifdef CONFIG_FBSPLASH
-		#include <console_splash.h>
+	#ifdef CONFIG_FBCON_DECOR
+		#include <console_decor.h>
 	#endif
 #endif
 
@@ -49,20 +49,20 @@
 #define PATH_DEV	"/dev"
 #define PATH_PROC	"/proc"
 #define PATH_SYS	"/sys"
-#define SPLASH_DEV	PATH_DEV"/fbsplash"
+#define FBCON_DECOR_DEV	PATH_DEV"/fbcondecor"
 
 #if defined(TARGET_KERNEL)
 	#define PATH_SYS	"/lib/splash/sys"
 	#define PATH_PROC	"/lib/splash/proc"
 #endif
 
-/* Necessary to avoid compilation errors when fbsplash support is
+/* Necessary to avoid compilation errors when fbcondecor support is
    disabled. */
-#if !defined(CONFIG_FBSPLASH)
-	#define FB_SPLASH_IO_ORIG_USER		0
-	#define FB_SPLASH_IO_ORIG_KERNEL	1
+#if !defined(CONFIG_FBCON_DECOR)
+	#define FBCON_DECOR_IO_ORIG_USER		0
+	#define FBCON_DECOR__IO_ORIG_KERNEL		1
 #else
-	extern int fd_fbsplash;
+	extern int fd_fbcondecor;
 #endif
 
 /* Useful short-named types */
@@ -392,13 +392,13 @@ void render_add(stheme_t *theme, obj *o, rect *a);
 /* image.c */
 int load_images(stheme_t *theme, char mode);
 
-/* fbsplash.c */
-int fbsplash_open(bool create);
-int fbsplash_setstate(unsigned char origin, int vc, unsigned int state);
-int fbsplash_getstate(unsigned char origin, int vc);
-int fbsplash_setpic(unsigned char origin, int vc, stheme_t *theme);
-int fbsplash_setcfg(unsigned char origin, int vc, stheme_t *theme);
-int fbsplash_getcfg(int vc);
+/* fbcon_decor.c */
+int fbcon_decor_open(bool create);
+int fbcon_decor_setstate(unsigned char origin, int vc, unsigned int state);
+int fbcon_decor_getstate(unsigned char origin, int vc);
+int fbcon_decor_setpic(unsigned char origin, int vc, stheme_t *theme);
+int fbcon_decor_setcfg(unsigned char origin, int vc, stheme_t *theme);
+int fbcon_decor_getcfg(int vc);
 
 /* daemon.c */
 void daemon_start();
@@ -423,7 +423,7 @@ extern char *arg_pidfile;
 
 extern int fd_fb;
 extern int fd_tty0;
-extern int fd_fbsplash;
+extern int fd_fbcondecor;
 extern sendian_t endianess;
 extern spl_cfg_t config;
 

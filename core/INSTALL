@@ -4,7 +4,7 @@ Installation instructions
 Before you begin compiling splashutils, please make sure that klibc
 1.0.14 or newer is installed on your system. It is essential that
 your klibc provides the `klcc' wrapper. Without `klcc' it will be
-impossible to build the splash_helper binary.
+impossible to build the fbcondecor_helper binary.
 
 If you have downloaded the 'lite' version of splashutils, you'll have
 to manually download the source code of a few helper libraries and then
