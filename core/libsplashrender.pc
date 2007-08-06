@@ -1,6 +1,6 @@
 prefix=/usr
 exec_prefix=/usr
-libdir=/usr//lib64
+libdir=/usr/lib64
 includedir=${prefix}/include
 
 Name: libsplash

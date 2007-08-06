@@ -23,7 +23,7 @@ LPNGSRC ?= libs/libpng-1.2.8
 ZLIBSRC ?= libs/zlib-1.2.3
 FT2SRC  ?= libs/freetype-2.1.9
 
-LIB = $(shell grep 'define LIBDIR' splash.h | sed -e 's/.*"\([^"]*\)".*/\1/g')
+LIB = $(shell grep 'define LIBDIR' splash.h | sed -e 's/.*"\([^"]*\)".*/\1/g' -e 's!^/!!')
 
 prefix 	  ?= /usr
 sbindir    = /sbin

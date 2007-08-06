@@ -6,8 +6,8 @@
 #include <linux/kd.h>
 
 #define LIBDIR "/lib64"
-#define SPLASH_CACHEDIR		"/"LIBDIR"/splash/cache"
-#define SPLASH_TMPDIR		"/"LIBDIR"/splash/tmp"
+#define SPLASH_CACHEDIR		LIBDIR"/splash/cache"
+#define SPLASH_TMPDIR		LIBDIR"/splash/tmp"
 #define SPLASH_PIDFILE		SPLASH_CACHEDIR"/daemon.pid"
 #define SPLASH_PROFILE		SPLASH_CACHEDIR"/profile"
 #define SPLASH_EXEC			"/sbin/splash_util.static"
