@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../splash.h"
+#include <splash.h>
 
 int main(int argc, char **argv)
 {
@@ -19,6 +19,10 @@ int main(int argc, char **argv)
 
 	splashr_init(false);
 	theme = splashr_theme_load();
+	if (!theme) {
+		fprintf(stderr, "Failed to load theme.\n");
+		return 1;
+	}
 
 	splash_set_silent();
 	splashr_tty_silent_init();

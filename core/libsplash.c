@@ -321,6 +321,12 @@ void splash_get_res(char *theme, int *xres, int *yres)
 
 		snprintf(buf, 512, SPL_THEME_DIR "/%s", theme);
 		tdir = opendir(buf);
+		if (!tdir) {
+			*xres = 0;
+			*yres = 0;
+			return;
+		}
+
 		while ((dent = readdir(tdir))) {
 			if (sscanf(dent->d_name, "%dx%d.cfg", &tx, &ty) != 2)
 				continue;

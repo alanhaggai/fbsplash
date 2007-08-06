@@ -234,6 +234,9 @@ stheme_t *splashr_theme_load()
 	st->yres = fbd.var.yres;
 
 	splash_get_res(config.theme, &st->xres, &st->yres);
+	if (st->xres == 0 || st->yres == 0)
+		return NULL;
+
 	snprintf(buf, 512, SPL_THEME_DIR "/%s/%dx%d.cfg", config.theme, st->xres, st->yres);
 
 	st->xmarg = (fbd.var.xres - st->xres) / 2;

@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../splash.h"
+#include <splash.h>
 
 int main(int argc, char **argv)
 {
@@ -16,10 +16,14 @@ int main(int argc, char **argv)
 	struct spl_theme *theme;
 
 	config = splash_lib_init(spl_bootup);
-	splash_theme_set("test");
+	splash_theme_set("test2");
 
 	splashr_init(false);
 	theme = splashr_theme_load();
+	if (!theme) {
+		fprintf(stderr, "Failed to load theme.\n");
+		return 1;
+	}
 
 	splashr_message_set(theme, "Benchmarking splashutils.. $progress%");
 
