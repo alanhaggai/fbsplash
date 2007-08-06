@@ -147,5 +147,5 @@ out:
 	return err;
 }
 
-#endif /* CONFIG_FBSPLASH */
+#endif /* CONFIG_FBCON_DECOR */
 

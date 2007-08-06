@@ -74,7 +74,7 @@ void usage(void)
 "splash_util/splashutils-" PKG_VERSION "\n"
 "Usage: splash_util [options] -c <cmd>\n\n"
 "Commands:\n"
-#ifdef CONFIG_FBSPLASH
+#ifdef CONFIG_FBCON_DECOR
 "  on       enable splash on a virtual console\n"
 "  off      disable splash on a virtual console\n"
 "  getstate get splash state on a virtual console\n"
