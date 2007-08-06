@@ -30,7 +30,6 @@
 #endif
 
 #include "util.h"
-#include "objs/splash.h"
 
 #define eerror(args...)		fprintf(stderr, ## args); fprintf(stdout, "\n");
 #define ewarn(args...)		fprintf(stdout, ## args); fprintf(stdout, "\n");

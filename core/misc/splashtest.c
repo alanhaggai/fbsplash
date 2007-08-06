@@ -1,13 +1,13 @@
 /*
  * splashtest.c
  *
- * A simple program to demonstrate the use of the splashrender library.
+ * A simple program to demonstrate the use of the fbsplashrender library.
  *
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <splash.h>
+#include <fbsplash.h>
 
 int main(int argc, char **argv)
 {

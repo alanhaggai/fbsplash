@@ -18,7 +18,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include "objs/splash.h"
+#include "util.h"
 #include "daemon.h"
 
 /*

@@ -1,13 +1,13 @@
 /*
  * benchmark.c
  *
- * A simple benchmarking program for the splashrender library.
+ * A simple benchmarking program for the fbsplashrender library.
  *
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <splash.h>
+#include <fbsplash.h>
 
 int main(int argc, char **argv)
 {
@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 
 	splash_set_silent(&tty);
 	splashr_input_init();
-	
+
 	splashr_tty_silent_init();
 	splashr_tty_silent_update();
 	splashr_render_screen(theme, true, false, 's', SPL_EFF_NONE);

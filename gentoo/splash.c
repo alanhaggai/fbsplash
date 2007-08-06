@@ -23,7 +23,7 @@
 #include <linux/fb.h>
 #include <einfo.h>
 #include <rc.h>
-#include <splash.h>
+#include <fbsplash.h>
 
 #define SPLASH_CMD "export SPLASH_XRES='%d'; export SPLASH_YRES='%d';" \
 				   "export SOFTLEVEL='%s'; export BOOTLEVEL='%s';" \

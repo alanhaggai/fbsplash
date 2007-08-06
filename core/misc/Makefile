@@ -1,4 +1,4 @@
-LDLIBS = -lsplashrender
+LDLIBS = -lfbsplashrender
 CFLAGS = -g
 
 all: splashtest benchmark blittest

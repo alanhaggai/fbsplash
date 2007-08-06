@@ -64,7 +64,7 @@ write_conf()
 		eval vname=\$copt_$i
 
 		if [[ "$vname" == "CONFIG_LIBDIR" ]]; then
-			cat splash.h | sed -e "s!#define LIBDIR.*!#define LIBDIR \"$vval\"!" > objs/splash.h
+			cat fbsplash.h | sed -e "s!#define LIBDIR.*!#define LIBDIR \"$vval\"!" > objs/fbsplash.h
 			continue
 		fi
 

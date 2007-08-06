@@ -8,7 +8,7 @@ LDFLAGS += -L../core/objs
 INCLUDES = -I../core
 
 splash.so: splash.o
-	$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,$@ $+ -o $@ -leinfo -lsplash
+	$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,$@ $+ -o $@ -leinfo -lfbsplash
 
 test: test.o
 	$(CC) $+ -o $@ -leinfo -lrc -ldl

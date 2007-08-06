@@ -23,7 +23,7 @@ LPNGSRC ?= libs/libpng-1.2.8
 ZLIBSRC ?= libs/zlib-1.2.3
 FT2SRC  ?= libs/freetype-2.1.9
 
-LIB = $(shell grep 'define LIBDIR' objs/splash.h | sed -e 's/.*"\([^"]*\)".*/\1/g' -e 's!^/!!')
+LIB = $(shell grep 'define LIBDIR' $(OBJDIR)/fbsplash.h | sed -e 's/.*"\([^"]*\)".*/\1/g' -e 's!^/!!')
 
 prefix 	  ?= /usr
 prefix2	  ?= /
@@ -69,8 +69,8 @@ PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_S
 
 K_LDLIBS = $(OBJDIR)/jpeglib/libjpeg.a
 K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
-		   $(KOUT)/fbcon_decor.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o $(KOUT)/libsplash.o \
-		   $(KOUT)/libsplashrender.o
+		   $(KOUT)/fbcon_decor.o $(KOUT)/common.o $(KOUT)/list.o $(KOUT)/effects.o $(KOUT)/libfbsplash.o \
+		   $(KOUT)/libfbsplashrender.o
 K_DEPS   =
 
 # Flags for the user utilities
@@ -144,7 +144,7 @@ SP_MNGR	  = splash_manager
 # us trouble when building against klibc.
 MAKEOVERRIDES=
 
-TARGETS   = objdir $(OBJDIR)/libsplash.la $(OBJDIR)/libsplashrender.la splash_user
+TARGETS   = objdir $(OBJDIR)/libfbsplash.la $(OBJDIR)/libfbsplashrender.la splash_user
 ifeq ($(call config_opt,CONFIG_HELPER),true)
 	TARGETS += splash_kern
 endif
@@ -153,13 +153,13 @@ endif
 
 all:	$(TARGETS)
 
-$(OBJDIR)/libsplash.la: $(OBJLDIR)/libsplash.lo
+$(OBJDIR)/libfbsplash.la: $(OBJLDIR)/libfbsplash.lo
 	@$(call infmsg,LD,$@)
-	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $(OBJDIR)/libsplash.la $+ -rpath $(libdir)
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $(OBJDIR)/libfbsplash.la $+ -rpath $(libdir)
 
-$(OBJDIR)/libsplashrender.la: $(OBJLDIR)/libsplashrender.lo $(LIBOBJS)
+$(OBJDIR)/libfbsplashrender.la: $(OBJLDIR)/libfbsplashrender.lo $(LIBOBJS)
 	@$(call infmsg,LD,$@)
-	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $(OBJDIR)/libsplashrender.la $+ $(LDLLIBS) $(OBJDIR)/libsplash.la -rpath $(usrlibdir)
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $(OBJDIR)/libfbsplashrender.la $+ $(LDLLIBS) $(OBJDIR)/libfbsplash.la -rpath $(usrlibdir)
 
 splash_user: $(OBJDIR)/$(SP_UTIL) $(OBJDIR)/$(SP_UTIL).static
 
@@ -171,13 +171,13 @@ config.h:
 		exit 1 ; \
 	fi
 
-$(OBJDIR)/$(SP_UTIL): $(OBJS) $(OBJDIR)/libsplash.la $(OBJDIR)/libsplashrender.la
+$(OBJDIR)/$(SP_UTIL): $(OBJS) $(OBJDIR)/libfbsplash.la $(OBJDIR)/libfbsplashrender.la
 	@$(call infmsg,LD,$@)
-	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) $+ $(LDLIBS) $(OBJDIR)/libsplashrender.la $(OBJDIR)/libsplash.la -o $@
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) $+ $(LDLIBS) $(OBJDIR)/libfbsplashrender.la $(OBJDIR)/libfbsplash.la -o $@
 
-$(OBJDIR)/$(SP_UTIL).static: $(OBJS) $(OBJDIR)/libsplash.la $(OBJDIR)/libsplashrender.la
+$(OBJDIR)/$(SP_UTIL).static: $(OBJS) $(OBJDIR)/libfbsplash.la $(OBJDIR)/libfbsplashrender.la
 	@$(call infmsg,LD,$@)
-	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) -all-static $(LDFLAGS) $+ $(OBJDIR)/libsplashrender.la $(OBJDIR)/libsplash.la $(LDLIBS) -L/usr/lib/nptl -o $@
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) -all-static $(LDFLAGS) $+ $(OBJDIR)/libfbsplashrender.la $(OBJDIR)/libfbsplash.la $(LDLIBS) -L/usr/lib/nptl -o $@
 
 objdir:
 	@if [ ! -d "$(OBJDIR)" ]; then \
@@ -251,15 +251,15 @@ $(OBJDIR)/$(SP_HELPER): $(K_OBJS)
 	$(Q)$(KLCC) $(K_LDFLAGS) -o $@ $+ $(K_LDLIBS)
 	$(Q)$(STRIP) $@
 
-$(KOUT)/%.o: %.c config.h objs/splash.h
+$(KOUT)/%.o: %.c config.h $(OBJDIR)/fbsplash.h
 	@$(call infmsg,CC,$@)
 	$(Q)$(KLCC) $(K_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/%.o: %.c config.h objs/splash.h daemon.h util.h
+$(OBJDIR)/%.o: %.c config.h $(OBJDIR)/fbsplash.h daemon.h util.h
 	@$(call infmsg,CC,$@)
 	$(Q)$(CC) $(CFLAGS) -DTARGET_UTIL $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
 
-$(OBJLDIR)/%.lo: %.c config.h objs/splash.h
+$(OBJLDIR)/%.lo: %.c config.h $(OBJDIR)/fbsplash.h
 	@$(call infmsg,CC,$@)
 	$(Q)libtool $(LQ) --mode=compile $(CC) $(CFLAGS) $(INCLUDES) -DPKG_VERSION=\"$(PKG_VERSION)\" -c -o $@ $<
 
@@ -323,31 +323,31 @@ ifeq ($(call config_opt,CONFIG_HELPER),true)
 	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_HELPER) $(DESTDIR)$(sbindir)/$(SP_HELPER)
 	$(Q)$(call install_script,$(SP_GIRAM))
 endif
-	@$(call infmsg,INSTALL,libsplash.so)
-	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/libsplash.la $(DESTDIR)$(libdir)/libsplash.la
-	@$(call infmsg,INSTALL,libsplashrender.so)
-	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/libsplashrender.la $(DESTDIR)$(usrlibdir)/libsplashrender.la
+	@$(call infmsg,INSTALL,libfbsplash.so)
+	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/libfbsplash.la $(DESTDIR)$(libdir)/libfbsplash.la
+	@$(call infmsg,INSTALL,libfbsplashrender.so)
+	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/libfbsplashrender.la $(DESTDIR)$(usrlibdir)/libfbsplashrender.la
 	@$(call infmsg,INSTALL,$(SP_UTIL))
 	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL) $(DESTDIR)$(sbindir)/$(SP_UTIL)
 	@$(call infmsg,INSTALL,$(SP_UTIL).static)
 	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL).static $(DESTDIR)$(sbindir)/$(SP_UTIL).static
-	@$(call infmsg,INSTALL,splash.h)
-	$(Q)$(INSTALL_PROG) -D objs/splash.h $(DESTDIR)$(incdir)/splash.h
+	@$(call infmsg,INSTALL,fbsplash.h)
+	$(Q)$(INSTALL_PROG) -D objs/fbsplash.h $(DESTDIR)$(incdir)/fbsplash.h
 	@$(call infmsg,INSTALL,splash-functions.sh)
 	$(Q)$(INSTALL_PROG) -D scripts/splash-functions.sh $(DESTDIR)$(sbindir)/splash-functions.sh
 	$(Q)$(call install_script,$(SP_CONV))
 	$(Q)$(call install_script,$(SP_RESIZE))
 	$(Q)$(call install_script,$(SP_MNGR))
-	$(Q)cp -f libsplash.pc libsplashrender.pc $(OBJDIR)/
-	$(Q)sed -i -e 's#prefix=.*#prefix=$(prefix)#' $(OBJDIR)/libsplash.pc
-	$(Q)sed -i -e 's#prefix=.*#prefix=$(prefix)#' $(OBJDIR)/libsplashrender.pc
-	$(Q)sed -i -e 's#libdir=.*#libdir=$(libdir)#' $(OBJDIR)/libsplash.pc
-	$(Q)sed -i -e 's#libdir=.*#libdir=$(usrlibdir)#' $(OBJDIR)/libsplashrender.pc
-	$(Q)sed -i -e 's#Libs.private: .*#Libs.private: -lsplash $(LDLLIBS)#' $(OBJDIR)/libsplashrender.pc
-	@$(call infmsg,INSTALL,libsplash.pc)
-	$(Q)$(INSTALL_PROG) -D -m 0664 $(OBJDIR)/libsplash.pc $(DESTDIR)$(usrlibdir)/pkgconfig/libsplash.pc
-	@$(call infmsg,INSTALL,libsplashrender.pc)
-	$(Q)$(INSTALL_PROG) -D -m 0664 $(OBJDIR)/libsplashrender.pc $(DESTDIR)$(usrlibdir)/pkgconfig/libsplashrender.pc
+	$(Q)cp -f libfbsplash.pc libfbsplashrender.pc $(OBJDIR)/
+	$(Q)sed -i -e 's#prefix=.*#prefix=$(prefix)#' $(OBJDIR)/libfbsplash.pc
+	$(Q)sed -i -e 's#prefix=.*#prefix=$(prefix)#' $(OBJDIR)/libfbsplashrender.pc
+	$(Q)sed -i -e 's#libdir=.*#libdir=$(libdir)#' $(OBJDIR)/libfbsplash.pc
+	$(Q)sed -i -e 's#libdir=.*#libdir=$(usrlibdir)#' $(OBJDIR)/libfbsplashrender.pc
+	$(Q)sed -i -e 's#Libs.private: .*#Libs.private: -lfbsplash $(LDLLIBS)#' $(OBJDIR)/libfbsplashrender.pc
+	@$(call infmsg,INSTALL,libfbsplash.pc)
+	$(Q)$(INSTALL_PROG) -D -m 0664 $(OBJDIR)/libfbsplash.pc $(DESTDIR)$(usrlibdir)/pkgconfig/libfbsplash.pc
+	@$(call infmsg,INSTALL,libfbsplashrender.pc)
+	$(Q)$(INSTALL_PROG) -D -m 0664 $(OBJDIR)/libfbsplashrender.pc $(DESTDIR)$(usrlibdir)/pkgconfig/libfbsplashrender.pc
 
 uninstall:
 ifeq ($(call config_opt,CONFIG_HELPER),true)
@@ -360,12 +360,12 @@ endif
 	$(Q)rm -f $(sbindir)/$(SP_UTIL)
 	@$(call infmsg,UNINSTALL,$(SP_UTIL).static)
 	$(Q)rm -f $(sbindir)/$(SP_UTIL).static
-	@$(call infmsg,UNINSTALL,libsplash.so)
-	$(Q)libtool $(LQ) --mode=uninstall rm -f $(libdir)/libsplash.so
-	@$(call infmsg,UNINSTALL,libsplashrender.so)
-	$(Q)libtool $(LQ) --mode=uninstall rm -f $(usrlibdir)/libsplashrender.so
-	@$(call insmsg,UNINSTALL,splash.h)
-	$(Q)rm -f $(incdir)/splash.h
+	@$(call infmsg,UNINSTALL,libfbsplash.so)
+	$(Q)libtool $(LQ) --mode=uninstall rm -f $(libdir)/libfbsplash.so
+	@$(call infmsg,UNINSTALL,libfbsplashrender.so)
+	$(Q)libtool $(LQ) --mode=uninstall rm -f $(usrlibdir)/libfbsplashrender.so
+	@$(call insmsg,UNINSTALL,fbsplash.h)
+	$(Q)rm -f $(incdir)/fbsplash.h
 	@$(call infmsg,UNINSTALL,splash-functions.sh)
 	$(Q)rm -f $(sbindir)/splash-functions.sh
 	@$(call infmsg,UNINSTALL,$(SP_CONV))
@@ -374,8 +374,8 @@ endif
 	$(Q)rm -f $(usrbindir)/$(SP_RESIZE)
 	@$(call infmsg,UNINSTALL,$(SP_MNGR))
 	$(Q)rm -f $(usrbindir)/$(SP_MNGR)
-	@$(call infmsg,UNINSTALL,libsplash.pc)
-	$(Q)rm -f $(usrlibdir)/pkgconfig/libsplash.pc
-	@$(call infmsg,UNINSTALL,libsplashrender.pc)
-	$(Q)rm -f $(usrlibdir)/pkgconfig/libsplashrender.pc
+	@$(call infmsg,UNINSTALL,libfbsplash.pc)
+	$(Q)rm -f $(usrlibdir)/pkgconfig/libfbsplash.pc
+	@$(call infmsg,UNINSTALL,libfbsplashrender.pc)
+	$(Q)rm -f $(usrlibdir)/pkgconfig/libfbsplashrender.pc
 
