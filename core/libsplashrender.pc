@@ -1,0 +1,11 @@
+prefix=/usr
+exec_prefix=/usr
+libdir=/usr//lib64
+includedir=${prefix}/include
+
+Name: libsplash
+Description: Provide support for rendering themes used by splashutils. 
+Version: 0.1
+Libs: -L${libdir} -lsplashrender
+Libs.private: -lsplash -ljpeg -lm -lfreetype -lz -lmng -llcms -ljpeg -lz -lrt -lpng -lz -lm
+Cflags: -I${includedir}

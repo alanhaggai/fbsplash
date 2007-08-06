@@ -25,7 +25,7 @@ FT2SRC  ?= libs/freetype-2.1.9
 
 LIB = $(shell grep 'define LIBDIR' splash.h | sed -e 's/.*"\([^"]*\)".*/\1/g')
 
-prefix     ?= /usr
+prefix 	  ?= /usr
 sbindir    = /sbin
 libdir     = /${LIB}
 usrbindir  = ${prefix}/bin
@@ -334,6 +334,14 @@ endif
 	$(Q)$(call install_script,$(SP_CONV))
 	$(Q)$(call install_script,$(SP_RESIZE))
 	$(Q)$(call install_script,$(SP_MNGR))
+	$(Q)sed -i -e 's#prefix=.*#prefix=$(prefix)#' libsplash*.pc
+	$(Q)sed -i -e 's#libdir=.*#libdir=$(libdir)#' libsplash.pc
+	$(Q)sed -i -e 's#libdir=.*#libdir=$(usrlibdir)#' libsplashrender.pc
+	$(Q)sed -i -e 's#Libs.private: .*#Libs.private: -lsplash $(LDLLIBS)#' libsplashrender.pc
+	@$(call infmsg,INSTALL,libsplash.pc)
+	$(Q)$(INSTALL_PROG) -D -m 0664 libsplash.pc $(DESTDIR)$(usrlibdir)/pkgconfig/libsplash.pc
+	@$(call infmsg,INSTALL,libsplashrender.pc)
+	$(Q)$(INSTALL_PROG) -D -m 0664 libsplashrender.pc $(DESTDIR)$(usrlibdir)/pkgconfig/libsplashrender.pc
 
 uninstall:
 ifeq ($(call config_opt,CONFIG_HELPER),true)
@@ -360,4 +368,8 @@ endif
 	$(Q)rm -f $(usrbindir)/$(SP_RESIZE)
 	@$(call infmsg,UNINSTALL,$(SP_MNGR))
 	$(Q)rm -f $(usrbindir)/$(SP_MNGR)
+	@$(call infmsg,UNINSTALL,libsplash.pc)
+	$(Q)rm -f $(usrlibdir)/pkgconfig/libsplash.pc
+	@$(call infmsg,UNINSTALL,libsplashrender.pc)
+	$(Q)rm -f $(usrlibdir)/pkgconfig/libsplashrender.pc
 
