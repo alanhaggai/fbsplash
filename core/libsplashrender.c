@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <fcntl.h>
 #include <termios.h>
 
 #include "util.h"
@@ -25,6 +26,7 @@
 #define eerror(args...)		fprintf(stderr, ## args); fprintf(stdout, "\n");
 #define ewarn(args...)		fprintf(stdout, ## args); fprintf(stdout, "\n");
 
+static int fd_console = -1;
 static int fd_fb0 = -1;
 static int fb = -1;
 int fd_fb = -1;
@@ -145,6 +147,71 @@ int splashr_init(bool create)
 	}
 #endif
 	return 0;
+}
+
+/**
+ * Initialize the splash input system.
+ *
+ * @return 0 on success, a negative value otherwise.
+ */
+int splashr_input_init()
+{
+	int err;
+
+	fd_console = open("/dev/console", O_RDWR);
+	if (fd_console == -1)
+		return -1;
+
+	err = fcntl(fd_console, F_SETOWN, getpid());
+	if (err = -1) {
+		close(fd_console);
+		return err;
+	}
+
+	return 0;
+}
+
+/**
+ * Clean up after splashr_input_init().
+ */
+void splashr_input_cleanup()
+{
+	if (fd_console != -1)
+		close(fd_console);
+
+	fd_console = -1;
+
+	return;
+}
+
+/**
+ * Wait for a keypress or check whether a key has been pressed.
+ *
+ * @param block If true, this function will block.
+ */
+unsigned char splashr_input_getkey(bool block)
+{
+	unsigned char a;
+	int err;
+	int flags;
+
+	if (fd_console == -1)
+		return 0;
+
+	if (block) {
+		flags = O_RDWR;
+	} else {
+		flags = O_RDWR | O_NONBLOCK;
+	}
+
+	err = fcntl(fd_console, F_SETFL, flags);
+	if (err == -1)
+		return 0;
+
+	if (read(fd_console, &a, 1) <= 0)
+		return 0;
+
+	return a;
 }
 
 /**

@@ -92,4 +92,8 @@ bool splashr_tty_silent_update();
 void splashr_message_set(struct spl_theme *theme, char *msg);
 void splashr_progress_set(struct spl_theme *theme, int progress);
 
+int splashr_input_init();
+void splashr_input_cleanup();
+unsigned char splashr_input_getkey(bool block);
+
 #endif /* __SPLASH_H */
