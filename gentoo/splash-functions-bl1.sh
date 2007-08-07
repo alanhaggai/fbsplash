@@ -113,6 +113,7 @@ splash_setup() {
 	export SPLASH_REBOOT_MESSAGE="Rebooting the system (\$progress%)... Press F2 for verbose mode."
 
 	[[ -f $(add_suffix /etc/conf.d/splash) ]] && source "$(add_suffix /etc/conf.d/splash)"
+	[[ -f $(add_suffix /etc/conf.d/fbcondecor) ]] && source "$(add_suffix /etc/conf.d/fbcondecor)"
 
 	if [[ -f /proc/cmdline ]]; then
 		options=$(grep 'splash=[^ ]*' -o /proc/cmdline)

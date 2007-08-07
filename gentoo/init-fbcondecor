@@ -23,28 +23,28 @@ start() {
 	. /sbin/splash-functions.sh
 	splash_setup
 
-	if [ -z "${SPLASH_TTYS}" ]; then
+	if [ -z "${FBCONDECOR_TTYS}" ]; then
 		if [ -n "${RC_TTY_NUMBER}" ]; then
-			SPLASH_TTYS=$(seq 1 "${RC_TTY_NUMBER}")
+			FBCONDECOR_TTYS=$(seq 1 "${RC_TTY_NUMBER}")
 		else
-			SPLASH_TTYS="1 2 3 4 5 6"
+			FBCONDECOR_TTYS="1 2 3 4 5 6"
 		fi
 	fi
 
 	local err=0
 
-	# Only do this if the kernel supports fbsplash.
+	# Only do this if the kernel supports fbcondecor.
 	if [ -e /dev/fbcondecor -o -e /dev/fbsplash -a "${SPLASH_MODE_REQ}" != "off" ]; then
 		ebegin "Setting framebuffer console images"
 
-		for TTY in ${SPLASH_TTYS} ; do
+		for TTY in ${FBCONDECOR_TTYS} ; do
 			theme="${SPLASH_THEME}"
 
 			[ ${TTY} = "1" -a -z "$(/sbin/fbcondecor_ctl -c getstate --tty=${TTY}| grep 'off')" ] && continue
 			[ ${TTY} = "0" ] && continue
 
-			if [ -n "${SPLASH_TTY_MAP}" ]; then
-				for i in ${SPLASH_TTY_MAP} ; do
+			if [ -n "${FBCONDECOR_TTY_MAP}" ]; then
+				for i in ${FBCONDECOR_TTY_MAP} ; do
 					if [ "${i%:*}" = "${TTY}" ]; then
 						theme="${i#*:}"
 					fi

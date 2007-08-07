@@ -15,13 +15,13 @@ splash() {
 	local cmd="$1"
 	splash_setup
 
-	[ ! -x /sbin/splash_helper ] && return
+	[ ! -x /sbin/fbcondecor_helper ] && return
 	[ "${SPLASH_MODE_REQ}" != 'silent' ] && return
 
 	case "${cmd}" in
 		set_msg)
 			export BOOT_MSG="$2"
-			/sbin/splash_helper 2 'repaint'
+			/sbin/fbcondecor_helper 2 'repaint'
 			;;
 		init)
 			if [ -n "$2" ]; then
@@ -31,7 +31,7 @@ splash() {
 			else
 				export BOOT_MSG="Preparing the system for boot... Press Alt+F1 for verbose mode."
 			fi
-			/sbin/splash_helper 2 'repaint'
+			/sbin/fbcondecor_helper 2 'repaint'
 			;;
 		verbose)
 			if [ -x /bin/chvt ]; then
