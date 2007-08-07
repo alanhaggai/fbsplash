@@ -19,9 +19,9 @@ KLCC		= klcc
 # builds splashutils against his own versions of the libraries.
 
 JPEGSRC	?= libs/jpeg-6b
-LPNGSRC ?= libs/libpng-1.2.8
+LPNGSRC ?= libs/libpng-1.2.18
 ZLIBSRC ?= libs/zlib-1.2.3
-FT2SRC  ?= libs/freetype-2.1.9
+FT2SRC  ?= libs/freetype-2.3.5
 
 LIB = $(shell grep 'define LIBDIR' $(OBJDIR)/fbsplash.h | sed -e 's/.*"\([^"]*\)".*/\1/g' -e 's!^/!!')
 
@@ -65,7 +65,8 @@ K_CFLAGS = -Os -w -ffunction-sections -fdata-sections $(MISCINCS) \
 PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_SUPPORTED -DPNG_NO_READ_iTXt \
 		-DPNG_LEGACY_SUPPORTED -DPNG_NO_PROGRESSIVE_READ -DPNG_NO_MNG_FEATURES -DPNG_NO_CONSOLE_IO \
 		-DPNG_NO_ERROR_NUMBERS -DPNG_READ_GRAY_TO_RGB_SUPPORTED -DPNG_READ_16_TO_8_SUPPORTED \
-		-DPNG_READ_STRIP_ALPHA_SUPPORTED -DPNG_NO_INFO_IMAGE -DPNG_NO_READ_TRANSFORMS -DPNG_NO_READ_ANCILLARY_CHUNKS
+		-DPNG_READ_STRIP_ALPHA_SUPPORTED -DPNG_NO_INFO_IMAGE -DPNG_NO_READ_TRANSFORMS -DPNG_NO_READ_ANCILLARY_CHUNKS \
+		-DPNG_NO_MMX_CODE
 
 K_LDLIBS = $(OBJDIR)/jpeglib/libjpeg.a
 K_OBJS 	 = $(KOUT)/kernel.o $(KOUT)/parse.o $(KOUT)/render.o $(KOUT)/image.o \
@@ -254,7 +255,7 @@ ft2:	config.h
 		$(ROOT)/$(FT2SRC)/configure --disable-shared > $(OUTPUT) ; \
 	fi ; \
 	if ! make -q CFLAGS="$(K_CFLAGS)" library; then $(call infmsg,MAKE,freetype2) ; fi ; \
-	make CFLAGS="-c $(K_CFLAGS)" library > $(OUTPUT)
+	make CFLAGS="-c $(K_CFLAGS)" CCexe="$(CC)" library > $(OUTPUT)
 
 splash_kern: jpeglib $(K_DEPS) $(OBJDIR)/$(SP_HELPER) config.h $(K_LDLIBS)
 
