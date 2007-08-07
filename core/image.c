@@ -16,14 +16,14 @@
 
 #ifdef CONFIG_PNG
 #ifdef TARGET_KERNEL
-  #include "libs/libpng-1.2.8/png.h"
+  #include "png.h"
 #else
   #include <png.h>
 #endif
 #endif
 
 #ifdef TARGET_KERNEL
-  #include "libs/jpeg-6b/jpeglib.h"
+  #include "jpeglib.h"
 #else
   #include <jpeglib.h>
 #endif
