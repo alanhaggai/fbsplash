@@ -10,7 +10,7 @@
 #define SPLASH_TMPDIR		LIBDIR"/splash/tmp"
 #define SPLASH_PIDFILE		SPLASH_CACHEDIR"/daemon.pid"
 #define SPLASH_PROFILE		SPLASH_CACHEDIR"/profile"
-#define SPLASH_EXEC			"/sbin/splash_util.static"
+#define SPLASH_DAEMON		"/sbin/fbsplashd.static"
 
 #ifndef SPLASH_FIFO
 	#define SPLASH_FIFO			SPLASH_CACHEDIR"/.splash"

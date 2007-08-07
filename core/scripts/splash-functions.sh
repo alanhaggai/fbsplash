@@ -17,7 +17,7 @@
 # both readable and writable at all times, even when the root fs
 # is mounted read-only. This writable space is provided by a tmpfs
 # mounted at ${spl_cachedir}.
-export spl_util="/sbin/splash_util.static"
+export spl_decor="/sbin/fbcondecor_ctl.static"
 export spl_bindir="/lib/splash/bin"
 export spl_cachedir="/lib/splash/cache"
 export spl_fifo="${spl_cachedir}/.splash"
@@ -103,7 +103,7 @@ splash_get_mode() {
 	if [ "${ctty}" = "${SPLASH_TTY}" ]; then
 		echo "silent"
 	else
-		if [ -z "$(${spl_util} -c getstate --tty=${tty} 2>/dev/null | grep off)" ]; then
+		if [ -z "$(${spl_decor} -c getstate --tty=${tty} 2>/dev/null | grep off)" ]; then
 			echo "verbose"
 		else
 			echo "off"

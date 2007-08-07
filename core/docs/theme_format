@@ -209,18 +209,8 @@ Silent mode directives
 
   'service' is the name of the system service.
 
-  An icon will be rendered on the screen only if the service name
-  is found in a environment variable appropriate for the selected
-  state or if the state has been set through an appropriate splash
-  daemon command. The list of variable names corresponding to the
-  recognized states follows:
-  SPL_SVC_INACTIVE_START    SPL_SVC_INACTIVE_STOP
-  SPL_SVC_STARTED           SPL_SVC_STOPPED
-  SPL_SVC_START_FAILED      SPL_SVC_STOP_FAILED
-  SPL_SVC_START             SPL_SVC_STOP
-
-  Each of these variables can contain a space-separated list of
-  service names.
+  An icon will be rendered on the screen only if its state has
+  been set through an appropriate splash daemon command.
 
   Examples:
 

@@ -270,32 +270,6 @@ static int parse_color(char **t, struct color *cl)
 	return 0;
 }
 
-static int is_in_svclist(char *svc, char *list)
-{
-	char *data = getenv(list);
-	int l = strlen(svc);
-
-	if (!data)
-		return 0;
-
-	skip_whitespace(&data);
-
-	while (1) {
-
-		if (data[0] == 0)
-			break;
-
-		if (!strncmp(data, svc, l) && (data[l] == ' ' || data[l] == 0))
-			return 1;
-
-		for ( ; data[0] != 0 && data[0] != ' '; data++);
-
-		skip_whitespace(&data);
-	}
-
-	return 0;
-}
-
 static int parse_4vec(char **t, rect *r)
 {
 	char *p;
@@ -458,64 +432,8 @@ static void parse_icon(char *t)
 	t[i] = 0;
 	i = 0;
 
-	if (arg_task != start_daemon) {
-
-		switch (cic->type) {
-
-		case e_svc_inact_start:
-			if (is_in_svclist(t, "SPL_SVC_INACTIVE_START"))
-				i = 1;
-			break;
-
-		case e_svc_inact_stop:
-			if (is_in_svclist(t, "SPL_SVC_INACTIVE_STOP"))
-				i = 1;
-			break;
-
-		case e_svc_started:
-			if (is_in_svclist(t, "SPL_SVC_STARTED"))
-				i = 1;
-			break;
-
-		case e_svc_stopped:
-			if (is_in_svclist(t, "SPL_SVC_STOPPED"))
-				i = 1;
-			break;
-
-		case e_svc_start_failed:
-			if (is_in_svclist(t, "SPL_SVC_START_FAILED"))
-				i = 1;
-			break;
-
-		case e_svc_stop_failed:
-			if (is_in_svclist(t, "SPL_SVC_STOP_FAILED"))
-				i = 1;
-			break;
-
-		case e_svc_stop:
-			if (is_in_svclist(t, "SPL_SVC_STOP"))
-				i = 1;
-			break;
-
-		case e_svc_start:
-			if (is_in_svclist(t, "SPL_SVC_START"))
-				i = 1;
-			break;
-
-		case e_display:
-			i = 1;
-			break;
-		}
-
-		if (!i)
-			goto pi_out;
-
-	} else {
-		if (cic->type != e_display)
-			o->visible = false;
-	}
-
 	if (cic->type != e_display) {
+		o->visible = false;
 		cic->svc = strdup(t);
 	}
 

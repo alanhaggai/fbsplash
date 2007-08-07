@@ -25,9 +25,6 @@
 
 #include "util.h"
 
-enum TASK	arg_task = none;
-int			arg_fb = 0;
-char		*arg_pidfile = NULL;
 spl_cfg_t		*cfg;
 
 int dev_create(char *fn, char *sys)

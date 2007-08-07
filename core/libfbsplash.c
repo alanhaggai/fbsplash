@@ -31,8 +31,8 @@
 
 #include "util.h"
 
-#define eerror(args...)		fprintf(stderr, ## args); fprintf(stdout, "\n");
-#define ewarn(args...)		fprintf(stdout, ## args); fprintf(stdout, "\n");
+#define eerror(args...)		{ fprintf(stderr, ## args); fprintf(stderr, "\n"); }
+#define ewarn(args...)		{ fprintf(stdout, ## args); fprintf(stdout, "\n"); }
 
 static FILE *fp_fifo = NULL;
 int fd_tty0 = -1;

@@ -531,7 +531,7 @@ static int splash_start(const char *runlevel)
 		return -1;
 
 	/* Start the splash daemon */
-	snprintf(buf, 2048, "BOOT_MSG='%s' " SPLASH_EXEC " -d --theme=\"%s\" --pidfile=" SPLASH_PIDFILE " --type=%s %s %s",
+	snprintf(buf, 2048, "BOOT_MSG='%s' " SPLASH_DAEMON " --theme=\"%s\" --pidfile=" SPLASH_PIDFILE " --type=%s %s %s",
 			 config->message, config->theme,
 			 (config->type == spl_reboot) ? "reboot" : ((config->type == spl_shutdown) ? "shutdown" : "bootup"),
 			 (config->kdmode == KD_GRAPHICS) ? "--kdgraphics" : "",

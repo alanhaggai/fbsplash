@@ -159,18 +159,12 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
-	arg_task = none;
 	if (argc > 3 && argv[3])
 		arg_vc = atoi(argv[3]);
 	else
 		arg_vc = 0;
 
-	if (argc > 4 && argv[4])
-		arg_fb = atoi(argv[4]);
-	else
-		arg_fb = 0;
-
-	if (arg_vc < 0 || arg_fb < 0)
+	if (arg_vc < 0)
 		goto out;
 
 	if (!strcmp(argv[1],"1")) {

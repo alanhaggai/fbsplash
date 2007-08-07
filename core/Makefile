@@ -94,8 +94,6 @@ LIBOBJS  = $(OBJLDIR)/parse.lo $(OBJLDIR)/image.lo \
 		   $(OBJLDIR)/render.lo $(OBJLDIR)/common.lo $(OBJLDIR)/list.lo \
 		   $(OBJLDIR)/fbcon_decor.lo $(OBJLDIR)/effects.lo
 
-OBJS = $(OBJDIR)/daemon.o $(OBJDIR)/daemon_cmd.o $(OBJDIR)/splash.o
-
 # Checks whether an option is set in config.h
 config_opt = $(shell if [ -e config.h -a -n "`egrep '^\#define[[:space:]]+$(1)([[:space:]]+|$$)' config.h 2>/dev/null`" ]; then echo true ; fi)
 
@@ -148,6 +146,9 @@ TARGETS   = objdir $(OBJDIR)/libfbsplash.la $(OBJDIR)/libfbsplashrender.la splas
 ifeq ($(call config_opt,CONFIG_HELPER),true)
 	TARGETS += splash_kern
 endif
+ifeq ($(call config_opt,CONFIG_FBCON_DECOR),true)
+	TARGETS += $(OBJDIR)/fbcondecor_ctl
+endif
 
 #### make rules below #####
 
@@ -161,7 +162,11 @@ $(OBJDIR)/libfbsplashrender.la: $(OBJLDIR)/libfbsplashrender.lo $(LIBOBJS)
 	@$(call infmsg,LD,$@)
 	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $(OBJDIR)/libfbsplashrender.la $+ $(LDLLIBS) $(OBJDIR)/libfbsplash.la -rpath $(usrlibdir)
 
-splash_user: $(OBJDIR)/$(SP_UTIL) $(OBJDIR)/$(SP_UTIL).static
+splash_user: $(OBJDIR)/$(SP_UTIL) $(OBJDIR)/$(SP_UTIL).static $(OBJDIR)/fbsplashd $(OBJDIR)/fbsplashd.static
+
+$(OBJDIR)/fbcondecor_ctl: $(OBJDIR)/libfbsplashrender.la $(OBJDIR)/fbcon_decor_ctl.o
+	@$(call infmsg,LD,$@)
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) $+ -o $(OBJDIR)/libfbsplashrender.la $(OBJDIR)/libfbsplash.la -o $@
 
 config.h:
 	@echo "Using default configuration."
@@ -171,13 +176,21 @@ config.h:
 		exit 1 ; \
 	fi
 
-$(OBJDIR)/$(SP_UTIL): $(OBJS) $(OBJDIR)/libfbsplash.la $(OBJDIR)/libfbsplashrender.la
+$(OBJDIR)/$(SP_UTIL): $(OBJDIR)/util.o $(OBJDIR)/libfbsplash.la $(OBJDIR)/libfbsplashrender.la
 	@$(call infmsg,LD,$@)
-	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) $+ $(LDLIBS) $(OBJDIR)/libfbsplashrender.la $(OBJDIR)/libfbsplash.la -o $@
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) $+ $(OBJDIR)/libfbsplashrender.la $(OBJDIR)/libfbsplash.la -o $@
 
-$(OBJDIR)/$(SP_UTIL).static: $(OBJS) $(OBJDIR)/libfbsplash.la $(OBJDIR)/libfbsplashrender.la
+$(OBJDIR)/$(SP_UTIL).static: $(OBJDIR)/util.o $(OBJDIR)/libfbsplash.la $(OBJDIR)/libfbsplashrender.la
 	@$(call infmsg,LD,$@)
-	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) -all-static $(LDFLAGS) $+ $(OBJDIR)/libfbsplashrender.la $(OBJDIR)/libfbsplash.la $(LDLIBS) -L/usr/lib/nptl -o $@
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) -all-static $+ $(OBJDIR)/libfbsplashrender.la $(OBJDIR)/libfbsplash.la $(LDLIBS) -L/usr/lib/nptl -o $@
+
+$(OBJDIR)/fbsplashd: $(OBJDIR)/daemon.o $(OBJDIR)/daemon_cmd.o $(OBJDIR)/libfbsplash.la $(OBJDIR)/libfbsplashrender.la
+	@$(call infmsg,LD,$@)
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) $(LDLIBS) $+ $(OBJDIR)/libfbsplashrender.la $(OBJDIR)/libfbsplash.la -o $@
+
+$(OBJDIR)/fbsplashd.static: $(OBJDIR)/daemon.o $(OBJDIR)/daemon_cmd.o $(OBJDIR)/libfbsplash.la $(OBJDIR)/libfbsplashrender.la
+	@$(call infmsg,LD,$@)
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) -all-static $(LDFLAGS) $(LDLIBS) $+ $(OBJDIR)/libfbsplashrender.la $(OBJDIR)/libfbsplash.la -o $@
 
 objdir:
 	@if [ ! -d "$(OBJDIR)" ]; then \
@@ -323,10 +336,18 @@ ifeq ($(call config_opt,CONFIG_HELPER),true)
 	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_HELPER) $(DESTDIR)$(sbindir)/$(SP_HELPER)
 	$(Q)$(call install_script,$(SP_GIRAM))
 endif
+ifeq ($(call config_opt,CONFIG_FBCON_DECOR),true)
+	@$(call infmsg,INSTALL,fbcondecor_ctl)
+	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/fbcondecor_ctl $(DESTDIR)$(sbindir)/fbcondecor_ctl
+endif
 	@$(call infmsg,INSTALL,libfbsplash.so)
 	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/libfbsplash.la $(DESTDIR)$(libdir)/libfbsplash.la
 	@$(call infmsg,INSTALL,libfbsplashrender.so)
 	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/libfbsplashrender.la $(DESTDIR)$(usrlibdir)/libfbsplashrender.la
+	@$(call infmsg,INSTALL,fbsplashd)
+	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/fbsplashd $(DESTDIR)$(sbindir)/fbsplashd
+	@$(call infmsg,INSTALL,fbsplashd.static)
+	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/fbsplashd.static $(DESTDIR)$(sbindir)/fbsplashd.static
 	@$(call infmsg,INSTALL,$(SP_UTIL))
 	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL) $(DESTDIR)$(sbindir)/$(SP_UTIL)
 	@$(call infmsg,INSTALL,$(SP_UTIL).static)
@@ -356,6 +377,14 @@ ifeq ($(call config_opt,CONFIG_HELPER),true)
 	@$(call infmsg,UNINSTALL,$(SP_GIRAM))
 	$(Q)rm -f $(usrbindir)/$(SP_GIRAM)
 endif
+ifeq ($(call config_opt,CONFIG_FBCON_DECOR),true)
+	@$(call infmsg,UNINSTALL,fbcondecor_ctl)
+	$(Q)rm -f $(sbindir)/fbcondecor_ctl
+endif
+	@$(call infmsg,UNINSTALL,fbsplashd)
+	$(Q)rm -f $(sbindir)/fbsplashd
+	@$(call infmsg,UNINSTALL,fbsplashd.static)
+	$(Q)rm -f $(sbindir)/fbsplashd.static
 	@$(call infmsg,UNINSTALL,$(SP_UTIL))
 	$(Q)rm -f $(sbindir)/$(SP_UTIL)
 	@$(call infmsg,UNINSTALL,$(SP_UTIL).static)

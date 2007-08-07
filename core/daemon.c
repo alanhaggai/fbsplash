@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <dirent.h>
 #include <time.h>
+#include <getopt.h>
 
 #include "util.h"
 #include "daemon.h"
@@ -44,6 +45,7 @@ int fd_evdev = -1;
 int fd_gpm = -1;
 #endif
 
+char		*arg_pidfile = NULL;
 stheme_t *theme;
 
 /* Misc settings */
@@ -616,4 +618,131 @@ void daemon_start(stheme_t *th)
 	daemon_comm(fp_fifo);
 	exit(0);
 }
+
+struct option options[] = {
+	{ "theme",	required_argument, NULL, 0x100 },
+	{ "progress",required_argument, NULL, 0x101 },
+	{ "kdgraphics", no_argument, NULL, 0x102 },
+#ifdef CONFIG_TTF
+	{ "mesg",	required_argument, NULL, 0x103 },
+#endif
+	{ "pidfile",required_argument, NULL, 0x104 },
+	{ "minstances", no_argument, NULL, 0x105 },
+	{ "effects", required_argument, NULL, 0x106 },
+	{ "type", required_argument, NULL, 0x107 },
+	{ "help",	no_argument, NULL, 'h'},
+	{ "verbose", no_argument, NULL, 'v'},
+	{ "quiet",  no_argument, NULL, 'q'},
+};
+
+void usage(void)
+{
+	printf(
+"fbsplashd/splashutils-" PKG_VERSION "\n"
+"Usage: fbsplashd [options]\n\n"
+"Options:\n"
+"  -h, --help          show this help message\n"
+"  -t, --theme=THEME   use theme THEME\n"
+"  -p, --progress=NUM  set progress to NUM/65535 * 100%%\n"
+"      --kdgraphics    use KD_GRAPHICS mode for the splash screen\n"
+"  -v, --verbose       display verbose error messages\n"
+"  -q, --quiet         don't display any messages\n"
+#ifdef CONFIG_TTF
+"      --mesg=TEXT     use TEXT as the main splash message\n"
+#endif
+"      --pidfile=FILE  save the PID of the daemon to FILE\n"
+"      --minstances    allow multiple instances of the splash daemon\n"
+"      --effects=LIST  a comma-separated list of effects to use;\n"
+"                      supported effects: fadein, fadeout\n"
+"      --type=TYPE     TYPE can be: bootup, reboot, shutdown\n"
+);
+}
+
+int main(int argc, char **argv)
+{
+	unsigned int c, i;
+	int err = 0;
+	int arg_vc = -1;
+	stheme_t *theme = NULL;
+
+	splash_lib_init(spl_bootup);
+	splashr_init(false);
+
+	arg_vc = -1;
+
+	config.reqmode = 's';
+
+	while ((c = getopt_long(argc, argv, "c:t:p:e:hdvq", options, NULL)) != EOF) {
+
+		switch (c) {
+
+		case 'h':
+			usage();
+			return 0;
+
+		case 0x100:
+		case 't':
+			splash_acc_theme_set(optarg);
+			break;
+
+		case 'p':
+		case 0x101:
+			config.progress = atoi(optarg);
+			break;
+
+		case 0x102:
+			config.kdmode = KD_GRAPHICS;
+			break;
+#ifdef CONFIG_TTF
+		case 0x103:
+			if (config.message)
+				free(config.message);
+			config.message = strdup(optarg);
+			break;
+#endif
+		case 0x104:
+			arg_pidfile = strdup(optarg);
+			break;
+
+		case 0x105:
+			config.minstances = true;
+			break;
+
+		case 0x106:
+		{
+			char *topt;
+
+			while ((topt = strsep(&optarg, ",")) != NULL) {
+				if (!strcmp(topt, "fadein"))
+					config.effects |= SPL_EFF_FADEIN;
+				else if (!strcmp(topt, "fadeout"))
+					config.effects |= SPL_EFF_FADEOUT;
+			}
+			break;
+		}
+
+		case 0x107:
+			if (!strcmp(optarg, "reboot"))
+				config.type = spl_reboot;
+			else if (!strcmp(optarg, "shutdown"))
+				config.type = spl_shutdown;
+			else
+				config.type = spl_bootup;
+			break;
+
+		/* Verbosity level adjustment. */
+		case 'q':
+			config.verbosity = VERB_QUIET;
+			break;
+
+		case 'v':
+			config.verbosity = VERB_HIGH;
+			break;
+		}
+	}
+
+	theme = splashr_theme_load();
+	daemon_start(theme);
+}
+
 

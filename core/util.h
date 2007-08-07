@@ -93,7 +93,7 @@ typedef enum { little, big } sendian_t;
 
 #define DEFAULT_FONT	"luxisri.ttf"
 #define TTF_DEFAULT		SPL_THEME_DIR"/"DEFAULT_FONT
-#define DAEMON_NAME		"splash_util"
+#define DAEMON_NAME		"fbsplashd"
 
 /* Default TTYs for silent and verbose modes. */
 #define TTY_SILENT		8
@@ -138,8 +138,6 @@ typedef struct {
  *				Enums
  * ************************************************************************ */
 
-enum TASK { getres, setpic, init, on, off, setcfg, getcfg, getstate, none, paint,
-	    setmode, getmode, repaint, start_daemon };
 enum ESVC { e_display, e_svc_inact_start, e_svc_inact_stop, e_svc_start,
 	    e_svc_started, e_svc_stop, e_svc_stopped, e_svc_stop_failed,
 	    e_svc_start_failed };
@@ -417,8 +415,6 @@ void set_directcolor_cmap(int fd);
 
 /* common.c */
 
-extern enum TASK arg_task;
-extern int arg_fb;
 extern char *arg_pidfile;
 
 extern int fd_fb;

@@ -22,8 +22,8 @@
 
 #include "util.h"
 
-#define eerror(args...)		fprintf(stderr, ## args); fprintf(stdout, "\n");
-#define ewarn(args...)		fprintf(stdout, ## args); fprintf(stdout, "\n");
+#define eerror(args...)	  {	fprintf(stderr, ## args); fprintf(stderr, "\n"); }
+#define ewarn(args...)	  {	fprintf(stdout, ## args); fprintf(stdout, "\n"); }
 
 static int fd_console = -1;
 static int fd_fb0 = -1;

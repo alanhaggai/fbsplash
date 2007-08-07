@@ -19,16 +19,18 @@
 
 # System configuration variables
 spl_util=splash_util.static
+spl_daemon=fbsplashd.static
+spl_decor=fbcondecor_ctl
 spl_dir=/lib/splash
 spl_fifo=${spl_dir}/cache/.splash
 spl_pidfile=${spl_dir}/cache/daemon.pid
 themedir=/etc/splash
 
-spl_util_exename="$(basename ${spl_util})"
-spl_util_short="${spl_util_exename:0:15}"
+spl_daemon_exename="$(basename ${spl_daemon})"
+spl_daemon_short="${spl_daemon:0:9}"
 
 cleanup() {
-	killall ${spl_util_exename} 2>/dev/null
+	killall ${spl_daemon_exename} 2>/dev/null
 	chvt ${ctty}
 }
 
@@ -113,7 +115,7 @@ spl_comm() {
 		return 1
 	fi
 
-	if [ "$(pgrep ${spl_util_short})" == "$(<${spl_pidfile})" ]; then
+	if [ "$(pgrep ${spl_daemon_short})" == "$(<${spl_pidfile})" ]; then
 		echo "$*" > ${spl_fifo} &
 	else
 		err "Splash daemon not running!"
@@ -158,23 +160,23 @@ set_theme() {
 
 	theme_sanity_check "${theme}"
 	[ -z "${tty}" ] && tty="${ctty}"
-	${spl_util} -c setcfg -t "${theme}" --tty="${tty}"
-	[ "${tty}" == "${ctty}" ] && ${spl_util} -c setpic -t "${theme}" --tty="${tty}"
-	${spl_util} -c on --tty=${tty}
+	${spl_decor} -c setcfg -t "${theme}" --tty="${tty}"
+	[ "${tty}" == "${ctty}" ] && ${spl_decor} -c setpic -t "${theme}" --tty="${tty}"
+	${spl_decor} -c on --tty=${tty}
 }
 
 # void get_theme(int tty)
 #   Prints the name of the theme that is used on a tty.
 get_theme() {
 	local ctty=$1
-	echo $(${spl_util} --tty=${ctty} -c getcfg | grep theme | awk '{ print $2 }')
+	echo $(${spl_decor} --tty=${ctty} -c getcfg | grep theme | awk '{ print $2 }')
 }
 
 # void get_state(int tty)
 #   Prints 'on' or 'off', indicating fbsplash state on a tty.
 get_state() {
 	local ctty=$1
-	echo $(${spl_util} --tty=${ctty} -c getstate | cut -f2 -d: | tr -d ' ')
+	echo $(${spl_decor} --tty=${ctty} -c getstate | cut -f2 -d: | tr -d ' ')
 }
 
 # void check_silent(char *theme, char *res, char *action)
@@ -211,8 +213,8 @@ set_silent() {
 	trap "cleanup" EXIT
 
 	# Make sure the splash daemon is not running
-	killall -9 ${spl_util_exename} 2>/dev/null
-	${spl_util} -d -t "${theme}" --pidfile ${spl_pidfile} ${util_params}
+	killall -9 ${spl_daemon_exename} 2>/dev/null
+	${spl_daemon} -t "${theme}" --pidfile ${spl_pidfile} ${util_params}
 	pid=$(cat ${spl_pidfile})
 
 	[ -z "${msg}" ] && msg="Testing the '${theme}' theme (\$progress%)..."
@@ -225,7 +227,7 @@ set_silent() {
 exit_silent() {
 	spl_comm "exit"
 
-	while [[ "$(head -n 1 /proc/${pid}/status 2>/dev/null | cut -f2)" == "${spl_util_short}" ]]; do
+	while [[ "$(head -n 1 /proc/${pid}/status 2>/dev/null | cut -f2)" == "${spl_daemon_short}" ]]; do
 		sleep 0.5
 	done
 
@@ -325,7 +327,7 @@ replay() {
 		# Start the splash daemon after rc_init/pre.
 		if [[ -z "${pid}" ]]; then
 			if [[ "${arr[1]}" != "pre" || "${arr[2]}" != "rc_init" ]]; then
-				BOOT_MSG="$(splash_get_boot_message)" ${spl_util} -d -t ${theme} --pidfile ${spl_pidfile}
+				BOOT_MSG="$(splash_get_boot_message)" ${spl_daemon} -t ${theme} --pidfile ${spl_pidfile}
 				pid=$(cat ${spl_pidfile})
 			fi
 		fi
@@ -365,7 +367,7 @@ exit_verbose() {
 	if [ "${cstate}" == "on" ]; then
 		set_theme "${ctheme}" "${tty}"
 	else
-		${spl_util} --tty=${tty} -c off
+		${spl_decor} --tty=${tty} -c off
 	fi
 }
 
