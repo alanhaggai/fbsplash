@@ -6,5 +6,5 @@ includedir=${prefix}/include
 Name: libfbsplash
 Description: Provide support for integration of fbsplash with the initscript system. 
 Version: 0.1
-Libs: -L${libdir} -lsplash 
+Libs: -L${libdir} -lfbsplash 
 Cflags: -I${includedir}

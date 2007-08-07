@@ -6,6 +6,6 @@ includedir=${prefix}/include
 Name: libfbsplashrender
 Description: Provide support for rendering themes used by fbsplash. 
 Version: 0.1
-Libs: -L${libdir} -lsplashrender
-Libs.private: -lsplash
+Libs: -L${libdir} -lfbsplashrender
+Libs.private: -lfbsplash
 Cflags: -I${includedir}
