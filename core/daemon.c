@@ -738,6 +738,11 @@ int main(int argc, char **argv)
 		}
 	}
 
+	if (splash_is_silent())
+		config.effects &= ~SPL_EFF_FADEIN;
+
+	printf("effects %x\n", config.effects);
+
 	theme = splashr_theme_load();
 	if (!theme) {
 		iprint(MSG_ERROR, "Failed to load theme '%s'.\n", config.theme);

@@ -245,7 +245,12 @@ int cmd_repaint(void **args)
 	if (ctty != CTTY_SILENT)
 		goto out;
 
-	splashr_render_screen(theme, true, false, 's', SPL_EFF_NONE);
+	if (config.effects & SPL_EFF_FADEIN) {
+		config.effects &= ~SPL_EFF_FADEIN;
+		splashr_render_screen(theme, true, false, 's', SPL_EFF_FADEIN);
+	} else {
+		splashr_render_screen(theme, true, false, 's', SPL_EFF_NONE);
+	}
 out:
 	pthread_mutex_unlock(&mtx_paint);
 
