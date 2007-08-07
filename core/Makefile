@@ -343,7 +343,8 @@ ifeq ($(call config_opt,CONFIG_FBCON_DECOR),true)
 	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/fbcondecor_ctl $(DESTDIR)$(sbindir)/fbcondecor_ctl
 endif
 	@$(call infmsg,INSTALL,libfbsplash.so)
-	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/libfbsplash.la $(DESTDIR)$(libdir)/libfbsplash.la
+	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/libfbsplash.la $(DESTDIR)$(usrlibdir)/libfbsplash.la
+	$(Q)mv $(DESTDIR)$(usrlibdir)/libfbsplash.so* $(DESTDIR)$(libdir)/
 	@$(call infmsg,INSTALL,libfbsplashrender.so)
 	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/libfbsplashrender.la $(DESTDIR)$(usrlibdir)/libfbsplashrender.la
 	@$(call infmsg,INSTALL,fbsplashd)
@@ -393,7 +394,7 @@ endif
 	@$(call infmsg,UNINSTALL,$(SP_UTIL).static)
 	$(Q)rm -f $(sbindir)/$(SP_UTIL).static
 	@$(call infmsg,UNINSTALL,libfbsplash.so)
-	$(Q)libtool $(LQ) --mode=uninstall rm -f $(libdir)/libfbsplash.so
+	$(Q)libtool $(LQ) --mode=uninstall rm -f $(usrlibdir)/libfbsplash.so
 	@$(call infmsg,UNINSTALL,libfbsplashrender.so)
 	$(Q)libtool $(LQ) --mode=uninstall rm -f $(usrlibdir)/libfbsplashrender.so
 	@$(call insmsg,UNINSTALL,fbsplash.h)
