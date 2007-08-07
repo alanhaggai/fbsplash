@@ -519,15 +519,13 @@ static int daemon_check_running(const char *pname)
 /*
  * Start the splash daemon.
  */
-void daemon_start(stheme_t *th)
+void daemon_start()
 {
 	int i = 0;
 	FILE *fp_fifo = NULL;
 	struct stat mystat;
 	struct vt_stat vtstat;
 	sigset_t sigset;
-
-	theme = th;
 
 	if (!config.minstances && (i = daemon_check_running("splash_util"))) {
 		iprint(MSG_ERROR, "It looks like there's another instance of the splash daemon running (pid %d).\n", i);
@@ -663,9 +661,8 @@ int main(int argc, char **argv)
 	unsigned int c, i;
 	int err = 0;
 	int arg_vc = -1;
-	stheme_t *theme = NULL;
 
-	splash_lib_init(spl_bootup);
+	splash_lib_init(spl_undef);
 	splashr_init(false);
 
 	arg_vc = -1;
@@ -742,7 +739,12 @@ int main(int argc, char **argv)
 	}
 
 	theme = splashr_theme_load();
-	daemon_start(theme);
+	if (!theme) {
+		iprint(MSG_ERROR, "Failed to load theme '%s'.\n", config.theme);
+		exit(1);
+	}
+
+	daemon_start();
 }
 
 

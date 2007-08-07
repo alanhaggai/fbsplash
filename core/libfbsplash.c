@@ -125,7 +125,7 @@ int splash_init_config(spl_type_t type)
 	config.effects = SPL_EFF_NONE;
 	config.verbosity = VERB_NORMAL;
 	config.type = type;
-	splash_acc_message_set(SPL_DEFAULT_THEME);
+	splash_acc_theme_set(SPL_DEFAULT_THEME);
 
 	s = getenv("PROGRESS");
 	if (s)

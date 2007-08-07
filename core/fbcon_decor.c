@@ -36,6 +36,14 @@ int fbcon_decor_open(bool create)
 			c = open(FBCON_DECOR_DEV, O_RDWR);
 	}
 
+	if (c == -1) {
+		c = open(PATH_DEV"/fbsplash", O_RDWR);
+		if (c == -1 && create) {
+			if (!dev_create(PATH_DEV"/fbsplash", PATH_SYS "/class/misc/fbsplash/dev"))
+				c = open(PATH_DEV"/fbsplash", O_RDWR);
+		}
+	}
+
 	return c;
 }
 
