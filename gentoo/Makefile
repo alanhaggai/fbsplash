@@ -3,7 +3,7 @@
 
 LIB		?= lib
 CFLAGS 	+= -g -Wall
-LDFLAGS += -L../core/objs
+LDFLAGS += -L../core/objs/.libs
 
 INCLUDES = -I../core/objs
 
