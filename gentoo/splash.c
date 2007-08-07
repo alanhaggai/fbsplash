@@ -177,6 +177,8 @@ static int splash_config_gentoo(spl_cfg_t *cfg, spl_type_t type)
 			cfg->reqmode = 'v';
 		} else if (!strcasecmp(t, "silent")) {
 			cfg->reqmode = 's';
+		} else if (!strcasecmp(t, "silentonly")) {
+			cfg->reqmode = 't';
 		}
 	}
 
@@ -203,6 +205,19 @@ static int splash_config_gentoo(spl_cfg_t *cfg, spl_type_t type)
 		if (t)
 			splash_acc_message_set(t);
 		break;
+	}
+
+	t = rc_get_config_entry(confd, "SPLASH_EFFECTS");
+	if (t) {
+		char *opt;
+
+		while ((opt = strsep(&t, ",")) != NULL) {
+			if (!strcmp(opt, "fadein")) {
+				cfg->effects |= SPL_EFF_FADEIN;
+			} else if (!strcmp(opt, "fadeout")) {
+				cfg->effects |= SPL_EFF_FADEOUT;
+			}
+		}
 	}
 
 	rc_strlist_free(confd);
@@ -535,7 +550,9 @@ static int splash_start(const char *runlevel)
 			 config->message, config->theme,
 			 (config->type == spl_reboot) ? "reboot" : ((config->type == spl_shutdown) ? "shutdown" : "bootup"),
 			 (config->kdmode == KD_GRAPHICS) ? "--kdgraphics" : "",
-			 (config->effects & SPL_EFF_FADEOUT) ? "--effects=fadeout" : "");
+			 (config->effects & (SPL_EFF_FADEOUT | SPL_EFF_FADEIN)) ? "--effects=fadeout,fadein" :
+				 ((config->effects & SPL_EFF_FADEOUT) ? "--effects=fadeout" :
+					 ((config->effects & SPL_EFF_FADEIN) ? "--effects=fadein" : "")));
 
 	err = system(buf);
 	if (err == -1 || WEXITSTATUS(err) != 0) {
