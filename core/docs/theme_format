@@ -47,7 +47,8 @@ is booting or rebooting.
 The format for the <type> tag is:
   <type type-spec [type-spec]>
 
-where type-spec is any of the following: 'bootup', 'reboot', 'shutdown'.
+where type-spec is any of the following: 'bootup', 'reboot', 'shutdown'
+and 'other'.
 
 Example:
  # Progress bar for boot-up.

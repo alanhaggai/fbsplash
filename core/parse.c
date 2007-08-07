@@ -1034,13 +1034,8 @@ void add_main_msg()
 	ct->y = text_y;
 	ct->col = text_color;
 	ct->val = strdup(config.message);
-
-	if (strstr(ct->val, "$progress")) {
-		ct->curr_progress = config.progress;
-		ct->flags = F_TXT_EVAL;
-	} else {
-		ct->curr_progress = -1;
-	}
+	ct->curr_progress = config.progress;
+	ct->flags = F_TXT_EVAL;
 
 	fpath = text_font;
 
@@ -1210,8 +1205,12 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 							if (config.type == spl_shutdown)
 								ignore = false;
 							t += 8;
+						} else if (!strncmp(t, "other", 5)) {
+							if (config.type == spl_undef)
+								ignore = false;
+							t += 5;
 						} else {
-							parse_error("expected 'bootup', 'reboot' or 'shutdown' instead of '%s'", t);
+							parse_error("expected 'other', 'bootup', 'reboot' or 'shutdown' instead of '%s'", t);
 							break;
 						}
 					}

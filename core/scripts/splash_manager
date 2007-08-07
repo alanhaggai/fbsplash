@@ -254,6 +254,9 @@ benchmark() {
 
 demo_theme_silent() {
 	check_silent "${theme}" "${res}"
+	if [ -z "$(echo ${util_params} | grep -- '--type=')" ]; then
+		export util_params="${util_params} --type=bootup"
+	fi
 	set_silent
 
 	# Try to configure an event input device so that F2 can work both ways.
@@ -327,7 +330,7 @@ replay() {
 		# Start the splash daemon after rc_init/pre.
 		if [[ -z "${pid}" ]]; then
 			if [[ "${arr[1]}" != "pre" || "${arr[2]}" != "rc_init" ]]; then
-				BOOT_MSG="$(splash_get_boot_message)" ${spl_daemon} -t ${theme} --pidfile ${spl_pidfile}
+				BOOT_MSG="$(splash_get_boot_message)" ${spl_daemon} -t ${theme} --pidfile ${spl_pidfile} --type=bootup
 				pid=$(cat ${spl_pidfile})
 			fi
 		fi
