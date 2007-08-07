@@ -157,7 +157,7 @@ all:	$(TARGETS)
 
 $(OBJDIR)/libfbsplash.la: $(OBJLDIR)/libfbsplash.lo
 	@$(call infmsg,LD,$@)
-	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $(OBJDIR)/libfbsplash.la $+ -rpath $(libdir)
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $(OBJDIR)/libfbsplash.la $+ -rpath $(usrlibdir)
 
 $(OBJDIR)/libfbsplashrender.la: $(OBJLDIR)/libfbsplashrender.lo $(LIBOBJS)
 	@$(call infmsg,LD,$@)
