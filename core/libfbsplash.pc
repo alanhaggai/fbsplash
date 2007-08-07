@@ -3,8 +3,8 @@ exec_prefix=/usr
 libdir=/
 includedir=${prefix}/include
 
-Name: libsplash
-Description: Provide support for integration of splashutils with the initscript system. 
+Name: libfbsplash
+Description: Provide support for integration of fbsplash with the initscript system. 
 Version: 0.1
 Libs: -L${libdir} -lsplash 
 Cflags: -I${includedir}

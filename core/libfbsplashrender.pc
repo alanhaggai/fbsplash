@@ -3,8 +3,8 @@ exec_prefix=/usr
 libdir=${prefix}/lib
 includedir=${prefix}/include
 
-Name: libsplash
-Description: Provide support for rendering themes used by splashutils. 
+Name: libfbsplashrender
+Description: Provide support for rendering themes used by fbsplash. 
 Version: 0.1
 Libs: -L${libdir} -lsplashrender
 Libs.private: -lsplash

@@ -344,7 +344,6 @@ ifeq ($(call config_opt,CONFIG_FBCON_DECOR),true)
 endif
 	@$(call infmsg,INSTALL,libfbsplash.so)
 	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/libfbsplash.la $(DESTDIR)$(usrlibdir)/libfbsplash.la
-	$(Q)mv $(DESTDIR)$(usrlibdir)/libfbsplash.so* $(DESTDIR)$(libdir)/
 	@$(call infmsg,INSTALL,libfbsplashrender.so)
 	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/libfbsplashrender.la $(DESTDIR)$(usrlibdir)/libfbsplashrender.la
 	@$(call infmsg,INSTALL,fbsplashd)
@@ -365,7 +364,7 @@ endif
 	$(Q)cp -f libfbsplash.pc libfbsplashrender.pc $(OBJDIR)/
 	$(Q)sed -i -e 's#prefix=.*#prefix=$(prefix)#' $(OBJDIR)/libfbsplash.pc
 	$(Q)sed -i -e 's#prefix=.*#prefix=$(prefix)#' $(OBJDIR)/libfbsplashrender.pc
-	$(Q)sed -i -e 's#libdir=.*#libdir=$(libdir)#' $(OBJDIR)/libfbsplash.pc
+	$(Q)sed -i -e 's#libdir=.*#libdir=$(usrlibdir)#' $(OBJDIR)/libfbsplash.pc
 	$(Q)sed -i -e 's#libdir=.*#libdir=$(usrlibdir)#' $(OBJDIR)/libfbsplashrender.pc
 	$(Q)sed -i -e 's#Libs.private: .*#Libs.private: -lfbsplash $(LDLLIBS)#' $(OBJDIR)/libfbsplashrender.pc
 	@$(call infmsg,INSTALL,libfbsplash.pc)
