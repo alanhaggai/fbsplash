@@ -23,7 +23,7 @@ LPNGSRC ?= libs/libpng-1.2.18
 ZLIBSRC ?= libs/zlib-1.2.3
 FT2SRC  ?= libs/freetype-2.3.5
 
-LIB = $(shell grep 'define LIBDIR' $(OBJDIR)/fbsplash.h | sed -e 's/.*"\([^"]*\)".*/\1/g' -e 's!^/!!')
+LIB = $(shell grep 'define CONFIG_LIBDIR' config.h | sed -e 's/.*"\([^"]*\)".*/\1/g' -e 's!^/!!')
 
 prefix 	  ?= /usr
 prefix2	  ?= /
@@ -176,6 +176,9 @@ config.h:
 		$(warning "Restart make") \
 		exit 1 ; \
 	fi
+
+$(OBJDIR)/fbsplash.h:
+	$(Q)cat fbsplash.h | sed -e "s!#define LIBDIR.*!#define LIBDIR \"$(LIB)\"!" > objs/fbsplash.h
 
 $(OBJDIR)/$(SP_UTIL): $(OBJDIR)/util.o $(OBJDIR)/libfbsplash.la $(OBJDIR)/libfbsplashrender.la
 	@$(call infmsg,LD,$@)

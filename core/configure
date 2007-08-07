@@ -63,11 +63,6 @@ write_conf()
 		eval vtype=\$copt_$i\_type
 		eval vname=\$copt_$i
 
-		if [[ "$vname" == "CONFIG_LIBDIR" ]]; then
-			cat fbsplash.h | sed -e "s!#define LIBDIR.*!#define LIBDIR \"$vval\"!" > objs/fbsplash.h
-			continue
-		fi
-
 		if [[ "$vtype" == "bool" ]]; then
 			if [[ "$vval" == "y" ]]; then
 				echo "#define $vname" >> config.h
