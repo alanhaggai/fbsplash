@@ -9,6 +9,7 @@
 #include <linux/kd.h>
 #include <linux/tty.h>
 #include <linux/input.h>
+#include <linux/fb.h>
 #include <limits.h>
 
 #include "objs/fbsplash.h"
@@ -23,46 +24,14 @@
 	#include <sys/vt.h>
 #endif
 
-/*
- * HACK WARNING:
- * -------------
- * Using the trick below we try to make sure that we always compile
- * against a single set of kernel headers -- the one against which
- * klibc was compiled. To do that, we skip the 'linux/' part of the
- * path when compiling the userspace utilities. This ensures that
- * fb.h and console_splash.h are pulled from /usr/lib/klibc/include/linux
- * and not /usr/include.
- */
-#ifdef TARGET_KERNEL
-	#include <linux/fb.h>
-	#ifdef CONFIG_FBCON_DECOR
-		#include <linux/console_decor.h>
-	#endif
-#else
-	#include <fb.h>
-	#ifdef CONFIG_FBCON_DECOR
-		#include <console_decor.h>
-	#endif
-#endif
-
 /* Common paths */
 #define PATH_DEV	"/dev"
 #define PATH_PROC	"/proc"
 #define PATH_SYS	"/sys"
-#define FBCON_DECOR_DEV	PATH_DEV"/fbcondecor"
 
 #if defined(TARGET_KERNEL)
 	#define PATH_SYS	"/lib/splash/sys"
 	#define PATH_PROC	"/lib/splash/proc"
-#endif
-
-/* Necessary to avoid compilation errors when fbcondecor support is
-   disabled. */
-#if !defined(CONFIG_FBCON_DECOR)
-	#define FBCON_DECOR_IO_ORIG_USER		0
-	#define FBCON_DECOR__IO_ORIG_KERNEL		1
-#else
-	extern int fd_fbcondecor;
 #endif
 
 /* Useful short-named types */

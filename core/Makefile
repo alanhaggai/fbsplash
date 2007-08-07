@@ -86,7 +86,6 @@ else
 	CFLAGS ?= -O2
 endif
 
-
 # Include the klibc header files so that we can compile against fb.h
 # from a kernel thee patched with fbcondecor.
 INCLUDES = -I/usr/include/freetype2 -idirafter /usr/$(LIB)/klibc/include/linux
@@ -334,6 +333,7 @@ install: all
 ifeq ($(call config_opt,CONFIG_HELPER),true)
 	@$(call infmsg,INSTALL,$(SP_HELPER))
 	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/$(SP_HELPER) $(DESTDIR)$(sbindir)/$(SP_HELPER)
+	$(Q)ln -sf $(SP_HELPER) $(DESTDIR)$(sbindir)/splash_helper
 	$(Q)$(call install_script,$(SP_GIRAM))
 endif
 ifeq ($(call config_opt,CONFIG_FBCON_DECOR),true)
@@ -374,6 +374,7 @@ uninstall:
 ifeq ($(call config_opt,CONFIG_HELPER),true)
 	@$(call infmsg,UNINSTALL,$(SP_HELPER))
 	$(Q)rm -f $(sbindir)/$(SP_HELPER)
+	$(Q)rm -f $(sbindir)/splash_helper
 	@$(call infmsg,UNINSTALL,$(SP_GIRAM))
 	$(Q)rm -f $(usrbindir)/$(SP_GIRAM)
 endif

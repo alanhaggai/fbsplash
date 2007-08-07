@@ -162,6 +162,7 @@ fi
 
 printv "o Copying ${splash_hlp}.."
 cp "${splash_hlp}" "${imgdir}/sbin"
+ln -sf "${splash_hlp} ${imgdir}/sbin/splash_helper"
 
 res=${res//,/ }
 

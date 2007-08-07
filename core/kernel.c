@@ -21,6 +21,7 @@
 #include <linux/tiocl.h>
 
 #include "util.h"
+#include "fbcon_decor.h"
 
 int arg_vc;
 
@@ -81,7 +82,13 @@ int handle_init(bool update)
 		return -1;
 
 #ifdef CONFIG_FBCON_DECOR
-	if (!update && (config.reqmode == 's' || config.reqmode == 'v')) {
+	fd_fbcondecor = fbcon_decor_open(true);
+	if (fd_fbcondecor == -1) {
+		fprintf(stderr, "Failed to open the fbcon_decor control device.\n");
+		fbcon_decor = false;
+	}
+
+	if (!update && (config.reqmode == 's' || config.reqmode == 'v') && fbcon_decor) {
 		if (fbcon_decor_setcfg(FBCON_DECOR_IO_ORIG_USER, arg_vc, theme))
 			goto noverbose;
 
@@ -191,6 +198,14 @@ int main(int argc, char **argv)
 		stheme_t *theme;
 
 		splashr_init(false);
+
+		fd_fbcondecor = fbcon_decor_open(true);
+		if (fd_fbcondecor == -1) {
+			fprintf(stderr, "Failed to open the fbcon_decor control device.\n");
+			err = -1;
+			goto out;
+		}
+
 		theme = splashr_theme_load();
 		if (!theme) {
 			err = -1;
@@ -217,6 +232,11 @@ int main(int argc, char **argv)
 out:
 	if (mounts)
 		umount2(PATH_SYS, 0);
+
+#ifdef CONFIG_FBCON_DECOR
+	if (fd_fbcondecor != -1)
+		close(fd_fbcondecor);
+#endif
 
 	return err;
 }

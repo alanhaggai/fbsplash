@@ -33,10 +33,6 @@ u8 *fb_mem = NULL;
 int fd_tty[MAX_NR_CONSOLES];
 struct fb_data fbd;
 
-#ifdef CONFIG_FBCON_DECOR
-int fd_fbcondecor = -1;
-#endif
-
 static void obj_free(obj *o)
 {
 	if (!o)
@@ -126,10 +122,6 @@ static void fb_cmap_directcolor_set(int fd)
  */
 int splashr_init(bool create)
 {
-#ifdef CONFIG_FBCON_DECOR
-	fd_fbcondecor = fbcon_decor_open(create);
-#endif
-
 	memset(fd_tty, -1, sizeof(fd_tty));
 
 	fd_fb0 = fb_open(0, create);
@@ -233,13 +225,6 @@ void splashr_cleanup()
 			fd_tty[i] = -1;
 		}
 	}
-
-#ifdef CONFIG_FBCON_DECOR
-	if (fd_fbcondecor != -1) {
-		close(fd_fbcondecor);
-		fd_fbcondecor = -1;
-	}
-#endif
 }
 
 /**

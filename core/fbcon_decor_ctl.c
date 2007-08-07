@@ -24,8 +24,7 @@
 #include <unistd.h>
 
 #include "util.h"
-
-#include "util.h"
+#include "fbcon_decor.h"
 
 struct option options[] = {
 	{ "vc",		required_argument, NULL, 0x100 },
@@ -87,6 +86,12 @@ int main(int argc, char **argv)
 
 	splash_lib_init(spl_bootup);
 	splashr_init(false);
+
+	fd_fbcondecor = fbcon_decor_open(false);
+	if (fd_fbcondecor == -1) {
+		iprint(MSG_ERROR, "Failed to open the fbcon_decor control device.\n");
+		exit(1);
+	}
 
 	arg_task = none;
 	arg_vc = -1;
@@ -193,6 +198,7 @@ setpic_out:	break;
 		break;
 	}
 
+	close(fd_fbcondecor);
 	splashr_theme_free(theme);
 	splashr_cleanup();
 	splash_lib_cleanup();

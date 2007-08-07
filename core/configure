@@ -28,7 +28,7 @@ copt_mng_type="bool"
 copt_mng_def=n
 
 copt_fbcondecor=CONFIG_FBCON_DECOR
-copt_fbcondecor_desc="Enable support for fbcondecor"
+copt_fbcondecor_desc="Enable support for fbcondecor (previously called fbsplash)"
 copt_fbcondecor_type="bool"
 copt_fbcondecor_def=y
 

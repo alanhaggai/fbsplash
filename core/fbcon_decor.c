@@ -19,9 +19,13 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <errno.h>
+
 #include "util.h"
+#include "fbcon_decor.h"
 
 #ifdef CONFIG_FBCON_DECOR
+int fd_fbcondecor = -1;
+
 int fbcon_decor_open(bool create)
 {
 	int c;

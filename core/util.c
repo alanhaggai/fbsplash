@@ -27,6 +27,7 @@
 
 struct option options[] = {
 	{ "cmd",	required_argument, NULL, 0x102 },
+	{ "mode",	required_argument, NULL, 0x100 },
 #ifdef CONFIG_DEPRECATED
 	{ "theme",	required_argument, NULL, 0x103 },
 	{ "progress",required_argument, NULL, 0x105 },
@@ -75,8 +76,9 @@ void usage(void)
 "  -v, --verbose       display verbose error messages\n"
 "  -q, --quiet         don't display any messages\n"
 "  -h, --help          show this help message\n"
-#ifdef CONFIG_DEPRECATED
 "  -t, --theme=THEME   use theme THEME\n"
+"  -m, --mode=(v|s)    set silent (s) or verbsose (v) mode\n"
+#ifdef CONFIG_DEPRECATED
 "  -p, --progress=NUM  set progress to NUM/65535 * 100%%\n"
 #ifdef CONFIG_TTF
 "      --mesg=TEXT     use TEXT as the main splash message\n"
@@ -101,13 +103,19 @@ int main(int argc, char **argv)
 
 	config.reqmode = 's';
 
-	while ((c = getopt_long(argc, argv, "c:t:p:e:hdvq", options, NULL)) != EOF) {
+	while ((c = getopt_long(argc, argv, "c:t:m:p:e:hdvq", options, NULL)) != EOF) {
 
 		switch (c) {
 
 		case 'h':
 			usage();
 			return 0;
+
+		case 0x100:
+		case 'm':
+			if (optarg[0] == 'v')
+				config.reqmode = 'v';
+			break;
 
 		case 0x103:
 		case 't':
