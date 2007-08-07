@@ -99,6 +99,7 @@ noverbose:
 		fbcon_decor = false;
 	}
 #endif
+
 	/* Activate verbose mode if it was explicitly requested. If silent mode
 	 * was requested, the verbose background image will be set after the
 	 * switch to the silent tty is complete. */
@@ -122,6 +123,8 @@ noverbose:
 
 	if (!(theme->modes & MODE_SILENT))
 		return -1;
+
+	fd_tty0 = open("/dev/console", O_RDWR);
 
 	splash_set_silent(NULL);
 	splashr_tty_silent_init();
