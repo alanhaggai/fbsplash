@@ -313,7 +313,7 @@ bool splash_is_silent(void)
  * @param xres Preferred horizontal resolution (e.g. fb_var.xres).
  * @param yres Preferred vertical resolution (e.g. fb_var.yres).
  */
-void splash_get_res(char *theme, int *xres, int *yres)
+void splash_get_res(const char *theme, int *xres, int *yres)
 {
 	FILE *fp;
 	char buf[512];
@@ -369,7 +369,7 @@ void splash_get_res(char *theme, int *xres, int *yres)
  *
  * @param theme The new theme setting.
  */
-void splash_acc_theme_set(char *theme)
+void splash_acc_theme_set(const char *theme)
 {
 	if (config.theme)
 		free(config.theme);
@@ -382,7 +382,7 @@ void splash_acc_theme_set(char *theme)
  *
  * @param msg The new message setting.
  */
-void splash_acc_message_set(char *msg)
+void splash_acc_message_set(const char *msg)
 {
 	if (config.message)
 		free(config.message);
@@ -433,7 +433,7 @@ int splash_cache_prep(void)
 /**
  * Clean the splash cache.
  *
- * @param profile_save A strlist of files that should be saved on the hdd
+ * @param profile_save A strlist of files that should be saved to the hdd
  *                     if profiling is enabled.
  */
 int splash_cache_cleanup(char **profile_save)

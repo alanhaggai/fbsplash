@@ -561,7 +561,7 @@ bool splashr_tty_silent_update()
  * @param theme Theme descriptor.
  * @param msg The new main message.
  */
-void splashr_message_set(stheme_t *theme, char *msg)
+void splashr_message_set(stheme_t *theme, const char *msg)
 {
 	splash_acc_message_set(msg);
 
