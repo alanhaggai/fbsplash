@@ -27,6 +27,7 @@ LIB = $(shell grep 'define CONFIG_LIBDIR' config.h | sed -e 's/.*"\([^"]*\)".*/\
 
 prefix 	  ?= /usr
 prefix2	  ?= /
+bindir     = ${prefix2}/bin
 sbindir    = ${prefix2}/sbin
 libdir     = ${prefix2}/${LIB}
 usrbindir  = ${prefix}/bin
@@ -354,9 +355,9 @@ endif
 	@$(call infmsg,INSTALL,fbsplashd.static)
 	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/fbsplashd.static $(DESTDIR)$(sbindir)/fbsplashd.static
 	@$(call infmsg,INSTALL,$(SP_UTIL))
-	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL) $(DESTDIR)$(sbindir)/$(SP_UTIL)
+	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL) $(DESTDIR)$(usrbindir)/$(SP_UTIL)
 	@$(call infmsg,INSTALL,$(SP_UTIL).static)
-	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL).static $(DESTDIR)$(sbindir)/$(SP_UTIL).static
+	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL).static $(DESTDIR)$(bindir)/$(SP_UTIL).static
 	@$(call infmsg,INSTALL,fbsplash.h)
 	$(Q)$(INSTALL_PROG) -D objs/fbsplash.h $(DESTDIR)$(incdir)/fbsplash.h
 	@$(call infmsg,INSTALL,splash-functions.sh)
@@ -392,9 +393,9 @@ endif
 	@$(call infmsg,UNINSTALL,fbsplashd.static)
 	$(Q)rm -f $(sbindir)/fbsplashd.static
 	@$(call infmsg,UNINSTALL,$(SP_UTIL))
-	$(Q)rm -f $(sbindir)/$(SP_UTIL)
+	$(Q)rm -f $(usrbindir)/$(SP_UTIL)
 	@$(call infmsg,UNINSTALL,$(SP_UTIL).static)
-	$(Q)rm -f $(sbindir)/$(SP_UTIL).static
+	$(Q)rm -f $(bindir)/$(SP_UTIL).static
 	@$(call infmsg,UNINSTALL,libfbsplash.so)
 	$(Q)libtool $(LQ) --mode=uninstall rm -f $(usrlibdir)/libfbsplash.so
 	@$(call infmsg,UNINSTALL,libfbsplashrender.so)
