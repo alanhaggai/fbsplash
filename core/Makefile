@@ -23,6 +23,9 @@ LPNGSRC ?= libs/libpng-1.2.18
 ZLIBSRC ?= libs/zlib-1.2.3
 FT2SRC  ?= libs/freetype-2.3.5
 
+fbsplash_ver = 1:0:0
+fbsplashr_ver = 1:0:0
+
 LIB = $(shell grep 'define CONFIG_LIBDIR' config.h | sed -e 's/.*"\([^"]*\)".*/\1/g' -e 's!^/!!')
 
 prefix 	  ?= /usr
@@ -158,11 +161,11 @@ all:	$(TARGETS)
 
 $(OBJDIR)/libfbsplash.la: $(OBJLDIR)/libfbsplash.lo
 	@$(call infmsg,LD,$@)
-	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $(OBJDIR)/libfbsplash.la $+ -rpath $(usrlibdir)
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) -version-info $(fbsplash_ver) $(LDFLAGS) -o $(OBJDIR)/libfbsplash.la $+ -rpath $(usrlibdir)
 
 $(OBJDIR)/libfbsplashrender.la: $(OBJLDIR)/libfbsplashrender.lo $(LIBOBJS)
 	@$(call infmsg,LD,$@)
-	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) -o $(OBJDIR)/libfbsplashrender.la $+ $(LDLLIBS) $(OBJDIR)/libfbsplash.la -rpath $(usrlibdir)
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) -version-info $(fbsplashr_ver) $(LDFLAGS) -o $(OBJDIR)/libfbsplashrender.la $+ $(LDLLIBS) $(OBJDIR)/libfbsplash.la -rpath $(usrlibdir)
 
 splash_user: $(OBJDIR)/$(SP_UTIL) $(OBJDIR)/$(SP_UTIL).static $(OBJDIR)/fbsplashd $(OBJDIR)/fbsplashd.static
 
