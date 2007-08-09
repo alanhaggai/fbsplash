@@ -7,7 +7,6 @@
 
 #define LIBDIR "/lib"
 #define SPLASH_CACHEDIR		LIBDIR"/splash/cache"
-#define SPLASH_TMPDIR		LIBDIR"/splash/tmp"
 #define SPLASH_PIDFILE		SPLASH_CACHEDIR"/daemon.pid"
 #define SPLASH_PROFILE		SPLASH_CACHEDIR"/profile"
 #define SPLASH_DAEMON		"/sbin/fbsplashd.static"
@@ -76,7 +75,7 @@ int splash_cache_cleanup(char **profile_save);
 int splash_send(const char *fmt, ...);
 
 /*
- * Link with libsplashrender if you want to use the functions
+ * Link with libfbsplashrender if you want to use the functions
  * below.
  */
 int splashr_init(bool create);

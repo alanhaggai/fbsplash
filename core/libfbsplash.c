@@ -31,6 +31,8 @@
 
 #include "util.h"
 
+#define SPLASH_TMPDIR		LIBDIR"/splash/tmp"
+
 #define eerror(args...)		{ fprintf(stderr, ## args); fprintf(stderr, "\n"); }
 #define ewarn(args...)		{ fprintf(stdout, ## args); fprintf(stdout, "\n"); }
 

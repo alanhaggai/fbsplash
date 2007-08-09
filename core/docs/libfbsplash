@@ -1,0 +1,52 @@
+       libfbsplash and libfbsplashrender documentation
+	   -----------------------------------------------
+
+Last update: 2007-08-09
+
+This document is an introductory documentation for libfbsplash and 
+libfbsplashrender.
+
+1. Purpose
+----------
+
+Since 1.5, splashutils comes bundled with two libraries: libfbsplash
+and libfbsplashrender.  The libraries have two distinct purposes:
+
+- lifbsplash: provides functions that can be useful for integrating
+  fbsplash with the initscript system or for controlling the fbsplash
+  daemon from third party applications,
+
+- libfbsplashrender: provide functions to parse splash themes and
+  to display the silent splash screen (either to a memory buffer,
+  or directly on the screen).  One would use libfbsplashrender e.g.
+  in software suspend applications (to provide a graphical interface
+  while suspending/resuming the system).
+
+2. Usage
+--------
+
+In order to use libfbsplash, add "#include <fbsplash.h>" to your program
+and link it with "-lfbsplash".
+
+In order to use libfbsplashredner, add "#include <fbsplash.h>" to your
+program and link it with "-lfbsplashrender".  If you link your program with
+libfbsplashrender, you will automatically gain access to all features
+provided by libfbsplash.
+
+3. Documentation
+----------------
+
+If you want a complete reference for all functions provided by
+libfbsplash and libfbsplashrender, run `make doc` in the main
+splashutils directory (requires doxygen) or have a look at the code
+in libfbsplash.c and libfbsplashrender.c.
+
+3. Additional information
+-------------------------
+
+If you can't find an answer to your question in the splashutils 
+documentation, feel free to mail me at spock@gentoo.org.
+
+-- 
+  Written by: Michal Januszewski <spock@gentoo.org>
+

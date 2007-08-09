@@ -1,14 +1,14 @@
-                      Splashutils porting guide
-                      -------------------------
+                      Fbsplash porting guide
+                      ----------------------
 
-Last update: 2007-04-09
+Last update: 2007-08-09
 
-This document describes how to port splashutils to different Linux distros
+This document describes how to port fbsplash to different Linux distros
 and keep such ports maintainable.
 
 1. Initscript interface
 -----------------------
-To be of any use, splashutils has to be integrated with the initscript system
+To be of any use, fbplash has to be integrated with the initscript system
 used in a target Linux distro. There are many ways in which it can be done and
 this document will provide information about two of them:
 
@@ -33,7 +33,7 @@ script interface.
 
 3. Library interface
 --------------------
-Starting with 1.4, splashutils comes with a simple library (`libsplash') which
+Starting with 1.4, splashutils comes with a simple library (`libfbsplash') which
 contains the majority of functions necessary to build an initscript interface.
 `splashutils-gentoo' contains a plugin which makes use of this library.
 
@@ -66,11 +66,11 @@ event() {
 
 etc.
 
-Please refer to the code of the Gentoo plugin and to libsplash.c
+Please refer to the code of the Gentoo plugin and to libfbsplash.c
 for further information. In case of any doubts or problems, feel
 free to e-mail me :)
 
-[1] http://dev.gentoo.org/~spock/projects/gensplash/
+[1] http://dev.gentoo.org/~spock/projects/fbsplash/
 
 --
   Written by: Michal Januszewski <spock@gentoo.org>
