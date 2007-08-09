@@ -58,7 +58,6 @@ typedef struct
 
 spl_cfg_t* splash_lib_init(spl_type_t type);
 int splash_lib_cleanup();
-int splash_init_config(spl_type_t type);
 int splash_parse_kcmdline(bool sysmsg);
 void splash_get_res(const char *theme, int *xres, int *yres);
 int splash_profile(const char *fmt, ...);

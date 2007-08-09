@@ -56,62 +56,11 @@ static void detect_endianess(sendian_t *end)
 }
 
 /**
- * Init the splash library.
- *
- * @param  type One of: spl_undef, spl_bootup, spl_reboot, spl_shutdown
- * @return Pointer to a config structure used by all routines in libsplash.
- *         You should not attempt to free this pointer.  If a splash_acc_*
- *         function exists to set a members of this config structure, use it
- *         instead of setting the member directly.
- */
-spl_cfg_t* splash_lib_init(spl_type_t type)
-{
-	detect_endianess(&endianess);
-	splash_init_config(type);
-
-	/* The kernel helper cannot touch any tty devices. */
-#ifndef TARGET_KERNEL
-	if (fd_tty0 == -1) {
-		fd_tty0 = open(PATH_DEV "/tty0", O_RDWR);
-	}
-#endif
-	return &config;
-}
-
-/**
- * Clean up after splash_lib_init() and subsequent calls
- * to any libsplash routines.
- */
-int splash_lib_cleanup(void)
-{
-	if (config.theme) {
-		free(config.theme);
-		config.theme = NULL;
-	}
-
-	if (config.message) {
-		free(config.message);
-		config.message = NULL;
-	}
-
-	if (fp_fifo) {
-		fclose(fp_fifo);
-		fp_fifo = NULL;
-	}
-
-	if (fd_tty0 >= 0) {
-		close(fd_tty0);
-		fd_tty0 = -1;
-	}
-	return 0;
-}
-
-/**
  * Initialize the config structure with default values.
  *
  * @param type One of spl_reboot, spl_shutdown, spl_bootup, spl_undef.
  */
-int splash_init_config(spl_type_t type)
+static int init_config(spl_type_t type)
 {
 	char *s;
 
@@ -155,6 +104,58 @@ int splash_init_config(spl_type_t type)
 			config.message = strdup(SYSMSG_DEFAULT);
 			break;
 		}
+	}
+	return 0;
+}
+
+
+/**
+ * Init the splash library.
+ *
+ * @param  type One of: spl_undef, spl_bootup, spl_reboot, spl_shutdown
+ * @return Pointer to a config structure used by all routines in libsplash.
+ *         You should not attempt to free this pointer.  If a splash_acc_*
+ *         function exists to set a members of this config structure, use it
+ *         instead of setting the member directly.
+ */
+spl_cfg_t* splash_lib_init(spl_type_t type)
+{
+	detect_endianess(&endianess);
+	init_config(type);
+
+	/* The kernel helper cannot touch any tty devices. */
+#ifndef TARGET_KERNEL
+	if (fd_tty0 == -1) {
+		fd_tty0 = open(PATH_DEV "/tty0", O_RDWR);
+	}
+#endif
+	return &config;
+}
+
+/**
+ * Clean up after splash_lib_init() and subsequent calls
+ * to any libsplash routines.
+ */
+int splash_lib_cleanup(void)
+{
+	if (config.theme) {
+		free(config.theme);
+		config.theme = NULL;
+	}
+
+	if (config.message) {
+		free(config.message);
+		config.message = NULL;
+	}
+
+	if (fp_fifo) {
+		fclose(fp_fifo);
+		fp_fifo = NULL;
+	}
+
+	if (fd_tty0 >= 0) {
+		close(fd_tty0);
+		fd_tty0 = -1;
 	}
 	return 0;
 }
