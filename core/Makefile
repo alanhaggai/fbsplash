@@ -179,7 +179,7 @@ config.h:
 	fi
 
 $(OBJDIR)/fbsplash.h:
-	$(Q)cat fbsplash.h | sed -e "s!#define LIBDIR.*!#define LIBDIR \"$(LIB)\"!" > objs/fbsplash.h
+	$(Q)cat fbsplash.h | sed -e "s!#define LIBDIR.*!#define LIBDIR \"/$(LIB)\"!" > objs/fbsplash.h
 
 $(OBJDIR)/$(SP_UTIL): $(OBJDIR)/util.o $(OBJDIR)/libfbsplash.la $(OBJDIR)/libfbsplashrender.la
 	@$(call infmsg,LD,$@)
