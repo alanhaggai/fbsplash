@@ -65,7 +65,7 @@ typedef enum { little, big } sendian_t;
 #define DAEMON_NAME		"fbsplashd"
 
 /* Default TTYs for silent and verbose modes. */
-#define TTY_SILENT		8
+#define TTY_SILENT		16
 #define TTY_VERBOSE		1
 
 /* Useful macros */

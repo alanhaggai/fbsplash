@@ -207,7 +207,7 @@ int main(int argc, char **argv)
 		break;
 
 	case getmode:
-		printf("Splash mode: %s\n", splash_is_silent() ? "silent" : "verbose");
+		printf("%s\n", splash_is_silent() ? "silent" : "verbose");
 		break;
 
 #ifdef CONFIG_DEPRECATED
