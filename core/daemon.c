@@ -118,7 +118,7 @@ void *thf_anim(void *unused)
 		if (!mng->displayed_first) {
 			anim_render_frame(ca);
 
-			if (ctty == TTY_SILENT)
+			if (ctty == CTTY_SILENT)
 				splashr_render_screen(theme, true, false, 's', SPL_EFF_NONE);
 		}
 	}
@@ -145,7 +145,7 @@ void *thf_anim(void *unused)
 			if (!mng->displayed_first) {
 				anim_render_frame(ca);
 
-				if (ctty == TTY_SILENT)
+				if (ctty == CTTY_SILENT)
 					splashr_render_screen(theme, true, false, 's', SPL_EFF_NONE);
 			}
 
