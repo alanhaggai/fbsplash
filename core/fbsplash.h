@@ -25,9 +25,14 @@
 #define SPL_EFF_FADEOUT		2
 
 /* Verbosity levels */
-#define VERB_QUIET		0
-#define VERB_NORMAL		1
-#define VERB_HIGH	    2
+#define SPL_VERB_QUIET		0
+#define SPL_VERB_NORMAL		1
+#define SPL_VERB_HIGH	    2
+
+/* Splash mode flags */
+#define SPL_MODE_OFF	 0x00
+#define SPL_MODE_VERBOSE 0x01
+#define SPL_MODE_SILENT  0x02
 
 struct spl_theme;
 
@@ -35,12 +40,7 @@ typedef enum { spl_undef, spl_bootup, spl_reboot, spl_shutdown } spl_type_t;
 
 typedef struct
 {
-	char reqmode;	/* requested splash mode:
-					 *  s - silent & verbose
-					 *  t - silent only
-					 *  v - verbose only
-					 *  o - off
-					 */
+	char reqmode;	/* a combination of SPL_MODE_ flags */
 	char *theme;	/* theme */
 	char *message;	/* system message */
 	int kdmode;		/* KD_TEXT or KD_GRAPHICS */

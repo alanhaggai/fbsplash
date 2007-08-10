@@ -101,7 +101,7 @@ int main(int argc, char **argv)
 	arg_task = none;
 	arg_vc = -1;
 
-	config.reqmode = 's';
+	config.reqmode = SPL_MODE_SILENT;
 
 	while ((c = getopt_long(argc, argv, "c:t:m:p:e:hdvq", options, NULL)) != EOF) {
 
@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 		case 0x100:
 		case 'm':
 			if (optarg[0] == 'v')
-				config.reqmode = 'v';
+				config.reqmode = SPL_MODE_VERBOSE;
 			break;
 
 		case 0x103:
@@ -155,11 +155,11 @@ int main(int argc, char **argv)
 
 		/* Verbosity level adjustment. */
 		case 'q':
-			config.verbosity = VERB_QUIET;
+			config.verbosity = SPL_VERB_QUIET;
 			break;
 
 		case 'v':
-			config.verbosity = VERB_HIGH;
+			config.verbosity = SPL_VERB_HIGH;
 			break;
 		}
 	}
@@ -197,7 +197,7 @@ int main(int argc, char **argv)
 	}
 
 	case setmode:
-		if (config.reqmode == 's') {
+		if (config.reqmode & SPL_MODE_SILENT) {
 			splashr_tty_silent_init();
 			splash_set_silent(NULL);
 		} else {
@@ -213,11 +213,11 @@ int main(int argc, char **argv)
 #ifdef CONFIG_DEPRECATED
 	/* Deprecated. The daemon mode should be used instead. */
 	case paint:
-		splashr_render_screen(theme, false, false, 's', SPL_EFF_NONE);
+		splashr_render_screen(theme, false, false, SPL_EFF_NONE);
 		break;
 
 	case repaint:
-		splashr_render_screen(theme, true, false, 's', SPL_EFF_NONE);
+		splashr_render_screen(theme, true, false, SPL_EFF_NONE);
 		break;
 #endif /* CONFIG_DEPRECATED */
 

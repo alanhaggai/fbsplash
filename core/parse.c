@@ -359,7 +359,7 @@ static void parse_icon(char *t)
 	char *filename = NULL;
 	char *p;
 	obj *o;
-	icon *cic = obj_alloc(icon, MODE_SILENT);
+	icon *cic = obj_alloc(icon, SPL_MODE_SILENT);
 	icon_img *cim;
 	item *ti;
 	int i;
@@ -539,7 +539,7 @@ static void parse_anim(char *t)
 {
 	char *p;
 	char *filename;
-	anim *canim = obj_alloc(anim, MODE_SILENT);
+	anim *canim = obj_alloc(anim, SPL_MODE_SILENT);
 	obj *o;
 	int i;
 
@@ -549,7 +549,7 @@ static void parse_anim(char *t)
 	}
 
 	o = container_of(canim);
-	obj_setmode(container_of(canim), MODE_SILENT);
+	obj_setmode(container_of(canim), SPL_MODE_SILENT);
 
 	skip_whitespace(&t);
 	canim->flags = 0;
@@ -642,7 +642,7 @@ static box* parse_box(char *t)
 {
 	char *p;
 	int ret;
-	box *cbox = obj_alloc(box, MODE_VERBOSE);
+	box *cbox = obj_alloc(box, SPL_MODE_VERBOSE);
 
 	if (!cbox)
 		return NULL;
@@ -659,7 +659,7 @@ static box* parse_box(char *t)
 			cbox->attr |= BOX_INTER;
 			t += 5;
 		} else if (!strncmp(t, "silent", 6)) {
-			obj_setmode(container_of(cbox), MODE_SILENT);
+			obj_setmode(container_of(cbox), SPL_MODE_SILENT);
 			t += 6;
 		} else {
 			parse_error("expected 'noover', 'inter' or 'silent' instead of '%s'", t);
@@ -826,11 +826,11 @@ static void parse_text(char *t)
 
 	while (!isdigit(*t) && ret) {
 		if (!strncmp(t, "silent", 6)) {
-			mode |= MODE_SILENT;
+			mode |= SPL_MODE_SILENT;
 			t += 6;
 			ret = 1;
 		} else if (!strncmp(t, "verbose", 7)) {
-			mode |= MODE_VERBOSE;
+			mode |= SPL_MODE_VERBOSE;
 			t += 7;
 			ret = 1;
 		} else {
@@ -841,7 +841,7 @@ static void parse_text(char *t)
 	}
 
 	if (!mode)
-		mode = MODE_SILENT | MODE_VERBOSE;
+		mode = SPL_MODE_SILENT | SPL_MODE_VERBOSE;
 
 	obj_setmode(container_of(ct), mode);
 
@@ -1019,7 +1019,7 @@ pt_err:
 void add_main_msg()
 {
 	char *fpath;
-	text *ct = obj_alloc(text, MODE_SILENT);
+	text *ct = obj_alloc(text, SPL_MODE_SILENT);
 	item *ti;
 	font_e *fe;
 

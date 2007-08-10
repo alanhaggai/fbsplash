@@ -174,11 +174,11 @@ static int splash_config_gentoo(spl_cfg_t *cfg, spl_type_t type)
 	t = rc_get_config_entry(confd, "SPLASH_MODE_REQ");
 	if (t) {
 		if (!strcasecmp(t, "verbose")) {
-			cfg->reqmode = 'v';
+			cfg->reqmode = SPL_MODE_VERBOSE;
 		} else if (!strcasecmp(t, "silent")) {
-			cfg->reqmode = 's';
+			cfg->reqmode = SPL_MODE_VERBOSE | SPL_MODE_SILENT;
 		} else if (!strcasecmp(t, "silentonly")) {
-			cfg->reqmode = 't';
+			cfg->reqmode = SPL_MODE_SILENT;
 		}
 	}
 
@@ -332,13 +332,13 @@ static int splash_init(bool start)
 {
 	char **tmp;
 
-	config->verbosity = VERB_QUIET;
+	config->verbosity = SPL_VERB_QUIET;
 	if (splash_check_daemon(&pid_daemon)) {
-		config->verbosity = VERB_NORMAL;
+		config->verbosity = SPL_VERB_NORMAL;
 		return -1;
 	}
 
-	config->verbosity = VERB_NORMAL;
+	config->verbosity = SPL_VERB_NORMAL;
 
 	if (svcs)
 		ewarn("%s: We already have a svcs list!", __func__);
@@ -686,7 +686,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		return -1;
 
 	/* Don't do anything if we're not running in silent mode. */
-	if (config->reqmode != 's')
+	if (!(config->reqmode & SPL_MODE_SILENT))
 		return 0;
 
 	switch (hook) {
@@ -717,9 +717,9 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		/* Make sure the progress indicator reaches 100%, even if
 		 * something went wrong along the way. */
 		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
-			config->verbosity = VERB_QUIET;
+			config->verbosity = SPL_VERB_QUIET;
 			i = splash_check_daemon(&pid_daemon);
-			config->verbosity = VERB_NORMAL;
+			config->verbosity = SPL_VERB_NORMAL;
 			if (i)
 				return -1;
 
@@ -748,9 +748,9 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	case rc_hook_runlevel_start_out:
 		/* Stop the splash daemon after boot-up is finished. */
 		if (strcmp(name, bootlevel)) {
-			config->verbosity = VERB_QUIET;
+			config->verbosity = SPL_VERB_QUIET;
 			i = splash_check_daemon(&pid_daemon);
-			config->verbosity = VERB_NORMAL;
+			config->verbosity = SPL_VERB_NORMAL;
 			if (i)
 				return -1;
 
@@ -795,9 +795,9 @@ do_start:
 		break;
 
 	case rc_hook_service_start_done:
-		config->verbosity = VERB_QUIET;
+		config->verbosity = SPL_VERB_QUIET;
 		i = splash_check_daemon(&pid_daemon);
-		config->verbosity = VERB_NORMAL;
+		config->verbosity = SPL_VERB_NORMAL;
 		if (i)
 			return -1;
 
@@ -849,9 +849,9 @@ do_start:
 		break;
 
 	case rc_hook_service_stop_done:
-		config->verbosity = VERB_QUIET;
+		config->verbosity = SPL_VERB_QUIET;
 		i = splash_check_daemon(&pid_daemon);
-		config->verbosity = VERB_NORMAL;
+		config->verbosity = SPL_VERB_NORMAL;
 		if (i)
 			return -1;
 

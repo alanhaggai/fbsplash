@@ -68,12 +68,12 @@ typedef enum { little, big } sendian_t;
 #define max(a,b)		((a) > (b) ? (a) : (b))
 
 #define iprint(type, args...) do {				\
-	if (config.verbosity == VERB_QUIET)			\
+	if (config.verbosity == SPL_VERB_QUIET)		\
 		break;									\
 												\
 	if (type <= MSG_ERROR) {					\
 		fprintf(stderr, ## args);				\
-	} else if (config.verbosity == VERB_HIGH) {	\
+	} else if (config.verbosity == SPL_VERB_HIGH) {	\
 		fprintf(stdout, ## args);				\
 	}											\
 } while (0);
@@ -192,9 +192,6 @@ typedef struct text {
 } text;
 
 #endif /* TTF */
-
-#define MODE_VERBOSE 0x01
-#define MODE_SILENT  0x02
 
 typedef struct spl_theme {
 	u8 bg_color;

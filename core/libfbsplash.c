@@ -67,11 +67,11 @@ static int init_config(spl_type_t type)
 	config.insane = false;
 	config.profile = false;
 	config.vonerr = false;
-	config.reqmode = 'o';
+	config.reqmode = SPL_MODE_SILENT;
 	config.minstances = false;
 	config.progress = 0;
 	config.effects = SPL_EFF_NONE;
-	config.verbosity = VERB_NORMAL;
+	config.verbosity = SPL_VERB_NORMAL;
 	config.type = type;
 	splash_acc_theme_set(SPL_DEFAULT_THEME);
 
@@ -245,13 +245,13 @@ int splash_parse_kcmdline(bool sysmsg)
 			} else if (!strcmp(opt, "fadeout")) {
 				config.effects |= SPL_EFF_FADEOUT;
 			} else if (!strcmp(opt, "verbose")) {
-				config.reqmode = 'v';
+				config.reqmode = SPL_MODE_VERBOSE;
 			} else if (!strcmp(opt, "silent")) {
-				config.reqmode = 's';
+				config.reqmode = SPL_MODE_SILENT | SPL_MODE_VERBOSE;
 			} else if (!strcmp(opt, "silentonly")) {
-				config.reqmode = 't';
+				config.reqmode = SPL_MODE_SILENT;
 			} else if (!strcmp(opt, "off")) {
-				config.reqmode = 'o';
+				config.reqmode = SPL_MODE_OFF;
 			} else if (!strcmp(opt, "insane")) {
 				config.insane = true;
 			} else if (!strncmp(opt, "theme:", 6)) {

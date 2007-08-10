@@ -245,7 +245,7 @@ int splashr_render_buf(stheme_t *theme, void *buffer, bool repaint)
 	if (fbd.var.bits_per_pixel == 8)
 		return -2;
 
-	if (!(theme->modes & MODE_SILENT))
+	if (!(theme->modes & SPL_MODE_SILENT))
 		return -1;
 
 	if (repaint) {
@@ -253,7 +253,7 @@ int splashr_render_buf(stheme_t *theme, void *buffer, bool repaint)
 		invalidate_all(theme);
 	}
 
-	render_objs(theme, buffer, MODE_SILENT, repaint);
+	render_objs(theme, buffer, SPL_MODE_SILENT, repaint);
 	return 0;
 }
 
@@ -311,7 +311,7 @@ stheme_t *splashr_theme_load()
 	if (!st)
 		return NULL;
 
-	st->modes = MODE_SILENT | MODE_VERBOSE;
+	st->modes = SPL_MODE_SILENT | SPL_MODE_VERBOSE;
 	st->xres = fbd.var.xres;
 	st->yres = fbd.var.yres;
 
@@ -337,15 +337,15 @@ stheme_t *splashr_theme_load()
 
 	/* Check for config file sanity for the given splash mode and
 	 * load background images and icons. */
-	if ((config.reqmode == 'v' || config.reqmode == 's') &&
+	if ((config.reqmode & SPL_MODE_VERBOSE) &&
 		cfg_check_sanity(st, 'v'))
-		st->modes &= ~MODE_VERBOSE;
+		st->modes &= ~SPL_MODE_VERBOSE;
 	else
 		load_images(st, 'v');
 
-	if ((config.reqmode == 's' || config.reqmode == 't') &&
+	if ((config.reqmode & SPL_MODE_SILENT) &&
 		cfg_check_sanity(st, 's'))
-		st->modes &= ~MODE_SILENT;
+		st->modes &= ~SPL_MODE_SILENT;
 	else
 		load_images(st, 's');
 

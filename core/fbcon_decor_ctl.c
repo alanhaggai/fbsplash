@@ -131,11 +131,11 @@ int main(int argc, char **argv)
 
 		/* Verbosity level adjustment. */
 		case 'q':
-			config.verbosity = VERB_QUIET;
+			config.verbosity = SPL_VERB_QUIET;
 			break;
 
 		case 'v':
-			config.verbosity = VERB_HIGH;
+			config.verbosity = SPL_VERB_HIGH;
 			break;
 		}
 	}
