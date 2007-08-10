@@ -399,27 +399,32 @@ void splash_acc_message_set(const char *msg)
 /**
  * Switch to silent mode.
  *
- * @param tty_prev Previous tty. If not NULL, the tty used before the switch to silent
- *                 mode will be saved in it.
+ * @return Previous tty if successful, a negative value otherwise.
  */
-int splash_set_silent(int *tty_prev)
+int splash_set_silent()
 {
 	struct vt_stat vtstat;
+	int prev = 0, err;
 
-	if (tty_prev && fd_tty0 != -1) {
+	if (fd_tty0 != -1) {
 		if (ioctl(fd_tty0, VT_GETSTATE, &vtstat) != -1) {
-			*tty_prev = vtstat.v_active;
+			prev = vtstat.v_active;
 		}
 	}
 
 #ifndef TARGET_KERNEL
 	if (fd_tty0 == -1) {
-		return splash_send("set mode silent\n");
+		err = splash_send("set mode silent\n");
 	} else
 #endif
 	{
-		return ioctl(fd_tty0, VT_ACTIVATE, config.tty_s);
+		err = ioctl(fd_tty0, VT_ACTIVATE, config.tty_s);
 	}
+
+	if (!err)
+		return prev;
+	else
+		return err;
 }
 
 #ifndef TARGET_KERNEL
@@ -540,16 +545,17 @@ stale:
  * Perform sanity checks to make sure that it's safe to start the
  * splash daemon.
  *
- * @return True if it's OK to start the daemon, false otherwise.
+ * @return 0 if it's OK to start the daemon, a negative value otherwise.
  */
-bool splash_check_sanity(void)
+
+int splash_check_sanity(void)
 {
 	FILE *fp;
 	char buf[128];
 
 	/* Do nothing if 'insane' is set. */
 	if (config.insane)
-		return true;
+		return 0;
 
 	fp = popen("/bin/grep -E -e '(^| )CONSOLE=/dev/tty1( |$)' -e '(^| )console=tty1( |$)' /proc/cmdline", "r");
 	if (!fp)
@@ -562,7 +568,7 @@ bool splash_check_sanity(void)
 		goto err;
 	}
 	pclose(fp);
-	return true;
+	return 0;
 
 err:
 	/* Clear display. */
@@ -573,15 +579,15 @@ err:
 	iprint(MSG_WARN, "command line. Silent splash will not be enabled. Please add\n");
 	iprint(MSG_WARN, "console=tty1 or CONSOLE=/dev/tty1 to your kernel command line\n");
 	iprint(MSG_WARN, "to avoid this message.\n");
-	return false;
+	return -1;
 }
 
 /**
  * Try to set the event device for the splash daemon.
  *
- * @return True if an appropriate event device has been found, false otherwise.
+ * @return 0 if an appropriate event device has been found, a negative value otherwise.
  */
-bool splash_set_evdev(void)
+int splash_set_evdev(void)
 {
 	char buf[128];
 	FILE *fp;
@@ -612,9 +618,9 @@ bool splash_set_evdev(void)
 
 	if (buf[0] != 0) {
 		splash_send("set event dev " PATH_DEV "/input/%s\n", buf);
-		return true;
+		return 0;
 	} else {
-		return false;
+		return -1;
 	}
 }
 

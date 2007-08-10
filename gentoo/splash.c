@@ -545,7 +545,7 @@ static int splash_start(const char *runlevel)
 	splash_theme_hook("rc_init", "pre", runlevel);
 
 	/* Perform sanity checks (console=, CONSOLE= etc). */
-	if (!splash_check_sanity())
+	if (splash_check_sanity())
 		return -1;
 
 	/* Start the splash daemon */

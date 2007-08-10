@@ -518,12 +518,14 @@ int splashr_tty_silent_set(int tty)
  * Update all internal settings related to the silent tty.
  *
  * To be called when switching to the silent tty.
+ *
+ * @return 0 if all settings have been updated, 1 if the theme has to be reloaded.
  */
-bool splashr_tty_silent_update()
+int splashr_tty_silent_update()
 {
 	struct fb_var_screeninfo old_var;
 	struct fb_fix_screeninfo old_fix;
-	bool ret = false;
+	int ret = 0;
 
 	memcpy(&old_fix, &fbd.fix, sizeof(old_fix));
 	memcpy(&old_var, &fbd.var, sizeof(old_var));
@@ -542,7 +544,7 @@ bool splashr_tty_silent_update()
 
 		munmap(fb_mem, old_fix.line_length * old_var.yres);
 		fb_mem = fb_mmap(fd_fb);
-		ret = true;
+		ret = 1;
 	}
 
 	/* Update CMAP if we're in a DIRECTCOLOR mode. */
