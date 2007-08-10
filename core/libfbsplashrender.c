@@ -22,9 +22,6 @@
 
 #include "util.h"
 
-#define eerror(args...)	  {	fprintf(stderr, ## args); fprintf(stderr, "\n"); }
-#define ewarn(args...)	  {	fprintf(stdout, ## args); fprintf(stdout, "\n"); }
-
 static int fd_console = -1;
 static int fd_fb0 = -1;
 static int fb = -1;
@@ -133,7 +130,7 @@ int splashr_init(bool create)
 
 #if WANT_TTF
 	if (TTF_Init() < 0) {
-		eerror("Couldn't initialize TTF.");
+		iprint(MSG_ERROR, "Couldn't initialize TTF.\n");
 		return -3;
 	}
 #endif

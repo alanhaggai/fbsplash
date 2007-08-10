@@ -67,7 +67,7 @@ int splash_set_silent(int *prev_tty);
 void splash_acc_theme_set(const char *theme);
 void splash_acc_message_set(const char *msg);
 bool splash_set_evdev(void);
-int splash_check_daemon(int *pid_daemon, bool verbose);
+int splash_check_daemon(int *pid_daemon);
 bool splash_check_sanity(void);
 int splash_cache_prep(void);
 int splash_cache_cleanup(char **profile_save);

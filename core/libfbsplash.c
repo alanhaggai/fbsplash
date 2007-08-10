@@ -33,9 +33,6 @@
 
 #define SPLASH_TMPDIR		LIBDIR"/splash/tmp"
 
-#define eerror(args...)		{ fprintf(stderr, ## args); fprintf(stderr, "\n"); }
-#define ewarn(args...)		{ fprintf(stdout, ## args); fprintf(stdout, "\n"); }
-
 static FILE *fp_fifo = NULL;
 int fd_tty0 = -1;
 spl_cfg_t config;
@@ -434,7 +431,7 @@ int splash_set_silent(int *tty_prev)
 int splash_cache_prep(void)
 {
 	if (mount("cachedir", SPLASH_CACHEDIR, "tmpfs", MS_MGC_VAL, "mode=0644,size=4096k")) {
-		eerror("Unable to create splash cache: %s", strerror(errno));
+		iprint(MSG_ERROR, "Unable to create splash cache: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -461,13 +458,13 @@ int splash_cache_cleanup(char **profile_save)
 	if (stat(SPLASH_TMPDIR, &buf) != 0 || !S_ISDIR(buf.st_mode)) {
 		unlink(SPLASH_TMPDIR);
 		if ((err = mkdir(SPLASH_TMPDIR, 0700))) {
-			eerror("Failed to create " SPLASH_TMPDIR": %s", strerror(errno));
+			iprint(MSG_ERROR, "Failed to create " SPLASH_TMPDIR": %s\n", strerror(errno));
 			goto nosave;
 		}
 	}
 
 	if ((err = mount(SPLASH_CACHEDIR, SPLASH_TMPDIR, NULL, MS_MOVE, NULL))) {
-		eerror("Failed to move splash cache: %s", strerror(errno));
+		iprint(MSG_ERROR, "Failed to move splash cache: %s\n", strerror(errno));
 		goto nosave;
 	}
 
@@ -501,7 +498,7 @@ nosave:
  *
  * @return 0 if the splash daemon is running, a negative value otherwise.
  */
-int splash_check_daemon(int *pid_daemon, bool verbose)
+int splash_check_daemon(int *pid_daemon)
 {
 	int err = 0;
 	FILE *fp;
@@ -509,14 +506,12 @@ int splash_check_daemon(int *pid_daemon, bool verbose)
 
 	fp = fopen(SPLASH_PIDFILE, "r");
 	if (!fp) {
-		if (verbose)
-			eerror("Failed to open "SPLASH_PIDFILE);
+		iprint(MSG_ERROR, "Failed to open "SPLASH_PIDFILE "\n");
 		return -1;
 	}
 
 	if (fscanf(fp, "%d", pid_daemon) != 1) {
-		if (verbose)
-			eerror("Failed to get the PID of the splash daemon.");
+		iprint(MSG_ERROR, "Failed to get the PID of the splash daemon.\n");
 		fclose(fp);
 		return -1;
 	}
@@ -537,8 +532,7 @@ out:
 	return err;
 stale:
 	err = -1;
-	if (verbose)
-		eerror("Stale pidfile. Splash daemon not running.");
+	iprint(MSG_ERROR, "Stale pidfile. Splash daemon not running.\n");
 	goto out;
 }
 
@@ -575,10 +569,10 @@ err:
 	printf("\e[H\e[2J");
 	fflush(stdout);
 
-	ewarn("You don't appear to have a correct console= setting on your kernel");
-	ewarn("command line. Silent splash will not be enabled. Please add");
-	ewarn("console=tty1 or CONSOLE=/dev/tty1 to your kernel command line");
-	ewarn("to avoid this message.");
+	iprint(MSG_WARN, "You don't appear to have a correct console= setting on your kernel\n");
+	iprint(MSG_WARN, "command line. Silent splash will not be enabled. Please add\n");
+	iprint(MSG_WARN, "console=tty1 or CONSOLE=/dev/tty1 to your kernel command line\n");
+	iprint(MSG_WARN, "to avoid this message.\n");
 	return false;
 }
 
@@ -670,14 +664,14 @@ int splash_send(const char *fmt, ...)
 
 		fd = open(SPLASH_FIFO, O_WRONLY | O_NONBLOCK);
 		if (fd == -1) {
-			eerror("Failed to open "SPLASH_FIFO": %s %s",
+			iprint(MSG_ERROR, "Failed to open "SPLASH_FIFO": %s %s\n",
 					strerror(errno), (errno == ENXIO) ? "(is the splash daemon running?)" : "");
 			return -1;
 		}
 
 		fp_fifo = fdopen(fd, "w");
 		if (!fp_fifo) {
-			eerror("Failed to fdopen "SPLASH_FIFO": %s", strerror(errno));
+			iprint(MSG_ERROR, "Failed to fdopen "SPLASH_FIFO": %s\n", strerror(errno));
 			return -1;
 		}
 		setbuf(fp_fifo, NULL);
