@@ -166,6 +166,8 @@ int splash_lib_cleanup(void)
  *
  * @param sysmsg If true, the command line will be scanned for the BOOT_MSG
  *               splash message override.
+ * @return 0 if the command line was parsed correctly, a negative value if
+ *	         there was an error.
  */
 int splash_parse_kcmdline(bool sysmsg)
 {
@@ -315,6 +317,10 @@ bool splash_is_silent(void)
  * @param theme Theme name.
  * @param xres Preferred horizontal resolution (e.g. fb_var.xres).
  * @param yres Preferred vertical resolution (e.g. fb_var.yres).
+ *
+ * @return The resolution that the splash will use is saved in
+ *         xres and yres.  If an error is encountered, xres and
+ *         yres will be set to 0.
  */
 void splash_get_res(const char *theme, int *xres, int *yres)
 {
@@ -422,6 +428,8 @@ int splash_set_silent(int *tty_prev)
 #ifndef TARGET_KERNEL
 /**
  * Prepare a writable splash cache.
+ *
+ * @return 0 on success, -1 in case of a failure.
  */
 int splash_cache_prep(void)
 {
@@ -438,6 +446,8 @@ int splash_cache_prep(void)
  *
  * @param profile_save A strlist of files that should be saved to the hdd
  *                     if profiling is enabled.
+ * @return 0 if the splash cache was cleaned, a negative value in case of
+ *			 an error.
  */
 int splash_cache_cleanup(char **profile_save)
 {
@@ -488,6 +498,8 @@ nosave:
  * @param pid_daemon Will be set to the PID of the splash daemon if
  *                   it is found to be running.
  * @param verbose    Print errors if true, be silent otherwise.
+ *
+ * @return 0 if the splash daemon is running, a negative value otherwise.
  */
 int splash_check_daemon(int *pid_daemon, bool verbose)
 {
@@ -533,6 +545,8 @@ stale:
 /**
  * Perform sanity checks to make sure that it's safe to start the
  * splash daemon.
+ *
+ * @return True if it's OK to start the daemon, false otherwise.
  */
 bool splash_check_sanity(void)
 {
@@ -570,6 +584,8 @@ err:
 
 /**
  * Try to set the event device for the splash daemon.
+ *
+ * @return True if an appropriate event device has been found, false otherwise.
  */
 bool splash_set_evdev(void)
 {
