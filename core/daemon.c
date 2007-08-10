@@ -119,7 +119,7 @@ void *thf_anim(void *unused)
 			anim_render_frame(ca);
 
 			if (ctty == CTTY_SILENT)
-				splashr_render_screen(theme, true, false, 's', SPL_EFF_NONE);
+				splashr_render_screen(theme, true, false, SPL_EFF_NONE);
 		}
 	}
 	pthread_mutex_unlock(&mtx_paint);
@@ -146,7 +146,7 @@ void *thf_anim(void *unused)
 				anim_render_frame(ca);
 
 				if (ctty == CTTY_SILENT)
-					splashr_render_screen(theme, true, false, 's', SPL_EFF_NONE);
+					splashr_render_screen(theme, true, false, SPL_EFF_NONE);
 			}
 
 			if (mng->wait_msecs < delay && mng->wait_msecs > 0) {
@@ -198,7 +198,7 @@ void *thf_anim(void *unused)
 					anim_render_frame(ca);
 			}
 		}
-		splashr_render_screen(theme, true, false, 's', SPL_EFF_NONE);
+		splashr_render_screen(theme, true, false, SPL_EFF_NONE);
 
 next:	pthread_mutex_unlock(&mtx_paint);
 		pthread_setcancelstate(oldstate, NULL);

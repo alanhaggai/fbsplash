@@ -84,8 +84,11 @@ int fbcon_decor_setpic(unsigned char origin, int vc, stheme_t *theme)
 		.data = &theme->verbose_img,
 	};
 
-	if (splashr_render_buf(theme, (u8*)theme->verbose_img.data, true, 'v'))
+	if (!(theme->modes & MODE_VERBOSE))
 		return -1;
+
+	invalidate_all(theme);
+	render_objs(theme, (u8*)theme->verbose_img.data, MODE_VERBOSE, true);
 
 	if (ioctl(fd_fbcondecor, FBIOCONDECOR_SETPIC, &wrapper)) {
 		iprint(MSG_ERROR, "FBIOCONDECOR_SETPIC failed, error code %d.\n", errno);

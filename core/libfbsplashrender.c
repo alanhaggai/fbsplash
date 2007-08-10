@@ -236,35 +236,24 @@ void splashr_cleanup()
  *               of the current theme or of the video mode active on the framebuffer
  *               device.
  * @param repaint The whole screen is rendered if true, only updated parts otherwise.
- * @param mode   'v' if the verbose splash screen is to be rendered, 's' if the silent
- *               splash screen is to be rendered.
  *
  * @return 0 on success, a negative value otherwise.
  */
-int splashr_render_buf(stheme_t *theme, void *buffer, bool repaint, char mode)
+int splashr_render_buf(stheme_t *theme, void *buffer, bool repaint)
 {
-	u8 *img;
-
 	/* FIXME: 8bpp modes aren't supported yet */
 	if (fbd.var.bits_per_pixel == 8)
 		return -2;
 
-	if (mode == 'v') {
-		if (!(theme->modes & MODE_VERBOSE))
-			return -1;
-		img = (u8*) theme->verbose_img.data;
-	} else {
-		if (!(theme->modes & MODE_SILENT))
-			return -1;
-		img = (u8*) theme->silent_img.data;
-	}
+	if (!(theme->modes & MODE_SILENT))
+		return -1;
 
 	if (repaint) {
-		memcpy(buffer, img, theme->xres * theme->yres * fbd.bytespp);
+		memcpy(buffer, theme->silent_img.data, theme->xres * theme->yres * fbd.bytespp);
 		invalidate_all(theme);
 	}
 
-	render_objs(theme, buffer, (mode == 'v') ? MODE_VERBOSE : MODE_SILENT, repaint);
+	render_objs(theme, buffer, MODE_SILENT, repaint);
 	return 0;
 }
 
@@ -276,16 +265,14 @@ int splashr_render_buf(stheme_t *theme, void *buffer, bool repaint, char mode)
  * @param bgnd Return immediately if true, wait for all effects to be rendered otherwise.
  *             Effects such as fadein/fadeout take some time to be fully displayed. If this
  *             parameter is set to true, they will be rendered from a separate, forked process.
- * @param mode 'v' if the verbose splash screen is to be rendered, 's' if the silent
- *             splash screen is to be rendered.
  * @param effects Indicates which effects are to be used to display the image.  Valid values
  *                constants named prefixed with SPL_EFF_.
  *
  * @return 0 on success, a negative value otherwise.
  */
-int splashr_render_screen(stheme_t *theme, bool repaint, bool bgnd, char mode, char effects)
+int splashr_render_screen(stheme_t *theme, bool repaint, bool bgnd, char effects)
 {
-	if (!splashr_render_buf(theme, theme->bgbuf, repaint, mode)) {
+	if (!splashr_render_buf(theme, theme->bgbuf, repaint)) {
 		if (repaint) {
 			if (effects & SPL_EFF_FADEIN) {
 				fade(theme, fb_mem, theme->bgbuf, theme->silent_img.cmap, bgnd ? 1 : 0, fd_fb, 0);

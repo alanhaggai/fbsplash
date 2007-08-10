@@ -33,12 +33,12 @@ int main(int argc, char **argv)
 
 	splashr_tty_silent_init();
 	splashr_tty_silent_update();
-	splashr_render_screen(theme, true, false, 's', SPL_EFF_NONE);
+	splashr_render_screen(theme, true, false, SPL_EFF_NONE);
 
 	for (i = 0; i < 65536; i += 64) {
 		char a;
 		splashr_progress_set(theme, i);
-		splashr_render_screen(theme, false, false, 's', SPL_EFF_NONE);
+		splashr_render_screen(theme, false, false, SPL_EFF_NONE);
 		a = splashr_input_getkey(false);
 		if (a == '\x1b')
 			break;

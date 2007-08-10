@@ -29,9 +29,9 @@ int main(int argc, char **argv)
 	tty = splash_set_silent();
 	splashr_tty_silent_init();
 	splashr_tty_silent_update();
-	splashr_render_screen(theme, true, false, 's', SPL_EFF_FADEIN);
+	splashr_render_screen(theme, true, false, SPL_EFF_FADEIN);
 	sleep(2);
-	splashr_render_screen(theme, true, false, 's', SPL_EFF_FADEOUT);
+	splashr_render_screen(theme, true, false, SPL_EFF_FADEOUT);
 	splashr_tty_silent_cleanup();
 	splash_set_verbose(tty);
 

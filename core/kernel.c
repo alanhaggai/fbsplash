@@ -139,7 +139,7 @@ noverbose:
 	if (config.kdmode == KD_GRAPHICS)
 		ioctl(fd_tty[config.tty_s], KDSETMODE, KD_GRAPHICS);
 
-	splashr_render_screen(theme, true, true, 's', config.effects);
+	splashr_render_screen(theme, true, true, config.effects);
 
 #ifdef CONFIG_FBCON_DECOR
 	if (fbcon_decor && config.reqmode == 's')

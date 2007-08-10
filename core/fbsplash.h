@@ -84,8 +84,8 @@ int splash_send(const char *fmt, ...);
  */
 int splashr_init(bool create);
 void splashr_cleanup();
-int splashr_render_buf(struct spl_theme *theme, void *buffer, bool repaint, char mode);
-int splashr_render_screen(struct spl_theme *theme, bool repaint, bool bgnd, char mode, char effects);
+int splashr_render_buf(struct spl_theme *theme, void *buffer, bool repaint);
+int splashr_render_screen(struct spl_theme *theme, bool repaint, bool bgnd, char effects);
 struct spl_theme *splashr_theme_load();
 void splashr_theme_free(struct spl_theme *theme);
 int splashr_tty_silent_init();
