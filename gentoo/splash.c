@@ -332,10 +332,13 @@ static int splash_init(bool start)
 {
 	char **tmp;
 
-
-	if (splash_check_daemon(&pid_daemon, false)) {
+	config->verbosity = VERB_QUIET;
+	if (splash_check_daemon(&pid_daemon)) {
+		config->verbosity = VERB_NORMAL;
 		return -1;
 	}
+
+	config->verbosity = VERB_NORMAL;
 
 	if (svcs)
 		ewarn("%s: We already have a svcs list!", __func__);
@@ -714,8 +717,12 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		/* Make sure the progress indicator reaches 100%, even if
 		 * something went wrong along the way. */
 		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
-			if (splash_check_daemon(&pid_daemon, false))
+			config->verbosity = VERB_QUIET;
+			i = splash_check_daemon(&pid_daemon);
+			config->verbosity = VERB_NORMAL;
+			if (i)
 				return -1;
+
 			splash_send("progress %d\n", SPL_PROGRESS_MAX);
 			splash_send("paint\n");
 			splash_cache_cleanup(NULL);
@@ -741,7 +748,10 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	case rc_hook_runlevel_start_out:
 		/* Stop the splash daemon after boot-up is finished. */
 		if (strcmp(name, bootlevel)) {
-			if (splash_check_daemon(&pid_daemon, false))
+			config->verbosity = VERB_QUIET;
+			i = splash_check_daemon(&pid_daemon);
+			config->verbosity = VERB_NORMAL;
+			if (i)
 				return -1;
 
 			/* Make sure the progress indicator reaches 100%, even if
@@ -785,7 +795,10 @@ do_start:
 		break;
 
 	case rc_hook_service_start_done:
-		if (splash_check_daemon(&pid_daemon, false))
+		config->verbosity = VERB_QUIET;
+		i = splash_check_daemon(&pid_daemon);
+		config->verbosity = VERB_NORMAL;
+		if (i)
 			return -1;
 
 		if (!rc_service_state(name, rc_service_failed) &&
@@ -836,7 +849,10 @@ do_start:
 		break;
 
 	case rc_hook_service_stop_done:
-		if (splash_check_daemon(&pid_daemon, false))
+		config->verbosity = VERB_QUIET;
+		i = splash_check_daemon(&pid_daemon);
+		config->verbosity = VERB_NORMAL;
+		if (i)
 			return -1;
 
 		if (rc_service_state(name, rc_service_stopped)) {
