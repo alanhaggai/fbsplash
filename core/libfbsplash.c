@@ -31,11 +31,11 @@
 
 #include "util.h"
 
-#define SPLASH_TMPDIR		LIBDIR"/splash/tmp"
+#define FBSPLASH_TMPDIR		LIBDIR"/splash/tmp"
 
 static FILE *fp_fifo = NULL;
 int fd_tty0 = -1;
-spl_cfg_t config;
+fbspl_cfg_t config;
 sendian_t endianess;
 
 /* A list of loaded fonts. */
@@ -57,7 +57,7 @@ static void detect_endianess(sendian_t *end)
  *
  * @param type One of spl_reboot, spl_shutdown, spl_bootup, spl_undef.
  */
-static int init_config(spl_type_t type)
+static int init_config(fbspl_type_t type)
 {
 	char *s;
 
@@ -67,13 +67,13 @@ static int init_config(spl_type_t type)
 	config.insane = false;
 	config.profile = false;
 	config.vonerr = false;
-	config.reqmode = SPL_MODE_SILENT;
+	config.reqmode = FBSPL_MODE_SILENT;
 	config.minstances = false;
 	config.progress = 0;
-	config.effects = SPL_EFF_NONE;
-	config.verbosity = SPL_VERB_NORMAL;
+	config.effects = FBSPL_EFF_NONE;
+	config.verbosity = FBSPL_VERB_NORMAL;
 	config.type = type;
-	fbsplash_acc_theme_set(SPL_DEFAULT_THEME);
+	fbsplash_acc_theme_set(FBSPL_DEFAULT_THEME);
 
 	s = getenv("PROGRESS");
 	if (s)
@@ -84,19 +84,19 @@ static int init_config(spl_type_t type)
 		fbsplash_acc_message_set(s);
 	} else {
 		switch (type) {
-		case spl_reboot:
+		case fbspl_reboot:
 			fbsplash_acc_message_set(SYSMSG_REBOOT);
 			break;
 
-		case spl_shutdown:
+		case fbspl_shutdown:
 			fbsplash_acc_message_set(SYSMSG_SHUTDOWN);
 			break;
 
-		case spl_bootup:
+		case fbspl_bootup:
 			fbsplash_acc_message_set(SYSMSG_BOOTUP);
 			break;
 
-		case spl_undef:
+		case fbspl_undef:
 		default:
 			fbsplash_acc_message_set(SYSMSG_DEFAULT);
 			break;
@@ -115,7 +115,7 @@ static int init_config(spl_type_t type)
  *         function exists to set a members of this config structure, use it
  *         instead of setting the member directly.
  */
-spl_cfg_t* fbsplash_lib_init(spl_type_t type)
+fbspl_cfg_t* fbsplash_lib_init(fbspl_type_t type)
 {
 	detect_endianess(&endianess);
 	init_config(type);
@@ -241,17 +241,17 @@ int fbsplash_parse_kcmdline(bool sysmsg)
 					config.tty_s = tty;
 				}
 			} else if (!strcmp(opt, "fadein")) {
-				config.effects |= SPL_EFF_FADEIN;
+				config.effects |= FBSPL_EFF_FADEIN;
 			} else if (!strcmp(opt, "fadeout")) {
-				config.effects |= SPL_EFF_FADEOUT;
+				config.effects |= FBSPL_EFF_FADEOUT;
 			} else if (!strcmp(opt, "verbose")) {
-				config.reqmode = SPL_MODE_VERBOSE;
+				config.reqmode = FBSPL_MODE_VERBOSE;
 			} else if (!strcmp(opt, "silent")) {
-				config.reqmode = SPL_MODE_SILENT | SPL_MODE_VERBOSE;
+				config.reqmode = FBSPL_MODE_SILENT | FBSPL_MODE_VERBOSE;
 			} else if (!strcmp(opt, "silentonly")) {
-				config.reqmode = SPL_MODE_SILENT;
+				config.reqmode = FBSPL_MODE_SILENT;
 			} else if (!strcmp(opt, "off")) {
-				config.reqmode = SPL_MODE_OFF;
+				config.reqmode = FBSPL_MODE_OFF;
 			} else if (!strcmp(opt, "insane")) {
 				config.insane = true;
 			} else if (!strncmp(opt, "theme:", 6)) {
@@ -327,7 +327,7 @@ void fbsplash_get_res(const char *theme, int *xres, int *yres)
 
 	oxres = *xres;
 	oyres = *yres;
-	snprintf(buf, 512, SPL_THEME_DIR "/%s/%dx%d.cfg", theme, oxres, oyres);
+	snprintf(buf, 512, FBSPL_THEME_DIR "/%s/%dx%d.cfg", theme, oxres, oyres);
 
 	fp = fopen(buf, "r");
 	if (!fp) {
@@ -335,7 +335,7 @@ void fbsplash_get_res(const char *theme, int *xres, int *yres)
 		struct dirent *dent;
 		DIR *tdir;
 
-		snprintf(buf, 512, SPL_THEME_DIR "/%s", theme);
+		snprintf(buf, 512, FBSPL_THEME_DIR "/%s", theme);
 		tdir = opendir(buf);
 		if (!tdir) {
 			*xres = 0;
@@ -435,7 +435,7 @@ int fbsplash_set_silent()
  */
 int fbsplash_cache_prep(void)
 {
-	if (mount("cachedir", SPLASH_CACHEDIR, "tmpfs", MS_MGC_VAL, "mode=0644,size=4096k")) {
+	if (mount("cachedir", FBSPLASH_CACHEDIR, "tmpfs", MS_MGC_VAL, "mode=0644,size=4096k")) {
 		iprint(MSG_ERROR, "Unable to create splash cache: %s\n", strerror(errno));
 		return -1;
 	}
@@ -454,21 +454,21 @@ int fbsplash_cache_prep(void)
 int fbsplash_cache_cleanup(char **profile_save)
 {
 	int err = 0;
-	char *what = SPLASH_CACHEDIR;
+	char *what = FBSPLASH_CACHEDIR;
 	struct stat buf;
 
 	if (!config.profile)
 		goto nosave;
 
-	if (stat(SPLASH_TMPDIR, &buf) != 0 || !S_ISDIR(buf.st_mode)) {
-		unlink(SPLASH_TMPDIR);
-		if ((err = mkdir(SPLASH_TMPDIR, 0700))) {
-			iprint(MSG_ERROR, "Failed to create " SPLASH_TMPDIR": %s\n", strerror(errno));
+	if (stat(FBSPLASH_TMPDIR, &buf) != 0 || !S_ISDIR(buf.st_mode)) {
+		unlink(FBSPLASH_TMPDIR);
+		if ((err = mkdir(FBSPLASH_TMPDIR, 0700))) {
+			iprint(MSG_ERROR, "Failed to create " FBSPLASH_TMPDIR": %s\n", strerror(errno));
 			goto nosave;
 		}
 	}
 
-	if ((err = mount(SPLASH_CACHEDIR, SPLASH_TMPDIR, NULL, MS_MOVE, NULL))) {
+	if ((err = mount(FBSPLASH_CACHEDIR, FBSPLASH_TMPDIR, NULL, MS_MOVE, NULL))) {
 		iprint(MSG_ERROR, "Failed to move splash cache: %s\n", strerror(errno));
 		goto nosave;
 	}
@@ -478,17 +478,17 @@ int fbsplash_cache_cleanup(char **profile_save)
 		err = 0;
 
 		while (*profile_save) {
-			snprintf(buf, PATH_MAX, "/bin/mv "SPLASH_TMPDIR"/%s "SPLASH_CACHEDIR"/%s", *profile_save, *profile_save);
+			snprintf(buf, PATH_MAX, "/bin/mv "FBSPLASH_TMPDIR"/%s "FBSPLASH_CACHEDIR"/%s", *profile_save, *profile_save);
 			err += system(buf);
 			profile_save++;
 		}
 	}
 
-	what = SPLASH_TMPDIR;
+	what = FBSPLASH_TMPDIR;
 
 nosave:
 	/* Clear a stale mtab entry that might have been created by the initscripts. */
-	system("/bin/sed -i -e '\\#"SPLASH_CACHEDIR"# d' /etc/mtab");
+	system("/bin/sed -i -e '\\#"FBSPLASH_CACHEDIR"# d' /etc/mtab");
 
 	umount2(what, MNT_DETACH);
 	return err;
@@ -509,9 +509,9 @@ int fbsplash_check_daemon(int *pid_daemon)
 	FILE *fp;
 	char buf[64];
 
-	fp = fopen(SPLASH_PIDFILE, "r");
+	fp = fopen(FBSPLASH_PIDFILE, "r");
 	if (!fp) {
-		iprint(MSG_ERROR, "Failed to open "SPLASH_PIDFILE "\n");
+		iprint(MSG_ERROR, "Failed to open "FBSPLASH_PIDFILE "\n");
 		return -1;
 	}
 
@@ -644,7 +644,7 @@ int fbsplash_profile(const char *fmt, ...)
 	fscanf(fp, "%f", &uptime);
 	fclose(fp);
 
-	fp = fopen(SPLASH_PROFILE, "a");
+	fp = fopen(FBSPLASH_PROFILE, "a");
 	if (!fp)
 		return -1;
 	va_start(ap, fmt);
@@ -668,16 +668,16 @@ int fbsplash_send(const char *fmt, ...)
 	if (!fp_fifo) {
 		int fd;
 
-		fd = open(SPLASH_FIFO, O_WRONLY | O_NONBLOCK);
+		fd = open(FBSPLASH_FIFO, O_WRONLY | O_NONBLOCK);
 		if (fd == -1) {
-			iprint(MSG_ERROR, "Failed to open "SPLASH_FIFO": %s %s\n",
+			iprint(MSG_ERROR, "Failed to open "FBSPLASH_FIFO": %s %s\n",
 					strerror(errno), (errno == ENXIO) ? "(is the splash daemon running?)" : "");
 			return -1;
 		}
 
 		fp_fifo = fdopen(fd, "w");
 		if (!fp_fifo) {
-			iprint(MSG_ERROR, "Failed to fdopen "SPLASH_FIFO": %s\n", strerror(errno));
+			iprint(MSG_ERROR, "Failed to fdopen "FBSPLASH_FIFO": %s\n", strerror(errno));
 			return -1;
 		}
 		setbuf(fp_fifo, NULL);

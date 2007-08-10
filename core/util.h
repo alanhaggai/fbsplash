@@ -56,7 +56,7 @@ typedef enum { little, big } sendian_t;
 #define SYSMSG_SHUTDOWN	"Shutting down the system ($progress%)... Press F2 for verbose mode."
 
 #define DEFAULT_FONT	"luxisri.ttf"
-#define TTF_DEFAULT		SPL_THEME_DIR"/"DEFAULT_FONT
+#define TTF_DEFAULT		FBSPL_THEME_DIR"/"DEFAULT_FONT
 #define DAEMON_NAME		"fbsplashd"
 
 /* Default TTYs for silent and verbose modes. */
@@ -68,12 +68,12 @@ typedef enum { little, big } sendian_t;
 #define max(a,b)		((a) > (b) ? (a) : (b))
 
 #define iprint(type, args...) do {				\
-	if (config.verbosity == SPL_VERB_QUIET)		\
+	if (config.verbosity == FBSPL_VERB_QUIET)		\
 		break;									\
 												\
 	if (type <= MSG_ERROR) {					\
 		fprintf(stderr, ## args);				\
-	} else if (config.verbosity == SPL_VERB_HIGH) {	\
+	} else if (config.verbosity == FBSPL_VERB_HIGH) {	\
 		fprintf(stdout, ## args);				\
 	}											\
 } while (0);
@@ -193,7 +193,7 @@ typedef struct text {
 
 #endif /* TTF */
 
-typedef struct spl_theme {
+typedef struct fbspl_theme {
 	u8 bg_color;
 	u16 tx;
 	u16 ty;
@@ -382,7 +382,7 @@ extern int fd_fb;
 extern int fd_tty0;
 extern int fd_fbcondecor;
 extern sendian_t endianess;
-extern spl_cfg_t config;
+extern fbspl_cfg_t config;
 
 /* libsplashrender */
 extern int fd_tty[MAX_NR_CONSOLES];

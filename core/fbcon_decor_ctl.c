@@ -84,7 +84,7 @@ int main(int argc, char **argv)
 	int arg_vc = -1;
 	stheme_t *theme = NULL;
 
-	fbsplash_lib_init(spl_bootup);
+	fbsplash_lib_init(fbspl_bootup);
 	fbsplashr_init(false);
 
 	fd_fbcondecor = fbcon_decor_open(false);
@@ -131,11 +131,11 @@ int main(int argc, char **argv)
 
 		/* Verbosity level adjustment. */
 		case 'q':
-			config.verbosity = SPL_VERB_QUIET;
+			config.verbosity = FBSPL_VERB_QUIET;
 			break;
 
 		case 'v':
-			config.verbosity = SPL_VERB_HIGH;
+			config.verbosity = FBSPL_VERB_HIGH;
 			break;
 		}
 	}

@@ -95,13 +95,13 @@ int main(int argc, char **argv)
 	int arg_vc = -1;
 	stheme_t *theme = NULL;
 
-	fbsplash_lib_init(spl_bootup);
+	fbsplash_lib_init(fbspl_bootup);
 	fbsplashr_init(false);
 
 	arg_task = none;
 	arg_vc = -1;
 
-	config.reqmode = SPL_MODE_SILENT;
+	config.reqmode = FBSPL_MODE_SILENT;
 
 	while ((c = getopt_long(argc, argv, "c:t:m:p:e:hdvq", options, NULL)) != EOF) {
 
@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 		case 0x100:
 		case 'm':
 			if (optarg[0] == 'v')
-				config.reqmode = SPL_MODE_VERBOSE;
+				config.reqmode = FBSPL_MODE_VERBOSE;
 			break;
 
 		case 0x103:
@@ -146,20 +146,20 @@ int main(int argc, char **argv)
 #endif
 		case 0x10d:
 			if (!strcmp(optarg, "reboot"))
-				config.type = spl_reboot;
+				config.type = fbspl_reboot;
 			else if (!strcmp(optarg, "shutdown"))
-				config.type = spl_shutdown;
+				config.type = fbspl_shutdown;
 			else
-				config.type = spl_bootup;
+				config.type = fbspl_bootup;
 			break;
 
 		/* Verbosity level adjustment. */
 		case 'q':
-			config.verbosity = SPL_VERB_QUIET;
+			config.verbosity = FBSPL_VERB_QUIET;
 			break;
 
 		case 'v':
-			config.verbosity = SPL_VERB_HIGH;
+			config.verbosity = FBSPL_VERB_HIGH;
 			break;
 		}
 	}
@@ -197,7 +197,7 @@ int main(int argc, char **argv)
 	}
 
 	case setmode:
-		if (config.reqmode & SPL_MODE_SILENT) {
+		if (config.reqmode & FBSPL_MODE_SILENT) {
 			fbsplashr_tty_silent_init();
 			fbsplash_set_silent(NULL);
 		} else {
@@ -213,11 +213,11 @@ int main(int argc, char **argv)
 #ifdef CONFIG_DEPRECATED
 	/* Deprecated. The daemon mode should be used instead. */
 	case paint:
-		fbsplashr_render_screen(theme, false, false, SPL_EFF_NONE);
+		fbsplashr_render_screen(theme, false, false, FBSPL_EFF_NONE);
 		break;
 
 	case repaint:
-		fbsplashr_render_screen(theme, true, false, SPL_EFF_NONE);
+		fbsplashr_render_screen(theme, true, false, FBSPL_EFF_NONE);
 		break;
 #endif /* CONFIG_DEPRECATED */
 

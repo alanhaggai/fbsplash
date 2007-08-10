@@ -245,7 +245,7 @@ int fbsplashr_render_buf(stheme_t *theme, void *buffer, bool repaint)
 	if (fbd.var.bits_per_pixel == 8)
 		return -2;
 
-	if (!(theme->modes & SPL_MODE_SILENT))
+	if (!(theme->modes & FBSPL_MODE_SILENT))
 		return -1;
 
 	if (repaint) {
@@ -253,7 +253,7 @@ int fbsplashr_render_buf(stheme_t *theme, void *buffer, bool repaint)
 		invalidate_all(theme);
 	}
 
-	render_objs(theme, buffer, SPL_MODE_SILENT, repaint);
+	render_objs(theme, buffer, FBSPL_MODE_SILENT, repaint);
 	return 0;
 }
 
@@ -274,9 +274,9 @@ int fbsplashr_render_screen(stheme_t *theme, bool repaint, bool bgnd, char effec
 {
 	if (!fbsplashr_render_buf(theme, theme->bgbuf, repaint)) {
 		if (repaint) {
-			if (effects & SPL_EFF_FADEIN) {
+			if (effects & FBSPL_EFF_FADEIN) {
 				fade(theme, fb_mem, theme->bgbuf, theme->silent_img.cmap, bgnd ? 1 : 0, fd_fb, 0);
-			} else if (effects & SPL_EFF_FADEOUT) {
+			} else if (effects & FBSPL_EFF_FADEOUT) {
 				fade(theme, fb_mem, theme->bgbuf, theme->silent_img.cmap, bgnd ? 1 : 0, fd_fb, 1);
 			} else {
 				if (theme->silent_img.cmap.red)
@@ -311,7 +311,7 @@ stheme_t *fbsplashr_theme_load()
 	if (!st)
 		return NULL;
 
-	st->modes = SPL_MODE_SILENT | SPL_MODE_VERBOSE;
+	st->modes = FBSPL_MODE_SILENT | FBSPL_MODE_VERBOSE;
 	st->xres = fbd.var.xres;
 	st->yres = fbd.var.yres;
 
@@ -319,7 +319,7 @@ stheme_t *fbsplashr_theme_load()
 	if (st->xres == 0 || st->yres == 0)
 		return NULL;
 
-	snprintf(buf, 512, SPL_THEME_DIR "/%s/%dx%d.cfg", config.theme, st->xres, st->yres);
+	snprintf(buf, 512, FBSPL_THEME_DIR "/%s/%dx%d.cfg", config.theme, st->xres, st->yres);
 
 	st->xmarg = (fbd.var.xres - st->xres) / 2;
 	st->ymarg = (fbd.var.yres - st->yres) / 2;
@@ -337,15 +337,15 @@ stheme_t *fbsplashr_theme_load()
 
 	/* Check for config file sanity for the given splash mode and
 	 * load background images and icons. */
-	if ((config.reqmode & SPL_MODE_VERBOSE) &&
+	if ((config.reqmode & FBSPL_MODE_VERBOSE) &&
 		cfg_check_sanity(st, 'v'))
-		st->modes &= ~SPL_MODE_VERBOSE;
+		st->modes &= ~FBSPL_MODE_VERBOSE;
 	else
 		load_images(st, 'v');
 
-	if ((config.reqmode & SPL_MODE_SILENT) &&
+	if ((config.reqmode & FBSPL_MODE_SILENT) &&
 		cfg_check_sanity(st, 's'))
-		st->modes &= ~SPL_MODE_SILENT;
+		st->modes &= ~FBSPL_MODE_SILENT;
 	else
 		load_images(st, 's');
 
@@ -577,8 +577,8 @@ void fbsplashr_progress_set(stheme_t *theme, int progress)
 	if (progress < 0)
 		progress = 0;
 
-	if (progress > SPL_PROGRESS_MAX)
-		progress = SPL_PROGRESS_MAX;
+	if (progress > FBSPL_PROGRESS_MAX)
+		progress = FBSPL_PROGRESS_MAX;
 
 	config.progress = progress;
 	invalidate_progress(theme);

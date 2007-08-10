@@ -64,14 +64,14 @@ typedef struct _TTF_Font TTF_Font;
 int TTF_Init(void);
 void TTF_Quit(void);
 
-struct stheme;
+struct fbspl_theme;
 struct text;
 
-void text_render(struct spl_theme *theme, struct text *ct, rect *re, u8 *target);
-void text_prerender(struct spl_theme *theme, struct text *ct, bool force);
-void text_bnd(struct spl_theme *theme, struct text *ct, rect *bnd);
+void text_render(struct fbspl_theme *theme, struct text *ct, rect *re, u8 *target);
+void text_prerender(struct fbspl_theme *theme, struct text *ct, bool force);
+void text_bnd(struct fbspl_theme *theme, struct text *ct, rect *bnd);
 
-int load_fonts(struct spl_theme *theme);
-int free_fonts(struct spl_theme *theme);
+int load_fonts(struct fbspl_theme *theme);
+int free_fonts(struct fbspl_theme *theme);
 
 #endif

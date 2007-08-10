@@ -12,10 +12,10 @@
 
 int main(int argc, char **argv)
 {
-	struct spl_theme *theme;
+	struct fbspl_theme *theme;
 	int tty = 0;
 
-	fbsplash_lib_init(spl_bootup);
+	fbsplash_lib_init(fbspl_bootup);
 	fbsplash_acc_theme_set("test");
 
 	fbsplashr_init(false);
@@ -28,9 +28,9 @@ int main(int argc, char **argv)
 	tty = fbsplash_set_silent();
 	fbsplashr_tty_silent_init();
 	fbsplashr_tty_silent_update();
-	fbsplashr_render_screen(theme, true, false, SPL_EFF_FADEIN);
+	fbsplashr_render_screen(theme, true, false, FBSPL_EFF_FADEIN);
 	sleep(2);
-	fbsplashr_render_screen(theme, true, false, SPL_EFF_FADEOUT);
+	fbsplashr_render_screen(theme, true, false, FBSPL_EFF_FADEOUT);
 	fbsplashr_tty_silent_cleanup();
 	fbsplash_set_verbose(tty);
 

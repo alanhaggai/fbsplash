@@ -65,13 +65,13 @@ int handle_init(bool update)
 	if (h == 0)
 		umount(PATH_PROC);
 
-	if (config.reqmode == SPL_MODE_OFF)
+	if (config.reqmode == FBSPL_MODE_OFF)
 		return 0;
 
 	/* We don't want to use any effects if we're just updating the image.
 	 * Nor do we want to mess with the verbose mode. */
 	if (update) {
-		config.effects = SPL_EFF_NONE;
+		config.effects = FBSPL_EFF_NONE;
 #ifdef CONFIG_FBCON_DECOR
 		fbcon_decor = false;
 #endif
@@ -88,7 +88,7 @@ int handle_init(bool update)
 		fbcon_decor = false;
 	}
 
-	if (!update && (config.reqmode & SPL_MODE_VERBOSE) && fbcon_decor) {
+	if (!update && (config.reqmode & FBSPL_MODE_VERBOSE) && fbcon_decor) {
 		if (fbcon_decor_setcfg(FBCON_DECOR_IO_ORIG_USER, arg_vc, theme))
 			goto noverbose;
 
@@ -103,7 +103,7 @@ noverbose:
 	/* Activate verbose mode if it was explicitly requested. If silent mode
 	 * was requested, the verbose background image will be set after the
 	 * switch to the silent tty is complete. */
-	if (config.reqmode == SPL_MODE_VERBOSE) {
+	if (config.reqmode == FBSPL_MODE_VERBOSE) {
 #ifdef CONFIG_FBCON_DECOR
 		/* Activate fbcon_decor on the first tty if the picture and
 		 * the config file were successfully loaded. */
@@ -121,7 +121,7 @@ noverbose:
 #endif
 	}
 
-	if (!(theme->modes & SPL_MODE_SILENT))
+	if (!(theme->modes & FBSPL_MODE_SILENT))
 		return -1;
 
 	fd_tty0 = open("/dev/console", O_RDWR);
@@ -142,7 +142,7 @@ noverbose:
 	fbsplashr_render_screen(theme, true, true, config.effects);
 
 #ifdef CONFIG_FBCON_DECOR
-	if (fbcon_decor && config.reqmode & SPL_MODE_VERBOSE)
+	if (fbcon_decor && config.reqmode & FBSPL_MODE_VERBOSE)
 		fbcon_decor_setstate(FBCON_DECOR_IO_ORIG_USER, arg_vc, 1);
 #endif
 
@@ -160,7 +160,7 @@ int main(int argc, char **argv)
 	if (argc < 3)
 		goto out;
 
-	fbsplash_lib_init(spl_undef);
+	fbsplash_lib_init(fbspl_undef);
 
 	if (strcmp(argv[1],"2") && strcmp(argv[1], "1")) {
 		fprintf(stderr, "Splash protocol mismatch: %s\n", argv[1]);

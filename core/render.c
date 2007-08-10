@@ -149,12 +149,12 @@ void blit(u8 *src, rect *bnd, int src_w, u8 *dst, int x, int y, int dst_w)
  */
 void rect_interpolate(rect *a, rect *b, rect *c)
 {
-	int h = SPL_PROGRESS_MAX - config.progress;
+	int h = FBSPL_PROGRESS_MAX - config.progress;
 
-	c->x1 = (a->x1 * h + b->x1 * config.progress) / SPL_PROGRESS_MAX;
-	c->x2 = (a->x2 * h + b->x2 * config.progress) / SPL_PROGRESS_MAX;
-	c->y1 = (a->y1 * h + b->y1 * config.progress) / SPL_PROGRESS_MAX;
-	c->y2 = (a->y2 * h + b->y2 * config.progress) / SPL_PROGRESS_MAX;
+	c->x1 = (a->x1 * h + b->x1 * config.progress) / FBSPL_PROGRESS_MAX;
+	c->x2 = (a->x2 * h + b->x2 * config.progress) / FBSPL_PROGRESS_MAX;
+	c->y1 = (a->y1 * h + b->y1 * config.progress) / FBSPL_PROGRESS_MAX;
+	c->y2 = (a->y2 * h + b->y2 * config.progress) / FBSPL_PROGRESS_MAX;
 }
 
 /*
@@ -255,14 +255,14 @@ void obj_visibility_set(stheme_t *theme, obj *o, bool visible)
  */
 void box_interpolate(box *a, box *b, box *c)
 {
-	int h = SPL_PROGRESS_MAX - config.progress;
+	int h = FBSPL_PROGRESS_MAX - config.progress;
 
 #define inter_color(clo, cl1, cl2)									\
 {																	\
-	clo.r = (cl1.r * h + cl2.r * config.progress) / SPL_PROGRESS_MAX;	\
-	clo.g = (cl1.g * h + cl2.g * config.progress) / SPL_PROGRESS_MAX;	\
-	clo.b = (cl1.b * h + cl2.b * config.progress) / SPL_PROGRESS_MAX;	\
-	clo.a = (cl1.a * h + cl2.a * config.progress) / SPL_PROGRESS_MAX;	\
+	clo.r = (cl1.r * h + cl2.r * config.progress) / FBSPL_PROGRESS_MAX;	\
+	clo.g = (cl1.g * h + cl2.g * config.progress) / FBSPL_PROGRESS_MAX;	\
+	clo.b = (cl1.b * h + cl2.b * config.progress) / FBSPL_PROGRESS_MAX;	\
+	clo.a = (cl1.a * h + cl2.a * config.progress) / FBSPL_PROGRESS_MAX;	\
 }
 	c->attr = a->attr;
 

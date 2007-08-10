@@ -25,7 +25,7 @@
 
 #include "util.h"
 
-spl_cfg_t		*cfg;
+fbspl_cfg_t		*cfg;
 
 int dev_create(char *fn, char *sys)
 {

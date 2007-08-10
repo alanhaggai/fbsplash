@@ -119,7 +119,7 @@ void *thf_anim(void *unused)
 			anim_render_frame(ca);
 
 			if (ctty == CTTY_SILENT)
-				fbsplashr_render_screen(theme, true, false, SPL_EFF_NONE);
+				fbsplashr_render_screen(theme, true, false, FBSPL_EFF_NONE);
 		}
 	}
 	pthread_mutex_unlock(&mtx_paint);
@@ -146,7 +146,7 @@ void *thf_anim(void *unused)
 				anim_render_frame(ca);
 
 				if (ctty == CTTY_SILENT)
-					fbsplashr_render_screen(theme, true, false, SPL_EFF_NONE);
+					fbsplashr_render_screen(theme, true, false, FBSPL_EFF_NONE);
 			}
 
 			if (mng->wait_msecs < delay && mng->wait_msecs > 0) {
@@ -198,7 +198,7 @@ void *thf_anim(void *unused)
 					anim_render_frame(ca);
 			}
 		}
-		fbsplashr_render_screen(theme, true, false, SPL_EFF_NONE);
+		fbsplashr_render_screen(theme, true, false, FBSPL_EFF_NONE);
 
 next:	pthread_mutex_unlock(&mtx_paint);
 		pthread_setcancelstate(oldstate, NULL);
@@ -539,20 +539,20 @@ void daemon_start()
 	}
 
 	/* Create the splash FIFO if it's not already in place. */
-	if (stat(SPLASH_FIFO, &mystat) == -1 || !S_ISFIFO(mystat.st_mode)) {
-		unlink(SPLASH_FIFO);
-		if (mkfifo(SPLASH_FIFO, 0700)) {
-			iprint(MSG_ERROR, "mkfifo("SPLASH_FIFO") failed.\n");
+	if (stat(FBSPLASH_FIFO, &mystat) == -1 || !S_ISFIFO(mystat.st_mode)) {
+		unlink(FBSPLASH_FIFO);
+		if (mkfifo(FBSPLASH_FIFO, 0700)) {
+			iprint(MSG_ERROR, "mkfifo("FBSPLASH_FIFO") failed.\n");
 			exit(3);
 		}
 	}
 
 	while (!fp_fifo) {
-		fp_fifo = fopen(SPLASH_FIFO, "r+");
+		fp_fifo = fopen(FBSPLASH_FIFO, "r+");
 		if (!fp_fifo) {
 			if (errno == EINTR)
 				continue;
-			iprint(MSG_ERROR, "Can't open the splash FIFO (" SPLASH_FIFO ") for reading: %s", strerror(errno));
+			iprint(MSG_ERROR, "Can't open the splash FIFO (" FBSPLASH_FIFO ") for reading: %s", strerror(errno));
 			exit(4);
 		}
 	}
@@ -662,12 +662,12 @@ int main(int argc, char **argv)
 	int err = 0;
 	int arg_vc = -1;
 
-	fbsplash_lib_init(spl_undef);
+	fbsplash_lib_init(fbspl_undef);
 	fbsplashr_init(false);
 
 	arg_vc = -1;
 
-	config.reqmode = SPL_MODE_SILENT;
+	config.reqmode = FBSPL_MODE_SILENT;
 
 	while ((c = getopt_long(argc, argv, "c:t:p:e:hdvq", options, NULL)) != EOF) {
 
@@ -709,35 +709,35 @@ int main(int argc, char **argv)
 
 			while ((topt = strsep(&optarg, ",")) != NULL) {
 				if (!strcmp(topt, "fadein"))
-					config.effects |= SPL_EFF_FADEIN;
+					config.effects |= FBSPL_EFF_FADEIN;
 				else if (!strcmp(topt, "fadeout"))
-					config.effects |= SPL_EFF_FADEOUT;
+					config.effects |= FBSPL_EFF_FADEOUT;
 			}
 			break;
 		}
 
 		case 0x107:
 			if (!strcmp(optarg, "reboot"))
-				config.type = spl_reboot;
+				config.type = fbspl_reboot;
 			else if (!strcmp(optarg, "shutdown"))
-				config.type = spl_shutdown;
+				config.type = fbspl_shutdown;
 			else
-				config.type = spl_bootup;
+				config.type = fbspl_bootup;
 			break;
 
 		/* Verbosity level adjustment. */
 		case 'q':
-			config.verbosity = SPL_VERB_QUIET;
+			config.verbosity = FBSPL_VERB_QUIET;
 			break;
 
 		case 'v':
-			config.verbosity = SPL_VERB_HIGH;
+			config.verbosity = FBSPL_VERB_HIGH;
 			break;
 		}
 	}
 
 	if (fbsplash_is_silent())
-		config.effects &= ~SPL_EFF_FADEIN;
+		config.effects &= ~FBSPL_EFF_FADEIN;
 
 	theme = fbsplashr_theme_load();
 	if (!theme) {

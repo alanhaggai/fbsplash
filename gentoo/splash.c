@@ -37,7 +37,7 @@ static char		**svcs_done = NULL;
 static int		svcs_cnt = 0;
 static int		svcs_done_cnt = 0;
 static pid_t	pid_daemon = 0;
-static spl_cfg_t	*config = NULL;
+static fbspl_cfg_t	*config = NULL;
 
 static int		xres = 0;
 static int		yres = 0;
@@ -137,7 +137,7 @@ static char **get_list(char **list, const char *file)
 /*
  * Get splash settings from /etc/conf.d/splash
  */
-static int splash_config_gentoo(spl_cfg_t *cfg, spl_type_t type)
+static int splash_config_gentoo(fbspl_cfg_t *cfg, fbspl_type_t type)
 {
 	char **confd;
 	char *t;
@@ -174,11 +174,11 @@ static int splash_config_gentoo(spl_cfg_t *cfg, spl_type_t type)
 	t = rc_get_config_entry(confd, "SPLASH_MODE_REQ");
 	if (t) {
 		if (!strcasecmp(t, "verbose")) {
-			cfg->reqmode = SPL_MODE_VERBOSE;
+			cfg->reqmode = FBSPL_MODE_VERBOSE;
 		} else if (!strcasecmp(t, "silent")) {
-			cfg->reqmode = SPL_MODE_VERBOSE | SPL_MODE_SILENT;
+			cfg->reqmode = FBSPL_MODE_VERBOSE | FBSPL_MODE_SILENT;
 		} else if (!strcasecmp(t, "silentonly")) {
-			cfg->reqmode = SPL_MODE_SILENT;
+			cfg->reqmode = FBSPL_MODE_SILENT;
 		}
 	}
 
@@ -187,19 +187,19 @@ static int splash_config_gentoo(spl_cfg_t *cfg, spl_type_t type)
 		cfg->vonerr = true;
 
 	switch(type) {
-	case spl_reboot:
+	case fbspl_reboot:
 		t = rc_get_config_entry(confd, "SPLASH_REBOOT_MESSAGE");
 		if (t)
 			fbsplash_acc_message_set(t);
 		break;
 
-	case spl_shutdown:
+	case fbspl_shutdown:
 		t = rc_get_config_entry(confd, "SPLASH_SHUTDOWN_MESSAGE");
 		if (t)
 			fbsplash_acc_message_set(t);
 		break;
 
-	case spl_bootup:
+	case fbspl_bootup:
 	default:
 		t = rc_get_config_entry(confd, "SPLASH_BOOT_MESSAGE");
 		if (t)
@@ -213,9 +213,9 @@ static int splash_config_gentoo(spl_cfg_t *cfg, spl_type_t type)
 
 		while ((opt = strsep(&t, ",")) != NULL) {
 			if (!strcmp(opt, "fadein")) {
-				cfg->effects |= SPL_EFF_FADEIN;
+				cfg->effects |= FBSPL_EFF_FADEIN;
 			} else if (!strcmp(opt, "fadeout")) {
-				cfg->effects |= SPL_EFF_FADEOUT;
+				cfg->effects |= FBSPL_EFF_FADEOUT;
 			}
 		}
 	}
@@ -332,20 +332,20 @@ static int splash_init(bool start)
 {
 	char **tmp;
 
-	config->verbosity = SPL_VERB_QUIET;
+	config->verbosity = FBSPL_VERB_QUIET;
 	if (fbsplash_check_daemon(&pid_daemon)) {
-		config->verbosity = SPL_VERB_NORMAL;
+		config->verbosity = FBSPL_VERB_NORMAL;
 		return -1;
 	}
 
-	config->verbosity = SPL_VERB_NORMAL;
+	config->verbosity = FBSPL_VERB_NORMAL;
 
 	if (svcs)
 		ewarn("%s: We already have a svcs list!", __func__);
 
 	/* Booting.. */
 	if (start) {
-		svcs = get_list(NULL, SPLASH_CACHEDIR"/svcs_start");
+		svcs = get_list(NULL, FBSPLASH_CACHEDIR"/svcs_start");
 		svcs_cnt = strlist_count(svcs);
 
 		svcs_done = rc_services_in_state(rc_service_started);
@@ -365,7 +365,7 @@ static int splash_init(bool start)
 		svcs_done_cnt = strlist_count(svcs_done);
 	/* .. or rebooting? */
 	} else {
-		svcs = get_list(NULL, SPLASH_CACHEDIR"/svcs_stop");
+		svcs = get_list(NULL, FBSPLASH_CACHEDIR"/svcs_stop");
 		svcs_cnt = strlist_count(svcs);
 
 		svcs_done = rc_services_in_state(rc_service_started);
@@ -406,7 +406,7 @@ static int splash_svc_handle(const char *name, const char *state, bool skip)
 	}
 
 	/* Recalculate progress */
-	config->progress = svcs_done_cnt * SPL_PROGRESS_MAX / svcs_cnt;
+	config->progress = svcs_done_cnt * FBSPL_PROGRESS_MAX / svcs_cnt;
 
 	splash_theme_hook(state, "pre", name);
 	splash_svc_state(name, state, 0);
@@ -427,9 +427,9 @@ int splash_svcs_start()
 	char **t, **deporder, *s, *r;
 	int i, j, err = 0;
 
-	fp = fopen(SPLASH_CACHEDIR"/svcs_start", "w");
+	fp = fopen(FBSPLASH_CACHEDIR"/svcs_start", "w");
 	if (!fp) {
-		ewarn("%s: `%s': %s", __func__, SPLASH_CACHEDIR"/svcs_start", strerror(errno));
+		ewarn("%s: `%s': %s", __func__, FBSPLASH_CACHEDIR"/svcs_start", strerror(errno));
 		return -1;
 	}
 
@@ -488,9 +488,9 @@ int splash_svcs_stop(const char *runlevel)
 	FILE *fp;
 	int i, err = 0;
 
-	fp = fopen(SPLASH_CACHEDIR"/svcs_stop", "w");
+	fp = fopen(FBSPLASH_CACHEDIR"/svcs_stop", "w");
 	if (!fp) {
-		ewarn("%s: `%s': %s", __func__, SPLASH_CACHEDIR"/svcs_stop", strerror(errno));
+		ewarn("%s: `%s': %s", __func__, FBSPLASH_CACHEDIR"/svcs_stop", strerror(errno));
 		return -1;
 	}
 
@@ -549,13 +549,13 @@ static int splash_start(const char *runlevel)
 		return -1;
 
 	/* Start the splash daemon */
-	snprintf(buf, 2048, "BOOT_MSG='%s' " SPLASH_DAEMON " --theme=\"%s\" --pidfile=" SPLASH_PIDFILE " --type=%s %s %s",
+	snprintf(buf, 2048, "BOOT_MSG='%s' " FBSPLASH_DAEMON " --theme=\"%s\" --pidfile=" FBSPLASH_PIDFILE " --type=%s %s %s",
 			 config->message, config->theme,
-			 (config->type == spl_reboot) ? "reboot" : ((config->type == spl_shutdown) ? "shutdown" : "bootup"),
+			 (config->type == fbspl_reboot) ? "reboot" : ((config->type == fbspl_shutdown) ? "shutdown" : "bootup"),
 			 (config->kdmode == KD_GRAPHICS) ? "--kdgraphics" : "",
-			 (config->effects & (SPL_EFF_FADEOUT | SPL_EFF_FADEIN)) ? "--effects=fadeout,fadein" :
-				 ((config->effects & SPL_EFF_FADEOUT) ? "--effects=fadeout" :
-					 ((config->effects & SPL_EFF_FADEIN) ? "--effects=fadein" : "")));
+			 (config->effects & (FBSPL_EFF_FADEOUT | FBSPL_EFF_FADEIN)) ? "--effects=fadeout,fadein" :
+				 ((config->effects & FBSPL_EFF_FADEOUT) ? "--effects=fadeout" :
+					 ((config->effects & FBSPL_EFF_FADEIN) ? "--effects=fadein" : "")));
 
 	err = system(buf);
 	if (err == -1 || WEXITSTATUS(err) != 0) {
@@ -613,15 +613,15 @@ static int splash_stop(const char *runlevel)
 int _splash_hook (rc_hook_t hook, const char *name)
 {
 	int i = 0;
-	spl_type_t type = spl_bootup;
+	fbspl_type_t type = fbspl_bootup;
 	char *runlev;
 	bool skip = false;
 
 	runlev = rc_get_runlevel();
 	if (!strcmp(runlev, RC_LEVEL_REBOOT))
-		type = spl_reboot;
+		type = fbspl_reboot;
 	else if (!strcmp(runlev, RC_LEVEL_SHUTDOWN))
-		type = spl_shutdown;
+		type = fbspl_shutdown;
 
 	/* We generally do nothing if we're in sysinit. Except if the
 	 * autoconfig service is present, when we get a list of services
@@ -686,7 +686,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		return -1;
 
 	/* Don't do anything if we're not running in silent mode. */
-	if (!(config->reqmode & SPL_MODE_SILENT))
+	if (!(config->reqmode & FBSPL_MODE_SILENT))
 		return 0;
 
 	switch (hook) {
@@ -717,13 +717,13 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		/* Make sure the progress indicator reaches 100%, even if
 		 * something went wrong along the way. */
 		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
-			config->verbosity = SPL_VERB_QUIET;
+			config->verbosity = FBSPL_VERB_QUIET;
 			i = fbsplash_check_daemon(&pid_daemon);
-			config->verbosity = SPL_VERB_NORMAL;
+			config->verbosity = FBSPL_VERB_NORMAL;
 			if (i)
 				return -1;
 
-			fbsplash_send("progress %d\n", SPL_PROGRESS_MAX);
+			fbsplash_send("progress %d\n", FBSPL_PROGRESS_MAX);
 			fbsplash_send("paint\n");
 			fbsplash_cache_cleanup(NULL);
 		}
@@ -748,15 +748,15 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	case rc_hook_runlevel_start_out:
 		/* Stop the splash daemon after boot-up is finished. */
 		if (strcmp(name, bootlevel)) {
-			config->verbosity = SPL_VERB_QUIET;
+			config->verbosity = FBSPL_VERB_QUIET;
 			i = fbsplash_check_daemon(&pid_daemon);
-			config->verbosity = SPL_VERB_NORMAL;
+			config->verbosity = FBSPL_VERB_NORMAL;
 			if (i)
 				return -1;
 
 			/* Make sure the progress indicator reaches 100%, even if
 			 * something went wrong along the way. */
-			fbsplash_send("progress %d\n", SPL_PROGRESS_MAX);
+			fbsplash_send("progress %d\n", FBSPL_PROGRESS_MAX);
 			fbsplash_send("paint\n");
 			splash_theme_hook("rc_exit", "pre", name);
 			i = splash_stop(name);
@@ -795,9 +795,9 @@ do_start:
 		break;
 
 	case rc_hook_service_start_done:
-		config->verbosity = SPL_VERB_QUIET;
+		config->verbosity = FBSPL_VERB_QUIET;
 		i = fbsplash_check_daemon(&pid_daemon);
-		config->verbosity = SPL_VERB_NORMAL;
+		config->verbosity = FBSPL_VERB_NORMAL;
 		if (i)
 			return -1;
 
@@ -841,17 +841,17 @@ do_start:
 			char *umounts = getenv("RC_NO_UMOUNTS");
 
             if (umounts)
-                fprintf(rc_environ_fd, "RC_NO_UMOUNTS=%s:%s", umounts, SPLASH_CACHEDIR);
+                fprintf(rc_environ_fd, "RC_NO_UMOUNTS=%s:%s", umounts, FBSPLASH_CACHEDIR);
             else
-                fprintf(rc_environ_fd, "RC_NO_UMOUNTS=%s", SPLASH_CACHEDIR);
+                fprintf(rc_environ_fd, "RC_NO_UMOUNTS=%s", FBSPLASH_CACHEDIR);
 		}
 		i = splash_svc_handle(name, "svc_stop", false);
 		break;
 
 	case rc_hook_service_stop_done:
-		config->verbosity = SPL_VERB_QUIET;
+		config->verbosity = FBSPL_VERB_QUIET;
 		i = fbsplash_check_daemon(&pid_daemon);
-		config->verbosity = SPL_VERB_NORMAL;
+		config->verbosity = FBSPL_VERB_NORMAL;
 		if (i)
 			return -1;
 

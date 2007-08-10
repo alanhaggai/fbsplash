@@ -35,8 +35,8 @@ int cmd_exit(void **args)
 	pthread_mutex_lock(&mtx_paint);
 
 	if (ctty == CTTY_SILENT) {
-		if (config.effects & SPL_EFF_FADEOUT)
-			fbsplashr_render_screen(theme, true, false, SPL_EFF_FADEOUT);
+		if (config.effects & FBSPL_EFF_FADEOUT)
+			fbsplashr_render_screen(theme, true, false, FBSPL_EFF_FADEOUT);
 
 		/* Switch to the verbose tty if we're in silent mode when the
 		 * 'exit' command is received. */
@@ -221,7 +221,7 @@ int cmd_paint(void **args)
 	if (ctty != CTTY_SILENT)
 		goto out;
 
-	fbsplashr_render_screen(theme, false, false, SPL_EFF_NONE);
+	fbsplashr_render_screen(theme, false, false, FBSPL_EFF_NONE);
 out:
 	pthread_mutex_unlock(&mtx_paint);
 	return ret;
@@ -245,11 +245,11 @@ int cmd_repaint(void **args)
 	if (ctty != CTTY_SILENT)
 		goto out;
 
-	if (config.effects & SPL_EFF_FADEIN) {
-		config.effects &= ~SPL_EFF_FADEIN;
-		fbsplashr_render_screen(theme, true, false, SPL_EFF_FADEIN);
+	if (config.effects & FBSPL_EFF_FADEIN) {
+		config.effects &= ~FBSPL_EFF_FADEIN;
+		fbsplashr_render_screen(theme, true, false, FBSPL_EFF_FADEIN);
 	} else {
-		fbsplashr_render_screen(theme, true, false, SPL_EFF_NONE);
+		fbsplashr_render_screen(theme, true, false, FBSPL_EFF_NONE);
 	}
 out:
 	pthread_mutex_unlock(&mtx_paint);

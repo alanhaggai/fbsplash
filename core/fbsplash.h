@@ -1,42 +1,39 @@
-#ifndef __FBSPLASH_H
-#define __FBSPLASH_H
+#ifndef __FBFBSPLASH_H
+#define __FBFBSPLASH_H
 
 #include <stdbool.h>
 #include <stdio.h>
 #include <linux/kd.h>
 
 #define LIBDIR "/lib"
-#define SPLASH_CACHEDIR		LIBDIR"/splash/cache"
-#define SPLASH_PIDFILE		SPLASH_CACHEDIR"/daemon.pid"
-#define SPLASH_PROFILE		SPLASH_CACHEDIR"/profile"
-#define SPLASH_DAEMON		"/sbin/fbsplashd.static"
+#define FBSPLASH_CACHEDIR	LIBDIR"/splash/cache"
+#define FBSPLASH_PIDFILE	FBSPLASH_CACHEDIR"/daemon.pid"
+#define FBSPLASH_PROFILE	FBSPLASH_CACHEDIR"/profile"
+#define FBSPLASH_DAEMON		"/sbin/fbsplashd.static"
+#define FBSPLASH_FIFO		FBSPLASH_CACHEDIR"/.splash"
 
-#ifndef SPLASH_FIFO
-	#define SPLASH_FIFO			SPLASH_CACHEDIR"/.splash"
-#endif
-
-#define SPL_THEME_DIR		"/etc/splash"
-#define SPL_DEFAULT_THEME	"default"
-#define SPL_PROGRESS_MAX	0xffff
+#define FBSPL_THEME_DIR		"/etc/splash"
+#define FBSPL_DEFAULT_THEME	"default"
+#define FBSPL_PROGRESS_MAX	0xffff
 
 /* Effects */
-#define SPL_EFF_NONE		0
-#define SPL_EFF_FADEIN		1
-#define SPL_EFF_FADEOUT		2
+#define FBSPL_EFF_NONE		0
+#define FBSPL_EFF_FADEIN	1
+#define FBSPL_EFF_FADEOUT	2
 
 /* Verbosity levels */
-#define SPL_VERB_QUIET		0
-#define SPL_VERB_NORMAL		1
-#define SPL_VERB_HIGH	    2
+#define FBSPL_VERB_QUIET	0
+#define FBSPL_VERB_NORMAL	1
+#define FBSPL_VERB_HIGH	    2
 
 /* Splash mode flags */
-#define SPL_MODE_OFF	 0x00
-#define SPL_MODE_VERBOSE 0x01
-#define SPL_MODE_SILENT  0x02
+#define FBSPL_MODE_OFF		0x00
+#define FBSPL_MODE_VERBOSE	0x01
+#define FBSPL_MODE_SILENT	0x02
 
-struct spl_theme;
+struct fbspl_theme;
 
-typedef enum { spl_undef, spl_bootup, spl_reboot, spl_shutdown } spl_type_t;
+typedef enum { fbspl_undef, fbspl_bootup, fbspl_reboot, fbspl_shutdown } fbspl_type_t;
 
 typedef struct
 {
@@ -48,7 +45,7 @@ typedef struct
 	int tty_s;		/* silent tty */
 	int tty_v;		/* verbose tty */
 	char *pidfile;	/* pidfile */
-	spl_type_t type;	/* bootup/reboot/shutdown? */
+	fbspl_type_t type;	/* bootup/reboot/shutdown? */
 
 	/* rc system data */
 	bool profile;	/* enable profiling? */
@@ -59,9 +56,9 @@ typedef struct
 	bool minstances;	/* allow multiple instances of the splash daemon? */
 	int progress;		/* current value of progress */
 	char verbosity;		/* verbosity level */
-} spl_cfg_t;
+} fbspl_cfg_t;
 
-spl_cfg_t* fbsplash_lib_init(spl_type_t type);
+fbspl_cfg_t* fbsplash_lib_init(fbspl_type_t type);
 int fbsplash_lib_cleanup();
 int fbsplash_parse_kcmdline(bool sysmsg);
 void fbsplash_get_res(const char *theme, int *xres, int *yres);
@@ -84,19 +81,19 @@ int fbsplash_send(const char *fmt, ...);
  */
 int fbsplashr_init(bool create);
 void fbsplashr_cleanup();
-int fbsplashr_render_buf(struct spl_theme *theme, void *buffer, bool repaint);
-int fbsplashr_render_screen(struct spl_theme *theme, bool repaint, bool bgnd, char effects);
-struct spl_theme *fbsplashr_theme_load();
-void fbsplashr_theme_free(struct spl_theme *theme);
+int fbsplashr_render_buf(struct fbspl_theme *theme, void *buffer, bool repaint);
+int fbsplashr_render_screen(struct fbspl_theme *theme, bool repaint, bool bgnd, char effects);
+struct fbspl_theme *fbsplashr_theme_load();
+void fbsplashr_theme_free(struct fbspl_theme *theme);
 int fbsplashr_tty_silent_init();
 int fbsplashr_tty_silent_cleanup();
 int fbsplashr_tty_silent_set(int tty);
 int fbsplashr_tty_silent_update();
-void fbsplashr_message_set(struct spl_theme *theme, const char *msg);
-void fbsplashr_progress_set(struct spl_theme *theme, int progress);
+void fbsplashr_message_set(struct fbspl_theme *theme, const char *msg);
+void fbsplashr_progress_set(struct fbspl_theme *theme, int progress);
 
 int fbsplashr_input_init();
 void fbsplashr_input_cleanup();
 unsigned char fbsplashr_input_getkey(bool block);
 
-#endif /* __FBSPLASH_H */
+#endif /* __FBFBSPLASH_H */

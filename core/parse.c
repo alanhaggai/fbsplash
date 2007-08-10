@@ -147,7 +147,7 @@ static char *get_filepath(char *path)
 	if (path[0] == '/')
 		return strdup(path);
 
-	snprintf(buf, 512, SPL_THEME_DIR "/%s/%s", config.theme, path);
+	snprintf(buf, 512, FBSPL_THEME_DIR "/%s/%s", config.theme, path);
 	return strdup(buf);
 }
 
@@ -204,8 +204,8 @@ static char *get_fontpath(char *t)
 		return strdup(t);
 	}
 
-	snprintf(buf, 512, "%s/%s/%s", SPL_THEME_DIR, config.theme, t);
-	snprintf(buf2, 512, "%s/%s", SPL_THEME_DIR, t);
+	snprintf(buf, 512, "%s/%s/%s", FBSPL_THEME_DIR, config.theme, t);
+	snprintf(buf2, 512, "%s/%s", FBSPL_THEME_DIR, t);
 
 	stat(buf, &st1);
 	stat(buf2, &st2);
@@ -359,7 +359,7 @@ static void parse_icon(char *t)
 	char *filename = NULL;
 	char *p;
 	obj *o;
-	icon *cic = obj_alloc(icon, SPL_MODE_SILENT);
+	icon *cic = obj_alloc(icon, FBSPL_MODE_SILENT);
 	icon_img *cim;
 	item *ti;
 	int i;
@@ -539,7 +539,7 @@ static void parse_anim(char *t)
 {
 	char *p;
 	char *filename;
-	anim *canim = obj_alloc(anim, SPL_MODE_SILENT);
+	anim *canim = obj_alloc(anim, FBSPL_MODE_SILENT);
 	obj *o;
 	int i;
 
@@ -549,7 +549,7 @@ static void parse_anim(char *t)
 	}
 
 	o = container_of(canim);
-	obj_setmode(container_of(canim), SPL_MODE_SILENT);
+	obj_setmode(container_of(canim), FBSPL_MODE_SILENT);
 
 	skip_whitespace(&t);
 	canim->flags = 0;
@@ -642,7 +642,7 @@ static box* parse_box(char *t)
 {
 	char *p;
 	int ret;
-	box *cbox = obj_alloc(box, SPL_MODE_VERBOSE);
+	box *cbox = obj_alloc(box, FBSPL_MODE_VERBOSE);
 
 	if (!cbox)
 		return NULL;
@@ -659,7 +659,7 @@ static box* parse_box(char *t)
 			cbox->attr |= BOX_INTER;
 			t += 5;
 		} else if (!strncmp(t, "silent", 6)) {
-			obj_setmode(container_of(cbox), SPL_MODE_SILENT);
+			obj_setmode(container_of(cbox), FBSPL_MODE_SILENT);
 			t += 6;
 		} else {
 			parse_error("expected 'noover', 'inter' or 'silent' instead of '%s'", t);
@@ -826,11 +826,11 @@ static void parse_text(char *t)
 
 	while (!isdigit(*t) && ret) {
 		if (!strncmp(t, "silent", 6)) {
-			mode |= SPL_MODE_SILENT;
+			mode |= FBSPL_MODE_SILENT;
 			t += 6;
 			ret = 1;
 		} else if (!strncmp(t, "verbose", 7)) {
-			mode |= SPL_MODE_VERBOSE;
+			mode |= FBSPL_MODE_VERBOSE;
 			t += 7;
 			ret = 1;
 		} else {
@@ -841,7 +841,7 @@ static void parse_text(char *t)
 	}
 
 	if (!mode)
-		mode = SPL_MODE_SILENT | SPL_MODE_VERBOSE;
+		mode = FBSPL_MODE_SILENT | FBSPL_MODE_VERBOSE;
 
 	obj_setmode(container_of(ct), mode);
 
@@ -1019,7 +1019,7 @@ pt_err:
 void add_main_msg()
 {
 	char *fpath;
-	text *ct = obj_alloc(text, SPL_MODE_SILENT);
+	text *ct = obj_alloc(text, FBSPL_MODE_SILENT);
 	item *ti;
 	font_e *fe;
 
@@ -1194,19 +1194,19 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 					while (*t != '>') {
 						skip_whitespace(&t);
 						if (!strncmp(t, "bootup", 6)) {
-							if (config.type == spl_bootup)
+							if (config.type == fbspl_bootup)
 								ignore = false;
 							t += 6;
 						} else if (!strncmp(t, "reboot", 6)) {
-							if (config.type == spl_reboot)
+							if (config.type == fbspl_reboot)
 								ignore = false;
 							t += 6;
 						} else if (!strncmp(t, "shutdown", 8)) {
-							if (config.type == spl_shutdown)
+							if (config.type == fbspl_shutdown)
 								ignore = false;
 							t += 8;
 						} else if (!strncmp(t, "other", 5)) {
-							if (config.type == spl_undef)
+							if (config.type == fbspl_undef)
 								ignore = false;
 							t += 5;
 						} else {

@@ -13,9 +13,9 @@ int main(int argc, char **argv)
 {
 	int tty = 0;
 	int i;
-	struct spl_theme *theme;
+	struct fbspl_theme *theme;
 
-	fbsplash_lib_init(spl_bootup);
+	fbsplash_lib_init(fbspl_bootup);
 	fbsplash_acc_theme_set("test");
 
 	fbsplashr_init(false);
@@ -32,12 +32,12 @@ int main(int argc, char **argv)
 
 	fbsplashr_tty_silent_init();
 	fbsplashr_tty_silent_update();
-	fbsplashr_render_screen(theme, true, false, SPL_EFF_NONE);
+	fbsplashr_render_screen(theme, true, false, FBSPL_EFF_NONE);
 
 	for (i = 0; i < 65536; i += 64) {
 		char a;
 		fbsplashr_progress_set(theme, i);
-		fbsplashr_render_screen(theme, false, false, SPL_EFF_NONE);
+		fbsplashr_render_screen(theme, false, false, FBSPL_EFF_NONE);
 		a = fbsplashr_input_getkey(false);
 		if (a == '\x1b')
 			break;

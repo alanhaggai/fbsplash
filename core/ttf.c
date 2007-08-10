@@ -741,7 +741,7 @@ static char *text_eval(char *txt)
 		*d = *p;
 
 		if (!strncmp(p, "$progress", 9)) {
-			d += sprintf(d, "%d", config.progress * 100 / SPL_PROGRESS_MAX);
+			d += sprintf(d, "%d", config.progress * 100 / FBSPL_PROGRESS_MAX);
 			p += 9;
 		} else {
 			p++;

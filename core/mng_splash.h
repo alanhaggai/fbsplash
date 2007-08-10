@@ -25,8 +25,8 @@ struct anim;
 extern mng_handle mng_load(char *filename, int *w, int *h);
 extern void mng_done(mng_handle mngh);
 extern mng_retcode mng_render_next(mng_handle mngh);
-extern void anim_prerender(struct spl_theme *theme, struct anim *a, bool force);
-extern void anim_render(struct spl_theme *theme, struct anim *a, rect *re, u8* tg);
+extern void anim_prerender(struct fbspl_theme *theme, struct anim *a, bool force);
+extern void anim_render(struct fbspl_theme *theme, struct anim *a, rect *re, u8* tg);
 extern mng_retcode mng_render_proportional(mng_handle mngh, int progress);
 
 /* mng_callbacks.c */
