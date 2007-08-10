@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <fbsplash.h>
 
 int main(int argc, char **argv)
@@ -25,7 +26,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	splash_set_silent(&tty);
+	tty = splash_set_silent();
 	splashr_tty_silent_init();
 	splashr_tty_silent_update();
 	splashr_render_screen(theme, true, false, 's', SPL_EFF_FADEIN);

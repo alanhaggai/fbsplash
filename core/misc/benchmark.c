@@ -28,7 +28,7 @@ int main(int argc, char **argv)
 
 	splashr_message_set(theme, "Benchmarking splashutils.. $progress%");
 
-	splash_set_silent(&tty);
+	tty = splash_set_silent();
 	splashr_input_init();
 
 	splashr_tty_silent_init();
