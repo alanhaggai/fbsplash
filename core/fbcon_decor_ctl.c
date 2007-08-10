@@ -84,8 +84,8 @@ int main(int argc, char **argv)
 	int arg_vc = -1;
 	stheme_t *theme = NULL;
 
-	splash_lib_init(spl_bootup);
-	splashr_init(false);
+	fbsplash_lib_init(spl_bootup);
+	fbsplashr_init(false);
 
 	fd_fbcondecor = fbcon_decor_open(false);
 	if (fd_fbcondecor == -1) {
@@ -110,7 +110,7 @@ int main(int argc, char **argv)
 
 		case 0x102:
 		case 't':
-			splash_acc_theme_set(optarg);
+			fbsplash_acc_theme_set(optarg);
 			break;
 
 		case 0x101:
@@ -149,7 +149,7 @@ int main(int argc, char **argv)
 	/* Only load the theme if it will actually be used. */
 	case setpic:
 	case setcfg:
-		theme = splashr_theme_load();
+		theme = fbsplashr_theme_load();
 	default:
 		break;
 	}
@@ -199,9 +199,9 @@ setpic_out:	break;
 	}
 
 	close(fd_fbcondecor);
-	splashr_theme_free(theme);
-	splashr_cleanup();
-	splash_lib_cleanup();
+	fbsplashr_theme_free(theme);
+	fbsplashr_cleanup();
+	fbsplash_lib_cleanup();
 
 	return err;
 }

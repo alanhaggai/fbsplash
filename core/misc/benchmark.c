@@ -13,44 +13,43 @@ int main(int argc, char **argv)
 {
 	int tty = 0;
 	int i;
-	spl_cfg_t *config;
 	struct spl_theme *theme;
 
-	config = splash_lib_init(spl_bootup);
-	splash_acc_theme_set("test");
+	fbsplash_lib_init(spl_bootup);
+	fbsplash_acc_theme_set("test");
 
-	splashr_init(false);
-	theme = splashr_theme_load();
+	fbsplashr_init(false);
+	theme = fbsplashr_theme_load();
 	if (!theme) {
 		fprintf(stderr, "Failed to load theme.\n");
 		return 1;
 	}
 
-	splashr_message_set(theme, "Benchmarking splashutils.. $progress%");
+	fbsplashr_message_set(theme, "Benchmarking fbsplash.. $progress%");
 
-	tty = splash_set_silent();
-	splashr_input_init();
+	tty = fbsplash_set_silent();
+	fbsplashr_input_init();
 
-	splashr_tty_silent_init();
-	splashr_tty_silent_update();
-	splashr_render_screen(theme, true, false, SPL_EFF_NONE);
+	fbsplashr_tty_silent_init();
+	fbsplashr_tty_silent_update();
+	fbsplashr_render_screen(theme, true, false, SPL_EFF_NONE);
 
 	for (i = 0; i < 65536; i += 64) {
 		char a;
-		splashr_progress_set(theme, i);
-		splashr_render_screen(theme, false, false, SPL_EFF_NONE);
-		a = splashr_input_getkey(false);
+		fbsplashr_progress_set(theme, i);
+		fbsplashr_render_screen(theme, false, false, SPL_EFF_NONE);
+		a = fbsplashr_input_getkey(false);
 		if (a == '\x1b')
 			break;
 	}
 
-	splashr_tty_silent_cleanup();
-	splashr_input_cleanup();
-	splash_set_verbose(tty);
+	fbsplashr_tty_silent_cleanup();
+	fbsplashr_input_cleanup();
+	fbsplash_set_verbose(tty);
 
-	splashr_theme_free(theme);
-	splashr_cleanup();
-	splash_lib_cleanup();
+	fbsplashr_theme_free(theme);
+	fbsplashr_cleanup();
+	fbsplash_lib_cleanup();
 
 	return 0;
 }

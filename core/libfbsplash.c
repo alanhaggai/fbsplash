@@ -73,7 +73,7 @@ static int init_config(spl_type_t type)
 	config.effects = SPL_EFF_NONE;
 	config.verbosity = SPL_VERB_NORMAL;
 	config.type = type;
-	splash_acc_theme_set(SPL_DEFAULT_THEME);
+	fbsplash_acc_theme_set(SPL_DEFAULT_THEME);
 
 	s = getenv("PROGRESS");
 	if (s)
@@ -81,24 +81,24 @@ static int init_config(spl_type_t type)
 
 	s = getenv("BOOT_MSG");
 	if (s) {
-		config.message = strdup(s);
+		fbsplash_acc_message_set(s);
 	} else {
 		switch (type) {
 		case spl_reboot:
-			config.message = strdup(SYSMSG_REBOOT);
+			fbsplash_acc_message_set(SYSMSG_REBOOT);
 			break;
 
 		case spl_shutdown:
-			config.message = strdup(SYSMSG_SHUTDOWN);
+			fbsplash_acc_message_set(SYSMSG_SHUTDOWN);
 			break;
 
 		case spl_bootup:
-			config.message = strdup(SYSMSG_BOOTUP);
+			fbsplash_acc_message_set(SYSMSG_BOOTUP);
 			break;
 
 		case spl_undef:
 		default:
-			config.message = strdup(SYSMSG_DEFAULT);
+			fbsplash_acc_message_set(SYSMSG_DEFAULT);
 			break;
 		}
 	}
@@ -111,11 +111,11 @@ static int init_config(spl_type_t type)
  *
  * @param  type One of: spl_undef, spl_bootup, spl_reboot, spl_shutdown
  * @return Pointer to a config structure used by all routines in libsplash.
- *         You should not attempt to free this pointer.  If a splash_acc_*
+ *         You should not attempt to free this pointer.  If a fbsplash_acc_*
  *         function exists to set a members of this config structure, use it
  *         instead of setting the member directly.
  */
-spl_cfg_t* splash_lib_init(spl_type_t type)
+spl_cfg_t* fbsplash_lib_init(spl_type_t type)
 {
 	detect_endianess(&endianess);
 	init_config(type);
@@ -133,7 +133,7 @@ spl_cfg_t* splash_lib_init(spl_type_t type)
  * Clean up after splash_lib_init() and subsequent calls
  * to any libsplash routines.
  */
-int splash_lib_cleanup(void)
+int fbsplash_lib_cleanup(void)
 {
 	if (config.theme) {
 		free(config.theme);
@@ -166,7 +166,7 @@ int splash_lib_cleanup(void)
  * @return 0 if the command line was parsed correctly, a negative value if
  *	         there was an error.
  */
-int splash_parse_kcmdline(bool sysmsg)
+int fbsplash_parse_kcmdline(bool sysmsg)
 {
 	FILE *fp;
 	char *p, *t, *opt, *pbuf;
@@ -206,7 +206,7 @@ int splash_parse_kcmdline(bool sysmsg)
 				}
 			}
 			t[i] = 0;
-			splash_acc_message_set(t);
+			fbsplash_acc_message_set(t);
 			t[i] = '"';
 		}
 	}
@@ -255,7 +255,7 @@ int splash_parse_kcmdline(bool sysmsg)
 			} else if (!strcmp(opt, "insane")) {
 				config.insane = true;
 			} else if (!strncmp(opt, "theme:", 6)) {
-				splash_acc_theme_set(opt+6);
+				fbsplash_acc_theme_set(opt+6);
 			} else if (!strcmp(opt, "kdgraphics")) {
 				config.kdmode = KD_GRAPHICS;
 			} else if (!strcmp(opt, "profile")) {
@@ -279,7 +279,7 @@ fail:
  * @param old_tty If larger than 0, switch to old_tty instead of the verbose tty
  *                defined by config.tty_v.
  */
-int splash_set_verbose(int old_tty)
+int fbsplash_set_verbose(int old_tty)
 {
 	if (fd_tty0 == -1)
 		return -1;
@@ -294,7 +294,7 @@ int splash_set_verbose(int old_tty)
  *
  * @return True if the silent splash is displayed, false otherwise.
  */
-bool splash_is_silent(void)
+bool fbsplash_is_silent(void)
 {
 	struct vt_stat vtstat;
 
@@ -319,7 +319,7 @@ bool splash_is_silent(void)
  *         xres and yres.  If an error is encountered, xres and
  *         yres will be set to 0.
  */
-void splash_get_res(const char *theme, int *xres, int *yres)
+void fbsplash_get_res(const char *theme, int *xres, int *yres)
 {
 	FILE *fp;
 	char buf[512];
@@ -375,7 +375,7 @@ void splash_get_res(const char *theme, int *xres, int *yres)
  *
  * @param theme The new theme setting.
  */
-void splash_acc_theme_set(const char *theme)
+void fbsplash_acc_theme_set(const char *theme)
 {
 	if (config.theme)
 		free(config.theme);
@@ -388,7 +388,7 @@ void splash_acc_theme_set(const char *theme)
  *
  * @param msg The new message setting.
  */
-void splash_acc_message_set(const char *msg)
+void fbsplash_acc_message_set(const char *msg)
 {
 	if (config.message)
 		free(config.message);
@@ -401,7 +401,7 @@ void splash_acc_message_set(const char *msg)
  *
  * @return Previous tty if successful, a negative value otherwise.
  */
-int splash_set_silent()
+int fbsplash_set_silent()
 {
 	struct vt_stat vtstat;
 	int prev = 0, err;
@@ -414,7 +414,7 @@ int splash_set_silent()
 
 #ifndef TARGET_KERNEL
 	if (fd_tty0 == -1) {
-		err = splash_send("set mode silent\n");
+		err = fbsplash_send("set mode silent\n");
 	} else
 #endif
 	{
@@ -433,7 +433,7 @@ int splash_set_silent()
  *
  * @return 0 on success, -1 in case of a failure.
  */
-int splash_cache_prep(void)
+int fbsplash_cache_prep(void)
 {
 	if (mount("cachedir", SPLASH_CACHEDIR, "tmpfs", MS_MGC_VAL, "mode=0644,size=4096k")) {
 		iprint(MSG_ERROR, "Unable to create splash cache: %s\n", strerror(errno));
@@ -451,7 +451,7 @@ int splash_cache_prep(void)
  * @return 0 if the splash cache was cleaned, a negative value in case of
  *			 an error.
  */
-int splash_cache_cleanup(char **profile_save)
+int fbsplash_cache_cleanup(char **profile_save)
 {
 	int err = 0;
 	char *what = SPLASH_CACHEDIR;
@@ -503,7 +503,7 @@ nosave:
  *
  * @return 0 if the splash daemon is running, a negative value otherwise.
  */
-int splash_check_daemon(int *pid_daemon)
+int fbsplash_check_daemon(int *pid_daemon)
 {
 	int err = 0;
 	FILE *fp;
@@ -548,7 +548,7 @@ stale:
  * @return 0 if it's OK to start the daemon, a negative value otherwise.
  */
 
-int splash_check_sanity(void)
+int fbsplash_check_sanity(void)
 {
 	FILE *fp;
 	char buf[128];
@@ -587,7 +587,7 @@ err:
  *
  * @return 0 if an appropriate event device has been found, a negative value otherwise.
  */
-int splash_set_evdev(void)
+int fbsplash_set_evdev(void)
 {
 	char buf[128];
 	FILE *fp;
@@ -617,7 +617,7 @@ int splash_set_evdev(void)
 	}
 
 	if (buf[0] != 0) {
-		splash_send("set event dev " PATH_DEV "/input/%s\n", buf);
+		fbsplash_send("set event dev " PATH_DEV "/input/%s\n", buf);
 		return 0;
 	} else {
 		return -1;
@@ -629,7 +629,7 @@ int splash_set_evdev(void)
  *
  * @param fmt Format of the data to be saved (printf style).
  */
-int splash_profile(const char *fmt, ...)
+int fbsplash_profile(const char *fmt, ...)
 {
 	va_list ap;
 	FILE *fp;
@@ -660,7 +660,7 @@ int splash_profile(const char *fmt, ...)
  *
  * @param fmt Format of the data to be sent (printf style).
  */
-int splash_send(const char *fmt, ...)
+int fbsplash_send(const char *fmt, ...)
 {
 	char cmd[256];
 	va_list ap;
@@ -688,7 +688,7 @@ int splash_send(const char *fmt, ...)
 	va_end(ap);
 
 	fprintf(fp_fifo, cmd);
-	splash_profile("comm %s", cmd);
+	fbsplash_profile("comm %s", cmd);
 	return 0;
 }
 

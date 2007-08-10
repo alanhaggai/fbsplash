@@ -36,7 +36,7 @@ int cmd_exit(void **args)
 
 	if (ctty == CTTY_SILENT) {
 		if (config.effects & SPL_EFF_FADEOUT)
-			splashr_render_screen(theme, true, false, SPL_EFF_FADEOUT);
+			fbsplashr_render_screen(theme, true, false, SPL_EFF_FADEOUT);
 
 		/* Switch to the verbose tty if we're in silent mode when the
 		 * 'exit' command is received. */
@@ -45,9 +45,9 @@ int cmd_exit(void **args)
 
 	pthread_mutex_unlock(&mtx_paint);
 
-	splashr_theme_free(theme);
-	splashr_cleanup();
-	splash_lib_cleanup();
+	fbsplashr_theme_free(theme);
+	fbsplashr_cleanup();
+	fbsplash_lib_cleanup();
 
 	for (i = svcs.head; i != NULL; ) {
 		j = i->next;
@@ -69,7 +69,7 @@ int cmd_exit(void **args)
  */
 int cmd_set_theme(void **args)
 {
-	splash_acc_theme_set(args[0]);
+	fbsplash_acc_theme_set(args[0]);
 	pthread_mutex_lock(&mtx_paint);
 	reload_theme();
 	pthread_mutex_unlock(&mtx_paint);
@@ -221,7 +221,7 @@ int cmd_paint(void **args)
 	if (ctty != CTTY_SILENT)
 		goto out;
 
-	splashr_render_screen(theme, false, false, SPL_EFF_NONE);
+	fbsplashr_render_screen(theme, false, false, SPL_EFF_NONE);
 out:
 	pthread_mutex_unlock(&mtx_paint);
 	return ret;
@@ -247,9 +247,9 @@ int cmd_repaint(void **args)
 
 	if (config.effects & SPL_EFF_FADEIN) {
 		config.effects &= ~SPL_EFF_FADEIN;
-		splashr_render_screen(theme, true, false, SPL_EFF_FADEIN);
+		fbsplashr_render_screen(theme, true, false, SPL_EFF_FADEIN);
 	} else {
-		splashr_render_screen(theme, true, false, SPL_EFF_NONE);
+		fbsplashr_render_screen(theme, true, false, SPL_EFF_NONE);
 	}
 out:
 	pthread_mutex_unlock(&mtx_paint);
@@ -265,7 +265,7 @@ out:
  */
 int cmd_progress(void **args)
 {
-	splashr_progress_set(theme, *(int*)args[0]);
+	fbsplashr_progress_set(theme, *(int*)args[0]);
 	return 0;
 }
 
@@ -277,7 +277,7 @@ int cmd_progress(void **args)
  */
 int cmd_set_mesg(void **args)
 {
-	splashr_message_set(theme, args[0]);
+	fbsplashr_message_set(theme, args[0]);
 	return 0;
 }
 

@@ -1,5 +1,5 @@
 LDLIBS = -lfbsplashrender
-CFLAGS = -g -Wall
+CFLAGS = -g -Wall -I../objs
 
 all: splashtest benchmark blittest
 

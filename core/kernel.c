@@ -56,12 +56,12 @@ int handle_init(bool update)
 	if (!update)
 		prep_io();
 
-	splashr_init(true);
+	fbsplashr_init(true);
 
 	/* Parse the kernel command line to get splash settings. */
 	mkdir(PATH_PROC,0700);
 	h = mount("proc", PATH_PROC, "proc", 0, NULL);
-	splash_parse_kcmdline(true);
+	fbsplash_parse_kcmdline(true);
 	if (h == 0)
 		umount(PATH_PROC);
 
@@ -77,7 +77,7 @@ int handle_init(bool update)
 #endif
 	}
 
-	theme = splashr_theme_load();
+	theme = fbsplashr_theme_load();
 	if (!theme)
 		return -1;
 
@@ -126,9 +126,9 @@ noverbose:
 
 	fd_tty0 = open("/dev/console", O_RDWR);
 
-	splash_set_silent(NULL);
-	splashr_tty_silent_init();
-	splashr_tty_silent_update();
+	fbsplash_set_silent(NULL);
+	fbsplashr_tty_silent_init();
+	fbsplashr_tty_silent_update();
 
 	/* Redirect all kernel messages to tty1 so that they don't get
 	 * printed over our silent splash image. */
@@ -139,7 +139,7 @@ noverbose:
 	if (config.kdmode == KD_GRAPHICS)
 		ioctl(fd_tty[config.tty_s], KDSETMODE, KD_GRAPHICS);
 
-	splashr_render_screen(theme, true, true, config.effects);
+	fbsplashr_render_screen(theme, true, true, config.effects);
 
 #ifdef CONFIG_FBCON_DECOR
 	if (fbcon_decor && config.reqmode & SPL_MODE_VERBOSE)
@@ -160,7 +160,7 @@ int main(int argc, char **argv)
 	if (argc < 3)
 		goto out;
 
-	splash_lib_init(spl_undef);
+	fbsplash_lib_init(spl_undef);
 
 	if (strcmp(argv[1],"2") && strcmp(argv[1], "1")) {
 		fprintf(stderr, "Splash protocol mismatch: %s\n", argv[1]);
@@ -184,7 +184,7 @@ int main(int argc, char **argv)
 	/* On 'init' the theme isn't defined yet, and thus NULL is passed
 	 * instead of any meaningful value. */
 	if (argc > i && argv[i]) {
-		splash_acc_theme_set(argv[i]);
+		fbsplash_acc_theme_set(argv[i]);
 	}
 	mkdir(PATH_SYS, 0700);
 	if (!mount("sysfs", PATH_SYS, "sysfs", 0, NULL))
@@ -200,7 +200,7 @@ int main(int argc, char **argv)
 	else if (config.theme) {
 		stheme_t *theme;
 
-		splashr_init(false);
+		fbsplashr_init(false);
 
 		fd_fbcondecor = fbcon_decor_open(true);
 		if (fd_fbcondecor == -1) {
@@ -209,7 +209,7 @@ int main(int argc, char **argv)
 			goto out;
 		}
 
-		theme = splashr_theme_load();
+		theme = fbsplashr_theme_load();
 		if (!theme) {
 			err = -1;
 			goto out;

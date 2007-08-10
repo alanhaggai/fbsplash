@@ -169,7 +169,7 @@ static int splash_config_gentoo(spl_cfg_t *cfg, spl_type_t type)
 
 	t = rc_get_config_entry(confd, "SPLASH_THEME");
 	if (t)
-		splash_acc_theme_set(t);
+		fbsplash_acc_theme_set(t);
 
 	t = rc_get_config_entry(confd, "SPLASH_MODE_REQ");
 	if (t) {
@@ -190,20 +190,20 @@ static int splash_config_gentoo(spl_cfg_t *cfg, spl_type_t type)
 	case spl_reboot:
 		t = rc_get_config_entry(confd, "SPLASH_REBOOT_MESSAGE");
 		if (t)
-			splash_acc_message_set(t);
+			fbsplash_acc_message_set(t);
 		break;
 
 	case spl_shutdown:
 		t = rc_get_config_entry(confd, "SPLASH_SHUTDOWN_MESSAGE");
 		if (t)
-			splash_acc_message_set(t);
+			fbsplash_acc_message_set(t);
 		break;
 
 	case spl_bootup:
 	default:
 		t = rc_get_config_entry(confd, "SPLASH_BOOT_MESSAGE");
 		if (t)
-			splash_acc_message_set(t);
+			fbsplash_acc_message_set(t);
 		break;
 	}
 
@@ -264,9 +264,9 @@ static int splash_theme_hook(const char *name, const char *type, const char *arg
 	int l = 256;
 
 	if (arg1)
-		splash_profile("%s %s %s\n", type, name, arg1);
+		fbsplash_profile("%s %s %s\n", type, name, arg1);
 	else
-		splash_profile("%s %s\n", type, name);
+		fbsplash_profile("%s %s\n", type, name);
 
 	l += strlen(name);
 	l += strlen(config->theme);
@@ -292,10 +292,10 @@ static int splash_svc_state(const char *name, const char *state, bool paint)
 	if (paint)
 		splash_theme_hook(state, "pre", name);
 
-	splash_send("update_svc %s %s\n", name, state);
+	fbsplash_send("update_svc %s %s\n", name, state);
 
 	if (paint) {
-		splash_send("paint\n");
+		fbsplash_send("paint\n");
 		splash_theme_hook(state, "post", name);
 	}
 
@@ -319,7 +319,7 @@ static void splash_init_res()
 
 	close(fh);
 
-	splash_get_res(config->theme, (int*)&var.xres, (int*)&var.yres);
+	fbsplash_get_res(config->theme, (int*)&var.xres, (int*)&var.yres);
 	xres = var.xres;
 	yres = var.yres;
 }
@@ -333,7 +333,7 @@ static int splash_init(bool start)
 	char **tmp;
 
 	config->verbosity = SPL_VERB_QUIET;
-	if (splash_check_daemon(&pid_daemon)) {
+	if (fbsplash_check_daemon(&pid_daemon)) {
 		config->verbosity = SPL_VERB_NORMAL;
 		return -1;
 	}
@@ -410,8 +410,8 @@ static int splash_svc_handle(const char *name, const char *state, bool skip)
 
 	splash_theme_hook(state, "pre", name);
 	splash_svc_state(name, state, 0);
-	splash_send("progress %d\n", config->progress);
-	splash_send("paint\n");
+	fbsplash_send("progress %d\n", config->progress);
+	fbsplash_send("paint\n");
 	splash_theme_hook(state, "post", name);
 
 	return 0;
@@ -530,13 +530,13 @@ static int splash_start(const char *runlevel)
 	/* Get a list of services that we'll have to handle. */
 	/* We're rebooting/shutting down. */
 	if (!strcmp(runlevel, RC_LEVEL_SHUTDOWN) || !strcmp(runlevel, RC_LEVEL_REBOOT)) {
-		if ((err = splash_cache_prep()))
+		if ((err = fbsplash_cache_prep()))
 			return err;
 		splash_svcs_stop(runlevel);
 		start = false;
 	/* We're booting. */
 	} else {
-		if ((err = splash_cache_prep()))
+		if ((err = fbsplash_cache_prep()))
 			return err;
 		splash_svcs_start();
 		start = true;
@@ -545,7 +545,7 @@ static int splash_start(const char *runlevel)
 	splash_theme_hook("rc_init", "pre", runlevel);
 
 	/* Perform sanity checks (console=, CONSOLE= etc). */
-	if (splash_check_sanity())
+	if (fbsplash_check_sanity())
 		return -1;
 
 	/* Start the splash daemon */
@@ -572,10 +572,10 @@ static int splash_start(const char *runlevel)
 		splash_svc_state(svcs[i], start ? "svc_inactive_start" : "svc_inactive_stop", 0);
 	}
 
-	splash_set_evdev();
-	splash_send("set tty silent %d\n", config->tty_s);
-	splash_send("set mode silent\n");
-	splash_send("repaint\n");
+	fbsplash_set_evdev();
+	fbsplash_send("set tty silent %d\n", config->tty_s);
+	fbsplash_send("set mode silent\n");
+	fbsplash_send("repaint\n");
 	return err;
 }
 
@@ -588,7 +588,7 @@ static int splash_stop(const char *runlevel)
 	char buf[128];
 	int cnt = 0;
 
-	splash_send("exit\n");
+	fbsplash_send("exit\n");
 	snprintf(buf, 128, "/proc/%d", pid_daemon);
 
 	/* Wait up to 1.0s for the splash daemon to exit. */
@@ -598,15 +598,15 @@ static int splash_stop(const char *runlevel)
 	}
 
 	/* Just to be sure we aren't stuck in a black ex-silent tty.. */
-	if (splash_is_silent())
-		splash_set_verbose(0);
+	if (fbsplash_is_silent())
+		fbsplash_set_verbose(0);
 
 	/* If we don't get a runlevel argument, then we're being executed
 	 * because of a rc-abort event and we don't save any data. */
 	if (runlevel == NULL) {
-		return splash_cache_cleanup(NULL);
+		return fbsplash_cache_cleanup(NULL);
 	} else {
-		return splash_cache_cleanup(save);
+		return fbsplash_cache_cleanup(save);
 	}
 }
 
@@ -676,9 +676,9 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	}
 
 	if (!config) {
-		config = splash_lib_init(type);
+		config = fbsplash_lib_init(type);
 		splash_config_gentoo(config, type);
-		splash_parse_kcmdline(false);
+		fbsplash_parse_kcmdline(false);
 	}
 
 	/* Extremely weird.. should never happen. */
@@ -695,12 +695,12 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		 * from splash_start(). */
 		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
 			if ((i = splash_start(name))) {
-				splash_set_verbose(0);
+				fbsplash_set_verbose(0);
 				return i;
 			} else {
 				if (rc_service_state("gpm", rc_service_started)) {
-					splash_send("set gpm\n");
-					splash_send("repaint\n");
+					fbsplash_send("set gpm\n");
+					fbsplash_send("repaint\n");
 				}
 			}
 			splash_theme_hook("rc_init", "post", name);
@@ -708,7 +708,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		} else {
 			splash_theme_hook("rc_exit", "pre", name);
 			splash_theme_hook("rc_exit", "post", name);
-			splash_lib_cleanup();
+			fbsplash_lib_cleanup();
 			config = NULL;
 		}
 		break;
@@ -718,14 +718,14 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		 * something went wrong along the way. */
 		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
 			config->verbosity = SPL_VERB_QUIET;
-			i = splash_check_daemon(&pid_daemon);
+			i = fbsplash_check_daemon(&pid_daemon);
 			config->verbosity = SPL_VERB_NORMAL;
 			if (i)
 				return -1;
 
-			splash_send("progress %d\n", SPL_PROGRESS_MAX);
-			splash_send("paint\n");
-			splash_cache_cleanup(NULL);
+			fbsplash_send("progress %d\n", SPL_PROGRESS_MAX);
+			fbsplash_send("paint\n");
+			fbsplash_cache_cleanup(NULL);
 		}
 		break;
 
@@ -736,7 +736,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		 * scripts. */
 		if (strcmp(name, bootlevel) == 0) {
 			if ((i = splash_start(RC_LEVEL_SYSINIT)))
-				splash_set_verbose(0);
+				fbsplash_set_verbose(0);
 			splash_theme_hook("rc_init", "post", RC_LEVEL_SYSINIT);
 			splash_theme_hook("rc_exit", "pre", RC_LEVEL_SYSINIT);
 			splash_theme_hook("rc_exit", "post", RC_LEVEL_SYSINIT);
@@ -749,19 +749,19 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		/* Stop the splash daemon after boot-up is finished. */
 		if (strcmp(name, bootlevel)) {
 			config->verbosity = SPL_VERB_QUIET;
-			i = splash_check_daemon(&pid_daemon);
+			i = fbsplash_check_daemon(&pid_daemon);
 			config->verbosity = SPL_VERB_NORMAL;
 			if (i)
 				return -1;
 
 			/* Make sure the progress indicator reaches 100%, even if
 			 * something went wrong along the way. */
-			splash_send("progress %d\n", SPL_PROGRESS_MAX);
-			splash_send("paint\n");
+			fbsplash_send("progress %d\n", SPL_PROGRESS_MAX);
+			fbsplash_send("paint\n");
 			splash_theme_hook("rc_exit", "pre", name);
 			i = splash_stop(name);
 			splash_theme_hook("rc_exit", "post", name);
-			splash_lib_cleanup();
+			fbsplash_lib_cleanup();
 			config = NULL;
 		}
 		break;
@@ -796,7 +796,7 @@ do_start:
 
 	case rc_hook_service_start_done:
 		config->verbosity = SPL_VERB_QUIET;
-		i = splash_check_daemon(&pid_daemon);
+		i = fbsplash_check_daemon(&pid_daemon);
 		config->verbosity = SPL_VERB_NORMAL;
 		if (i)
 			return -1;
@@ -813,21 +813,21 @@ do_start:
 					usleep(10000);
 					cnt++;
 				}
-				splash_send("set gpm\n");
+				fbsplash_send("set gpm\n");
 			}
 
 			i = splash_svc_state(name, "svc_started", 1);
 
 			if (gpm) {
-				splash_send("repaint\n");
+				fbsplash_send("repaint\n");
 			}
 		} else {
 			i = splash_svc_state(name, "svc_start_failed", 1);
 			if (config->vonerr) {
-				splash_set_verbose(0);
+				fbsplash_set_verbose(0);
 			}
 		}
-		splash_lib_cleanup();
+		fbsplash_lib_cleanup();
 		config = NULL;
 		break;
 
@@ -850,7 +850,7 @@ do_start:
 
 	case rc_hook_service_stop_done:
 		config->verbosity = SPL_VERB_QUIET;
-		i = splash_check_daemon(&pid_daemon);
+		i = fbsplash_check_daemon(&pid_daemon);
 		config->verbosity = SPL_VERB_NORMAL;
 		if (i)
 			return -1;
@@ -860,16 +860,16 @@ do_start:
 		} else {
 			i = splash_svc_state(name, "svc_stop_failed", 1);
 			if (config->vonerr) {
-				splash_set_verbose(0);
+				fbsplash_set_verbose(0);
 			}
 		}
-		splash_lib_cleanup();
+		fbsplash_lib_cleanup();
 		config = NULL;
 		break;
 
 	case rc_hook_abort:
 		i = splash_stop(name);
-		splash_lib_cleanup();
+		fbsplash_lib_cleanup();
 		config = NULL;
 		break;
 

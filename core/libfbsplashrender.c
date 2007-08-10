@@ -117,7 +117,7 @@ static void fb_cmap_directcolor_set(int fd)
  *
  * @param create Create device nodes if they're missing.
  */
-int splashr_init(bool create)
+int fbsplashr_init(bool create)
 {
 	memset(fd_tty, -1, sizeof(fd_tty));
 
@@ -142,7 +142,7 @@ int splashr_init(bool create)
  *
  * @return 0 on success, a negative value otherwise.
  */
-int splashr_input_init()
+int fbsplashr_input_init()
 {
 	int err;
 
@@ -160,9 +160,9 @@ int splashr_input_init()
 }
 
 /**
- * Clean up after splashr_input_init().
+ * Clean up after fbsplashr_input_init().
  */
-void splashr_input_cleanup()
+void fbsplashr_input_cleanup()
 {
 	if (fd_console != -1)
 		close(fd_console);
@@ -177,7 +177,7 @@ void splashr_input_cleanup()
  *
  * @param block If true, this function will block.
  */
-unsigned char splashr_input_getkey(bool block)
+unsigned char fbsplashr_input_getkey(bool block)
 {
 	unsigned char a;
 	int err;
@@ -203,10 +203,10 @@ unsigned char splashr_input_getkey(bool block)
 }
 
 /**
- * Cleanup after splashr_init() and subsequent calls to any
+ * Cleanup after fbsplashr_init() and subsequent calls to any
  * libsplashrender routines.
  */
-void splashr_cleanup()
+void fbsplashr_cleanup()
 {
 	int i;
 
@@ -239,7 +239,7 @@ void splashr_cleanup()
  *
  * @return 0 on success, a negative value otherwise.
  */
-int splashr_render_buf(stheme_t *theme, void *buffer, bool repaint)
+int fbsplashr_render_buf(stheme_t *theme, void *buffer, bool repaint)
 {
 	/* FIXME: 8bpp modes aren't supported yet */
 	if (fbd.var.bits_per_pixel == 8)
@@ -270,9 +270,9 @@ int splashr_render_buf(stheme_t *theme, void *buffer, bool repaint)
  *
  * @return 0 on success, a negative value otherwise.
  */
-int splashr_render_screen(stheme_t *theme, bool repaint, bool bgnd, char effects)
+int fbsplashr_render_screen(stheme_t *theme, bool repaint, bool bgnd, char effects)
 {
-	if (!splashr_render_buf(theme, theme->bgbuf, repaint)) {
+	if (!fbsplashr_render_buf(theme, theme->bgbuf, repaint)) {
 		if (repaint) {
 			if (effects & SPL_EFF_FADEIN) {
 				fade(theme, fb_mem, theme->bgbuf, theme->silent_img.cmap, bgnd ? 1 : 0, fd_fb, 0);
@@ -297,9 +297,9 @@ int splashr_render_screen(stheme_t *theme, bool repaint, bool bgnd, char effects
  * Load a splash theme specified by config.theme.
  *
  * @return A pointer to a theme descriptor, which is then passed to any
- *         libsplashrender functions.
+ *         libfbsplashrender functions.
  */
-stheme_t *splashr_theme_load()
+stheme_t *fbsplashr_theme_load()
 {
 	char buf[512];
 	stheme_t *st;
@@ -315,7 +315,7 @@ stheme_t *splashr_theme_load()
 	st->xres = fbd.var.xres;
 	st->yres = fbd.var.yres;
 
-	splash_get_res(config.theme, &st->xres, &st->yres);
+	fbsplash_get_res(config.theme, &st->xres, &st->yres);
 	if (st->xres == 0 || st->yres == 0)
 		return NULL;
 
@@ -363,11 +363,11 @@ stheme_t *splashr_theme_load()
 }
 
 /**
- * Free a theme descriptor struct returned by splashr_theme_load().
+ * Free a theme descriptor struct returned by fbsplashr_theme_load().
  *
  * @param theme Theme descriptor to be freed.
  */
-void splashr_theme_free(stheme_t *theme)
+void fbsplashr_theme_free(stheme_t *theme)
 {
 	item *i, *j;
 
@@ -430,7 +430,7 @@ static void vt_cursor_enable(int fd)
 /**
  * Prepare the silent tty (config.tty_s) for displaying the silent splash screen.
  */
-int splashr_tty_silent_init()
+int fbsplashr_tty_silent_init()
 {
 	struct termios w;
 	int fd;
@@ -456,9 +456,9 @@ int splashr_tty_silent_init()
 }
 
 /**
- * Restore the silent tty to its previous settings after a call to splashr_tty_silent_init().
+ * Restore the silent tty to its previous settings after a call to fbsplashr_tty_silent_init().
  */
-int splashr_tty_silent_cleanup()
+int fbsplashr_tty_silent_cleanup()
 {
 	struct termios w;
 	int fd;
@@ -485,7 +485,7 @@ int splashr_tty_silent_cleanup()
  *
  * @param tty The new silent tty.
  */
-int splashr_tty_silent_set(int tty)
+int fbsplashr_tty_silent_set(int tty)
 {
 	if (tty < 0 || tty > MAX_NR_CONSOLES)
 		return -1;
@@ -508,7 +508,7 @@ int splashr_tty_silent_set(int tty)
  *
  * @return 0 if all settings have been updated, 1 if the theme has to be reloaded.
  */
-int splashr_tty_silent_update()
+int fbsplashr_tty_silent_update()
 {
 	struct fb_var_screeninfo old_var;
 	struct fb_fix_screeninfo old_fix;
@@ -547,9 +547,9 @@ int splashr_tty_silent_update()
  * @param theme Theme descriptor.
  * @param msg The new main message.
  */
-void splashr_message_set(stheme_t *theme, const char *msg)
+void fbsplashr_message_set(stheme_t *theme, const char *msg)
 {
-	splash_acc_message_set(msg);
+	fbsplash_acc_message_set(msg);
 
 #if WANT_TTF
 	obj *o;
@@ -572,7 +572,7 @@ void splashr_message_set(stheme_t *theme, const char *msg)
  * @param theme Theme descriptor.
  * @param progress The new progress value.
  */
-void splashr_progress_set(stheme_t *theme, int progress)
+void fbsplashr_progress_set(stheme_t *theme, int progress)
 {
 	if (progress < 0)
 		progress = 0;

@@ -119,7 +119,7 @@ void *thf_anim(void *unused)
 			anim_render_frame(ca);
 
 			if (ctty == CTTY_SILENT)
-				splashr_render_screen(theme, true, false, SPL_EFF_NONE);
+				fbsplashr_render_screen(theme, true, false, SPL_EFF_NONE);
 		}
 	}
 	pthread_mutex_unlock(&mtx_paint);
@@ -146,7 +146,7 @@ void *thf_anim(void *unused)
 				anim_render_frame(ca);
 
 				if (ctty == CTTY_SILENT)
-					splashr_render_screen(theme, true, false, SPL_EFF_NONE);
+					fbsplashr_render_screen(theme, true, false, SPL_EFF_NONE);
 			}
 
 			if (mng->wait_msecs < delay && mng->wait_msecs > 0) {
@@ -198,7 +198,7 @@ void *thf_anim(void *unused)
 					anim_render_frame(ca);
 			}
 		}
-		splashr_render_screen(theme, true, false, SPL_EFF_NONE);
+		fbsplashr_render_screen(theme, true, false, SPL_EFF_NONE);
 
 next:	pthread_mutex_unlock(&mtx_paint);
 		pthread_setcancelstate(oldstate, NULL);
@@ -217,7 +217,7 @@ void vt_silent_init(void)
 {
 	struct vt_mode vt;
 
-	splashr_tty_silent_init();
+	fbsplashr_tty_silent_init();
 	ioctl(fd_tty[config.tty_s], TIOCSCTTY, 0);
 
 	vt.mode   = VT_PROCESS;
@@ -241,7 +241,7 @@ void vt_silent_cleanup(void)
 	ioctl(fd_tty[config.tty_s], KDSETMODE, KD_TEXT);
 	ioctl(fd_tty[config.tty_s], VT_SETMODE, &vt);
 
-	splashr_tty_silent_cleanup();
+	fbsplashr_tty_silent_cleanup();
 	return;
 }
 
@@ -252,7 +252,7 @@ void switch_silent()
 {
 	pthread_mutex_lock(&mtx_paint);
 
-	if (splashr_tty_silent_update()) {
+	if (fbsplashr_tty_silent_update()) {
 		if (reload_theme()) {
 			iprint(MSG_ERROR, "Failed to (re-)load the '%s' theme.\n", config.theme);
 			exit(1);
@@ -426,7 +426,7 @@ void switchmon_start(int update, int stty)
 	if (update & UPD_SILENT) {
 		if (config.tty_s != stty) {
 			vt_silent_cleanup();
-			splashr_tty_silent_set(stty);
+			fbsplashr_tty_silent_set(stty);
 		}
 		vt_silent_init();
 	}
@@ -462,8 +462,8 @@ int reload_theme(void)
 	pthread_cancel(th_anim);
 #endif
 
-	splashr_theme_free(theme);
-	theme = splashr_theme_load();
+	fbsplashr_theme_free(theme);
+	theme = fbsplashr_theme_load();
 
 	for (i = svcs.head ; i != NULL; i = i->next) {
 		svc_state *ss = (svc_state*)i->p;
@@ -527,7 +527,7 @@ void daemon_start()
 	struct vt_stat vtstat;
 	sigset_t sigset;
 
-	if (!config.minstances && (i = daemon_check_running("splash_util"))) {
+	if (!config.minstances && (i = daemon_check_running("fbsplashd"))) {
 		iprint(MSG_ERROR, "It looks like there's another instance of the splash daemon running (pid %d).\n", i);
 		iprint(MSG_ERROR, "Stop it first or run this program with `--minstances'.\n");
 		exit(1);
@@ -662,8 +662,8 @@ int main(int argc, char **argv)
 	int err = 0;
 	int arg_vc = -1;
 
-	splash_lib_init(spl_undef);
-	splashr_init(false);
+	fbsplash_lib_init(spl_undef);
+	fbsplashr_init(false);
 
 	arg_vc = -1;
 
@@ -679,7 +679,7 @@ int main(int argc, char **argv)
 
 		case 0x100:
 		case 't':
-			splash_acc_theme_set(optarg);
+			fbsplash_acc_theme_set(optarg);
 			break;
 
 		case 'p':
@@ -692,9 +692,7 @@ int main(int argc, char **argv)
 			break;
 #ifdef CONFIG_TTF
 		case 0x103:
-			if (config.message)
-				free(config.message);
-			config.message = strdup(optarg);
+			fbsplash_acc_message_set(optarg);
 			break;
 #endif
 		case 0x104:
@@ -738,10 +736,10 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (splash_is_silent())
+	if (fbsplash_is_silent())
 		config.effects &= ~SPL_EFF_FADEIN;
 
-	theme = splashr_theme_load();
+	theme = fbsplashr_theme_load();
 	if (!theme) {
 		iprint(MSG_ERROR, "Failed to load theme '%s'.\n", config.theme);
 		exit(1);

@@ -95,8 +95,8 @@ int main(int argc, char **argv)
 	int arg_vc = -1;
 	stheme_t *theme = NULL;
 
-	splash_lib_init(spl_bootup);
-	splashr_init(false);
+	fbsplash_lib_init(spl_bootup);
+	fbsplashr_init(false);
 
 	arg_task = none;
 	arg_vc = -1;
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
 
 		case 0x103:
 		case 't':
-			splash_acc_theme_set(optarg);
+			fbsplash_acc_theme_set(optarg);
 			break;
 
 		case 0x102:
@@ -175,7 +175,7 @@ int main(int argc, char **argv)
 	case paint:
 	case repaint:
 #endif
-		theme = splashr_theme_load();
+		theme = fbsplashr_theme_load();
 		if (!theme)
 			exit(1);
 	default:
@@ -191,33 +191,33 @@ int main(int argc, char **argv)
 	{
 		int xres = fbd.var.xres;
 		int yres = fbd.var.yres;
-		splash_get_res(config.theme, &xres, &yres);
+		fbsplash_get_res(config.theme, &xres, &yres);
 		printf("%dx%d\n", xres, yres);
 		return 0;
 	}
 
 	case setmode:
 		if (config.reqmode & SPL_MODE_SILENT) {
-			splashr_tty_silent_init();
-			splash_set_silent(NULL);
+			fbsplashr_tty_silent_init();
+			fbsplash_set_silent(NULL);
 		} else {
-			splashr_tty_silent_cleanup();
-			splash_set_verbose(0);
+			fbsplashr_tty_silent_cleanup();
+			fbsplash_set_verbose(0);
 		}
 		break;
 
 	case getmode:
-		printf("%s\n", splash_is_silent() ? "silent" : "verbose");
+		printf("%s\n", fbsplash_is_silent() ? "silent" : "verbose");
 		break;
 
 #ifdef CONFIG_DEPRECATED
 	/* Deprecated. The daemon mode should be used instead. */
 	case paint:
-		splashr_render_screen(theme, false, false, SPL_EFF_NONE);
+		fbsplashr_render_screen(theme, false, false, SPL_EFF_NONE);
 		break;
 
 	case repaint:
-		splashr_render_screen(theme, true, false, SPL_EFF_NONE);
+		fbsplashr_render_screen(theme, true, false, SPL_EFF_NONE);
 		break;
 #endif /* CONFIG_DEPRECATED */
 
@@ -225,9 +225,9 @@ int main(int argc, char **argv)
 		break;
 	}
 
-	splashr_theme_free(theme);
-	splashr_cleanup();
-	splash_lib_cleanup();
+	fbsplashr_theme_free(theme);
+	fbsplashr_cleanup();
+	fbsplash_lib_cleanup();
 
 	return err;
 }
