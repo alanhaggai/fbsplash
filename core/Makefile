@@ -181,7 +181,7 @@ config.h:
 		exit 1 ; \
 	fi
 
-$(OBJDIR)/fbsplash.h:
+$(OBJDIR)/fbsplash.h: fbsplash.h config.h
 	$(Q)cat fbsplash.h | sed -e "s!#define LIBDIR.*!#define LIBDIR \"/$(LIB)\"!" > objs/fbsplash.h
 
 $(OBJDIR)/$(SP_UTIL): $(OBJDIR)/util.o $(OBJDIR)/libfbsplash.la $(OBJDIR)/libfbsplashrender.la
