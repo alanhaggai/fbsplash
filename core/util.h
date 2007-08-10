@@ -50,11 +50,6 @@ typedef enum { little, big } sendian_t;
 #define MSG_WARN		2
 #define MSG_INFO		3
 
-/* Verbosity levels */
-#define VERB_QUIET		0
-#define VERB_NORMAL		1
-#define VERB_HIGH	    2
-
 #define SYSMSG_DEFAULT  "Initializing the kernel..."
 #define SYSMSG_BOOTUP	"Booting the system ($progress%)... Press F2 for verbose mode."
 #define SYSMSG_REBOOT	"Rebooting the system ($progress%)... Press F2 for verbose mode."

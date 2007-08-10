@@ -24,6 +24,11 @@
 #define SPL_EFF_FADEIN		1
 #define SPL_EFF_FADEOUT		2
 
+/* Verbosity levels */
+#define VERB_QUIET		0
+#define VERB_NORMAL		1
+#define VERB_HIGH	    2
+
 struct spl_theme;
 
 typedef enum { spl_undef, spl_bootup, spl_reboot, spl_shutdown } spl_type_t;
