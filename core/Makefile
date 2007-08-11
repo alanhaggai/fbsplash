@@ -345,10 +345,6 @@ ifeq ($(call config_opt,CONFIG_HELPER),true)
 	$(Q)ln -sf $(SP_HELPER) $(DESTDIR)$(sbindir)/splash_helper
 	$(Q)$(call install_script,$(SP_GIRAM))
 endif
-ifeq ($(call config_opt,CONFIG_FBCON_DECOR),true)
-	@$(call infmsg,INSTALL,fbcondecor_ctl)
-	$(Q)$(INSTALL_PROG) -D $(OBJDIR)/fbcondecor_ctl $(DESTDIR)$(sbindir)/fbcondecor_ctl
-endif
 	@$(call infmsg,INSTALL,libfbsplash.so)
 	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/libfbsplash.la $(DESTDIR)$(usrlibdir)/libfbsplash.la
 	@$(call infmsg,INSTALL,libfbsplashrender.so)
@@ -361,6 +357,10 @@ endif
 	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL) $(DESTDIR)$(usrbindir)/$(SP_UTIL)
 	@$(call infmsg,INSTALL,$(SP_UTIL).static)
 	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/$(SP_UTIL).static $(DESTDIR)$(bindir)/$(SP_UTIL).static
+ifeq ($(call config_opt,CONFIG_FBCON_DECOR),true)
+	@$(call infmsg,INSTALL,fbcondecor_ctl)
+	$(Q)libtool $(LQ) --mode=install $(INSTALL_PROG) -D $(OBJDIR)/fbcondecor_ctl $(DESTDIR)$(sbindir)/fbcondecor_ctl
+endif
 	@$(call infmsg,INSTALL,fbsplash.h)
 	$(Q)$(INSTALL_PROG) -D objs/fbsplash.h $(DESTDIR)$(incdir)/fbsplash.h
 	@$(call infmsg,INSTALL,splash-functions.sh)
