@@ -225,16 +225,6 @@ Silent mode directives
       image will be extended downward, until it reaches the
       full size of 50 x 200 pixels.
 
-* rect <attr> <x0> <y0> <x1> <y1>
-  Describes a rectangular area on the screen with some special
-  attribute 'attr'.
-
-  Available attributes:
-
-  repaint - causes the area to be repainted every time splash_util
-            is called with the 'paint' command (with 'repaint', the
-            whole screen is repainted)
-
 * anim <once|loop|proportional> <path> <x> <y> [state service]
 
   Displays a MNG animation on the silent splash screen at (x,y).
