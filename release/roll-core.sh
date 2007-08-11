@@ -29,8 +29,8 @@ if [[ ${TESTING} == "no" ]]; then
 	eend $?
 
 	ebegin Copying the tarballs to the SDS
-	cp splashutils-${ver}.tar.bz2 ${SDS_ROOT}/htdocs/projects/gensplash/archive
-	cp splashutils-lite-${ver}.tar.bz2 ${SDS_ROOT}/htdocs/projects/gensplash/archive
+	cp splashutils-${ver}.tar.bz2 ${SDS_ROOT}/htdocs/projects/fbnsplash/archive
+	cp splashutils-lite-${ver}.tar.bz2 ${SDS_ROOT}/htdocs/projects/fbsplash/archive
 	eend $?
 fi
 

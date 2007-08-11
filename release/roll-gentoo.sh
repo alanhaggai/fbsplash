@@ -42,6 +42,6 @@ if [[ "${TESTING}" == "no" ]]; then
 	eend $?
 
 	ebegin Copying the tarball to the SDS
-	cp splashutils-gentoo-${ver}.tar.bz2 ${SDS_ROOT}/htdocs/projects/gensplash/archive
+	cp splashutils-gentoo-${ver}.tar.bz2 ${SDS_ROOT}/htdocs/projects/fbsplash/archive
 	eend $?
 fi
