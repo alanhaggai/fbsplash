@@ -59,13 +59,13 @@ typedef struct
 } fbspl_cfg_t;
 
 fbspl_cfg_t* fbsplash_lib_init(fbspl_type_t type);
-int fbsplash_lib_cleanup();
+int fbsplash_lib_cleanup(void);
 int fbsplash_parse_kcmdline(bool sysmsg);
 void fbsplash_get_res(const char *theme, int *xres, int *yres);
 int fbsplash_profile(const char *fmt, ...);
 bool fbsplash_is_silent(void);
 int fbsplash_set_verbose(int old_tty);
-int fbsplash_set_silent();
+int fbsplash_set_silent(void);
 void fbsplash_acc_theme_set(const char *theme);
 void fbsplash_acc_message_set(const char *msg);
 int fbsplash_set_evdev(void);
@@ -80,15 +80,15 @@ int fbsplash_send(const char *fmt, ...);
  * below.
  */
 int fbsplashr_init(bool create);
-void fbsplashr_cleanup();
+void fbsplashr_cleanup(void);
 int fbsplashr_render_buf(struct fbspl_theme *theme, void *buffer, bool repaint);
 int fbsplashr_render_screen(struct fbspl_theme *theme, bool repaint, bool bgnd, char effects);
 struct fbspl_theme *fbsplashr_theme_load();
 void fbsplashr_theme_free(struct fbspl_theme *theme);
 int fbsplashr_tty_silent_init(bool clean);
-int fbsplashr_tty_silent_cleanup();
+int fbsplashr_tty_silent_cleanup(void);
 int fbsplashr_tty_silent_set(int tty);
-int fbsplashr_tty_silent_update();
+int fbsplashr_tty_silent_update(void);
 void fbsplashr_message_set(struct fbspl_theme *theme, const char *msg);
 void fbsplashr_progress_set(struct fbspl_theme *theme, int progress);
 
