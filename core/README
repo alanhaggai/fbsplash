@@ -12,21 +12,29 @@ Here's a short description of provided programs, scripts and documents:
 
 1. Programs
 
+   fbsplashd
+   ---------
+   The framebuffer splash daemon.
+
    splash_util
    -----------
-   The core application of this package. Provides support for the silent
-   splash mode. Can be used as a command-line tool or run in daemon mode.
+   A simple utility for various splash-related tasks not suitable for 
+   fbsplashd.
 
    fbcondecor_helper
    -----------------
    A simple and small program run directly by the kernel to:
     - initialize the silent mode during early stages of the boot-up process,
 	- provide the kernel with background images and theme configuration
-	  for the verbose splash mode.
+	  for the framebuffer console decorations.
 
    This program is only of any use if the kernel has been patched with
    the 'fbcondecor' patch. The patch can be downloaded from the splashutils
    webpage.
+
+   fbcondecor_ctl
+   --------------
+   A program to control the framebuffer console decorations.
 
    For technical documentation on the kernel<->userspace fbcondecor interface
    please refer to <kernel sources>/Documentation/fb/fbcondecor.txt.
@@ -90,7 +98,7 @@ Here's a short description of provided programs, scripts and documents:
 Any comments, suggestions and bug-reports are appreciated.
 
 Project homepage:
-  http://dev.gentoo.org/~spock/projects/gensplash/
+  http://dev.gentoo.org/~spock/projects/fbsplash/
 
 -- 
   Michal Januszewski <spock@gentoo.org>

@@ -39,29 +39,29 @@ contains the majority of functions necessary to build an initscript interface.
 
 Typically one would build an interface in the following way:
 
-splash_lib_init();
-splash_parse_kcmdline();
+fbsplash_lib_init();
+fbsplash_parse_kcmdline();
 /* call a specific function */
-splash_lib_clean();
+fbsplash_lib_clean();
 
 where the specific function could be:
 
 start() {
-	splash_check_sanity();
-	splash_cache_prep();
+	fbsplash_check_sanity();
+	fbsplash_cache_prep();
 	/* start the splash daemon */
-	splash_set_evdev();
+	fbsplash_set_evdev();
 }
 
 stop() {
 	/* stop the splash daemon */
-	splash_cache_cleanup();
+	fbsplash_cache_cleanup();
 }
 
 event() {
-	splash_check_daemon();
-	splash_profile();
-	splash_send();
+	fbsplash_check_daemon();
+	fbsplash_profile();
+	fbsplash_send();
 }
 
 etc.
