@@ -429,8 +429,10 @@ static void vt_cursor_enable(int fd)
 
 /**
  * Prepare the silent tty (config.tty_s) for displaying the silent splash screen.
+ *
+ * @param clear If true, the silent tty will be cleared from any text it might contain.
  */
-int fbsplashr_tty_silent_init()
+int fbsplashr_tty_silent_init(bool clear)
 {
 	struct termios w;
 	int fd;
@@ -449,8 +451,10 @@ int fbsplashr_tty_silent_init()
 	tcsetattr(fd, TCSANOW, &w);
 	vt_cursor_disable(fd);
 
-	/* Clear display */
-	write(fd, "\e[H\e[2J", 7);
+	if (clear) {
+		/* Clear display */
+		write(fd, "\e[H\e[2J", 7);
+	}
 
 	return 0;
 }

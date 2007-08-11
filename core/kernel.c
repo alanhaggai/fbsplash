@@ -127,7 +127,7 @@ noverbose:
 	fd_tty0 = open("/dev/console", O_RDWR);
 
 	fbsplash_set_silent(NULL);
-	fbsplashr_tty_silent_init();
+	fbsplashr_tty_silent_init(true);
 	fbsplashr_tty_silent_update();
 
 	/* Redirect all kernel messages to tty1 so that they don't get

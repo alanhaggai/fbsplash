@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 	}
 
 	tty = fbsplash_set_silent();
-	fbsplashr_tty_silent_init();
+	fbsplashr_tty_silent_init(true);
 	fbsplashr_tty_silent_update();
 	fbsplashr_render_screen(theme, true, false, FBSPL_EFF_FADEIN);
 	sleep(2);

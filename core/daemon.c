@@ -217,7 +217,7 @@ void vt_silent_init(void)
 {
 	struct vt_mode vt;
 
-	fbsplashr_tty_silent_init();
+	fbsplashr_tty_silent_init(false);
 	ioctl(fd_tty[config.tty_s], TIOCSCTTY, 0);
 
 	vt.mode   = VT_PROCESS;

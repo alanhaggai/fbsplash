@@ -85,7 +85,7 @@ int fbsplashr_render_buf(struct fbspl_theme *theme, void *buffer, bool repaint);
 int fbsplashr_render_screen(struct fbspl_theme *theme, bool repaint, bool bgnd, char effects);
 struct fbspl_theme *fbsplashr_theme_load();
 void fbsplashr_theme_free(struct fbspl_theme *theme);
-int fbsplashr_tty_silent_init();
+int fbsplashr_tty_silent_init(bool clean);
 int fbsplashr_tty_silent_cleanup();
 int fbsplashr_tty_silent_set(int tty);
 int fbsplashr_tty_silent_update();
