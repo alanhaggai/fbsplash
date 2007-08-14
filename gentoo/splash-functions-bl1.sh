@@ -21,7 +21,7 @@
 # values for spl_cachetype are 'tmpfs' and 'ramfs'. spl_cachesize
 # is a size limit in KB, and it should probably be left with the
 # default value.
-spl_util="/sbin/splash_util.static"
+spl_daemon="/sbin/fbsplashd.static"
 spl_bindir="/lib/splash/bin"
 spl_cachedir="/lib/splash/cache"
 spl_tmpdir="/lib/splash/tmp"
@@ -206,7 +206,7 @@ splash_exit() {
 	# Make sure the splash daemon is really dead (just in case the killall
 	# in splash_cache_cleanup didn't get executed). This should fix Gentoo
 	# bug #96697.
-	killall -9 splash_util.static >/dev/null 2>/dev/null
+	killall -9 fbsplashd.static >/dev/null 2>/dev/null
 	rm -f "${spl_pidfile}"
 }
 
@@ -215,7 +215,7 @@ splash_start() {
 	rm -f ${spl_fifo} 2>/dev/null
 
 	if [[ ${SPLASH_MODE_REQ} == "verbose" ]]; then
-		${spl_util} -c on 2>/dev/null
+		/sbin/fbcondecor_ctl -c on 2>/dev/null
 		return 0
 	elif [[ ${SPLASH_MODE_REQ} != "silent" ]]; then
 		return 0
@@ -253,7 +253,7 @@ splash_start() {
 	fi
 
 	# In the unlikely case that there's a splash daemon running -- kill it.
-	killall -9 ${spl_util##*/} 2>/dev/null
+	killall -9 ${spl_daemon##*/} 2>/dev/null
 	rm -f "${spl_pidfile}"
 
 	# Prepare the communications FIFO
@@ -263,7 +263,7 @@ splash_start() {
 	[[ ${SPLASH_KDMODE} == "GRAPHICS" ]] && options="--kdgraphics"
 
 	# Start the splash daemon
-	BOOT_MSG="$(splash_get_boot_message)" ${spl_util} -d --theme=${SPLASH_THEME} --pidfile=${spl_pidfile} ${options}
+	BOOT_MSG="$(splash_get_boot_message)" ${spl_daemon} -d --theme=${SPLASH_THEME} --pidfile=${spl_pidfile} ${options}
 
 	# Set the silent TTY and boot message
 	splash_comm_send "set tty silent ${SPLASH_TTY}"
@@ -271,7 +271,7 @@ splash_start() {
 	if [[ ${SPLASH_MODE_REQ} == "silent" ]] ; then
 		splash_comm_send "set mode silent"
 		splash_comm_send "repaint"
-		${spl_util} -c on 2>/dev/null
+		/sbin/fbcondecor_ctl -c on 2>/dev/null
 	fi
 
 	# Set the input device if it exists. This will make it possible to use F2 to
@@ -335,8 +335,8 @@ splash_comm_send() {
 
 	splash_profile "comm $*"
 
-	if [[ -r /proc/$(<${spl_pidfile})/status &&
-		  "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "splash_util.sta" ]]; then
+	if [[ -r /proc/$(<${spl_pidfile})/status &&                                              
+		  "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "fbsplashd.stati" ]]; then
 		echo "$*" > ${spl_fifo} &
 	else
 		echo "Splash daemon not running!"
@@ -351,7 +351,7 @@ splash_get_mode() {
 	if [[ ${ctty} == "${SPLASH_TTY}" ]]; then
 		echo "silent"
 	else
-		if [[ -z "$(${spl_util} -c getstate --vc=$(($ctty-1)) 2>/dev/null | grep off)" ]]; then
+		if [[ -z "$(/sbin/fbcondecor_ctl -c getstate --vc=$(($ctty-1)) 2>/dev/null | grep off)" ]]; then
 			echo "verbose"
 		else
 			echo "off"
@@ -371,7 +371,7 @@ splash_verbose() {
 # Switches to silent mode.
 splash_silent() {
 	splash_comm_send "set mode silent"
-	${spl_util} -c on 2>/dev/null
+	/sbin/fbcondecor_ctl -c on 2>/dev/null
 }
 
 splash_load_vars() {
@@ -540,7 +540,7 @@ splash_cache_prep() {
 
 splash_cache_cleanup() {
 	# FIXME: Make sure the splash daemon is dead.
-	killall -9 splash_util.static >/dev/null 2>/dev/null
+	killall -9 fbsplashd.static >/dev/null 2>/dev/null
 	rm -f "${spl_pidfile}"
 
 	# There's no point in saving all the data if we're running off a livecd.
