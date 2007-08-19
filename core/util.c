@@ -199,7 +199,7 @@ int main(int argc, char **argv)
 	case setmode:
 		if (config.reqmode & FBSPL_MODE_SILENT) {
 			fbsplashr_tty_silent_init(true);
-			fbsplash_set_silent(NULL);
+			fbsplash_set_silent();
 		} else {
 			fbsplashr_tty_silent_cleanup();
 			fbsplash_set_verbose(0);

@@ -126,7 +126,7 @@ noverbose:
 
 	fd_tty0 = open("/dev/console", O_RDWR);
 
-	fbsplash_set_silent(NULL);
+	fbsplash_set_silent();
 	fbsplashr_tty_silent_init(true);
 	fbsplashr_tty_silent_update();
 
