@@ -648,12 +648,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	/* Get boot and default levels from env variables exported by RC.
 	 * If unavailable, use the default ones. */
 	bootlevel = getenv("RC_BOOTLEVEL");
-	if (!bootlevel)
-		bootlevel = RC_LEVEL_BOOT;
-
 	defaultlevel = getenv("RC_DEFAULTLEVEL");
-	if (!defaultlevel)
-		defaultlevel = RC_LEVEL_DEFAULT;
 
 	/* Don't do anything if we're starting/stopping a service, but
 	 * we aren't in the middle of a runlevel switch. */
