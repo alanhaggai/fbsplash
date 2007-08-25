@@ -282,6 +282,10 @@ int fbsplashr_render_screen(stheme_t *theme, bool repaint, bool bgnd, char effec
 				if (theme->silent_img.cmap.red)
 					ioctl(fd_fb, FBIOPUTCMAP, &theme->silent_img.cmap);
 
+				/* Update CMAP if we're in a DIRECTCOLOR mode. */
+				if (fbd.fix.visual == FB_VISUAL_DIRECTCOLOR)
+					fb_cmap_directcolor_set(fd_fb);
+
 				put_img(theme, fb_mem, theme->bgbuf);
 			}
 		} else {
