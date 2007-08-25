@@ -38,9 +38,11 @@ int cmd_exit(void **args)
 		if (config.effects & FBSPL_EFF_FADEOUT)
 			fbsplashr_render_screen(theme, true, false, FBSPL_EFF_FADEOUT);
 
-		/* Switch to the verbose tty if we're in silent mode when the
-		 * 'exit' command is received. */
-		ioctl(fd_tty0, VT_ACTIVATE, config.tty_v);
+		if (!args[0] || strcmp(args[0], "staysilent")) {
+			/* Switch to the verbose tty if we're in silent mode when the
+			 * 'exit' command is received. */
+			ioctl(fd_tty0, VT_ACTIVATE, config.tty_v);
+		}
 	}
 
 	pthread_mutex_unlock(&mtx_paint);
@@ -499,7 +501,7 @@ cmdhandler known_cmds[] =
 
 	{	.cmd = "exit",
 		.handler = cmd_exit,
-		.args = 0,
+		.args = 1,
 		.specs = NULL,
 	},
 };
@@ -519,6 +521,7 @@ inner:
 			int args_i[4];
 			void *args[4];
 
+			memset(&args, 0, sizeof(args));
 			buf[PIPE_BUF-1] = 0;
 			buf[strlen(buf)-1] = 0;
 
@@ -530,13 +533,15 @@ inner:
 
 				for (j = 0; j < known_cmds[i].args; j++) {
 					for (; buf[k] == ' '; buf[k] = 0, k++);
-					if (!buf[k])
-						goto inner;
+					if (!buf[k]) {
+						args[j] = NULL;
+						continue;
+					}
 
 					switch (known_cmds[i].specs[j]) {
 					case 's':
 						args[j] = &(buf[k]);
-						for (; buf[k] != ' '; k++);
+						for (; buf[k] != ' ' && buf[k]; k++);
 						break;
 
 					case 'd':

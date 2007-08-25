@@ -78,8 +78,11 @@ FIFO. Currently, the following commands are recognized:
       svc_start_failed
       svc_stop_failed
 
- - exit
+ - exit [staysilent]
    Causes the splash daemon to exit.
+
+   If the 'staysilent' option is provided, the daemon won't try to
+   automatically switch the screen to the verbose tty.
 
 
 4. Exporting the background buffer to a file (EXPERIMENTAL)
