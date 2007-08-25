@@ -506,11 +506,6 @@ void icon_prerender(stheme_t *theme, icon *c, bool force)
 	if (!c->img || !c->img->picbuf)
 		return;
 
-	if (c->img->w > theme->xres - c->x || c->img->h > theme->yres - c->y) {
-		iprint(MSG_WARN,"Icon %s does not fit on the screen - ignoring it.", c->img->filename);
-		return;
-	}
-
 	if (c->crop) {
 		rect crn;
 
