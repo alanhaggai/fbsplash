@@ -39,6 +39,11 @@ FIFO. Currently, the following commands are recognized:
    Sets the silent or verbose tty to <tty>. <tty> is a number in the range
    1 - MAX_NR_CONSOLES.
 
+ - set effects [fadein fadeout]
+   Set the special effects that the splash daemon will use.  If used without
+   any optional parameters, this command will disable the use of all special
+   effects.
+
  - set event dev <evdev>
    Sets the event device to <evdev> (such as /dev/input/event0). If the
    kernel was configured with CONFIG_INPUT_EVDEV='y' or if the evdev.ko

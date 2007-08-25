@@ -133,6 +133,31 @@ int cmd_set_gpm(void **args)
 }
 
 /*
+ * 'set effects' command handler.
+ *
+ * Makes it possible to dynamically enable special effects.
+ */
+int cmd_set_effects(void **args)
+{
+	int i;
+
+	config.effects = FBSPL_EFF_NONE;
+
+	for (i = 0; i < 4; i++) {
+		if (!args[i])
+			break;
+
+		if (!strcmp(args[i], "fadein")) {
+			config.effects |= FBSPL_EFF_FADEIN;
+		} else if (!strcmp(args[i], "fadeout")) {
+			config.effects |= FBSPL_EFF_FADEOUT;
+		}
+	}
+
+	return 0;
+}
+
+/*
  * 'set tty' command handlers.
  *
  * Assigns a TTY for verbose/silent splash screen.
@@ -463,6 +488,12 @@ cmdhandler known_cmds[] =
 		.specs = NULL,
 	},
 
+	{	.cmd = "set effects",
+		.handler = cmd_set_effects,
+		.args = 2,
+		.specs = "ss"
+	},
+
 	{	.cmd = "paint rect",
 		.handler = cmd_paint_rect,
 		.args = 4,
@@ -502,7 +533,7 @@ cmdhandler known_cmds[] =
 	{	.cmd = "exit",
 		.handler = cmd_exit,
 		.args = 1,
-		.specs = NULL,
+		.specs = "s",
 	},
 };
 
@@ -554,6 +585,7 @@ inner:
 						break;
 					}
 				}
+
 				known_cmds[i].handler(args);
 			}
 		}
