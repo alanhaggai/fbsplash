@@ -202,6 +202,28 @@ void blit_add(stheme_t *theme, rect *a)
 		return;
 
 	memcpy(re, a, sizeof(rect));
+
+	if (re->x1 < 0)
+		re->x1 = 0;
+	else if (re->x1 >= theme->xres)
+		re->x1 = theme->xres - 1;
+
+	if (re->x2 < 0)
+		re->x2 = 0;
+	else if (re->x2 >= theme->xres)
+		re->x2 = theme->xres - 1;
+
+	if (re->y1 < 0)
+		re->y1 = 0;
+	else if (re->y1 >= theme->yres)
+		re->y1 = theme->yres - 1;
+
+	if (re->y2 < 0)
+		re->y2 = 0;
+	else if (re->y2 >= theme->yres)
+		re->y2 = theme->yres - 1;
+
+
 	list_add(&theme->blit, re);
 }
 
