@@ -1162,20 +1162,32 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 						} else {
 							obj_add(bprev);
 
-							if (!memcmp(&bprev->c_ul, &bprev->c_ur, sizeof(color))) {
-								if (!memcmp(&bprev->c_ll, &bprev->c_lr, sizeof(color))) {
-									if (!memcmp(&bprev->c_ll, &bprev->c_ul, sizeof(color)))
-										bprev->attr |= BOX_SOLID;
-									else
-										bprev->attr |= BOX_VGRAD;
+							if (!memcmp(&bprev->c_ul, &tbox->c_ul, sizeof(color)) &&
+								!memcmp(&bprev->c_ll, &tbox->c_ll, sizeof(color)) &&
+								!memcmp(&bprev->c_ur, &tbox->c_ur, sizeof(color)) &&
+								!memcmp(&bprev->c_lr, &tbox->c_lr, sizeof(color)))
+							{
+								if (!memcmp(&bprev->c_ul, &bprev->c_ur, sizeof(color))) {
+									if (!memcmp(&bprev->c_ll, &bprev->c_lr, sizeof(color))) {
+										if (!memcmp(&bprev->c_ll, &bprev->c_ul, sizeof(color)))
+											bprev->attr |= BOX_SOLID;
+										else
+											bprev->attr |= BOX_VGRAD;
+									}
+								} else if (!memcmp(&bprev->c_ul, &bprev->c_ll, sizeof(color)) &&
+										   !memcmp(&bprev->c_ur, &bprev->c_lr, sizeof(color))) {
+									bprev->attr |= BOX_HGRAD;
 								}
-							} else if (!memcmp(&bprev->c_ul, &bprev->c_ll, sizeof(color)) &&
-									   !memcmp(&bprev->c_ur, &bprev->c_lr, sizeof(color))) {
-								bprev->attr |= BOX_HGRAD;
 							}
 						}
 						bprev = NULL;
+					/* Non-interpolated box */
 					} else {
+						if (!memcmp(&tbox->c_ul, &tbox->c_ur, sizeof(color)) &&
+							!memcmp(&tbox->c_ll, &tbox->c_lr, sizeof(color)) &&
+							!memcmp(&tbox->c_ll, &tbox->c_ul, sizeof(color))) {
+							tbox->attr |= BOX_SOLID;
+						}
 						obj_add(tbox);
 					}
 					break;
