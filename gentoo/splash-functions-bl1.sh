@@ -104,6 +104,7 @@ splash_setup() {
 		return 0
 	fi
 
+	export SPLASH_EFFECTS=""
 	export SPLASH_MODE_REQ="off"
 	export SPLASH_PROFILE="off"
 	export SPLASH_THEME="default"
@@ -197,18 +198,8 @@ splash_exit() {
 		return 0
 	fi
 
-	if [[ "$(splash_get_mode)" == "silent" ]] ; then
-		splash_verbose
-	fi
-
 	splash_comm_send "exit"
 	splash_cache_cleanup
-
-	# Make sure the splash daemon is really dead (just in case the killall
-	# in splash_cache_cleanup didn't get executed). This should fix Gentoo
-	# bug #96697.
-	killall -9 fbsplashd.static >/dev/null 2>/dev/null
-	rm -f "${spl_pidfile}"
 }
 
 splash_start() {
@@ -262,9 +253,17 @@ splash_start() {
 
 	local options=""
 	[[ ${SPLASH_KDMODE} == "GRAPHICS" ]] && options="--kdgraphics"
+	[[ -n ${SPLASH_EFFECTS} ]] && options="${options} --effects=${SPLASH_EFFECTS}"
+
+	local ttype="bootup"
+	if [[ ${SOFTLEVEL} == "reboot" ]]; then
+		ttype="reboot"
+	elif [[ ${SOFTLEVEL} == "shutdown" ]]; then
+		ttype="shutdown"
+	fi
 
 	# Start the splash daemon
-	BOOT_MSG="$(splash_get_boot_message)" ${spl_daemon} --theme=${SPLASH_THEME} --pidfile=${spl_pidfile} ${options}
+	BOOT_MSG="$(splash_get_boot_message)" ${spl_daemon} --theme=${SPLASH_THEME} --pidfile=${spl_pidfile} --type=${ttype} ${options}
 
 	# Set the silent TTY and boot message
 	splash_comm_send "set tty silent ${SPLASH_TTY}"
@@ -540,8 +539,6 @@ splash_cache_prep() {
 
 
 splash_cache_cleanup() {
-	# FIXME: Make sure the splash daemon is dead.
-	killall -9 fbsplashd.static >/dev/null 2>/dev/null
 	rm -f "${spl_pidfile}"
 
 	# There's no point in saving all the data if we're running off a livecd.
