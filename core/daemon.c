@@ -279,6 +279,14 @@ static void do_cleanup(void)
 }
 
 /*
+ * A dummy handler for SIGALRM.
+ */
+void handler_alarm(int unused)
+{
+	return;
+}
+
+/*
  * Signal handler.
  *
  * This thread is reponsible for allowing switches between the
@@ -583,6 +591,7 @@ void daemon_start()
 	dup2(i, 2);
 
 	signal(SIGABRT, SIG_IGN);
+	signal(SIGALRM, handler_alarm);
 
 	/* These signals will be handled by the sighandler thread. */
 	sigemptyset(&sigset);

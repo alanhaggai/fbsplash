@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -86,7 +87,8 @@ int cmd_set_theme(void **args)
  */
 int cmd_set_mode(void **args)
 {
-	int n;
+	int n, i = 0;
+	struct itimerval itv;
 
 	if (!strcmp(args[0], "silent")) {
 		n = config.tty_s;
@@ -96,12 +98,33 @@ int cmd_set_mode(void **args)
 		return -1;
 	}
 
-	if (ioctl(fd_tty0, VT_ACTIVATE, n) == -1) {
+	itv.it_interval.tv_sec = 0;
+	itv.it_interval.tv_usec = 0;
+	itv.it_value.tv_sec = 0;
+	itv.it_value.tv_usec = 250000;
+
+vtswitch:
+	if (ioctl(fd_tty[n], VT_ACTIVATE, n) == -1) {
 		iprint(MSG_ERROR, "Switch to tty%d failed with: %d '%s'\n", n, errno, strerror(errno));
 		return -1;
 	}
 
-	if (ioctl(fd_tty0, VT_WAITACTIVE, n) == -1) {
+	/*
+	 * Interrupt the VT_WAITACTIVE call every 0.25s.  This makes sure we actually
+	 * return from this function in a timely manner and that we can complete the
+	 * switch to silent mode even when someone does a VT_ACTIVATE before our
+	 * VT_WAITACTIVE.
+	 *
+	 * This fixes the problem of the silent mode not being activated when
+	 * rebooting directly from X.
+	 */
+	i++;
+	setitimer(ITIMER_REAL, &itv, NULL);
+
+	if (ioctl(fd_tty[n], VT_WAITACTIVE, n) == -1) {
+		if (i < 9 && errno == EINTR)
+			goto vtswitch;
+
 		iprint(MSG_ERROR, "Wait for tty%d failed with: %d '%s'\n", n, errno, strerror(errno));
 		return -1;
 	}
