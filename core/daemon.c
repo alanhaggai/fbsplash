@@ -440,18 +440,17 @@ void switchmon_start(int update, int stty)
 	}
 
 	/* Do we have to start a monitor thread? */
-	if (fd_evdev != -1 && (update & UPD_MON)) {
-		if (pthread_create(&th_switchmon, NULL, &thf_switch_evdev, NULL)) {
-			iprint(MSG_ERROR, "Evdev monitor thread creation failed.\n");
-			exit(3);
-		}
-
-	/* We start the standard monitoring thread only if no event device
-	 * has been defined and if the silent TTY has just been changed. */
-	} else if (fd_evdev == -1 && (update & UPD_SILENT)) {
-		if (pthread_create(&th_switchmon, NULL, &thf_switch_ttymon, NULL)) {
-			iprint(MSG_ERROR, "TTY monitor thread creation failed.\n");
-			exit(3);
+	if (update & UPD_MON) {
+		if (fd_evdev != -1) {
+			if (pthread_create(&th_switchmon, NULL, &thf_switch_evdev, NULL)) {
+				iprint(MSG_ERROR, "Evdev monitor thread creation failed.\n");
+				exit(3);
+			}
+		} else {
+			if (pthread_create(&th_switchmon, NULL, &thf_switch_ttymon, NULL)) {
+				iprint(MSG_ERROR, "TTY monitor thread creation failed.\n");
+				exit(3);
+			}
 		}
 	}
 }
