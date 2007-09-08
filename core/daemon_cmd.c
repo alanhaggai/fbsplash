@@ -30,9 +30,6 @@ int cmd_exit(void **args)
 	item *i, *j;
 
 	pthread_cancel(th_switchmon);
-	pthread_kill(th_sighandler, SIGINT);
-	pthread_join(th_sighandler, NULL);
-
 	pthread_mutex_lock(&mtx_paint);
 
 	if (ctty == CTTY_SILENT) {
@@ -47,6 +44,9 @@ int cmd_exit(void **args)
 	}
 
 	pthread_mutex_unlock(&mtx_paint);
+
+	pthread_kill(th_sighandler, SIGINT);
+	pthread_join(th_sighandler, NULL);
 
 	fbsplashr_theme_free(theme);
 	fbsplashr_cleanup();
