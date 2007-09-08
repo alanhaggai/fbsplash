@@ -130,6 +130,7 @@ endif
 
 OBJDIR	= objs
 OBJLDIR = $(OBJDIR)/lib
+OBJTDIR = $(OBJDIR)/test
 KOUT	= $(OBJDIR)/kernel
 dotg    = \e[32;01m*\e[0m
 infmsg	= if [ "${QUIET}" = "true" ] ; then printf "  %-7s %s\n" $(1) $(2) ; fi
@@ -210,6 +211,9 @@ objdir:
 	@if [ ! -d "$(OBJLDIR)" ]; then \
 		mkdir "${OBJLDIR}" ; \
 	fi
+	@if [ ! -d "$(OBJTDIR)" ]; then \
+		mkdir "$(OBJTDIR)" ; \
+	fi
 zlib:	config.h
 	@cd $(ZLIBSRC) ; \
 	if [ ! -e ./Makefile ]; then \
@@ -287,11 +291,21 @@ $(OBJLDIR)/%.lo: %.c config.h $(OBJDIR)/fbsplash.h
 doc:
 	doxygen
 
+tests:	objdir $(OBJDIR)/test_parser
+
+$(OBJDIR)/test_parser: $(OBJDIR)/test/test_parser.o $(OBJDIR)/libfbsplash.la $(OBJDIR)/libfbsplashrender.la
+	@$(call infmsg,LD,$@)
+	$(Q)libtool $(LQ) --tag=CC --mode=link $(CC) $(LDFLAGS) $(LDLIBS) $+ -o $@
+
 clean:	clean_all
 
-clean_all:	clean_zlib clean_png
+clean_all:	clean_zlib clean_png clean_test clean_splash
 	@$(call infmsg,CLEAN,all)
 	$(Q)rm -rf $(OBJDIR)/*
+
+clean_test:
+	@$(call infmsg,CLEAN,test)
+	$(Q)rm -rf $(OBJDIR)/test
 
 clean_splash:
 	@$(call infmsg,CLEAN,splash)

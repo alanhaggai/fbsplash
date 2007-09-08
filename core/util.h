@@ -257,6 +257,7 @@ typedef struct anim {
 	int x, y, w, h;
 	mng_handle mng;
 	char *svc;
+	char *filename;
 	enum ESVC type;
 	int curr_progress;
 	u8 status;

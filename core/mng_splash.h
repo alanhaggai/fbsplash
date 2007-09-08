@@ -35,6 +35,8 @@ extern void fb_mng_memfree(mng_ptr p, mng_size_t len);
 extern mng_retcode mng_init_callbacks(mng_handle handle);
 extern mng_retcode mng_display_restart(mng_handle mngh);
 
+extern int load_anims(struct fbspl_theme *theme);
+
 /* MNG-error printing functions */
 static inline void __print_mng_error(mng_handle mngh, char* s, ...)
 {

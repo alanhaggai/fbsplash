@@ -7,6 +7,8 @@ Fixes
 =====
 - render: move all sanity checks (position on screen) to bndrect calculation
 - optimize rect-based rendering
+- sanitize the parser unit tests
+- add unit tests for the rendering framework
 
 New features
 ============

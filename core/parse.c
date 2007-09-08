@@ -156,20 +156,34 @@ static int ishexdigit(char c)
 	return (isdigit(c) || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) ? 1 : 0;
 }
 
-static void skip_whitespace(char **buf)
+static bool skip_whitespace(char **buf, bool req)
 {
-	while (**buf == ' ' || **buf == '\t')
+	if (req && (**buf != ' ' && **buf != '\t' && **buf)) {
+		parse_error("expected a non-zero amount of whitespace instead of '%s'", *buf);
+		while (**buf)
+			(*buf)++;
+		return false;
+	}
+
+	while ((**buf == ' ' || **buf == '\t') && **buf)
 		(*buf)++;
 
-	return;
+	return true;
 }
 
-static void skip_nonwhitespace(char **buf)
+static bool skip_nonwhitespace(char **buf, bool req)
 {
-	while (**buf != ' ' && **buf != '\t')
+	if (req && ((**buf == ' ' || **buf == '\t') && **buf)) {
+		parse_error("expected a non-zero amount of non-whitespace instead of '%s'", *buf);
+		while (**buf)
+			(*buf)++;
+		return false;
+	}
+
+	while ((**buf != ' ' && **buf != '\t') && **buf)
 		(*buf)++;
 
-	return;
+	return true;
 }
 
 static void parse_int(char *t, struct cfg_opt opt)
@@ -179,7 +193,7 @@ static void parse_int(char *t, struct cfg_opt opt)
 		return;
 	}
 
-	t++; skip_whitespace(&t);
+	t++; skip_whitespace(&t, false);
 	*(u16*)opt.val = strtol(t,NULL,0);
 }
 
@@ -190,7 +204,7 @@ static void parse_path(char *t, struct cfg_opt opt)
 		return;
 	}
 
-	t++; skip_whitespace(&t);
+	t++; skip_whitespace(&t, false);
 	*(char**)opt.val = get_filepath(t);
 }
 
@@ -228,7 +242,7 @@ static void parse_fontpath(char *t, struct cfg_opt opt)
 		return;
 	}
 
-	t++; skip_whitespace(&t);
+	t++; skip_whitespace(&t, false);
 	*(char**)opt.val = get_fontpath(t);
 }
 
@@ -247,6 +261,9 @@ static int parse_color(char **t, struct color *cl)
 	}
 
 	for (p = *t; ishexdigit(*p); p++, len++);
+
+	if (len != 6 && len != 8)
+		return -1;
 
 	p = *t;
 	h = strtoul(*t, &p, 16);
@@ -278,13 +295,13 @@ static int parse_4vec(char **t, rect *r)
 		return -1;
 	(*t)++;
 
-	skip_whitespace(t);
+	skip_whitespace(t, false);
 
 	p = *t;
 	r->x1 = strtol(p, t, 0);
 	if (p == *t)
 		return -1;
-	skip_whitespace(t);
+	skip_whitespace(t, false);
 	if (**t != ',')
 		return -1;
 	(*t)++;
@@ -293,7 +310,7 @@ static int parse_4vec(char **t, rect *r)
 	r->y1 = strtol(p, t, 0);
 	if (p == *t)
 		return -1;
-	skip_whitespace(t);
+	skip_whitespace(t, false);
 	if (**t != ',')
 		return -1;
 	(*t)++;
@@ -302,7 +319,7 @@ static int parse_4vec(char **t, rect *r)
 	r->x2 = strtol(p, t, 0);
 	if (p == *t)
 		return -1;
-	skip_whitespace(t);
+	skip_whitespace(t, false);
 	if (**t != ',')
 		return -1;
 	(*t)++;
@@ -312,7 +329,7 @@ static int parse_4vec(char **t, rect *r)
 	if (p == *t)
 		return -1;
 
-	skip_whitespace(t);
+	skip_whitespace(t, false);
 	if (**t != '>')
 		return -1;
 
@@ -330,10 +347,10 @@ int parse_svc_state(char *t, enum ESVC *state)
 		*state = e_svc_started; return 11;
 	} else if (!strncmp(t, "svc_stopped", 11)) {
 		*state = e_svc_stopped; return 11;
-	} else if (!strncmp(t, "svc_start_failed", 17)) {
-		*state = e_svc_start_failed; return 17;
-	} else if (!strncmp(t, "svc_stop_failed",  16)) {
-		*state = e_svc_stop_failed; return 16;
+	} else if (!strncmp(t, "svc_start_failed", 16)) {
+		*state = e_svc_start_failed; return 16;
+	} else if (!strncmp(t, "svc_stop_failed",  15)) {
+		*state = e_svc_stop_failed; return 15;
 	} else if (!strncmp(t, "svc_stop", 8)) {
 		*state = e_svc_stop; return 8;
 	} else if (!strncmp(t, "svc_start", 9)) {
@@ -354,7 +371,7 @@ void obj_add(void *x) {
 	list_add(&tmptheme.objs, o);
 }
 
-static void parse_icon(char *t)
+bool parse_icon(char *t)
 {
 	char *filename = NULL;
 	char *p;
@@ -366,53 +383,64 @@ static void parse_icon(char *t)
 
 	if (!cic) {
 		iprint(MSG_ERROR, "%s: failed to allocate memory.\n", __func__);
-		return;
+		return false;
 	}
 
 	o = container_of(cic);
 	cic->svc = NULL;
 
-	skip_whitespace(&t);
+	if (!skip_whitespace(&t, true))
+		goto pi_err;
+
 	for (i = 0; t[i] != ' ' && t[i] != '\t' && t[i] != '\0'; i++);
 	t[i] = 0;
 
 	filename = get_filepath(t);
 	t += (i+1);
 
-	skip_whitespace(&t);
+	skip_whitespace(&t, false);
 	cic->x = strtol(t,&p,0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pi_err;
 	}
 
-	t = p; skip_whitespace(&t);
+	t = p;
+	if (!skip_whitespace(&t, true))
+		goto pi_err;
+
 	cic->y = strtol(t,&p,0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pi_err;
-
 	}
-	t = p; skip_whitespace(&t);
+	t = p;
+	if (!skip_whitespace(&t, true))
+		goto pi_err;
 
 	/* Do we need to crop this icon? */
 	if (!strncmp(t, "crop", 4)) {
 		t += 4;
-		skip_whitespace(&t);
+
+		if (!skip_whitespace(&t, true))
+			goto pi_err;
 
 		if (parse_4vec(&t, &cic->crop_from)) {
 			parse_error("expected a 4-tuple instead of '%s'", t);
 			goto pi_err;
 		}
 
-		skip_whitespace(&t);
+		if (!skip_whitespace(&t, true))
+			goto pi_err;
 
 		if (parse_4vec(&t, &cic->crop_to)) {
 			parse_error("expected a 4-tuple instead of '%s'", t);
 			goto pi_err;
 		}
 
-		skip_whitespace(&t);
+		if (!skip_whitespace(&t, true))
+			goto pi_err;
+
 		cic->crop = true;
 		rect_interpolate(&cic->crop_from, &cic->crop_to, &cic->crop_curr);
 	} else {
@@ -421,20 +449,28 @@ static void parse_icon(char *t)
 
 	i = parse_svc_state(t, &cic->type);
 
-	if (i)
-		t += i;
-	else
+	if (!i) {
 		cic->type = e_display;
+	} else {
+		t += i;
 
-	/* Find the service name */
-	skip_whitespace(&t);
-	for (i = 0; t[i] != ' ' && t[i] != '\t' && t[i] != '\0'; i++);
-	t[i] = 0;
-	i = 0;
+		/* Find the service name */
+		if (!skip_whitespace(&t, true))
+			goto pi_err;
+		for (i = 0; t[i] != ' ' && t[i] != '\t' && t[i] != '\0'; i++);
+		t[i] = 0;
+		i = 0;
 
-	if (cic->type != e_display) {
 		o->visible = false;
+
+		if (*t == '\0') {
+			parse_error("expected service name");
+			goto pi_err;
+		}
+
 		cic->svc = strdup(t);
+		if (!skip_nonwhitespace(&t, true))
+			goto pi_err;
 	}
 
 	for (ti = tmptheme.icons.head ; ti != NULL; ti = ti->next) {
@@ -458,7 +494,7 @@ static void parse_icon(char *t)
 
 pi_end:
 	obj_add(cic);
-	return;
+	return true;
 
 pi_err:
 pi_out:
@@ -467,7 +503,7 @@ pi_out:
 	if (cic->svc)
 		free(cic->svc);
 	free(container_of(cic));
-	return;
+	return false;
 pi_outm:
 	iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
 	goto pi_out;
@@ -483,7 +519,7 @@ static void parse_rect(char *t)
 		return;
 	}
 
-	skip_whitespace(&t);
+	skip_whitespace(&t, true);
 
 	while (!isdigit(*t)) {
 		t++;
@@ -494,28 +530,28 @@ static void parse_rect(char *t)
 		parse_error("expected a number instead of '%s'", t);
 		goto pr_err;
 	}
-	t = p; skip_whitespace(&t);
+	t = p; skip_whitespace(&t, true);
 
 	crect->y1 = strtol(t,&p,0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pr_err;
 	}
-	t = p; skip_whitespace(&t);
+	t = p; skip_whitespace(&t, true);
 
 	crect->x2 = strtol(t,&p,0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pr_err;
 	}
-	t = p; skip_whitespace(&t);
+	t = p; skip_whitespace(&t, true);
 
 	crect->y2 = strtol(t,&p,0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pr_err;
 	}
-	t = p; skip_whitespace(&t);
+	t = p; skip_whitespace(&t, true);
 
 	/* sanity checks */
 	if (crect->x1 >= tmptheme.xres)
@@ -535,7 +571,7 @@ pr_err:
 }
 
 #if WANT_MNG
-static void parse_anim(char *t)
+static bool parse_anim(char *t)
 {
 	char *p;
 	char *filename;
@@ -545,13 +581,15 @@ static void parse_anim(char *t)
 
 	if (!canim) {
 		iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
-		return;
+		return false;
 	}
 
 	o = container_of(canim);
 	obj_setmode(container_of(canim), FBSPL_MODE_SILENT);
 
-	skip_whitespace(&t);
+	if (!skip_whitespace(&t, true))
+		goto pa_err;
+
 	canim->flags = 0;
 
 	if (!strncmp(t, "once", 4)) {
@@ -569,28 +607,39 @@ static void parse_anim(char *t)
 		goto pa_err;
 	}
 
-	skip_whitespace(&t);
+	if (!skip_whitespace(&t, true))
+		goto pa_err;
 
 	filename = t;
-	skip_nonwhitespace(&t);
+
+	if (!skip_nonwhitespace(&t, true))
+		goto pa_err;
 	*t = '\0';
 	t++;
 
-	skip_whitespace(&t);
+	/* We don't require whitespace, as we already had one which
+	 * we have just replaced with 0. */
+	skip_whitespace(&t, false);
 
 	canim->x = strtol(t,&p,0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pa_err;
 	}
-	t = p; skip_whitespace(&t);
+	t = p;
+
+	if (!skip_whitespace(&t, true))
+		goto pa_err;
 
 	canim->y = strtol(t,&p,0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pa_err;
 	}
-	t = p; skip_whitespace(&t);
+	t = p;
+
+	if (!skip_whitespace(&t, true))
+		goto pa_err;
 
 	/* sanity checks */
 	if (canim->x >= tmptheme.xres)
@@ -601,42 +650,38 @@ static void parse_anim(char *t)
 	canim->status = 0;
 
 	i = parse_svc_state(t, &canim->type);
-	if (i)
-		t += i;
-	else
+	if (!i) {
 		canim->type = e_display;
+	} else {
+		t += i;
 
-	/* Find the service name */
-	skip_whitespace(&t);
-	for (i = 0; t[i] != ' ' && t[i] != '\t' && t[i] != '\0'; i++);
-	t[i] = 0;
-	i = 0;
+		/* Find the service name */
+		skip_whitespace(&t, true);
+		for (i = 0; t[i] != ' ' && t[i] != '\t' && t[i] != '\0'; i++);
+		t[i] = 0;
+		i = 0;
 
-	if (canim->type != e_display) {
-		canim->svc = strdup(t);
 		o->visible = false;
+
+		if (*t == '\0') {
+			parse_error("expected service name");
+			goto pa_err;
+		}
+
+		canim->svc = strdup(t);
+		if (!skip_nonwhitespace(&t, true))
+			goto pa_err;
 	}
 
-	filename = get_filepath(filename);
-
-	canim->mng = mng_load(filename, &canim->w, &canim->h);
-	if (!canim->mng) {
-		free(filename);
-		iprint(MSG_ERROR, "%s: failed to allocate memory for mng\n", __func__);
-		goto pa_out;
-	}
-
-	free(filename);
-
+	canim->filename = get_filepath(filename);
 	list_add(&tmptheme.anims, canim);
 	obj_add(canim);
-	return;
+	return true;
 pa_err:
-pa_out:
 	free(container_of(canim));
-	return;
+	return false;
 }
-#endif /* CONFIG_MNG */
+#endif /* WANT_MNG */
 
 static box* parse_box(char *t)
 {
@@ -647,7 +692,9 @@ static box* parse_box(char *t)
 	if (!cbox)
 		return NULL;
 
-	skip_whitespace(&t);
+	if (!skip_whitespace(&t, true))
+		goto pb_err;
+
 	cbox->attr = 0;
 	cbox->curr = NULL;
 
@@ -666,7 +713,7 @@ static box* parse_box(char *t)
 			goto pb_err;
 		}
 
-		skip_whitespace(&t);
+		skip_whitespace(&t, false);
 	}
 
 	cbox->re.x1 = strtol(t,&p,0);
@@ -674,28 +721,36 @@ static box* parse_box(char *t)
 		parse_error("expected a number instead of '%s'", t);
 		goto pb_err;
 	}
-	t = p; skip_whitespace(&t);
+	t = p;
+	if (!skip_whitespace(&t, true))
+		goto pb_err;
 
 	cbox->re.y1 = strtol(t,&p,0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pb_err;
 	}
-	t = p; skip_whitespace(&t);
+	t = p;
+	if (!skip_whitespace(&t, true))
+		goto pb_err;
 
 	cbox->re.x2 = strtol(t,&p,0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pb_err;
 	}
-	t = p; skip_whitespace(&t);
+	t = p;
+	if (!skip_whitespace(&t, true))
+		goto pb_err;
 
 	cbox->re.y2 = strtol(t,&p,0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pb_err;
 	}
-	t = p; skip_whitespace(&t);
+	t = p;
+	if (!skip_whitespace(&t, true))
+		goto pb_err;
 
 	/* sanity checks */
 	if (cbox->re.x1 >= tmptheme.xres)
@@ -706,6 +761,16 @@ static box* parse_box(char *t)
 		cbox->re.y1 = tmptheme.yres-1;
 	if (cbox->re.y2 >= tmptheme.yres)
 		cbox->re.y2 = tmptheme.yres-1;
+
+	if (cbox->re.x2 < cbox->re.x1) {
+		parse_error("x2 has to larger or equal to x1");
+		goto pb_err;
+	}
+
+	if (cbox->re.y2 < cbox->re.y1) {
+		parse_error("y2 has to be larger or equal to y1");
+		goto pb_err;
+	}
 
 #define zero_color(cl) *(u32*)(&cl) = 0;
 #define is_zero_color(cl) (*(u32*)(&cl) == 0)
@@ -721,7 +786,7 @@ static box* parse_box(char *t)
 		goto pb_err;
 	}
 
-	skip_whitespace(&t);
+	skip_whitespace(&t, false);
 
 	ret = parse_color(&t, &cbox->c_ur);
 
@@ -735,14 +800,16 @@ static box* parse_box(char *t)
 		goto pb_err;
 	}
 
-	skip_whitespace(&t);
+	if (!skip_whitespace(&t, true))
+		goto pb_err;
 
 	if (parse_color(&t, &cbox->c_ll)) {
 		parse_error("expected a color instead of '%s'", t);
 		goto pb_err;
 	}
 
-	skip_whitespace(&t);
+	if (!skip_whitespace(&t, true))
+		goto pb_err;
 
 	if (parse_color(&t, &cbox->c_lr)) {
 		parse_error("expected a color instead of '%s'", t);
@@ -804,7 +871,7 @@ static char *parse_quoted_string(char *t, u8 keepvar)
 }
 
 #if WANT_TTF
-static void parse_text(char *t)
+static bool parse_text(char *t)
 {
 	char *p, *fontname = NULL, *fpath = NULL;
 	int ret, fontsize;
@@ -815,10 +882,12 @@ static void parse_text(char *t)
 
 	if (!ct) {
 		iprint(MSG_ERROR, "%s: failed to allocate memory\n", __func__);
-		return;
+		return false;
 	}
 
-	skip_whitespace(&t);
+	if (!skip_whitespace(&t, true))
+		goto pt_err;
+
 	ct->flags = 0;
 	ct->hotspot = 0;
 	ct->style = TTF_STYLE_NORMAL;
@@ -837,7 +906,7 @@ static void parse_text(char *t)
 			ret = 0;
 		}
 
-		skip_whitespace(&t);
+		skip_whitespace(&t, false);
 	}
 
 	if (!mode)
@@ -847,12 +916,16 @@ static void parse_text(char *t)
 
 	if (!isdigit(*t)) {
 		p = t;
-		skip_nonwhitespace(&p);
+		if (!skip_nonwhitespace(&p, true))
+			goto pt_err;
 		fontname = t;
 		*p = 0;
 		t = p+1;
 	}
-	skip_whitespace(&t);
+
+	/* We have already skipped at least one whitespace (replaced with 0)
+	 * -- no need to enforce any more here. */
+	skip_whitespace(&t, false);
 
 	/* Parse the style selector */
 	while (!isdigit(*t)) {
@@ -869,6 +942,8 @@ static void parse_text(char *t)
 		t++;
 	}
 
+	skip_whitespace(&t, false);
+
 	/* Parse font size */
 	fontsize = strtol(t,&p,0);
 	if (t == p) {
@@ -876,7 +951,9 @@ static void parse_text(char *t)
 		goto pt_err;
 	}
 
-	t = p; skip_whitespace(&t);
+	t = p;
+	if (!skip_whitespace(&t, true))
+		goto pt_err;
 
 	/* Parse x position */
 	ct->x = strtol(t,&p,0);
@@ -884,7 +961,9 @@ static void parse_text(char *t)
 		parse_error("expected x position (a number) instead of '%s'", t);
 		goto pt_err;
 	}
-	t = p; skip_whitespace(&t);
+	t = p;
+	if (!skip_whitespace(&t, true))
+		goto pt_err;
 
 	if (!isdigit(*t)) {
 		if (!strncmp(t, "left", 4)) {
@@ -901,7 +980,8 @@ static void parse_text(char *t)
 			goto pt_err;
 		}
 
-		skip_whitespace(&t);
+		if (!skip_whitespace(&t, true))
+			goto pt_err;
 	} else {
 		ct->hotspot |= F_HS_LEFT;
 	}
@@ -912,7 +992,9 @@ static void parse_text(char *t)
 		parse_error("expected y position (a number) instead of '%s'", t);
 		goto pt_err;
 	}
-	t = p; skip_whitespace(&t);
+	t = p;
+	if (!skip_whitespace(&t, true))
+		goto pt_err;
 
 	if (!strncmp(t, "top", 3)) {
 		ct->hotspot |= F_HS_TOP;
@@ -920,14 +1002,14 @@ static void parse_text(char *t)
 	} else if (!strncmp(t, "bottom", 6)) {
 		ct->hotspot |= F_HS_BOTTOM;
 		t += 6;
-	} else if (!strncmp(t, "middle", 6)) { 
+	} else if (!strncmp(t, "middle", 6)) {
 		ct->hotspot |= F_HS_VMIDDLE;
 		t += 6;
 	} else {
 		ct->hotspot |= F_HS_TOP;
 	}
 
-	skip_whitespace(&t);
+	skip_whitespace(&t, false);
 
 	/* Sanity checks */
 	if (ct->x >= tmptheme.xres) {
@@ -954,7 +1036,9 @@ static void parse_text(char *t)
 	}
 
 again:
-	skip_whitespace(&t);
+	if (!skip_whitespace(&t, true))
+		goto pt_err;
+
 	if (!strncmp(t, "exec", 4)) {
 		ct->flags |= F_TXT_EXEC;
 		t += 4;
@@ -965,7 +1049,8 @@ again:
 		goto again;
 	}
 
-	skip_whitespace(&t);
+	skip_whitespace(&t, false);
+
 	ct->val = parse_quoted_string(t, (ct->flags & F_TXT_EVAL) ? 1 : 0);
 	if (!ct->val) {
 		parse_error("failed to parse a quoted string: '%s'", t);
@@ -1007,13 +1092,13 @@ again:
 
 pt_end:
 	obj_add(ct);
-	return;
+	return true;
 
 pt_err:
 	free(container_of(ct));
 	if (fpath)
 		free(fpath);
-	return;
+	return false;
 }
 
 void add_main_msg()
@@ -1102,7 +1187,7 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 		buf[len-1] = 0;		/* get rid of \n */
 
 		t = buf;
-		skip_whitespace(&t);
+		skip_whitespace(&t, false);
 
 		/* skip comments */
 		if (*t == '#')
@@ -1116,7 +1201,6 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 					continue;
 
 				t += strlen(opts[i].name);
-				skip_whitespace(&t);
 
 				switch (opts[i].type) {
 
@@ -1136,7 +1220,7 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 					}
 
 					t++;
-					skip_whitespace(&t);
+					skip_whitespace(&t, false);
 					parse_color(&t, opts[i].val);
 					break;
 				}
@@ -1204,7 +1288,7 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 				case t_type_open:
 					ignore = true;
 					while (*t != '>') {
-						skip_whitespace(&t);
+						skip_whitespace(&t, true);
 						if (!strncmp(t, "bootup", 6)) {
 							if (config.type == fbspl_bootup)
 								ignore = false;

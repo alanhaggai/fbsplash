@@ -251,3 +251,21 @@ mng_retcode mng_display_restart(mng_handle mngh)
 	mng->displayed_first = 0;
 	return mng_display_reset(mngh);
 }
+
+int load_anims(stheme_t *theme)
+{
+	int err = 0;
+	item *i;
+
+	for (i = theme->anims.head; i != NULL; i = i->next) {
+		anim *a = (anim*)i->p;
+		a->mng = mng_load(a->filename, &a->w, &a->h);
+		if (!a->mng) {
+			iprint(MSG_ERROR, "%s: failed to allocate memory for mng\n", __func__);
+			err = -1;
+		}
+	}
+
+	return err;
+}
+

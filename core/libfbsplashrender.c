@@ -46,6 +46,19 @@ static void obj_free(obj *o)
 			free(b->curr);
 	}
 
+#if WANT_MNG
+	if (o->type == o_anim) {
+		anim *a = o->p;
+		if (a->filename) {
+			free(a->filename);
+		}
+
+		if (a->mng) {
+			mng_done(a->mng);
+		}
+	}
+#endif
+
 	free(o);
 	return;
 }
@@ -335,8 +348,7 @@ stheme_t *fbsplashr_theme_load()
 	list_init(st->fonts);
 	list_init(st->rects);
 
-	/* Parse the config file. It will also load all mng files, so
-	 * we don't have to load them explicitly later. */
+	/* Parse the config file. */
 	parse_cfg(buf, st);
 
 	/* Check for config file sanity for the given splash mode and
@@ -352,6 +364,10 @@ stheme_t *fbsplashr_theme_load()
 		st->modes &= ~FBSPL_MODE_SILENT;
 	else
 		load_images(st, 's');
+
+#if WANT_MNG
+	load_anims(st);
+#endif
 
 #if WANT_TTF
 	load_fonts(st);
