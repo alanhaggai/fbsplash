@@ -353,6 +353,10 @@ replay() {
 				if [[ -x ${themedir}/${theme}/scripts/${arr[2]}-post ]]; then
 					${themedir}/${theme}/scripts/${arr[2]}-post ${arr[*]:3}
 				fi
+
+				if [[ -e /etc/gentoo-release && ${arr[3]} == 'boot' ]]; then
+					export RUNLEVEL="3"
+				fi
 				;;
 
 			comm)
