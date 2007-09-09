@@ -1,4 +1,18 @@
-splashutils recognizes the following directives in the config files in
+Theme metadata
+--------------
+
+It is advised that all fbsplash themes are shipped with a metadata.xml
+file providing additional information about the author, license and origin
+of the theme.  The XML schema for this file is available in
+thememeta.xsd.  A sample metadata file is provided in metadata_sample.xml.
+The metadata.xml file should be located in the main directory of the
+fbsplash theme (e.g. it should be /etc/splash/<themename>/metadata.xml).
+
+
+Config file directives
+----------------------
+
+fbsplash recognizes the following directives in the config files in
 /etc/splash:
 
 NOTE: Unless otherwise stated, all coordinates are specified in the screen

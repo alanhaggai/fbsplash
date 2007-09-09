@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xml:lang="en">
+	<xsd:complexType name="authorType">
+		<xsd:sequence>
+			<xsd:element name="name" type="xsd:normalizedString" minOccurs="1" maxOccurs="1"/>
+			<xsd:element name="email" type="xsd:anyURI" minOccurs="1" maxOccurs="3"/>
+		</xsd:sequence>
+	</xsd:complexType>
+
+	<xsd:element name="thememeta">
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="name" type="xsd:normalizedString" minOccurs="1" maxOccurs="1"/>
+				<xsd:element name="version" type="xsd:normalizedString" minOccurs="1" maxOccurs="1"/>
+				<xsd:element name="author" type="authorType" minOccurs="1" maxOccurs="10"/>
+				<xsd:element name="description" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+				<xsd:element name="license" type="xsd:normalizedString" minOccurs="1" maxOccurs="1"/>
+				<xsd:element name="url" type="xsd:anyURI" minOccurs="0" maxOccurs="3"/>
+			</xsd:sequence>
+		</xsd:complexType>
+	</xsd:element>
+</xsd:schema>
