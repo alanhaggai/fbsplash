@@ -12,17 +12,20 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <linux/limits.h>
+#include <linux/input.h>
 
 #include "util.h"
 
-static int fd_console = -1;
 static int fd_fb0 = -1;
 static int fb = -1;
 int fd_fb = -1;
@@ -150,26 +153,61 @@ int fbsplashr_init(bool create)
 	return 0;
 }
 
+#ifndef TARGET_KERNEL
+
+#define INPUT_BASE "/sys/class/input"
+#define INPUT_MAX  16
+
+static int ev_fd[INPUT_MAX];
+static int ev_cnt;
+static int ev_highest;
+
 /**
- * Initialize the splash input system.
+ * Initialize the fbsplash input system.
+ *
+ * The fbsplash input uses the Linux event device framework. It will not
+ * work if evdev isn't built into the kernel or compiled as a module and
+ * loaded prior to calling this function.
  *
  * @return 0 on success, a negative value otherwise.
  */
 int fbsplashr_input_init()
 {
-	int err;
+	struct dirent *entry;
+	char buf[PATH_MAX];
+	FILE *fp;
+	DIR *input_cls;
+	int ev, num, err = -1;
 
-	fd_console = open("/dev/console", O_RDWR);
-	if (fd_console == -1)
-		return -1;
+	input_cls = opendir(INPUT_BASE);
+	if (input_cls) {
+		while ((entry = readdir(input_cls)) && ev_cnt < INPUT_MAX) {
 
-	err = fcntl(fd_console, F_SETOWN, getpid());
-	if (err == -1) {
-		close(fd_console);
-		return err;
+			/* Look for all input* files */
+			if (!strncmp(entry->d_name, "input", 5)) {
+				snprintf(buf, PATH_MAX, INPUT_BASE "/%s/capabilities/ev", entry->d_name);
+				fp = fopen(buf, "r");
+				fscanf(fp, "%x", &ev);
+
+				/* Check if the device supports KEY and REP.  It appears that all keyboard
+				 * drivers have at least these two capabilities. */
+				if ((ev & 0x100002) == 0x100002) {
+					sscanf(entry->d_name + 5, "%d", &num);
+					snprintf(buf, PATH_MAX, "/dev/input/event%d", num);
+					ev_fd[ev_cnt] = open(buf, O_RDWR | O_NONBLOCK);
+					if (ev_fd[ev_cnt] >= 0) {
+						ev_highest = ev_fd[ev_cnt];
+						ev_cnt++;
+						err = 0;
+					}
+				}
+				fclose(fp);
+			}
+		}
 	}
+	closedir(input_cls);
 
-	return 0;
+	return err;
 }
 
 /**
@@ -177,10 +215,14 @@ int fbsplashr_input_init()
  */
 void fbsplashr_input_cleanup()
 {
-	if (fd_console != -1)
-		close(fd_console);
+	int i;
 
-	fd_console = -1;
+	for (i = 0; i < ev_cnt; i++) {
+		close(ev_fd[i]);
+	}
+
+	ev_highest = 0;
+	ev_cnt = 0;
 
 	return;
 }
@@ -189,31 +231,62 @@ void fbsplashr_input_cleanup()
  * Wait for a keypress or check whether a key has been pressed.
  *
  * @param block If true, this function will block.
+ * @return Key code as defined in linux/input.h, 0 if no key has been
+ *         pressed or an error occured.
  */
-unsigned char fbsplashr_input_getkey(bool block)
+unsigned short fbsplashr_input_getkey(bool block)
 {
+	struct timeval timeout = {0, 0};
+	struct input_event ev;
 	unsigned char a;
-	int err;
-	int flags;
+	int err, i;
+	fd_set fds;
 
-	if (fd_console == -1)
+	if (!ev_cnt)
 		return 0;
 
-	if (block) {
-		flags = O_RDWR;
-	} else {
-		flags = O_RDWR | O_NONBLOCK;
+	FD_ZERO(&fds);
+
+	for (i = 0; i < ev_cnt; i++) {
+		FD_SET(ev_fd[i], &fds);
 	}
 
-	err = fcntl(fd_console, F_SETFL, flags);
-	if (err == -1)
+poll:
+	if (block) {
+		err = select(ev_highest + 1, &fds, NULL, NULL, NULL);
+	} else {
+		err = select(ev_highest + 1, &fds, NULL, NULL, &timeout);
+	}
+	if (err < 0) {
+		if (errno == EINTR)
+			goto poll;
+		else
+			return 0;
+	} else if (err == 0) {
 		return 0;
+	}
 
-	if (read(fd_console, &a, 1) <= 0)
-		return 0;
+	/* We only process the first event device for which there is
+	 * data available. */
+	for (i = 0; i < ev_cnt; i++) {
+		if (FD_ISSET(ev_fd[i], &fds)) {
+			break;
+		}
+	}
 
-	return a;
+	while ((err = read(ev_fd[i], &ev, sizeof(ev))) == sizeof(ev) || errno == EINTR) {
+		if (ev.type == EV_KEY && ev.value == 0)
+			return ev.code;
+		errno = 0;
+	}
+
+	if (block)
+		goto poll;
+
+	return 0;
 }
+
+#endif /* TARGET_KERNEL */
 
 /**
  * Cleanup after fbsplashr_init() and subsequent calls to any

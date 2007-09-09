@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <linux/kd.h>
+#include <linux/input.h>
 
 #define LIBDIR "/lib"
 #define FBSPLASH_CACHEDIR	LIBDIR"/splash/cache"
@@ -94,6 +95,6 @@ void fbsplashr_progress_set(struct fbspl_theme *theme, int progress);
 
 int fbsplashr_input_init();
 void fbsplashr_input_cleanup();
-unsigned char fbsplashr_input_getkey(bool block);
+unsigned short fbsplashr_input_getkey(bool block);
 
 #endif /* __FBFBSPLASH_H */
