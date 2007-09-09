@@ -7,7 +7,7 @@
 # more details.
 #
 
-PKG_VERSION	= 1.5.1.1
+PKG_VERSION	= 1.5.2
 DEBUG		= false		# set to true to prevent stripping
 K_SHARED	= false		# set to true if you want to link to a shared klibc
 QUIET		= true
