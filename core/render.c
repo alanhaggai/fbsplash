@@ -598,6 +598,7 @@ void obj_prerender(stheme_t *theme, obj *o, bool force)
 void render_objs(stheme_t *theme, u8 *target, u8 mode, bool force)
 {
 	item *i, *j;
+	u8 *bg;
 
 	/*
 	 * First pass: mark rectangles for reblitting and rerendering
@@ -616,10 +617,16 @@ void render_objs(stheme_t *theme, u8 *target, u8 mode, bool force)
 
 	blit_normalize(theme);
 
+	if (mode & FBSPL_MODE_VERBOSE) {
+		bg = (u8*)theme->verbose_img.data;
+	} else {
+		bg = (u8*)theme->silent_img.data;
+	}
+
 	for (i = theme->blit.head; i != NULL; i = i->next) {
 		rect *re = i->p;
 
-		blit((u8*)theme->silent_img.data, re, theme->xres, target, re->x1, re->y1, theme->xres);
+		blit(bg, re, theme->xres, target, re->x1, re->y1, theme->xres);
 
 		for (j = theme->objs.head; j != NULL; j = j->next) {
 			obj *o = j->p;
