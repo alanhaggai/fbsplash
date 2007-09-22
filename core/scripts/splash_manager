@@ -17,6 +17,10 @@
 # - support for '-v'
 # - support for 8bpp modes
 
+# BUGS:
+# - replay won't work correctly when started from a tty with a video mode
+#   different from the one used for the silent tty
+
 # System configuration variables
 spl_util=splash_util.static
 spl_daemon=fbsplashd.static
