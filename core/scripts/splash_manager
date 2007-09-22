@@ -140,14 +140,21 @@ chvt() {
 #   Performs a theme sanity check -- checks whether a theme exists.
 theme_sanity_check() {
 	local theme=$1
+	local t=${res}
+
+	# For verbose mode, we care about the real resolution, not the one
+	# fbsplash would be using for the silent mode.
+	if [ "${mode}" == "v" ]; then
+		t=${rres}
+	fi
 
 	if [ -z "${theme}" ]; then
 		err "You have to specify a theme name."
 		exit 1
 	fi
 
-	if [ ! -e "${themedir}/${theme}/${res}.cfg" ]; then
-		err "Theme '${theme}' doesn't seem to provide a config file for the current resolution (${res})."
+	if [ ! -e "${themedir}/${theme}/${t}.cfg" ]; then
+		err "Theme '${theme}' doesn't seem to provide a config file for the current resolution (${t})."
 		exit 1
 	fi
 }
@@ -931,12 +938,15 @@ if [ -z "${op}" ]; then
 	exit 0
 fi
 
+rres=$(${spl_dir}/bin/fbres)
 res=$(${spl_util} -c getres -t ${theme})
 yres=${res#*x}
 xres=${res%x*}
 
 case "${op}" in
-	'set')	set_theme "${theme}" "${tty}" ;;
+	'set')
+		mode='v'
+		set_theme "${theme}" "${tty}" ;;
 	'demo')
 		theme_sanity_check "${theme}"
 		if [ ${mode} == 's' ]; then
