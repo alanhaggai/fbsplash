@@ -325,7 +325,7 @@ void fbsplashr_cleanup()
  *
  * @return 0 on success, a negative value otherwise.
  */
-int fbsplashr_render_buf(stheme_t *theme, void *buffer, bool repaint)
+int fbsplashr_render_buf(struct fbspl_theme *theme, void *buffer, bool repaint)
 {
 	/* FIXME: 8bpp modes aren't supported yet */
 	if (fbd.var.bits_per_pixel == 8)
@@ -356,7 +356,7 @@ int fbsplashr_render_buf(stheme_t *theme, void *buffer, bool repaint)
  *
  * @return 0 on success, a negative value otherwise.
  */
-int fbsplashr_render_screen(stheme_t *theme, bool repaint, bool bgnd, char effects)
+int fbsplashr_render_screen(struct fbspl_theme *theme, bool repaint, bool bgnd, char effects)
 {
 	if (!fbsplashr_render_buf(theme, theme->bgbuf, repaint)) {
 		if (repaint) {
@@ -389,7 +389,7 @@ int fbsplashr_render_screen(stheme_t *theme, bool repaint, bool bgnd, char effec
  * @return A pointer to a theme descriptor, which is then passed to any
  *         libfbsplashrender functions.
  */
-stheme_t *fbsplashr_theme_load()
+struct fbspl_theme *fbsplashr_theme_load()
 {
 	char buf[512];
 	stheme_t *st;
@@ -460,7 +460,7 @@ stheme_t *fbsplashr_theme_load()
  *
  * @param theme Theme descriptor to be freed.
  */
-void fbsplashr_theme_free(stheme_t *theme)
+void fbsplashr_theme_free(struct fbspl_theme *theme)
 {
 	item *i, *j;
 
@@ -644,7 +644,7 @@ int fbsplashr_tty_silent_update()
  * @param theme Theme descriptor.
  * @param msg The new main message.
  */
-void fbsplashr_message_set(stheme_t *theme, const char *msg)
+void fbsplashr_message_set(struct fbspl_theme *theme, const char *msg)
 {
 	fbsplash_acc_message_set(msg);
 
@@ -669,7 +669,7 @@ void fbsplashr_message_set(stheme_t *theme, const char *msg)
  * @param theme Theme descriptor.
  * @param progress The new progress value.
  */
-void fbsplashr_progress_set(stheme_t *theme, int progress)
+void fbsplashr_progress_set(struct fbspl_theme *theme, int progress)
 {
 	if (progress < 0)
 		progress = 0;

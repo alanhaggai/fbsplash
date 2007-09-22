@@ -499,7 +499,6 @@ nosave:
  *
  * @param pid_daemon Will be set to the PID of the splash daemon if
  *                   it is found to be running.
- * @param verbose    Print errors if true, be silent otherwise.
  *
  * @return 0 if the splash daemon is running, a negative value otherwise.
  */
