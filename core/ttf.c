@@ -850,6 +850,7 @@ void text_bnd(stheme_t *theme, text *ct, rect *bnd)
 	}
 
 	UTF8_to_UNICODE(ct->cache, txt, unicode_len);
+	free(txt);
 	TTF_SetFontStyle(ct->font->font, ct->style);
 
 	text_get_xy(ct, &bnd->x1, &bnd->y1);

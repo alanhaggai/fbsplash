@@ -193,7 +193,7 @@ int main(int argc, char **argv)
 		int yres = fbd.var.yres;
 		fbsplash_get_res(config.theme, &xres, &yres);
 		printf("%dx%d\n", xres, yres);
-		return 0;
+		break;
 	}
 
 	case setmode:

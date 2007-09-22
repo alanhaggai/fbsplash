@@ -186,7 +186,7 @@ typedef struct text {
 	u16 *cache;
 	font_e *font;
 	int curr_progress;		/* if this string uses the $progress variable,
-							 * curr_progress holds it's currently used value
+							 * curr_progress holds its currently used value
 							 * (i.e. the value for which the text has been
 							 * rendered), otherwise = -1 */
 } text;

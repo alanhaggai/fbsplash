@@ -50,7 +50,7 @@ static void obj_free(obj *o)
 	}
 
 #if WANT_MNG
-	if (o->type == o_anim) {
+	else if (o->type == o_anim) {
 		anim *a = o->p;
 		if (a->filename) {
 			free(a->filename);
@@ -58,6 +58,18 @@ static void obj_free(obj *o)
 
 		if (a->mng) {
 			mng_done(a->mng);
+		}
+	}
+#endif
+#if WANT_TTF
+	else if (o->type == o_text) {
+		text *t = o->p;
+		if (t->cache) {
+			free(t->cache);
+		}
+
+		if (t->val) {
+			free(t->val);
 		}
 	}
 #endif
@@ -469,6 +481,18 @@ void fbsplashr_theme_free(struct fbspl_theme *theme)
 
 	free(theme->bgbuf);
 
+	if (theme->pic)
+		free(theme->pic);
+
+	if (theme->pic256)
+		free(theme->pic256);
+
+	if (theme->silentpic)
+		free(theme->silentpic);
+
+	if (theme->silentpic256)
+		free(theme->silentpic256);
+
 	for (i = theme->objs.head ; i != NULL; ) {
 		obj *o = (obj*)i->p;
 		j = i->next;
@@ -491,6 +515,7 @@ void fbsplashr_theme_free(struct fbspl_theme *theme)
 
 	list_free(theme->anims, false);
 	list_free(theme->rects, true);
+	list_free(theme->blit, true);
 
 	/* Free background pictures */
 	if (theme->verbose_img.data)

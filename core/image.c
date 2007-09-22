@@ -151,6 +151,8 @@ static int load_png(stheme_t *theme, char *filename, u8 **data, struct fb_cmap *
 		}
 	}
 
+	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+
 	free(buf);
 	fclose(fp);
 
