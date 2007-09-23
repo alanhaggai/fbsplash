@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 
 	config.reqmode = FBSPL_MODE_SILENT;
 
-	while ((c = getopt_long(argc, argv, "c:t:m:p:e:hdvq", options, NULL)) != EOF) {
+	while ((c = getopt_long(argc, argv, "c:t:m:p:hvq", options, NULL)) != EOF) {
 
 		switch (c) {
 
