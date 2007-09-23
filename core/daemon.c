@@ -60,38 +60,6 @@ struct termios tios;
 
 #if WANT_MNG
 /*
- * Renders an animation frame directly to the screen.
- */
-void anim_render_frame(anim *a)
-{
-	int ret;
-	mng_anim *mng;
-	obj *o;
-
-	mng = mng_get_userdata(a->mng);
-	mng->wait_msecs = 0;
-	memset(&mng->start_time, 0, sizeof(struct timeval));
-
-	/* XXX: This is a workaround for what seems to be a bug in libmng.
-	 * Either we clear the canvas ourselves, or parts of the previous frame
-	 * will remain in it after rendering the current one. */
-	memset(mng->canvas, 0, mng->canvas_h * mng->canvas_w * mng->canvas_bytes_pp);
-	ret = mng_render_next(a->mng);
-	if (ret == MNG_NOERROR) {
-		if (a->flags & F_ANIM_ONCE) {
-			a->status = F_ANIM_STATUS_DONE;
-		} else {
-			mng_display_restart(a->mng);
-		}
-	}
-
-	if (ret == MNG_NOERROR || ret == MNG_NEEDTIMERWAIT) {
-		o = container_of(a);
-		o->invalid = true;
-	}
-}
-
-/*
  * Display all animations of the type 'once' or 'loop'.
  */
 void *thf_anim(void *unused)
@@ -102,28 +70,6 @@ void *thf_anim(void *unused)
 	mng_anim *mng;
 	int delay = 10000, rdelay, oldstate;
 	struct timespec ts, tsc;
-
-	/* Render the first frame of all animations on the screen. */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
-	pthread_mutex_lock(&mtx_paint);
-	for (i = theme->anims.head; i != NULL; i = i->next) {
-		ca = i->p;
-		co = container_of(ca);
-
-		if (!co->visible ||
-			(ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL)
-			continue;
-
-		mng = mng_get_userdata(ca->mng);
-		if (!mng->displayed_first) {
-			anim_render_frame(ca);
-
-			if (ctty == CTTY_SILENT)
-				fbsplashr_render_screen(theme, true, false, FBSPL_EFF_NONE);
-		}
-	}
-	pthread_mutex_unlock(&mtx_paint);
-	pthread_setcancelstate(oldstate, NULL);
 
 	while(1) {
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
@@ -143,7 +89,7 @@ void *thf_anim(void *unused)
 			/* If this is a new animation (activated by a service),
 			 * display it immediately. */
 			if (!mng->displayed_first) {
-				anim_render_frame(ca);
+				anim_render_canvas(ca);
 
 				if (ctty == CTTY_SILENT)
 					fbsplashr_render_screen(theme, true, false, FBSPL_EFF_NONE);
@@ -195,7 +141,7 @@ void *thf_anim(void *unused)
 			if (mng->wait_msecs > 0) {
 				mng->wait_msecs -= rdelay;
 				if (mng->wait_msecs <= 0)
-					anim_render_frame(ca);
+					anim_render_canvas(ca);
 			}
 		}
 		fbsplashr_render_screen(theme, true, false, FBSPL_EFF_NONE);
@@ -457,17 +403,10 @@ void switchmon_start(int update, int stty)
 
 /*
  * Load a new theme.
- *
  */
 int reload_theme(void)
 {
 	item *i;
-
-#ifdef CONFIG_MNG
-	/* The anim thread will be restarted when we're done
-	 * reloading the theme. */
-	pthread_cancel(th_anim);
-#endif
 
 	fbsplashr_theme_free(theme);
 	theme = fbsplashr_theme_load();
@@ -477,9 +416,6 @@ int reload_theme(void)
 		invalidate_service(theme, ss->svc, ss->state);
 	}
 
-#ifdef CONFIG_MNG
-	pthread_create(&th_anim, NULL, &thf_anim, NULL);
-#endif
 	return 0;
 }
 

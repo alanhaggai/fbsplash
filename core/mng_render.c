@@ -252,6 +252,38 @@ mng_retcode mng_display_restart(mng_handle mngh)
 	return mng_display_reset(mngh);
 }
 
+/*
+ * Renders an animation frame to the anim's canvas.
+ */
+void anim_render_canvas(anim *a)
+{
+	int ret;
+	mng_anim *mng;
+	obj *o;
+
+	mng = mng_get_userdata(a->mng);
+	mng->wait_msecs = 0;
+	memset(&mng->start_time, 0, sizeof(struct timeval));
+
+	/* XXX: This is a workaround for what seems to be a bug in libmng.
+	 * Either we clear the canvas ourselves, or parts of the previous frame
+	 * will remain in it after rendering the current one. */
+	memset(mng->canvas, 0, mng->canvas_h * mng->canvas_w * mng->canvas_bytes_pp);
+	ret = mng_render_next(a->mng);
+	if (ret == MNG_NOERROR) {
+		if (a->flags & F_ANIM_ONCE) {
+			a->status = F_ANIM_STATUS_DONE;
+		} else {
+			mng_display_restart(a->mng);
+		}
+	}
+
+	if (ret == MNG_NOERROR || ret == MNG_NEEDTIMERWAIT) {
+		o = container_of(a);
+		o->invalid = true;
+	}
+}
+
 int load_anims(stheme_t *theme)
 {
 	int err = 0;

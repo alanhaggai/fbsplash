@@ -405,6 +405,7 @@ struct fbspl_theme *fbsplashr_theme_load()
 {
 	char buf[512];
 	stheme_t *st;
+	item *i;
 
 	if (!config.theme)
 		return NULL;
@@ -452,6 +453,21 @@ struct fbspl_theme *fbsplashr_theme_load()
 
 #if WANT_MNG
 	load_anims(st);
+
+	/* Initialize the first frame of all animations. */
+	for (i = st->anims.head; i != NULL; i = i->next) {
+		mng_anim *mng;
+		anim *ca = i->p;
+		obj *co = container_of(ca);
+
+		if (!co->visible ||
+			(ca->flags & F_ANIM_METHOD_MASK) == F_ANIM_PROPORTIONAL)
+			continue;
+
+		mng = mng_get_userdata(ca->mng);
+		if (!mng->displayed_first)
+			anim_render_canvas(ca);
+	}
 #endif
 
 #if WANT_TTF
