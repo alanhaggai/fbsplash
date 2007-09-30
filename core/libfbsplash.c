@@ -31,7 +31,7 @@
 
 #include "util.h"
 
-#define FBSPLASH_TMPDIR		LIBDIR"/splash/tmp"
+#define FBSPLASH_TMPDIR		FBSPLASH_DIR"/tmp"
 
 static FILE *fp_fifo = NULL;
 int fd_tty0 = -1;

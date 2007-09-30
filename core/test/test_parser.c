@@ -125,6 +125,7 @@ int main(int argc, char **argv)
 		test_parse(parse_icon, false, icons_err[i], 4);
 	}
 
+#if WANT_MNG
 	for (i = 0; i < ARRAY_SIZE(anims_ok); i++) {
 		test_parse(parse_anim, true, anims_ok[i], 4);
 	}
@@ -132,7 +133,9 @@ int main(int argc, char **argv)
 	for (i = 0; i < ARRAY_SIZE(anims_err); i++) {
 		test_parse(parse_anim, false, anims_err[i], 4);
 	}
+#endif
 
+#if WANT_TTF
 	for (i = 0; i < ARRAY_SIZE(text_ok); i++) {
 		test_parse(parse_text, true, text_ok[i], 4);
 	}
@@ -140,6 +143,7 @@ int main(int argc, char **argv)
 	for (i = 0; i < ARRAY_SIZE(text_err); i++) {
 		test_parse(parse_text, false, text_err[i], 4);
 	}
+#endif
 
 	for (i = 0; i < ARRAY_SIZE(box_ok); i++) {
 		test_parse(parse_box, true, box_ok[i], 3);

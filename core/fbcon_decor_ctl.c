@@ -55,7 +55,7 @@ struct cmd cmds[] = {
 void usage(void)
 {
 	printf(
-"fbcondecor_ctl/splashutils-" PKG_VERSION "\n"
+"fbcondecor_ctl/splashutils-" PACKAGE_VERSION "\n"
 "Usage: fbcondecor_ctl [options] -c <cmd>\n\n"
 "Commands:\n"
 "  on       enable fbcondecor on a virtual console\n"

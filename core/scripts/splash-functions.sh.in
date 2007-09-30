@@ -17,14 +17,14 @@
 # both readable and writable at all times, even when the root fs
 # is mounted read-only. This writable space is provided by a tmpfs
 # mounted at ${spl_cachedir}.
-export spl_util="/bin/splash_util.static"
-export spl_decor="/sbin/fbcondecor_ctl.static"
-export spl_bindir="/lib/splash/bin"
-export spl_cachedir="/lib/splash/cache"
+export spl_util="@bindir@/splash_util.static"
+export spl_decor="@sbindir@/fbcondecor_ctl.static"
+export spl_bindir="@libdir@/splash/bin"
+export spl_cachedir="@libdir@/splash/cache"
 export spl_fifo="${spl_cachedir}/.splash"
 export spl_pidfile="${spl_cachedir}/daemon.pid"
 
-[ -r /etc/init.d/functions.sh ] && . /etc/init.d/functions.sh
+[ -r @sysconfdir@/init.d/functions.sh ] && . @sysconfdir@/init.d/functions.sh
 
 splash_setup() {
 	# If it's already set up, let's not waste time on parsing the config
@@ -42,8 +42,8 @@ splash_setup() {
 	export SPLASH_SHUTDOWN_MESSAGE="Shutting down the system (\$progress%)... Press F2 for verbose mode."
 	export SPLASH_REBOOT_MESSAGE="Rebooting the system (\$progress%)... Press F2 for verbose mode."
 
-	[ -f /etc/conf.d/splash ] && . /etc/conf.d/splash
-	[ -f /etc/conf.d/fbcondecor ] && . /etc/conf.d/fbcondecor
+	[ -f @sysconfdir@/conf.d/splash ] && . @sysconfdir@/conf.d/splash
+	[ -f @sysconfdir@/conf.d/fbcondecor ] && . @sysconfdir@/conf.d/fbcondecor
 
 	if [ -f /proc/cmdline ]; then
 		options=$(grep -o 'splash=[^ ]*' /proc/cmdline)

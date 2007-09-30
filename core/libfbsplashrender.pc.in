@@ -1,11 +1,11 @@
-prefix=/usr
-exec_prefix=/usr
-libdir=${prefix}/lib
-includedir=${prefix}/include
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
 
 Name: libfbsplashrender
 Description: Provide support for rendering themes used by fbsplash. 
 Version: 0.1
 Libs: -L${libdir} -lfbsplashrender
-Libs.private: -lfbsplash
+Libs.private: -lfbsplash @libs_private@
 Cflags: -I${includedir}

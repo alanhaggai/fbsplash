@@ -4,5 +4,8 @@ Code authors and regular contributors
 Bernard Blackham <bernard@blackham.com.au>
  - functions for rendering MNG animations
 
+Paul Bender <pebender@gmail.com>
+ - autotools-based build system
+
 Michal Januszewski <spock@gentoo.org>
  - (almost) everything else

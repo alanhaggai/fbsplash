@@ -12,7 +12,7 @@
 #include <linux/fb.h>
 #include <limits.h>
 
-#include "objs/fbsplash.h"
+#include "fbsplash.h"
 
 /* XXX:
  * It should be perfectly OK to include sys/vt.h when building the kernel
@@ -30,8 +30,8 @@
 #define PATH_SYS	"/sys"
 
 #if defined(TARGET_KERNEL)
-	#define PATH_SYS	"/lib/splash/sys"
-	#define PATH_PROC	"/lib/splash/proc"
+	#define PATH_SYS	FBSPLASH_DIR"/sys"
+	#define PATH_PROC	FBSPLASH_DIR"/proc"
 #endif
 
 /* Useful short-named types */

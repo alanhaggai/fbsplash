@@ -61,7 +61,7 @@ struct cmd cmds[] = {
 void usage(void)
 {
 	printf(
-"splash_util/splashutils-" PKG_VERSION "\n"
+"splash_util/splashutils-" PACKAGE_VERSION "\n"
 "Usage: splash_util [options] -c <cmd>\n\n"
 "Commands:\n"
 #ifdef CONFIG_DEPRECATED

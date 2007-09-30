@@ -1,7 +1,7 @@
-prefix=/usr
-exec_prefix=/usr
-libdir=/
-includedir=${prefix}/include
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
 
 Name: libfbsplash
 Description: Provide support for integration of fbsplash with the initscript system. 

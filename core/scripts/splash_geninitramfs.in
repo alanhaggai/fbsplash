@@ -19,7 +19,7 @@ cleanup()
 usage()
 {
 	cat <<EOTB
-splash_geninitramfs/splashutils-%PKG_VERSION%
+splash_geninitramfs/splashutils-@PACKAGE_VERSION@
 Usage: splash_geninitramfs [options] [--all|theme ...]
 
 Main operation modes:
@@ -60,10 +60,10 @@ put_item()
 	fi
 }
 
-themedir="/etc/splash"
+themedir="@sysconfdir@/splash"
 declare -a themes
 mode="h"
-splash_hlp="/sbin/fbcondecor_helper"
+splash_hlp="@sbindir@/fbcondecor_helper"
 res=""
 overlay=""
 verbose=0
@@ -161,8 +161,8 @@ if [ ! -e ${splash_hlp} ]; then
 fi
 
 printv "o Copying ${splash_hlp}.."
-cp "${splash_hlp}" "${imgdir}/sbin"
-ln -sf "${splash_hlp}" "${imgdir}/sbin/splash_helper"
+cp "${splash_hlp}" "${imgdir}@sbindir@"
+ln -sf "${splash_hlp}" "${imgdir}@sbindir@/splash_helper"
 
 res=${res//,/ }
 
@@ -217,7 +217,7 @@ for (( i=0 ; i < index ; i++ )) ; do
 		if [[ -n "${font}" ]]; then
 			put_item "${font}"
 		else
-			put_item "/etc/splash/luxisri.ttf"
+			put_item "@sysconfdir@/splash/luxisri.ttf"
 		fi
 	done
 done

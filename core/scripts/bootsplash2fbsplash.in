@@ -6,14 +6,14 @@
 # Usage: bootsplash2fbsplash [--remove-comments] <theme_name>
 #
 
-$path_bp = "/etc/bootsplash/";
-$path_fbspl = "/etc/splash";
+$path_bp = "@sysconfdir@/bootsplash/";
+$path_fbspl = "@sysconfdir@/splash";
 $comments = 1;
 $theme = "";
 
 sub usage
 {
-	print "bootsplash2fbsplash theme converter / splashutils-%PKG_VERSION%\n";
+	print "bootsplash2fbsplash theme converter / splashutils-@PACKAGE_VERSION@\n";
 	print '(c) 2004-2005 Michal Januszewski <spock@gentoo.org>'."\n\n";
 	print "Usage: bootsplash2fbsplash [--remove-comments] <theme_name>\n";
 }

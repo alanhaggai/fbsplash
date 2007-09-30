@@ -6,14 +6,14 @@
 #include <linux/kd.h>
 #include <linux/input.h>
 
-#define LIBDIR "/lib"
-#define FBSPLASH_CACHEDIR	LIBDIR"/splash/cache"
+#define FBSPLASH_DIR		"@libdir@/splash"
+#define FBSPLASH_CACHEDIR	FBSPLASH_DIR"/cache"
 #define FBSPLASH_PIDFILE	FBSPLASH_CACHEDIR"/daemon.pid"
 #define FBSPLASH_PROFILE	FBSPLASH_CACHEDIR"/profile"
-#define FBSPLASH_DAEMON		"/sbin/fbsplashd.static"
+#define FBSPLASH_DAEMON		"@sbindir@/fbsplashd.static"
 #define FBSPLASH_FIFO		FBSPLASH_CACHEDIR"/.splash"
 
-#define FBSPL_THEME_DIR		"/etc/splash"
+#define FBSPL_THEME_DIR		"@sysconfdir@/splash"
 #define FBSPL_DEFAULT_THEME	"default"
 #define FBSPL_PROGRESS_MAX	0xffff
 

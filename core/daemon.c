@@ -580,7 +580,7 @@ struct option options[] = {
 void usage(void)
 {
 	printf(
-"fbsplashd/splashutils-" PKG_VERSION "\n"
+"fbsplashd/splashutils-" PACKAGE_VERSION "\n"
 "Usage: fbsplashd [options]\n\n"
 "Options:\n"
 "  -h, --help          show this help message\n"
