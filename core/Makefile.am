@@ -49,7 +49,7 @@ MOSTLYCLEANFILES       =
 
 pkgconfigdir = $(libdir)/pkgconfig
 
-QUIET = true
+QUIET ?= true
 
 if CONFIG_DEBUG
 CFLAGS ?= -Wall -g
@@ -142,14 +142,13 @@ dist-hook-header:
 fbsplash.h: fbsplash.h.in config.h
 	@$(call infmsg,CREATE,$@)
 	$(Q)$(MKDIR_P) $(@D)
-	$(Q)rm -f $@ $@~
+	$(Q)rm -f $@
 	$(Q)cat $< | $(SED) \
 		-e 's|@bindir[@]|$(ebindir)|g' \
 		-e 's|@sbindir[@]|$(esbindir)|g' \
 		-e 's|@sysconfdir[@]|$(sysconfdir)|g' \
 		-e 's|@libdir[@]|$(elibdir)|g' \
-		> $@~
-	$(Q)mv -f $@~ $@
+		> $@
 
 config.h:
 	@echo "The file 'config.h' is missing. Please run 'configure'."
@@ -167,7 +166,7 @@ pkgconfig_DATA  += libfbsplashrender.pc
 EXTRA_DIST      += libfbsplashrender.pc.in
 
 libfbsplash_la_SOURCES = libfbsplash.c util.h fbsplash.h
-libfbsplash_la_LDLAGS  = $(AM_LDFLAGS) -version-info $(libfbsplash_version)
+libfbsplash_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(libfbsplash_version)
 libfbsplash_la_LIBADD  =
 
 libfbsplashrender_la_SOURCES  = \
@@ -185,7 +184,7 @@ libfbsplashrender_la_SOURCES  = \
 	util.h \
 	fbsplash.h
 libfbsplashrender_la_CFLAGS   = $(AM_CFLAGS)
-libfbsplashrender_la_LDLAGS   = $(AM_LDFLAGS) -version-info $(libfbsplashrender_version)
+libfbsplashrender_la_LDFLAGS  = $(AM_LDFLAGS) -version-info $(libfbsplashrender_version)
 libfbsplashrender_la_LIBADD   =
 
 libfbsplashrender_la_CFLAGS  += $(JPEG_CFLAGS)
@@ -214,15 +213,14 @@ MOSTLYCLEANFILES += libfbsplashrender.pc
 %.pc: %.pc.in
 	@$(call infmsg,CREATE,$@)
 	$(Q)$(MKDIR_P) $(@D)
-	$(Q)rm -f $@ $@~
+	$(Q)rm -f $@
 	$(Q)cat $< | $(SED) \
 		-e 's|@prefix[@]|$(prefix)|g' \
 		-e 's|@exec_prefix[@]|$(exec_prefix)|g' \
 		-e 's|@libdir[@]|$(libdir)|g' \
 		-e 's|@includedir[@]|$(includedir)|g' \
 		-e 's|@libs_private[@]|$(strip $($(basename $(@F))_la_LIBADD))|g' \
-		> $@~
-	$(Q)mv -f $@~ $@
+		> $@
 
 ################################################################################
 # Script
@@ -251,15 +249,14 @@ MOSTLYCLEANFILES += scripts/splash_resize
 scripts/%: scripts/%.in
 	@$(call infmsg,CREATE,$@)
 	$(Q)$(MKDIR_P) $(@D)
-	$(Q)rm -f $@ $@~
+	$(Q)rm -f $@
 	$(Q)cat $< | $(SED) \
 		-e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g' \
 		-e 's|@bindir[@]|$(ebindir)|g' \
 		-e 's|@sbindir[@]|$(esbindir)|g' \
 		-e 's|@sysconfdir[@]|$(sysconfdir)|g' \
 		-e 's|@libdir[@]|$(libdir)|g' \
-		> $@~
-	$(Q)mv -f $@~ $@
+		> $@
 
 ################################################################################
 # User
@@ -510,7 +507,7 @@ libz.a:
 mostlyclean-local-kernel-libfreetype:
 	$(Q)$(MKDIR_P) libfreetype
 	$(Q)cd libfreetype ; \
-	$(Q)if test -e ./config.mk ; then \
+	if test -e ./config.mk ; then \
 		$(call infmsg,CLEAN,libfreetype.a) ; \
 		$(MAKE) $(AM_MAKEFLAGS) clean $(OUTPUT) ; \
 		rm -f config.mk ; \
@@ -521,7 +518,7 @@ mostlyclean-local-kernel-libfreetype:
 mostlyclean-local-kernel-libjpeg:
 	$(Q)$(MKDIR_P) libjpeg
 	$(Q)cd libjpeg ; \
-	$(Q)if test -e Makefile ; then \
+	if test -e Makefile ; then \
 		$(call infmsg,CLEAN,libjpeg.a) ; \
 		$(MAKE) $(AM_MAKEFLAGS) clean $(OUTPUT) ; \
 		rm -f Makefile ; \

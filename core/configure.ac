@@ -262,116 +262,6 @@ AC_ARG_WITH([klibc-compiler],
 )
 AC_SUBST([KLCC])
 
-AC_ARG_WITH([klibc-prefix],
-  AS_HELP_STRING([--with-klibc-prefix=DIR], [klibc installation directory @<:@auto@:>@]),
-  [klibc_prefix="${withval}"],
-  [
-    klibc_prefix=$("${KLCC}" -print-klibc-prefix 2> /dev/null)
-    AS_IF(
-      [test "x${klibc_prefix}" = "x"],
-      [
-        AS_IF(
-          [test -d "${DESTDIR}${libdir}/klibc"],
-          [klibc_prefix="\$(libdir)/klibc"]
-        )
-      ]
-    )
-    AS_IF(
-      [test "x${klibc_prefix}" = "x"],
-      [AC_MSG_WARN([could not determine klibc installation directory.])]
-    )
-  ]
-)
-AC_SUBST([klibc_prefix])
-
-AC_ARG_WITH([klibc-bindir],
-  AS_HELP_STRING([--with-klibc-bindir=DIR], [klibc user executables @<:@auto@:>@]),
-  [klibc_bindir="${withval}"],
-  [
-    klibc_bindir=$("${KLCC}" -print-klibc-bindir 2> /dev/null)
-    AS_IF(
-      [test "x${klibc_bindir}" = "x"],
-      [
-        AS_IF(
-          [test "x${klibc_prefix}" != "x" && test -d "${DESTDIR}${klibc_prefix}/bin"],
-          [klibc_bindir="\$(klibc_prefix)/bin"]
-        )
-      ]
-    )
-    AS_IF(
-      [test "x${klibc_bindir}" = "x"],
-      [AC_MSG_WARN([could not determine klibc user executables directory.])]
-    )
-  ]
-)
-AC_SUBST([klibc_bindir])
-
-AC_ARG_WITH([klibc-sbindir],
-  AS_HELP_STRING([--with-klibc-sbindir=DIR], [klibc system admin executables @<:@auto@:>@]),
-  [klibc_sbindir="${withval}"],
-  [
-    klibc_sbindir=$("${KLCC}" -print-klibc-sbindir 2> /dev/null)
-    AS_IF(
-      [test "x${klibc_sbindir}" = "x"],
-      [
-        AS_IF(
-          [test "x${klibc_prefix}" != "x" && test -d "${DESTDIR}${klibc_prefix}/sbin"],
-          [klibc_sbindir="\$(klibc_prefix)/sbin"]
-        )
-      ]
-    )
-    AS_IF(
-      [test "x${klibc_sbindir}" = "x"],
-      [AC_MSG_WARN([could not determine klibc system admin executables directory.])]
-    )
-  ]
-)
-AC_SUBST([klibc_sbindir])
-
-AC_ARG_WITH([klibc-libdir],
-  AS_HELP_STRING([--with-klibc-libdir=DIR], [klibc object libraries @<:@auto@:>@]),
-  [klibc_libdir="${withval}"],
-  [
-    klibc_libdir=$("${KLCC}" -print-klibc-libdir 2> /dev/null)
-    AS_IF(
-      [test "x${klibc_libdir}" = "x"],
-      [
-        AS_IF(
-          [test "x${klibc_prefix}" != "x" && test -d "${DESTDIR}${klibc_prefix}/lib"],
-          [klibc_libdir="\$(klibc_prefix)/lib"]
-        )
-      ]
-    )
-    AS_IF(
-      [test "x${klibc_libdir}" = "x"],
-      [AC_MSG_WARN([could not determine klibc object libraries directory.])]
-    )
-  ]
-)
-AC_SUBST([klibc_libdir])
-
-AC_ARG_WITH([klibc-includedir],
-  AS_HELP_STRING([--with-klibc-includedir=DIR], [klibc C header files @<:@auto@:>@]),
-  [klibc_includedir="${withval}"],
-  [
-    klibc_includedir=$("${KLCC}" -print-klibc-includedir 2> /dev/null)
-    AS_IF(
-      [test "x${klibc_includedir}" = "x"],
-      [
-        AS_IF(
-          [test "x${klibc_prefix}" != "x" && test -d "${DESTDIR}${klibc_prefix}/include"],
-          [klibc_includedir="\$(klibc_prefix)/include"]
-        )
-      ]
-    )
-    AS_IF(
-      [test "x${klibc_includedir}" = "x"],
-      [AC_MSG_WARN([could not determine klibc C header files directory.])]
-    )
-  ]
-)
-AC_SUBST([klibc_includedir])
-
 AC_ARG_WITH([freetype2-source-dir],
   AS_HELP_STRING([--with-freetype2-source-dir=DIR], [directory containing freetype2 library source used when linking with klibc @<:@internal@:>@]),
   [LIBFREETYPE2_SOURCE="${withval}"],
@@ -401,30 +291,30 @@ AC_ARG_WITH([zlib-source-dir],
 AC_SUBST([LIBZ_SOURCE])
 
 AC_ARG_WITH([essential-prefix],
-  AS_HELP_STRING([--with-essential-prefix=DIR], [install essential files in ESSENTIAL_PREFIX @<:@EPREFIX==EROOT/usr ? EROOT : EPREFIX@:>@]),
+  AS_HELP_STRING([--with-essential-prefix=DIR], [install essential files in ESSENTIAL_PREFIX @<:@/@:>@]),
   [essential_prefix="${withval}"],
-  [essential_prefix="$(echo ${exec_prefix} | sed -e 's%/usr$%%')"]
+  [essential_prefix="/"]
 )
 AC_SUBST([essential_prefix])
 
 AC_ARG_WITH([essential-bindir],
   AS_HELP_STRING([--with-essential-bindir=DIR], [essential user executables directory @<:@ESSENTIAL_PREFIX/bin@:>@]),
   [ebindir="${withval}"],
-  [ebindir="${essential_prefix}/bin"]
+  [ebindir="\$(essential_prefix)/bin"]
 )
 AC_SUBST([ebindir])
 
 AC_ARG_WITH([essential-sbindir],
   AS_HELP_STRING([--with-eseential-sbindir=DIR], [essential system admin executables directory @<:@ESSENTIAL_PREFIX/sbin@:>@]),
   [esbindir="${withval}"],
-  [esbindir="${essential_prefix}/sbin"]
+  [esbindir="\$(essential_prefix)/sbin"]
 )
 AC_SUBST([esbindir])
 
 AC_ARG_WITH([essential-libdir],
   AS_HELP_STRING([--with-essential-libdir=DIR], [essential object code libaries directoy @<:@ESSENTIAL_PREFIX/lib@:>@]),
   [elibdir="${withval}"],
-  [elibdir="${essential_prefix}/lib"]
+  [elibdir="\$(essential_prefix)/lib"]
 )
 AC_SUBST([elibdir])
 
@@ -622,7 +512,7 @@ AS_IF(
   [
     AS_IF(
       [test "x${LIBPNG_CONFIG}" = "x"],
-      [AC_CHECK_PROG([LIBPNG_CONFIG],[${DESTDIR}${bindir}/libpng-config],[${DESTDIR}${bindir}/libpng-config],,[/])]
+      [AC_CHECK_PROG([LIBPNG_CONFIG],["${DESTDIR}${bindir}"/libpng-config],["${DESTDIR}${bindir}"/libpng-config],,[/])]
     )
     AS_IF(
       [test "x${LIBPNG_CONFIG}" = "xno"],

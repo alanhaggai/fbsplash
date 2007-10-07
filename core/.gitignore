@@ -1,6 +1,17 @@
 # This is where object files go
 objs/*
 config.h
+config.h.in
+config.guess
+config.sub
+configure
+Makefile.in
+missing
+depcomp
+install-sh
+ltmain.sh
+aclocal.m4
+autom4te.cache
 misc/benchmark
 misc/splashtest
 misc/blittest
