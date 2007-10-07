@@ -507,12 +507,13 @@ AC_SUBST([MNG_LIBS])
 
 AC_ARG_VAR([PNG_CFLAGS], [C compiler flags for PNG library, overriding autodetection])
 AC_ARG_VAR([PNG_LIBS],   [linker flags for PNG library, overriding autodetection])
+
 AS_IF(
   [test "x${config_png}" = "xyes"],
   [
     AS_IF(
       [test "x${LIBPNG_CONFIG}" = "x"],
-      [AC_CHECK_PROG([LIBPNG_CONFIG],["${DESTDIR}${bindir}"/libpng-config],["${DESTDIR}${bindir}"/libpng-config],,[/])]
+      [AC_PATH_PROG(LIBPNG_CONFIG, libpng-config)]
     )
     AS_IF(
       [test "x${LIBPNG_CONFIG}" = "xno"],
