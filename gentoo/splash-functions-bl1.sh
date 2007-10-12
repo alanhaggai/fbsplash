@@ -198,7 +198,11 @@ splash_exit() {
 		return 0
 	fi
 
-	splash_comm_send "exit"
+	if service_started "xdm"; then
+		splash_comm_send "exit staysilent"
+	else
+		splash_comm_send "exit"
+	fi
 	splash_cache_cleanup
 }
 

@@ -588,7 +588,11 @@ static int splash_stop(const char *runlevel)
 	char buf[128];
 	int cnt = 0;
 
-	fbsplash_send("exit\n");
+	if (rc_service_state("xdm", rc_service_started)) {
+		fbsplash_send("exit staysilent\n");
+	} else {
+		fbsplash_send("exit\n");
+	}
 	snprintf(buf, 128, "/proc/%d", pid_daemon);
 
 	/* Wait up to 1.0s for the splash daemon to exit. */
