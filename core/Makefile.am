@@ -57,15 +57,6 @@ else
 CFLAGS ?= -O2
 endif
 
-# The was copied from the original Makefile file. I am not sure that it is
-# needed. In addition, given the trailing 'linux' in the path and that 'fb.h'
-# is included using '#include <linux/fb.h>', I am not sure that it works.
-# As a result, I have commented it out.
-# 
-## Include the klibc header files so that we can compile against fb.h
-## from a kernel thee patched with fbcondecor.
-#INCLUDES = -idirafter $(DESTDIR)$(libdir)/klibc/include/linux
-
 ################################################################################
 # All
 ################################################################################
@@ -205,8 +196,6 @@ libfbsplashrender_la_CFLAGS  += $(FREETYPE2_CFLAGS) $(M_CFLAGS)
 libfbsplashrender_la_LIBADD  += $(FREETYPE2_LIBS)   $(M_LIBS)
 endif
 
-libfbsplash_la_CFLAGS = $(libfbsplashrender_la_CFLAGS)
-
 MOSTLYCLEANFILES += libfbsplash.pc
 MOSTLYCLEANFILES += libfbsplashrender.pc
 
@@ -271,29 +260,29 @@ bin_PROGRAMS   += splash_util
 ebin_PROGRAMS  += splash_util.static
 
 fbcondecor_ctl_SOURCES      = fbcon_decor_ctl.c fbcon_decor.h include/console_decor.h include/fbcondecor.h util.h fbsplash.h
-fbcondecor_ctl_CPPFLAGS     = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplash_la_CFLAGS)
+fbcondecor_ctl_CPPFLAGS     = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplashrender_la_CFLAGS)
 fbcondecor_ctl_LDFLAGS      = $(AM_LDFLAGS)
 fbcondecor_ctl_LDADD        = libfbsplashrender.la libfbsplash.la
 
 fbsplashd_SOURCES           = daemon_cmd.c daemon.c daemon.h util.h fbsplash.h
-fbsplash__CPPFLAGS          = $(AM_CPPFLAGS) -DTARGET_UTIL
-fbsplashd_CFLAGS            = $(AM_CFLAGS) $(PTHREAD_CFLAGS) $(RT_CFLAGS) $(libfbsplash_la_CFLAGS)
+fbsplashd_CPPFLAGS          = $(AM_CPPFLAGS) -DTARGET_UTIL
+fbsplashd_CFLAGS            = $(AM_CFLAGS) $(PTHREAD_CFLAGS) $(RT_CFLAGS) $(libfbsplashrender_la_CFLAGS)
 fbsplashd_LDFLAGS           = $(AM_LDFLAGS)
 fbsplashd_LDADD             = libfbsplashrender.la libfbsplash.la $(PTHREAD_LIBS) $(RT_LIBS) $(GPM_LIBS)
 
 fbsplashd_static_SOURCES    = daemon_cmd.c daemon.c daemon.h util.h fbsplash.h
 fbsplashd_static_CPPFLAGS   = $(AM_CPPFLAGS) -DTARGET_UTIL
-fbsplashd_static_CFLAGS     = $(AM_CFLAGS) $(PTHREAD_STATIC_CFLAGS) $(RT_CFLAGS) $(libfbsplash_la_CFLAGS)
+fbsplashd_static_CFLAGS     = $(AM_CFLAGS) $(PTHREAD_STATIC_CFLAGS) $(RT_CFLAGS) $(libfbsplashrender_la_CFLAGS)
 fbsplashd_static_LDFLAGS    = $(AM_LDFLAGS) -all-static
 fbsplashd_static_LDADD      = libfbsplashrender.la libfbsplash.la $(PTHREAD_STATIC_LIBS) $(RT_LIBS) $(GPM_LIBS)
 
 splash_util_SOURCES         = util.c util.h fbsplash.h
-splash_util_CPPFLAGS        = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplash_la_CFLAGS)
+splash_util_CPPFLAGS        = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplashrender_la_CFLAGS)
 splash_util_LDFLAGS         = $(AM_LDFLAGS)
 splash_util_LDADD           = libfbsplashrender.la libfbsplash.la
 
 splash_util_static_SOURCES  = util.c util.h fbsplash.h
-splash_util_static_CPPFLAGS = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplash_la_CFLAGS)
+splash_util_static_CPPFLAGS = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplashrender_la_CFLAGS)
 splash_util_static_LDFLAGS  = $(AM_LDFLAGS) -all-static
 splash_util_static_LDADD    = libfbsplashrender.la libfbsplash.la
 
