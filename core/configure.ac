@@ -93,7 +93,7 @@ AS_IF(
 )
 
 AC_ARG_ENABLE([fbcondecor],
-  AC_HELP_STRING([--disable-fbcondecor], [exclude support for fbcondecor (previously called fbsplash).]),
+  AC_HELP_STRING([--disable-fbcondecor], [exclude support for fbcondecor]),
   [
     AS_CASE(["${enableval}"],
        [yes], [config_fbcondecor="yes"],
@@ -262,57 +262,57 @@ AC_ARG_WITH([klibc-compiler],
 )
 AC_SUBST([KLCC])
 
-AC_ARG_WITH([freetype2-source-dir],
-  AS_HELP_STRING([--with-freetype2-source-dir=DIR], [directory containing freetype2 library source used when linking with klibc @<:@internal@:>@]),
+AC_ARG_WITH([freetype2-src],
+  AS_HELP_STRING([--with-freetype2-src=DIR], [freetype2 source to use when linking with klibc]),
   [LIBFREETYPE2_SOURCE="${withval}"],
   [LIBFREETYPE2_SOURCE="\$(abs_top_srcdir)/\$(LIBFREETYPE2_SOURCE_INTERNAL)"]
 )
 AC_SUBST([LIBFREETYPE2_SOURCE])
 
-AC_ARG_WITH([jpeg-source-dir],
-  AS_HELP_STRING([--with-jpeg-source-dir=DIR], [directory containing JPEG library source used when linking with klibc @<:@internal@:>@]),
+AC_ARG_WITH([jpeg-src],
+  AS_HELP_STRING([--with-jpeg-src=DIR], [jpeglib source to use when linking with klibc]),
   [LIBJPEG_SOURCE="${withval}"],
   [LIBJPEG_SOURCE="\$(abs_top_srcdir)/\$(LIBJPEG_SOURCE_INTERNAL)"]
 )
 AC_SUBST([LIBJPEG_SOURCE])
 
-AC_ARG_WITH([png-source-dir],
-  AS_HELP_STRING([--with-lpng-source-dir=DIR], [directory containing PNG library source used when linking with klibc @<:@internal@:>@]),
+AC_ARG_WITH([lpng-src],
+  AS_HELP_STRING([--with-lpng-src=DIR], [libpng source to use when linking with klibc]),
   [LIBPNG_SOURCE="${withval}"],
   [LIBPNG_SOURCE="\$(abs_top_srcdir)/\$(LIBPNG_SOURCE_INTERNAL)"]
 )
 AC_SUBST([LIBPNG_SOURCE])
 
-AC_ARG_WITH([zlib-source-dir],
-  AS_HELP_STRING([--with-zlib-source-dir=DIR], [directory containing ZLIB library source used when linking with klibc @<:@internal@:>@]),
+AC_ARG_WITH([zlib-src],
+  AS_HELP_STRING([--with-zlib-src=DIR], [zlib source to use when linking with klibc]),
   [LIBZ_SOURCE="${withval}"],
   [LIBZ_SOURCE="\$(abs_top_srcdir)/\$(LIBZ_SOURCE_INTERNAL)"]
 )
 AC_SUBST([LIBZ_SOURCE])
 
 AC_ARG_WITH([essential-prefix],
-  AS_HELP_STRING([--with-essential-prefix=DIR], [install essential files in ESSENTIAL_PREFIX @<:@/@:>@]),
+  AS_HELP_STRING([--with-essential-prefix=ESPREFIX], [install essential files in ESPREFIX @<:@/@:>@]),
   [essential_prefix="${withval}"],
   [essential_prefix="/"]
 )
 AC_SUBST([essential_prefix])
 
 AC_ARG_WITH([essential-bindir],
-  AS_HELP_STRING([--with-essential-bindir=DIR], [essential user executables directory @<:@ESSENTIAL_PREFIX/bin@:>@]),
+  AS_HELP_STRING([--with-essential-bindir=DIR], [essential user apps directory @<:@ESPREFIX/bin@:>@]),
   [ebindir="${withval}"],
   [ebindir="\$(essential_prefix)/bin"]
 )
 AC_SUBST([ebindir])
 
 AC_ARG_WITH([essential-sbindir],
-  AS_HELP_STRING([--with-eseential-sbindir=DIR], [essential system admin executables directory @<:@ESSENTIAL_PREFIX/sbin@:>@]),
+  AS_HELP_STRING([--with-eseential-sbindir=DIR], [essential admin apps directory @<:@ESPREFIX/sbin@:>@]),
   [esbindir="${withval}"],
   [esbindir="\$(essential_prefix)/sbin"]
 )
 AC_SUBST([esbindir])
 
 AC_ARG_WITH([essential-libdir],
-  AS_HELP_STRING([--with-essential-libdir=DIR], [essential object code libaries directoy @<:@ESSENTIAL_PREFIX/lib@:>@]),
+  AS_HELP_STRING([--with-essential-libdir=DIR], [essential libraries directory @<:@ESPREFIX/lib@:>@]),
   [elibdir="${withval}"],
   [elibdir="\$(essential_prefix)/lib"]
 )
