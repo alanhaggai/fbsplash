@@ -244,7 +244,7 @@ scripts/%: scripts/%.in
 		-e 's|@bindir[@]|$(ebindir)|g' \
 		-e 's|@sbindir[@]|$(esbindir)|g' \
 		-e 's|@sysconfdir[@]|$(sysconfdir)|g' \
-		-e 's|@libdir[@]|$(libdir)|g' \
+		-e 's|@libdir[@]|$(elibdir)|g' \
 		> $@
 
 ################################################################################
