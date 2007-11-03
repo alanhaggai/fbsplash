@@ -16,8 +16,8 @@ misc/benchmark
 misc/splashtest
 misc/blittest
 
-libs/zlib-1.2.3/*.o
-libs/libpng-1.2.8/*.o
+libs/*/*.o
+libs/*/*.a
 libs/libpng-1.2.8/Makefile
 libs/zlib-1.2.3/Makefile
 libs/zlib-1.2.3/zconf.h
