@@ -1,1 +1,315 @@
-# Stub ChangeLog file to satisfy automake.
+
+ - Switched to an autotools-based configure system.
+
+23 Sep 2007 * <spock@gentoo.org> * splashutils-1.5.2.1
+ - Fix sanity checks in splash_manager.
+ - Bugfix: use the correct background picture when rendering objects for
+   the verbose mode.
+ - Fix memory leaks.
+
+10 Sep 2007 * <spock@gentoo.org> * splashutils-1.5.2
+ - Make sure there's always a key monitoring thread running.
+ - Make sure chvt requests are not processed during fadeout.
+ - Simulate runlevel change in splash_manager.
+ - Make the parser more strict about whitespace.
+ - Use evdev in the fbsplash input subsystem.
+ - Add info about metadata.xml for themes.
+
+04 Sep 2007 * <spock@gentoo.org> * splashutils-1.5.1.1
+ - Make sure "set mode silent" works when rebooting/shutting down directly from X.
+
+26 Aug 2007 * <spock@gentoo.org> * splashutils-1.5.1
+ - Add checks to make sure that rectangles larger than the screen are not being (re)drawn.
+ - Fix icon and box rendering.
+ - Add support for the new method of keyboard dev detection in splash_manager.
+ - Add the 'staysilent' option to the 'exit' fbsplashd command.
+ - Add the 'set effects' command in fbsplashd.
+
+11 Aug 2007 * <spock@gentoo.org> * splashutils-1.5
+ - Add support for the fadeout effect.
+ - Introduce libfbsplashrender.
+ - Make the parser error messages more user-friendly.
+ - Add support for separate theme section for bootup/reboot/shutdown.
+ - Rewrite and optimize large parts of the rendering engine.
+ - Add support for the 'silentonly' mode.
+ - Split splash_util to fbsplashd, splash_util and fbcondecor_ctl
+ - Change the default silent tty to 16.
+
+07 Jul 2007 * <spock@gentoo.org> * splashutils-1.4.3
+ - Add support for using configs for video modes other than the current one.
+ - Remove the background buffer export option.
+
+09 Jun 2007 * <spock@gentoo.org> * splashutils-1.4.2.1
+ - Minor fixes:
+  - Fix modechange and getcfg in the kernel helper.
+  - Don't check reqmode when doing a setpic.
+
+07 May 2007 * <spock@gentoo.org> * splashutils-1.4.2
+ - kernel helper: bail out if parsing the config file fails.
+ - Don't use Gentoo's einfo and eerror when linking libsplash into splash_util.
+ - Only open the config file if it's going to be actually used (splash_util).
+
+12 Apr 2007 * <spock@gentoo.org> * splashutils-1.4.1
+ - Make it possible for program output to be evaluated.
+ - Add support for '\n' in evaluated text.
+ - Add proper support for svc-activated anims.
+
+05 Apr 2007 * <spock@gentoo.org> * splashutils-1.4
+ - Add libsplash.
+ - Add GPM support.
+ - Don't start the splash daemon if there is another instance already running.
+ - Documentation cleanup and update.
+ - Add a basic splash-functions.sh file.
+
+13 Mar 2007 * <spock@gentoo.org> * splashutils-1.3.1
+ - Fix append mode in splash_geninitramfs so that it preserves the original
+   structure of the archive.
+ - Fix the way data from the FIFO is processed to avoid causing SIGPIPE to
+   be sent to the processes communicating with the splash daemon.
+ - Fix a possible chvt-related hang in splash_manager.
+ - Fix exit path in the splash daemon.
+ - .. and other minor bugfixes.
+
+08 Aug 2006 * <spock@gentoo.org> * miscsplashutils-0.1.5
+ - Remove x86 binaries that were accidentally placed in 0.1.4.
+ - Makefiles update.
+
+15 Jul 2006 * <spock@gentoo.org> * splashutils-1.3, miscsplashutils-0.1.4
+ - Added initial support for MNG animations.
+ - Added support for dynamic image cropping.
+ - Added support for replaying boot sequences using splash_manager.
+ - Added a simple './configure' script.
+ - Documentation updates and clean-ups.
+
+29 Sep 2005 * <spock@gentoo.org> * splashutils-1.1.9.10
+ - Updated documentation.
+ - Fixed compilation issues with CONFIG_TTF unset.
+ - Updated zlib to 1.2.3.
+ - Updated the build system to use klcc. Note that klibc is no longer
+   bundled with splashutils. You'll need a recent version of klibc
+   installed in your system in order to compile splashutils.
+
+21 Aug 2005 * <spock@gentoo.org> * splashutils-1.1.9.9
+ - Added support for BOOT_MSG kernel command line option.
+ - Added support for redirecting kernel messages to the first console.
+ - Added fixes for Gentoo bugs: #99568, #100032, #101235, #101352.
+
+18 Jul 2005 * <spock@gentoo.org> * splashutils-1.1.9.8
+ - Added info about text encoding in splash theme files (requested in Gentoo
+   bug #98545).
+ - Fixed compilation problems with undefined references to boot_message.
+ - Fixed TTF rendering problems on systems where line_length != xres * bpp.
+ - Added 'repaint' to the usage infomations.
+ - Fixed some inconsistencies in checking whether the splash FIFO is present
+   and with exiting from daemon_start(). Patch provided by Bernard Blackham
+   <bernard (at) blackham.com.au >.
+
+09 Jul 2005 * <spock@gentoo.org> * splashutils-1.1.9.7
+ - Fixed Gentoo bug #97251 (no more segfaults when the background images
+   cannot be found).
+ - Fixed Gentoo bug #97257.
+ - Fixed kernel command line parsing bug in splash_helper.
+ - Fixed command line parameter parsing in splash_helper.
+
+16 May 2005 * <spock@gentoo.org> * splashutils-1.1.9.6
+ - Merged MNG support code by Bernard Blackham <bernard(at)blackham.com.au>.
+   This is only a stub for now, but it means that full support for animations
+   will surely be coming in the next few revisions.
+ - Fixed a few box rendering issues in 16bpp modes.
+ - Added the '--no8bpp' option to splash_geninitramfs.
+ - Added some new options to bootsplash2fbsplash.
+ - Added a new utility called 'splash_manager'. This new script can be
+   used for theme testing, setting, switching and screenshot taking.
+ - Released splashutils in two versions -- the traditional 'full' tarball
+   and a new 'lite' one, which includes only the core splashutils code.
+   All libraries have to be downloaded and unpacked manually into the
+   libs/ subdirectory. The 'lite' package should be a great bandwidth
+   and space saver for systems which already have the source code of the
+   libraries used in splashutils.
+
+30 Apr 2005 * <spock@gentoo.org> * splashutils-1.1.9.5, splashutils-gentoo-0.1.9
+ - Fixed issues with 16bpp modes.
+ - Modified Makefile to allow a more verbose output and compilation
+   with user-provided CFLAGS.
+ - Added sanity checks for /dev/tty1.
+ - Added sanity checks for the kernel command line. Invalid settings
+   such as: splash=silent,theme:foo,CONSOLE=/dev/tty1,quiet should now
+   be detected automatically.
+ - Cleaned the code up a little bit. Moved alpha blending into
+   the put_pixel() function.
+ - Updated klibc to 1.0.8.
+ - Merged a PPC fix by Daniel Tarbuck <tarbuck(at)futurewest(dot)ca>.
+
+24 Apr 2005 * <spock@gentoo.org> * splashutils-1.1.9.4, splashutils-gentoo-0.1.8
+ - Fixed a few mistakes and typos in the docs.
+ - Made the core rendering code a little faster.
+ - Fixed the bootsplash2fbsplash scripts (Gentoo bug #85531).
+ - Splash scripts updates:
+   - ignore 'serial' exit code (to prevent automatic switches to
+     verbose mode when there is no apparent error)
+   - fixed Gentoo bugs #88461 and #87113
+
+28 Mar 2005 * <spock@gentoo.org> * splashutils-1.1.9.3, splashutils-gentoo-0.1.7
+ - Updated the documentation to reflect the changes in the 1.1.9 series.
+ - Fixed the bug with F2 not working in silent mode.
+ - Added support for font styles (bold, italic, underline).
+ - Added support for text hotspot positioning.
+ - Added support for text evaluation (only the $progress variable is supported,
+   for now).
+ - $progress is now a part of the main boot message by default.
+
+21 Mar 2005 * <spock@gentoo.org> * splashutils-1.1.9.2, splashutils-
+                                   gentoo-0.1.6, miscsplashutils-0.1.3
+
+ A bugfix release of splashutils. Fixed bugs:
+  - #85293 - compilation problems on amd64
+  - #85418 - cache directory not found
+  - #85565 - issues related to /usr and /var being separate partitions
+  - 8bpp modes fix (thanks to Bernard Blackham <bernard(at)blackham.com.au>)
+
+ Additionally, the following new features have been implemented:
+  - Support for switching between verbose and silent with F2.
+    In order to take advantage of this new feature, one has to use a kernel
+    compiled with the user event interface enabled (CONFIG_INPUT_EVDEV=y).
+  - Speed improvements for solid color boxes (thanks to Bernard Blackham).
+  - Support for compiling splashutils without any dependencies on fbsplash
+     (ie. silent mode only).
+
+09 Mar 2005 * <spock@gentoo.org> * splashutils-1.1.9.1
+ - Splash protocol v1 support is back in place. That means you can use
+   splashutils-1.1.9.1 with all currently available versions of fbsplash.
+   Still, fbsplash 0.9.2 is the recommended version.
+ - Improved the fade-in code for truecolor modes. The fading should be much
+   more smooth now.
+
+07 Mar 2005 * <spock@gentoo.org> * splashutils-1.1.9, splashutils-gentoo-0.1.5
+ Major changes in the architecture and in the code. A list of
+ more important ones:
+  - The splash daemon mode - makes things a lot faster and cleaner. This
+    will be the preferred way of using splashutils for the silent mode
+    from now on. The old run-paint-exit, run-paint-exit, ... scheme will
+    still be supported, but all new features will be going into the daemon.
+  - The silent mode has it's own TTY. By default - tty8. This can be changed
+    with the 'tty:<n>' kernel command line splash= parameter.
+  - Support for splash protocol v2. This means that this version of
+    splashutils will work with fbsplash-0.9.2.
+  - Initial support for graphical effects. For now, this is the initial
+    'fade-in'. Try adding 'fadein' to the kernel command line splash=
+    parameter.
+  - Support for switching between silent and verbose. Silent -> verbose
+    switch can be done with F2 or the standard Ctrl+Alt+F1 combination.
+    Verbose -> silent can be done only with Ctrl+Alt+F<n> (for now),
+    where n depends on the tty the user has chosen at boot.
+  - Support for TrueType fonts in the daemon and in the splash_helper.
+    This can be turned off in the config.h file if it's not required.
+  - Support for the 'text' object. Thanks to the 'exec' flag the text
+    to be displayed can be generated on-the-fly. Yes, this means that
+    you can get fortunes on your verbose/silent screen, displayed in a
+    nice TTF font ;)
+  - Enhanced support for icons in the splashutils-gentoo package. The
+    service list is automatically and transparently computed and cached,
+    and exported to user scripts by the means of the splash_svclist_get()
+    function.
+  - Proper handling of the objects chain. This means that the items from
+    the config file are painted in the order in which they appear.
+    The previous version drew all the boxes first.
+  - Support for exporting the background buffer to a file. This can be
+    used to call an external app every time the silent screen is about
+    to be repainted. This feature is experimental at the moment, largely
+    untested and there's not much you can do with it right now (unless
+    you write your own programs to take advantage of it).
+
+ Consider the whole release a little experimental. Don't think of it as
+ of something you can just package into whatever format you use and drop
+ into your system.
+
+ I'm sorry for not including any real documentation in this version
+ -- it will be added in one of the next bugfix releases that will surely
+ follow. For now, let this changelog, splash_util -h, the Gentoo
+ initscripts from splashutils-gentoo and The Code Itself be your guides ;)
+
+27 Jan 2005 * <spock@gentoo.org> * splashutils-0.9.1, splashutils-gentoo-0.1.4
+ Added numerous new features and bugfixes:
+  - support for devfs device names (bug #75515)
+  - fixes for consolefont problems (bug #77122)
+  - a splash_geninitramfs fix (bug #68518)
+  - support for switching back to silent mode after receiving
+    user input for services such as dm-crypt
+  - support for theme-defined ttf fonts
+  - support for boot icons
+  - support for event-driven scripts
+
+ Note that some of these are undocumented and usused at this point.
+ Please wait for baselayout updates (bug #78492) and/or new themes
+ to see them in action.
+
+27 Sep 2004 * <spock@gentoo.org> * splashutils-0.9-pre10, splashutils-
+                                   gentoo-0.1.2
+ - Fixed Gentoo bug #64068
+ - Fixed two small bugs in progress bar rendering code. Thanks to
+   Christian Hesse for spotting these.
+ - Updated klibc and libpng, splashutils should compile cleanly with 2.6.9-rc2
+   now.
+
+07 Sep 2004 * <spock@gentoo.org> * splashutils-0.9-pre09
+ - Added simple dithering for 15/16bpp modes
+ - Updated klibc to 0.172
+ - Fixed compilation issues on amd64 systems. Special thanks to
+   Christian Roessner for his help on making splashutils work on amd64.
+ - Added a few little fixes that should make fbsplash switch to verbose
+   when using swsusp (it was automatically switched off because of an
+   error in previous versions of splashutils)
+
+05 Sep 2004 * <spock@gentoo.org> * splashutils-0.9-pre08
+ Added the splash_resize script. Fixed the makefiles to allow compilation
+ on non-x86 arches. Fixed the binaries and scripts to make it possible to
+ use splashutils when /usr is a separate partition. Updated the docs.
+ Added some additional error messages to splashutils. Made splashutils
+ respect the fb_fix.line_length value.
+
+21 Aug 2004 * <spock@gentoo.org> * splashutils-0.9-pre07
+ A few minor bugfixes, mainly related to the placement of the progress bar
+ in modes which make use of ypanning.
+
+17 Aug 2004 * <spock@gentoo.org> * splashutils-0.9-pre06,
+                                   splashutils-0.9-pre06-gentoo
+ Updated splashutils-0.9-[gentoo] to fix a few glitches - bad colors parsing
+ in some special cases, bad picture/font rendering on systems which use
+ panning (eg. vesafb with ypan/ywrap).
+
+12 Aug 2004 * <spock@gentoo.org> * splashutils-0.9-pre05,
+                                   splashutils-0.9-pre05-gentoo
+ Fixed a bunch of minor bugs, mostly related to silent splash. Added some
+ checks to protect users from broken config files (invalid silentpic path).
+
+06 Aug 2004 * <spock@gentoo.org> * splashutils-0.9-pre04-gentoo-r1
+ It turned out that I've forgotten to include some parts of the updated
+ rc-scripts in the last ebuild, which made progress-bar completely
+ inoperational. This release fixes these problems.
+
+06 Aug 2004 * <spock@gentoo.org> * splashutils-0.9-pre04,
+                                   splashutils-0.9-pre04-gentoo
+ A new version of splashutils, with updated libpng and klibc. New ebuild,
+ with automatical kernel checking, rc-scripts upgrading and miscsplashutils.
+
+04 Aug 2004 * <spock@gentoo.org> * splashutils-0.9-pre03-gentoo-r1
+ Added an updated ebuild which should fix problems with /sbin/fbresolution.
+
+03 Aug 2004 * <spock@gentoo.org> * splashutils-0.9-pre03-gentoo,
+                                   splashutils-0.9-pre03-rc-scripts-1.5.1
+ Added an ebuild for the latest release of splashutils. Added a patch for
+ rc-scripts to make it possible to use the progressbar with splashutils.
+
+03 Aug 2004 * <spock@gentoo.org> * splashutils-0.9-pre03
+ - Mount sysfs in the kernel helper.
+ - Updated the docs.
+ - Changed the Makefile to make splashutils more configurable.
+ - Added the 'install' makefile target.
+ - Added the splash_genintramfs helper script to splashutils.
+
+25 Jul 2004 * <spock@gentoo.org> * splashutils-0.9-pre02
+ - Added support for the new ioctl interface provided by fbsplash.
+
+15 Jul 2004 * <spock@gentoo.org> * splashutils-0.9-pre01
+ Initial version.
+
