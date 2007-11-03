@@ -1,0 +1,79 @@
+ - Use 'exit staysilent' if the 'xdm' service has been started.
+
+04 Sep 2007 * <spock@gentoo.org> * splashutils-gentoo-1.0.7
+ - Add support for --type and --effects in splash-functions.sh for bl-1.
+
+26 Aug 2007 * <spock@gentoo.org> * splashutils-gentoo-1.0.6
+ - Fix the splash plugin so that it compiles with the latest baselayout-2.
+
+11 Aug 2007 * <spock@gentoo.org> * splashutils-gentoo-1.0.5
+ - Add an alternative of identifying the keyboard event device in
+   splash-functions-bl1.sh
+ - Add support for the new libfbsplash in the splash plugin.
+
+07 Jul 2007 * <spock@gentoo.org> * splashutils-gentoo-1.0.4
+ - Fix Gentoo bug #183281.
+
+09 Jun 2007 * <spock@gentoo.org> * splashutils-gentoo-1.0.3
+ - Fix handling of scheduled services.
+ - Add support for the rc-abort event.
+
+07 May 2007 * <spock@gentoo.org> * splashutils-gentoo-1.0.2
+ - Add support for linking with --as-needed.
+ - Add support for scheduled services.
+ - Only switch to verbose at the end of bootup if the silent screen is actually displayed.
+ - Add support for multilib systems.
+ - Don't print a warning about services failing to stop/start.
+
+12 Apr 2007 * <spock@gentoo.org> * splashutils-gentoo-1.0.1
+ - Add support for baselayout-2.0.0_alpha1.
+ - POSIX compatibility fixes.
+
+05 Apr 2007 * <spock@gentoo.org> * splashutils-gentoo-1.0.0
+ - Add support for GPM.
+ - Add support for baselayout-2 (splash plugin).
+
+13 Mar 2007 * <spock@gentoo.org> * splashutils-gentoo-0.5.4
+ - Make sure the splash boot message doesn't get shortened when passed to
+   the splash daemon.
+ - Ignore failures when calling 'setpic' in the initscript.
+ - Stop setting background images on first error in init-splash.
+
+21 Nov 2006 * <spock@gentoo.org> * splashutils-gentoo-0.5.3
+ - Use rc-depend to get a list of services that will be started during boot.
+ - Added 'use localmount' to the splash initscript.
+
+15 Jul 2006 * <spock@gentoo.org> * splashutils-gentoo-0.5.1
+ - Properly pass runlevel information to {rc_init,rc_exit}-{pre,post} scripts.
+
+15 Jul 2006 * <spock@gentoo.org> * splashutils-gentoo-0.5.0
+ - Added support for recording splash profiling information.
+ - Merged /sbin/splash and /sbin/splash-functions.sh into a single file.
+ - Fixed a number of minor bugs in the Gentoo scripts.
+
+29 Sep 2005 * <spock@gentoo.org> * splashutils-gentoo-0.1.14
+ - Added support for console=tty1 setting on the kernel command line.
+
+21 Aug 2005 * <spock@gentoo.org> * splashutils-gentoo-0.1.13
+ - Added support for BOOT_MSG kernel command line option.
+ - Removed dependency on local in the initscript.
+ - Use splash_setup() in the init scripts. Do not set verbose splash image if
+   splash=off was set on the kernel command line.
+ - Added an alternative method of locating the keyboard controlled input device.
+
+18 Jul 2005 * <spock@gentoo.org> * splashutils-gentoo-0.1.12
+ - Added a fix for Gentoo bug #96697.
+
+09 Jul 2005 * <spock@gentoo.org> * splashutils-gentoo-0.1.11
+ - Added a initrd support script (initrd.splash).
+ - Fixed Gentoo bug #98346 (additional sanity checks in /sbin/splash).
+ - Fixed service listing in /sbin/splash-function.sh.
+
+16 May 2005 * <spock@gentoo.org> * splashutils-gentoo-0.1.10
+ - Moved 'kdgraphics' from a compilation time option into a kernel command
+   line option.
+ - Changed the default silent splash tty on Gentoo to tty16. This should
+   allow us to avoid any conflicts with rc-scripts, consolefont, syslog-ng,
+   etc.
+ - Fixed a bug with the event device not being detected correctly.
+
