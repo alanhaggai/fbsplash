@@ -1,7 +1,7 @@
 #ifndef __H_FBCON_DECOR
 #define __H_FBCON_DECOR
 
-#include "util.h"
+#include "common.h"
 #include "include/fbcondecor.h"
 #include "include/console_decor.h"
 extern int fd_fbcondecor;

@@ -20,7 +20,8 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 
-#include "util.h"
+#include "common.h"
+#include "render.h"
 #include "fbcon_decor.h"
 
 #ifdef CONFIG_FBCON_DECOR

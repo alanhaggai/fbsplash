@@ -26,7 +26,7 @@
 #include <time.h>
 #include <getopt.h>
 
-#include "util.h"
+#include "common.h"
 #include "daemon.h"
 
 /* Threading structures */

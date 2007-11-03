@@ -9,7 +9,8 @@
  *
  */
 #include <stdlib.h>
-#include "util.h"
+#include "common.h"
+#include "render.h"
 
 void list_add(list *l, void *obj)
 {

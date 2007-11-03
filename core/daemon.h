@@ -1,7 +1,8 @@
 #ifndef __DAEMON_H
 #define __DAEMON_H
 
-#include "util.h"
+#include "common.h"
+#include "render.h"
 #include <pthread.h>
 #include <time.h>
 

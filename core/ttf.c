@@ -28,7 +28,8 @@
 #include <freetype/ftoutln.h>
 #include <freetype/ttnameid.h>
 
-#include "util.h"
+#include "common.h"
+#include "render.h"
 
 int boot_msg_width = 0;
 

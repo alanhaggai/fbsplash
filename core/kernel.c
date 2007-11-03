@@ -20,7 +20,8 @@
 #include <sys/mman.h>
 #include <linux/tiocl.h>
 
-#include "util.h"
+#include "common.h"
+#include "render.h"
 #include "fbcon_decor.h"
 
 int arg_vc;

@@ -23,7 +23,8 @@
 #include <getopt.h>
 #include <unistd.h>
 
-#include "util.h"
+#include "common.h"
+#include "render.h"
 
 struct option options[] = {
 	{ "cmd",	required_argument, NULL, 0x102 },

@@ -24,7 +24,8 @@
 #include <linux/limits.h>
 #include <linux/input.h>
 
-#include "util.h"
+#include "common.h"
+#include "render.h"
 
 static int fd_fb0 = -1;
 static int fb = -1;
@@ -32,6 +33,7 @@ int fd_fb = -1;
 u8 *fb_mem = NULL;
 int fd_tty[MAX_NR_CONSOLES];
 struct fb_data fbd;
+sendian_t endianess;
 
 static void obj_free(obj *o)
 {
@@ -140,6 +142,17 @@ static void fb_cmap_directcolor_set(int fd)
 	free(cmap.red);
 }
 
+static void detect_endianess(sendian_t *end)
+{
+	u16 t = 0x1122;
+
+	if (*(u8*)&t == 0x22) {
+		*end = little;
+	} else {
+		*end = big;
+	}
+}
+
 /**
  * Init the splashrender library.
  *
@@ -147,6 +160,7 @@ static void fb_cmap_directcolor_set(int fd)
  */
 int fbsplashr_init(bool create)
 {
+	detect_endianess(&endianess);
 	memset(fd_tty, -1, sizeof(fd_tty));
 
 	fd_fb0 = fb_open(0, create);

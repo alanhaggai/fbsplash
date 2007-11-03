@@ -28,7 +28,8 @@
   #include <jpeglib.h>
 #endif
 
-#include "util.h"
+#include "common.h"
+#include "render.h"
 
 #ifdef CONFIG_PNG
 #define PALETTE_COLORS 240

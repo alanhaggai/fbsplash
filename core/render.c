@@ -27,7 +27,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
-#include "util.h"
+#include "common.h"
+#include "render.h"
 
 /*
  * Lower level graphics fucntions

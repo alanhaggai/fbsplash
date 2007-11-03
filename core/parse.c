@@ -14,7 +14,8 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <ctype.h>
-#include "util.h"
+#include "common.h"
+#include "render.h"
 
 struct cfg_opt {
 	char *name;

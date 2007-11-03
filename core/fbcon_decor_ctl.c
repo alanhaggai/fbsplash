@@ -23,7 +23,8 @@
 #include <getopt.h>
 #include <unistd.h>
 
-#include "util.h"
+#include "common.h"
+#include "render.h"
 #include "fbcon_decor.h"
 
 struct option options[] = {

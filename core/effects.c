@@ -14,7 +14,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
-#include "util.h"
+#include "common.h"
+#include "render.h"
 
 #define FADEIN_STEPS	64
 #define FADEIN_STEPS_DC 256

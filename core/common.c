@@ -23,7 +23,8 @@
 #include <dirent.h>
 #include <errno.h>
 
-#include "util.h"
+#include "common.h"
+#include "render.h"
 
 fbspl_cfg_t		*cfg;
 

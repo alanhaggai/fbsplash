@@ -29,28 +29,13 @@
 	#define MNT_DETACH 2
 #endif
 
-#include "util.h"
+#include "common.h"
 
 #define FBSPLASH_TMPDIR		FBSPLASH_DIR"/tmp"
 
 static FILE *fp_fifo = NULL;
 int fd_tty0 = -1;
 fbspl_cfg_t config;
-sendian_t endianess;
-
-/* A list of loaded fonts. */
-list fonts = { NULL, NULL };
-
-static void detect_endianess(sendian_t *end)
-{
-	u16 t = 0x1122;
-
-	if (*(u8*)&t == 0x22) {
-		*end = little;
-	} else {
-		*end = big;
-	}
-}
 
 /**
  * Initialize the config structure with default values.
@@ -117,7 +102,6 @@ static int init_config(fbspl_type_t type)
  */
 fbspl_cfg_t* fbsplash_lib_init(fbspl_type_t type)
 {
-	detect_endianess(&endianess);
 	init_config(type);
 
 	/* The kernel helper cannot touch any tty devices. */
