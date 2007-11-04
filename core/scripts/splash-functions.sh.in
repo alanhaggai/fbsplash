@@ -24,7 +24,7 @@ export spl_cachedir="@libdir@/splash/cache"
 export spl_fifo="${spl_cachedir}/.splash"
 export spl_pidfile="${spl_cachedir}/daemon.pid"
 
-[ -r @sysconfdir@/init.d/functions.sh ] && . @sysconfdir@/init.d/functions.sh
+[ -r /etc/init.d/functions.sh ] && . /etc/init.d/functions.sh
 
 splash_setup() {
 	# If it's already set up, let's not waste time on parsing the config

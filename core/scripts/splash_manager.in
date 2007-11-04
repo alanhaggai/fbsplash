@@ -321,7 +321,7 @@ replay() {
 
 	ctime=0
 
-	if [[ -e @sysconfdir@/gentoo-release ]]; then
+	if [[ -e /etc/gentoo-release ]]; then
 		export RUNLEVEL="S"
 		export SOFTLEVEL=""
 	fi
@@ -365,7 +365,7 @@ replay() {
 					${themedir}/${theme}/scripts/${arr[2]}-post ${arr[*]:3}
 				fi
 
-				if [[ -e @sysconfdir@/gentoo-release && ${arr[3]} == 'boot' ]]; then
+				if [[ -e /etc/gentoo-release && ${arr[3]} == 'boot' ]]; then
 					export RUNLEVEL="3"
 				fi
 				;;
@@ -497,7 +497,7 @@ list_themes() {
 bootloader=""
 
 detect_bootloader() {
-	if [[ -e /boot/grub/grub.conf && -e @sysconfdir@/lilo.conf ]]; then
+	if [[ -e /boot/grub/grub.conf && -e /etc/lilo.conf ]]; then
 		ewarn "Both GRUB and LILO seem to be installed and configured. Please"
 		ewarn "select which one should be configured by this script:"
 		ewarn "  1) GRUB"
@@ -520,7 +520,7 @@ detect_bootloader() {
 		done
 	elif [[ -e /boot/grub/grub.conf ]]; then
 		bootloader="grub"
-	elif [[ -e @sysconfdir@/lilo.conf ]]; then
+	elif [[ -e /etc/lilo.conf ]]; then
 		bootloader="lilo"
 	else
 		err "It appears that none of the supported bootloaders (GRUB, LILO) is installed"
@@ -532,8 +532,8 @@ detect_bootloader() {
 
 # The code of mount_boot_partition() is stolen from Gentoo's mount-boot.eclass.
 mount_boot_partition() {
-	# note that /dev/BOOT is in the Gentoo default @sysconfdir@/fstab file
-	local fstabstate="$(cat @sysconfdir@/fstab | awk '!/^#|^[[:blank:]]+#|^\/dev\/BOOT/ {print $2}' | egrep "^/boot$" )"
+	# note that /dev/BOOT is in the Gentoo default /etc/fstab file
+	local fstabstate="$(cat /etc/fstab | awk '!/^#|^[[:blank:]]+#|^\/dev\/BOOT/ {print $2}' | egrep "^/boot$" )"
 	local procstate="$(cat /proc/mounts | awk '{print $2}' | egrep "^/boot$" )"
 	local proc_ro="$(cat /proc/mounts | awk '{ print $2, $4 }' | sed -n '/\/boot/{ /[ ,]\?ro[ ,]\?/p }' )"
 
@@ -680,25 +680,25 @@ theme_switch_lilo() {
 			want_name=false
 		fi
 		linecnt=$(($linecnt+1))
-	done < @sysconfdir@/lilo.conf
+	done < /etc/lilo.conf
 
 	input_number 1 ${cnt} 1
 	n=$(($?-1))
 	einfo "Configuring '${entries[$n]}'.."
 
 	line=${lines[$n]}
-	cp @sysconfdir@/lilo.conf @sysconfdir@/lilo.conf.work.$$
+	cp /etc/lilo.conf /etc/lilo.conf.work.$$
 
 	initrd="$(awk "FNR == $line {
 				print ;
 				while(getline > 0 && \$1 != \"image\") {
 						print \$0
 				}
-			}" @sysconfdir@/lilo.conf.work.$$ | grep "^[[:space:]]*initrd")"
+			}" /etc/lilo.conf.work.$$ | grep "^[[:space:]]*initrd")"
 	initrd=$(echo "$initrd" | cut -f2 -d'=')
 
 	theme_switch_initrd "${initrd}"
-	cp @sysconfdir@/lilo.conf @sysconfdir@/lilo.conf.backup
+	cp /etc/lilo.conf /etc/lilo.conf.backup
 
 	awk "FNR == $(($line+1)) {
 		initrd=0
@@ -766,10 +766,10 @@ theme_switch_lilo() {
 		next
 	}
 
-	FNR != $(($line+1)) { print \$0 }" @sysconfdir@/lilo.conf.work.$$ > @sysconfdir@/lilo.conf.tmp.$$
+	FNR != $(($line+1)) { print \$0 }" /etc/lilo.conf.work.$$ > /etc/lilo.conf.tmp.$$
 
-	rm @sysconfdir@/lilo.conf.work.$$
-	mv @sysconfdir@/lilo.conf.tmp.$$ @sysconfdir@/lilo.conf
+	rm /etc/lilo.conf.work.$$
+	mv /etc/lilo.conf.tmp.$$ /etc/lilo.conf
 
 	einfo "LILO config file has been updated."
 }
