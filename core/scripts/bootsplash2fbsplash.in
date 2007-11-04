@@ -7,7 +7,7 @@
 #
 
 $path_bp = "@sysconfdir@/bootsplash/";
-$path_fbspl = "@sysconfdir@/splash";
+$path_fbspl = "@themedir@";
 $comments = 1;
 $theme = "";
 

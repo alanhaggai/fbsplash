@@ -138,6 +138,7 @@ fbsplash.h: fbsplash.h.in config.h
 		-e 's|@bindir[@]|$(ebindir)|g' \
 		-e 's|@sbindir[@]|$(esbindir)|g' \
 		-e 's|@sysconfdir[@]|$(sysconfdir)|g' \
+		-e 's|@themedir[@]|$(themedir)|g' \
 		-e 's|@libdir[@]|$(elibdir)|g' \
 		> $@
 
@@ -244,6 +245,7 @@ scripts/%: scripts/%.in
 		-e 's|@bindir[@]|$(ebindir)|g' \
 		-e 's|@sbindir[@]|$(esbindir)|g' \
 		-e 's|@sysconfdir[@]|$(sysconfdir)|g' \
+		-e 's|@themedir[@]|$(themedir)|g' \
 		-e 's|@libdir[@]|$(elibdir)|g' \
 		> $@
 

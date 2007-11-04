@@ -22,8 +22,8 @@ $theme = $ARGV[0];
 $old_res = $ARGV[1];
 $new_res = $ARGV[2];
 
-open IN,"<@sysconfdir@/splash/$theme/$old_res.cfg" || die "Can't open source config file."; 
-open OUT,">@sysconfdir@/splash/$theme/$new_res.cfg" || die "Can't write to destination config file."; 
+open IN,"<@themedir@/$theme/$old_res.cfg" || die "Can't open source config file."; 
+open OUT,">@themedir@/$theme/$new_res.cfg" || die "Can't write to destination config file."; 
 
 $old_res =~ /(\d+)x(\d+)/; $old_x = $1; $old_y = $2;
 $new_res =~ /(\d+)x(\d+)/; $new_x = $1; $new_y = $2;

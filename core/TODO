@@ -9,6 +9,7 @@ Fixes
 - optimize rect-based rendering
 - sanitize the parser unit tests
 - add unit tests for the rendering framework
+- move some of the old splashutils-gentoo ChangeLog entries to gentoo/ChangeLog
 
 New features
 ============

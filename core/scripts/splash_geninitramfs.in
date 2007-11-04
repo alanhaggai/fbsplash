@@ -60,7 +60,7 @@ put_item()
 	fi
 }
 
-themedir="@sysconfdir@/splash"
+themedir="@themedir@"
 declare -a themes
 mode="h"
 splash_hlp="@sbindir@/fbcondecor_helper"
@@ -217,7 +217,7 @@ for (( i=0 ; i < index ; i++ )) ; do
 		if [[ -n "${font}" ]]; then
 			put_item "${font}"
 		else
-			put_item "@sysconfdir@/splash/luxisri.ttf"
+			put_item "${themedir}/luxisri.ttf"
 		fi
 	done
 done

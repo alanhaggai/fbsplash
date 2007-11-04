@@ -25,10 +25,10 @@
 spl_util=splash_util.static
 spl_daemon=fbsplashd.static
 spl_decor=fbcondecor_ctl
-spl_dir=@libdir@/splash
+spl_dir="@libdir@/splash"
 spl_fifo=${spl_dir}/cache/.splash
 spl_pidfile=${spl_dir}/cache/daemon.pid
-themedir=@sysconfdir@/splash
+themedir="@themedir@"
 
 spl_daemon_exename="$(basename ${spl_daemon})"
 spl_daemon_short="${spl_daemon:0:9}"

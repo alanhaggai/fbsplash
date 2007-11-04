@@ -13,7 +13,7 @@
 #define FBSPLASH_DAEMON		"@sbindir@/fbsplashd.static"
 #define FBSPLASH_FIFO		FBSPLASH_CACHEDIR"/.splash"
 
-#define FBSPL_THEME_DIR		"@sysconfdir@/splash"
+#define FBSPL_THEME_DIR		"@themedir@"
 #define FBSPL_DEFAULT_THEME	"default"
 #define FBSPL_PROGRESS_MAX	0xffff
 

@@ -318,6 +318,13 @@ AC_ARG_WITH([essential-libdir],
 )
 AC_SUBST([elibdir])
 
+AC_ARG_WITH([themedir],
+  AS_HELP_STRING([--with-themedir=DIR], [splash theme directory @<:@ESPREFIX/etc/splash@:>@]),
+  [elibdir="${withval}"],
+  [elibdir="\$(essential_prefix)/etc/splash"]
+)
+AC_SUBST([themedir])
+
 M_CFLFAGS=
 M_LIBS=
 AC_CHECK_HEADER(
