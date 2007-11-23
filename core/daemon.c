@@ -525,18 +525,21 @@ void daemon_start()
 	dup2(i, 1);
 	dup2(i, 2);
 
-	signal(SIGABRT, SIG_IGN);
-	signal(SIGALRM, handler_alarm);
-
-	/* These signals will be handled by the sighandler thread. */
+	/* Make all our threads ignore these signals. SIGUSR1, SIGUSR2,
+	 * SIGTERM and SIGINT will be handled in the sighandler thread. */
 	sigemptyset(&sigset);
+	sigaddset(&sigset, SIGABRT);
 	sigaddset(&sigset, SIGUSR1);
 	sigaddset(&sigset, SIGUSR2);
 	sigaddset(&sigset, SIGTERM);
 	sigaddset(&sigset, SIGINT);
-	sigprocmask(SIG_BLOCK, &sigset, NULL);
+	pthread_sigmask(SIG_BLOCK, &sigset, NULL);
 	pthread_mutex_lock(&mtx_paint);
 	pthread_create(&th_sighandler, NULL, &thf_sighandler, NULL);
+
+	/* This is just a dummy handler and we don't care which thread
+	 * it is delivered to. */
+	signal(SIGALRM, handler_alarm);
 
 	/* Check which TTY is active */
 	if (ioctl(fd_tty0, VT_GETSTATE, &vtstat) != -1) {
