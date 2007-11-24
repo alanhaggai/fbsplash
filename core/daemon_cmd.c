@@ -104,7 +104,7 @@ int cmd_set_mode(void **args)
 	itv.it_value.tv_usec = 250000;
 
 vtswitch:
-	if (ioctl(fd_tty[n], VT_ACTIVATE, n) == -1) {
+	if (ioctl(fd_tty0, VT_ACTIVATE, n) == -1) {
 		iprint(MSG_ERROR, "Switch to tty%d failed with: %d '%s'\n", n, errno, strerror(errno));
 		return -1;
 	}
@@ -121,7 +121,7 @@ vtswitch:
 	i++;
 	setitimer(ITIMER_REAL, &itv, NULL);
 
-	if (ioctl(fd_tty[n], VT_WAITACTIVE, n) == -1) {
+	if (ioctl(fd_tty0, VT_WAITACTIVE, n) == -1) {
 		if (i < 9 && errno == EINTR)
 			goto vtswitch;
 
