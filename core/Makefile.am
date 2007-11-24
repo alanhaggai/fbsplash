@@ -157,7 +157,7 @@ lib_LTLIBRARIES += libfbsplashrender.la
 pkgconfig_DATA  += libfbsplashrender.pc
 EXTRA_DIST      += libfbsplashrender.pc.in
 
-libfbsplash_la_SOURCES = libfbsplash.c util.h fbsplash.h
+libfbsplash_la_SOURCES = libfbsplash.c common.h fbsplash.h
 libfbsplash_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(libfbsplash_version)
 libfbsplash_la_LIBADD  =
 
@@ -173,7 +173,8 @@ libfbsplashrender_la_SOURCES  = \
 	fbcon_decor.h \
 	include/console_decor.h \
 	include/fbcondecor.h \
-	util.h \
+	common.h \
+	render.h \
 	fbsplash.h
 libfbsplashrender_la_CFLAGS   = $(AM_CFLAGS)
 libfbsplashrender_la_LDFLAGS  = $(AM_LDFLAGS) -version-info $(libfbsplashrender_version)
@@ -183,7 +184,7 @@ libfbsplashrender_la_CFLAGS  += $(JPEG_CFLAGS)
 libfbsplashrender_la_LIBADD  += $(JPEG_LIBS)
 
 if CONFIG_MNG
-libfbsplashrender_la_SOURCES += mng_callbacks.c mng_render.c mng_splash.h util.h fbsplash.h
+libfbsplashrender_la_SOURCES += mng_callbacks.c mng_render.c mng_splash.h common.h render.h fbsplash.h
 libfbsplashrender_la_CFLAGS  += $(MNG_CFLAGS)
 libfbsplashrender_la_LIBADD  += $(MNG_LIBS)
 endif
@@ -192,7 +193,7 @@ libfbsplashrender_la_CFLAGS  += $(PNG_CFLAGS)
 libfbsplashrender_la_LIBADD  += $(PNG_LIBS)
 endif
 if CONFIG_TTF
-libfbsplashrender_la_SOURCES += ttf.c ttf.h util.h fbsplash.h
+libfbsplashrender_la_SOURCES += ttf.c ttf.h fbsplash.h
 libfbsplashrender_la_CFLAGS  += $(FREETYPE2_CFLAGS) $(M_CFLAGS)
 libfbsplashrender_la_LIBADD  += $(FREETYPE2_LIBS)   $(M_LIBS)
 endif
@@ -261,29 +262,29 @@ esbin_PROGRAMS += fbsplashd.static
 bin_PROGRAMS   += splash_util
 ebin_PROGRAMS  += splash_util.static
 
-fbcondecor_ctl_SOURCES      = fbcon_decor_ctl.c fbcon_decor.h include/console_decor.h include/fbcondecor.h util.h fbsplash.h
+fbcondecor_ctl_SOURCES      = fbcon_decor_ctl.c fbcon_decor.h include/console_decor.h include/fbcondecor.h common.h fbsplash.h
 fbcondecor_ctl_CPPFLAGS     = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplashrender_la_CFLAGS)
 fbcondecor_ctl_LDFLAGS      = $(AM_LDFLAGS)
 fbcondecor_ctl_LDADD        = libfbsplashrender.la libfbsplash.la
 
-fbsplashd_SOURCES           = daemon_cmd.c daemon.c daemon.h util.h fbsplash.h
+fbsplashd_SOURCES           = daemon_cmd.c daemon.c daemon.h common.h render.h fbsplash.h
 fbsplashd_CPPFLAGS          = $(AM_CPPFLAGS) -DTARGET_UTIL
 fbsplashd_CFLAGS            = $(AM_CFLAGS) $(PTHREAD_CFLAGS) $(RT_CFLAGS) $(libfbsplashrender_la_CFLAGS)
 fbsplashd_LDFLAGS           = $(AM_LDFLAGS)
 fbsplashd_LDADD             = libfbsplashrender.la libfbsplash.la $(PTHREAD_LIBS) $(RT_LIBS) $(GPM_LIBS)
 
-fbsplashd_static_SOURCES    = daemon_cmd.c daemon.c daemon.h util.h fbsplash.h
+fbsplashd_static_SOURCES    = daemon_cmd.c daemon.c daemon.h common.h render.h fbsplash.h
 fbsplashd_static_CPPFLAGS   = $(AM_CPPFLAGS) -DTARGET_UTIL
 fbsplashd_static_CFLAGS     = $(AM_CFLAGS) $(PTHREAD_STATIC_CFLAGS) $(RT_CFLAGS) $(libfbsplashrender_la_CFLAGS)
 fbsplashd_static_LDFLAGS    = $(AM_LDFLAGS) -all-static
 fbsplashd_static_LDADD      = libfbsplashrender.la libfbsplash.la $(PTHREAD_STATIC_LIBS) $(RT_LIBS) $(GPM_LIBS)
 
-splash_util_SOURCES         = util.c util.h fbsplash.h
+splash_util_SOURCES         = util.c common.h fbsplash.h
 splash_util_CPPFLAGS        = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplashrender_la_CFLAGS)
 splash_util_LDFLAGS         = $(AM_LDFLAGS)
 splash_util_LDADD           = libfbsplashrender.la libfbsplash.la
 
-splash_util_static_SOURCES  = util.c util.h fbsplash.h
+splash_util_static_SOURCES  = util.c common.h fbsplash.h
 splash_util_static_CPPFLAGS = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplashrender_la_CFLAGS)
 splash_util_static_LDFLAGS  = $(AM_LDFLAGS) -all-static
 splash_util_static_LDADD    = libfbsplashrender.la libfbsplash.la
@@ -357,7 +358,8 @@ fbcondecor_helper_SOURCES = \
 	fbcon_decor.h \
 	include/console_decor.h \
 	include/fbcondecor.h \
-	util.h \
+	common.h \
+	render.h \
 	fbsplash.h
 fbcondecor_helper_CPPFLAGS  = -DWITH_ERRLIST -DTARGET_KERNEL -DTT_CONFIG_OPTION_BYTECODE_INTERPRETER
 fbcondecor_helper_CFLAGS    = -Os -w -ffunction-sections -fdata-sections -I.@am__isrc@
@@ -370,7 +372,7 @@ fbcondecor_helper_CFLAGS   += -I$(LIBPNG_SOURCE)
 fbcondecor_helper_LDADD    += libpng.a libz.a
 endif
 if CONFIG_TTF_KERNEL
-fbcondecor_helper_SOURCES  += ttf.c ttf.h util.h fbsplash.h
+fbcondecor_helper_SOURCES  += ttf.c ttf.h fbsplash.h
 fbcondecor_helper_CFLAGS   += -I$(LIBFREETYPE2_SOURCE)/include -I$(LIBZ_SOURCE)
 fbcondecor_helper_LDADD    += libfreetype.a
 endif
