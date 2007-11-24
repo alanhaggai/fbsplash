@@ -8,7 +8,7 @@ LDFLAGS += -L../core/objs/.libs
 INCLUDES = -I../core/objs
 
 splash.so: splash.o
-	$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,$@ $+ -o $@ -leinfo -lfbsplash
+	$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,$@ $+ -o $@ -leinfo -lrc -lfbsplash
 
 test: test.o
 	$(CC) $+ -o $@ -leinfo -lrc -ldl
@@ -17,7 +17,7 @@ test: test.o
 	$(CC) $(CFLAGS) $(INCLUDES) -fPIC -c -o $@ $<
 
 install:
-	install -D splash.so $(DESTDIR)/$(LIB)/rcscripts/plugins/splash.so
+	install -D splash.so $(DESTDIR)/$(LIB)/rc/plugins/splash.so
 
 clean:
 	rm -rf *.o *.so

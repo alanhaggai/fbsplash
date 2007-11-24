@@ -11,6 +11,7 @@
  * more details.
  *
  */
+#include <sys/stat.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -62,7 +63,7 @@ static char** strlist_merge_sort(char **dest, char **src)
 	int i;
 
 	for (i = 0; src && src[i]; i++) {
-		dest = rc_strlist_addsort(dest, src[i]);
+		rc_strlist_addsort(&dest, src[i]);
 	}
 	return dest;
 }
@@ -108,7 +109,7 @@ static char **get_list_fp(char **list, FILE *fp)
 
 		while ((p = strsep(&token, " ")) != NULL) {
 			if (strlen(p) > 1) {
-				list = rc_strlist_add(list, p);
+				rc_strlist_add(&list, p);
 			}
 		}
 	}
@@ -142,9 +143,9 @@ static int splash_config_gentoo(fbspl_cfg_t *cfg, fbspl_type_t type)
 	char **confd;
 	char *t;
 
-	confd = rc_get_config(NULL, "/etc/conf.d/splash");
+	confd = rc_config_load("/etc/conf.d/splash");
 
-	t = rc_get_config_entry(confd, "SPLASH_KDMODE");
+	t = rc_config_value(confd, "SPLASH_KDMODE");
 	if (t) {
 		if (!strcasecmp(t, "graphics")) {
 			cfg->kdmode = KD_GRAPHICS;
@@ -153,13 +154,13 @@ static int splash_config_gentoo(fbspl_cfg_t *cfg, fbspl_type_t type)
 		}
 	}
 
-	t = rc_get_config_entry(confd, "SPLASH_PROFILE");
+	t = rc_config_value(confd, "SPLASH_PROFILE");
 	if (t) {
 		if (!strcasecmp(t, "on") || !strcasecmp(t, "yes"))
 			cfg->profile = true;
 	}
 
-	t = rc_get_config_entry(confd, "SPLASH_TTY");
+	t = rc_config_value(confd, "SPLASH_TTY");
 	if (t) {
 		int i;
 		if (sscanf(t, "%d", &i) == 1 && i > 0) {
@@ -167,11 +168,11 @@ static int splash_config_gentoo(fbspl_cfg_t *cfg, fbspl_type_t type)
 		}
 	}
 
-	t = rc_get_config_entry(confd, "SPLASH_THEME");
+	t = rc_config_value(confd, "SPLASH_THEME");
 	if (t)
 		fbsplash_acc_theme_set(t);
 
-	t = rc_get_config_entry(confd, "SPLASH_MODE_REQ");
+	t = rc_config_value(confd, "SPLASH_MODE_REQ");
 	if (t) {
 		if (!strcasecmp(t, "verbose")) {
 			cfg->reqmode = FBSPL_MODE_VERBOSE;
@@ -182,32 +183,32 @@ static int splash_config_gentoo(fbspl_cfg_t *cfg, fbspl_type_t type)
 		}
 	}
 
-	t = rc_get_config_entry(confd, "SPLASH_VERBOSE_ON_ERRORS");
+	t = rc_config_value(confd, "SPLASH_VERBOSE_ON_ERRORS");
 	if (t && (!strcasecmp(t, "on") || !strcasecmp(t, "yes")))
 		cfg->vonerr = true;
 
 	switch(type) {
 	case fbspl_reboot:
-		t = rc_get_config_entry(confd, "SPLASH_REBOOT_MESSAGE");
+		t = rc_config_value(confd, "SPLASH_REBOOT_MESSAGE");
 		if (t)
 			fbsplash_acc_message_set(t);
 		break;
 
 	case fbspl_shutdown:
-		t = rc_get_config_entry(confd, "SPLASH_SHUTDOWN_MESSAGE");
+		t = rc_config_value(confd, "SPLASH_SHUTDOWN_MESSAGE");
 		if (t)
 			fbsplash_acc_message_set(t);
 		break;
 
 	case fbspl_bootup:
 	default:
-		t = rc_get_config_entry(confd, "SPLASH_BOOT_MESSAGE");
+		t = rc_config_value(confd, "SPLASH_BOOT_MESSAGE");
 		if (t)
 			fbsplash_acc_message_set(t);
 		break;
 	}
 
-	t = rc_get_config_entry(confd, "SPLASH_EFFECTS");
+	t = rc_config_value(confd, "SPLASH_EFFECTS");
 	if (t) {
 		char *opt;
 
@@ -262,6 +263,7 @@ static int splash_theme_hook(const char *name, const char *type, const char *arg
 {
 	char *buf;
 	int l = 256;
+	struct stat st;
 
 	if (arg1)
 		fbsplash_profile("%s %s %s\n", type, name, arg1);
@@ -273,8 +275,7 @@ static int splash_theme_hook(const char *name, const char *type, const char *arg
 
 	buf = malloc(l * sizeof(char*));
 	snprintf(buf, l, "/etc/splash/%s/scripts/%s-%s", config->theme, name, type);
-
-	if (!rc_is_exec(buf)) {
+	if (stat(buf, &st) != 0) {
 		free(buf);
 		return 0;
 	}
@@ -348,17 +349,17 @@ static int splash_init(bool start)
 		svcs = get_list(NULL, FBSPLASH_CACHEDIR"/svcs_start");
 		svcs_cnt = strlist_count(svcs);
 
-		svcs_done = rc_services_in_state(rc_service_started);
+		svcs_done = rc_services_in_state(RC_SERVICE_STARTED);
 
-		tmp = rc_services_in_state(rc_service_inactive);
+		tmp = rc_services_in_state(RC_SERVICE_INACTIVE);
 		svcs_done = strlist_merge_sort(svcs_done, tmp);
 		rc_strlist_free(tmp);
 
-		tmp = rc_services_in_state(rc_service_failed);
+		tmp = rc_services_in_state(RC_SERVICE_FAILED);
 		svcs_done = strlist_merge_sort(svcs_done, tmp);
 		rc_strlist_free(tmp);
 
-		tmp = rc_services_in_state(rc_service_scheduled);
+		tmp = rc_services_in_state(RC_SERVICE_SCHEDULED);
 		svcs_done = strlist_merge_sort(svcs_done, tmp);
 		rc_strlist_free(tmp);
 
@@ -368,13 +369,13 @@ static int splash_init(bool start)
 		svcs = get_list(NULL, FBSPLASH_CACHEDIR"/svcs_stop");
 		svcs_cnt = strlist_count(svcs);
 
-		svcs_done = rc_services_in_state(rc_service_started);
+		svcs_done = rc_services_in_state(RC_SERVICE_STARTED);
 
-		tmp = rc_services_in_state(rc_service_starting);
+		tmp = rc_services_in_state(RC_SERVICE_STARTING);
 		svcs_done = strlist_merge_sort(svcs_done, tmp);
 		rc_strlist_free(tmp);
 
-		tmp = rc_services_in_state(rc_service_inactive);
+		tmp = rc_services_in_state(RC_SERVICE_INACTIVE);
 		svcs_done = strlist_merge_sort(svcs_done, tmp);
 		rc_strlist_free(tmp);
 
@@ -401,7 +402,7 @@ static int splash_svc_handle(const char *name, const char *state, bool skip)
 		if (list_has(svcs_done, name))
 			return 0;
 
-		rc_strlist_add(svcs_done, name);
+		rc_strlist_add(&svcs_done, name);
 		svcs_done_cnt++;
 	}
 
@@ -433,13 +434,13 @@ int splash_svcs_start()
 		return -1;
 	}
 
-	if ((deptree = rc_load_deptree()) == NULL) {
+	if ((deptree = rc_deptree_load()) == NULL) {
 		eerror("%s: failed to load deptree", __func__);
 		err = -2;
 		goto out;
 	}
 
-	deporder = rc_order_services(deptree, bootlevel, RC_DEP_START);
+	deporder = rc_deptree_order(deptree, bootlevel, RC_DEP_START);
 
 	/* Save what we've got so far to the svcs_start. */
 	i = 0;
@@ -452,7 +453,7 @@ int splash_svcs_start()
 	}
 
 	t = deporder;
-	deporder = rc_order_services(deptree, defaultlevel, RC_DEP_START);
+	deporder = rc_deptree_order(deptree, defaultlevel, RC_DEP_START);
 
 	/* Print the new services and skip ones that have already been started
 	 * in the 'boot' runlevel. */
@@ -471,7 +472,7 @@ next:		i++;
 
 	rc_strlist_free(deporder);
 	rc_strlist_free(t);
-	rc_free_deptree(deptree);
+	rc_deptree_free(deptree);
 
 out:
 	fclose(fp);
@@ -494,13 +495,13 @@ int splash_svcs_stop(const char *runlevel)
 		return -1;
 	}
 
-	if ((deptree = rc_load_deptree()) == NULL) {
+	if ((deptree = rc_deptree_load()) == NULL) {
 		eerror("%s: failed to load deptree", __func__);
 		err = -2;
 		goto out;
 	}
 
-	deporder = rc_order_services(deptree, runlevel, RC_DEP_STOP);
+	deporder = rc_deptree_order(deptree, runlevel, RC_DEP_STOP);
 
 	i = 0;
 	if (deporder && deporder[0]) {
@@ -512,7 +513,7 @@ int splash_svcs_stop(const char *runlevel)
 	}
 
 	rc_strlist_free(deporder);
-	rc_free_deptree(deptree);
+	rc_deptree_free(deptree);
 out:
 	fclose(fp);
 	return err;
@@ -586,9 +587,10 @@ static int splash_stop(const char *runlevel)
 {
 	char *save[] = { "profile", "svcs_start", NULL };
 	char buf[128];
+	struct stat st;
 	int cnt = 0;
 
-	if (rc_service_state("xdm", rc_service_started)) {
+	if (rc_service_state("xdm") & RC_SERVICE_STARTED) {
 		fbsplash_send("exit staysilent\n");
 	} else {
 		fbsplash_send("exit\n");
@@ -596,7 +598,7 @@ static int splash_stop(const char *runlevel)
 	snprintf(buf, 128, "/proc/%d", pid_daemon);
 
 	/* Wait up to 1.0s for the splash daemon to exit. */
-	while (rc_is_dir(buf) && cnt < 100) {
+	while (stat(buf, &st) == 0 && cnt < 100) {
 		usleep(10000);
 		cnt++;
 	}
@@ -614,14 +616,15 @@ static int splash_stop(const char *runlevel)
 	}
 }
 
-int _splash_hook (rc_hook_t hook, const char *name)
+int rc_plugin_hook (rc_hook_t hook, const char *name)
 {
 	int i = 0;
 	fbspl_type_t type = fbspl_bootup;
 	char *runlev;
 	bool skip = false;
+	int retval = 0;
 
-	runlev = rc_get_runlevel();
+	runlev = rc_runlevel_get();
 	if (!strcmp(runlev, RC_LEVEL_REBOOT))
 		type = fbspl_reboot;
 	else if (!strcmp(runlev, RC_LEVEL_SHUTDOWN))
@@ -631,22 +634,22 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	 * autoconfig service is present, when we get a list of services
 	 * that will be started by it and mark them as coldplugged. */
 	if (name && !strcmp(name, RC_LEVEL_SYSINIT)) {
-		if (hook == rc_hook_runlevel_start_out) {
+		if (hook == RC_HOOK_RUNLEVEL_START_OUT) {
 			FILE *fp;
 			char **list = NULL;
 			int i;
 
 			fp = popen("if [ -e /etc/init.d/autoconfig ]; then . /etc/init.d/autoconfig ; list_services ; fi", "r");
 			if (!fp)
-				return 0;
+				goto exit;
 
 			list = get_list_fp(NULL, fp);
 			for (i = 0; list && list[i]; i++) {
-				rc_mark_service(list[i], rc_service_coldplugged);
+				rc_service_mark(list[i], RC_SERVICE_COLDPLUGGED);
 			}
 			pclose(fp);
 		}
-		return 0;
+		goto exit;
 	}
 
 	/* Get boot and default levels from env variables exported by RC.
@@ -657,21 +660,21 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	/* Don't do anything if we're starting/stopping a service, but
 	 * we aren't in the middle of a runlevel switch. */
 	if (!(rc_runlevel_starting() || rc_runlevel_stopping())) {
-		if (hook != rc_hook_runlevel_stop_in &&
-			hook != rc_hook_runlevel_stop_out &&
-			hook != rc_hook_runlevel_start_in &&
-			hook != rc_hook_runlevel_start_out)
-			return 0;
+		if (hook != RC_HOOK_RUNLEVEL_STOP_IN &&
+			hook != RC_HOOK_RUNLEVEL_STOP_OUT &&
+			hook != RC_HOOK_RUNLEVEL_START_IN &&
+			hook != RC_HOOK_RUNLEVEL_START_OUT)
+			goto exit;
 	} else {
 		/* We're starting/stopping a runlevel. Check whether we're
 		 * actually booting/rebooting. */
 		if (rc_runlevel_starting() && strcmp(runlev, bootlevel) &&
 			strcmp(runlev, defaultlevel) && strcmp(runlev, RC_LEVEL_SYSINIT))
-			return 0;
+			goto exit;
 
 		if (rc_runlevel_stopping() && strcmp(runlev, bootlevel) &&
 			strcmp(runlev, RC_LEVEL_REBOOT) && strcmp(runlev, RC_LEVEL_SHUTDOWN))
-			return 0;
+			goto exit;
 	}
 
 	if (!config) {
@@ -681,29 +684,33 @@ int _splash_hook (rc_hook_t hook, const char *name)
 	}
 
 	/* Extremely weird.. should never happen. */
-	if (!config)
-		return -1;
+	if (!config) {
+		retval = -1;
+		goto exit;
+	}
 
 	/* Don't do anything if we're not running in silent mode. */
 	if (!(config->reqmode & FBSPL_MODE_SILENT))
-		return 0;
+		goto exit;
 
 	switch (hook) {
-	case rc_hook_runlevel_stop_in:
+	case RC_HOOK_RUNLEVEL_STOP_IN:
 		/* Start the splash daemon on reboot. The theme hook is called
 		 * from splash_start(). */
 		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
 			if ((i = splash_start(name))) {
 				fbsplash_set_verbose(0);
-				return i;
+				retval= i;
+				goto exit;
 			} else {
-				if (rc_service_state("gpm", rc_service_started)) {
+				if (rc_service_state("gpm") & RC_SERVICE_STARTED) {
 					fbsplash_send("set gpm\n");
 					fbsplash_send("repaint\n");
 				}
 			}
 			splash_theme_hook("rc_init", "post", name);
-			return i;
+			retval = i;
+			goto exit;
 		} else {
 			splash_theme_hook("rc_exit", "pre", name);
 			splash_theme_hook("rc_exit", "post", name);
@@ -712,15 +719,17 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		}
 		break;
 
-	case rc_hook_runlevel_stop_out:
+	case RC_HOOK_RUNLEVEL_STOP_OUT:
 		/* Make sure the progress indicator reaches 100%, even if
 		 * something went wrong along the way. */
 		if (strcmp(name, RC_LEVEL_REBOOT) == 0 || strcmp(name, RC_LEVEL_SHUTDOWN) == 0) {
 			config->verbosity = FBSPL_VERB_QUIET;
 			i = fbsplash_check_daemon(&pid_daemon);
 			config->verbosity = FBSPL_VERB_NORMAL;
-			if (i)
-				return -1;
+			if (i) {
+				retval = -1;
+				goto exit;
+			}
 
 			fbsplash_send("progress %d\n", FBSPL_PROGRESS_MAX);
 			fbsplash_send("paint\n");
@@ -728,7 +737,7 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		}
 		break;
 
-	case rc_hook_runlevel_start_in:
+	case RC_HOOK_RUNLEVEL_START_IN:
 		/* Start the splash daemon during boot right after we finish
 		 * sysinit and are entering the boot runlevel. Due to historical
 		 * reasons, we simulate a full sysinit cycle here for the theme
@@ -744,14 +753,16 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		splash_theme_hook("rc_init", "post", name);
 		break;
 
-	case rc_hook_runlevel_start_out:
+	case RC_HOOK_RUNLEVEL_START_OUT:
 		/* Stop the splash daemon after boot-up is finished. */
 		if (strcmp(name, bootlevel)) {
 			config->verbosity = FBSPL_VERB_QUIET;
 			i = fbsplash_check_daemon(&pid_daemon);
 			config->verbosity = FBSPL_VERB_NORMAL;
-			if (i)
-				return -1;
+			if (i) {
+				retval = -1;
+				goto exit;
+			}
 
 			/* Make sure the progress indicator reaches 100%, even if
 			 * something went wrong along the way. */
@@ -765,50 +776,55 @@ int _splash_hook (rc_hook_t hook, const char *name)
 		}
 		break;
 
-	case rc_hook_service_start_now:
+	case RC_HOOK_SERVICE_START_NOW:
 do_start:
 		/* If we've been inactive, do nothing since the service has
 		 * already been handled before it went inactive. */
-		if (rc_service_state(name, rc_service_wasinactive))
-			return 0;
+		if (rc_service_state(name) & RC_SERVICE_WASINACTIVE)
+			goto exit;
 
 		/* If we're starting or stopping a service, we're being called by
 		 * runscript and thus have to reload our config. */
-		if (splash_init(true))
-			return -1;
+		if (splash_init(true)) {
+			retval = -1;
+			goto exit;
+		}
 		i = splash_svc_handle(name, "svc_start", skip);
 		break;
 
-	case rc_hook_service_start_out:
+	case RC_HOOK_SERVICE_START_OUT:
 		/* If a service gets scheduled, we want to increment the progress
 		 * bar (as it is no longer blocking boot completion). However,
 		 * the service may actually start during boot (some time after
 		 * being scheduled), so we don't want to increment the progress
 		 * bar twice. The following if clause satisfies this by catching
 		 * the first case but not the second. */
-		if (rc_service_state(name, rc_service_scheduled) &&
-		    !rc_service_state(name, rc_service_starting)) {
+		if ((rc_service_state(name) & RC_SERVICE_SCHEDULED) &&
+		    !(rc_service_state(name) & RC_SERVICE_STARTING)) {
 			skip = true;
 			goto do_start;
 		}
 		break;
 
-	case rc_hook_service_start_done:
+	case RC_HOOK_SERVICE_START_DONE:
 		config->verbosity = FBSPL_VERB_QUIET;
 		i = fbsplash_check_daemon(&pid_daemon);
 		config->verbosity = FBSPL_VERB_NORMAL;
-		if (i)
-			return -1;
+		if (i) {
+			retval = -1;
+			goto exit;
+		}
 
-		if (!rc_service_state(name, rc_service_failed) &&
-		    !rc_service_state(name, rc_service_stopped)) {
+		if (!(rc_service_state(name) & RC_SERVICE_FAILED) &&
+		    !(rc_service_state(name) & RC_SERVICE_STOPPED)) {
 			bool gpm = false;
 
 			if (!strcmp(name, "gpm")) {
+				struct stat st;
 				int cnt = 0;
 				gpm = true;
 				/* Wait up to 0.25s for the GPM socket to appear. */
-				while (rc_exists("/dev/gpmctl") && cnt < 25) {
+				while (stat("/dev/gpmctl", &st) == 0 && cnt < 25) {
 					usleep(10000);
 					cnt++;
 				}
@@ -830,9 +846,11 @@ do_start:
 		config = NULL;
 		break;
 
-	case rc_hook_service_stop_now:
-		if (splash_init(false))
-			return -1;
+	case RC_HOOK_SERVICE_STOP_NOW:
+		if (splash_init(false)) {
+			retval = -1;
+			goto exit;
+		}
 
 		/* We need to stop localmount from unmounting our cache dir.
 		   Luckily plugins can add to the unmount list. */
@@ -847,14 +865,16 @@ do_start:
 		i = splash_svc_handle(name, "svc_stop", false);
 		break;
 
-	case rc_hook_service_stop_done:
+	case RC_HOOK_SERVICE_STOP_DONE:
 		config->verbosity = FBSPL_VERB_QUIET;
 		i = fbsplash_check_daemon(&pid_daemon);
 		config->verbosity = FBSPL_VERB_NORMAL;
-		if (i)
-			return -1;
+		if (i) {
+			retval = -1;
+			goto exit;
+		}
 
-		if (rc_service_state(name, rc_service_stopped)) {
+		if (rc_service_state(name) & RC_SERVICE_STOPPED) {
 			i = splash_svc_state(name, "svc_stopped", 1);
 		} else {
 			i = splash_svc_state(name, "svc_stop_failed", 1);
@@ -866,7 +886,7 @@ do_start:
 		config = NULL;
 		break;
 
-	case rc_hook_abort:
+	case RC_HOOK_ABORT:
 		i = splash_stop(name);
 		fbsplash_lib_cleanup();
 		config = NULL;
@@ -881,5 +901,7 @@ do_start:
 		svcs = NULL;
 	}
 
+exit:
+	free (runlev);
 	return i;
 }
