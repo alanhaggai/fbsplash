@@ -468,6 +468,7 @@ void daemon_start()
 	FILE *fp_fifo = NULL;
 	struct stat mystat;
 	struct vt_stat vtstat;
+	struct sigaction sa;
 	sigset_t sigset;
 
 	if (!config.minstances && (i = daemon_check_running("fbsplashd"))) {
@@ -526,7 +527,9 @@ void daemon_start()
 	dup2(i, 2);
 
 	/* Make all our threads ignore these signals. SIGUSR1, SIGUSR2,
-	 * SIGTERM and SIGINT will be handled in the sighandler thread. */
+	 * SIGTERM and SIGINT will be handled in the sighandler thread.
+	 * The use of a separate thread for handling signals is required
+	 * in order to avoid potential deadlocks. */
 	sigemptyset(&sigset);
 	sigaddset(&sigset, SIGABRT);
 	sigaddset(&sigset, SIGUSR1);
@@ -537,9 +540,12 @@ void daemon_start()
 	pthread_mutex_lock(&mtx_paint);
 	pthread_create(&th_sighandler, NULL, &thf_sighandler, NULL);
 
-	/* This is just a dummy handler and we don't care which thread
-	 * it is delivered to. */
-	signal(SIGALRM, handler_alarm);
+	/* Setup a dummy handler for SIGALRM. Unlike the other signals,
+	 * we don't care which thread executes this handler. */
+	sa.sa_handler = handler_alarm;
+	sa.sa_flags = SA_RESTART;
+	sigemptyset(&sa.sa_mask);
+	sigaction(SIGALRM, &sa, NULL);
 
 	/* Check which TTY is active */
 	if (ioctl(fd_tty0, VT_GETSTATE, &vtstat) != -1) {
