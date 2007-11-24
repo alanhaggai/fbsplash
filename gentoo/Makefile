@@ -3,9 +3,9 @@
 
 LIB		?= lib
 CFLAGS 	+= -g -Wall
-LDFLAGS += -L../core/objs/.libs
+LDFLAGS += -L../core/objs/.libs -L../core/.libs
 
-INCLUDES = -I../core/objs
+INCLUDES = -I../core/objs -I../core
 
 splash.so: splash.o
 	$(CC) $(LDFLAGS) -fPIC -shared -Wl,-soname,$@ $+ -o $@ -leinfo -lrc -lfbsplash
