@@ -120,7 +120,7 @@ doc:
 
 nodist_include_HEADERS  += fbsplash.h
 
-EXTRA_DIST              += fbsplash.h.in
+EXTRA_DIST              += fbsplash.h.in klibc_compat.h
 
 MOSTLYCLEANFILES        += fbsplash.h
 
