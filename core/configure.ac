@@ -264,28 +264,52 @@ AC_SUBST([KLCC])
 
 AC_ARG_WITH([freetype2-src],
   AS_HELP_STRING([--with-freetype2-src=DIR], [freetype2 source to use when linking with klibc]),
-  [LIBFREETYPE2_SOURCE="${withval}"],
+  [
+	AS_IF(
+	  [test "`echo ${withval} | sed -e 's,^/.*,,'`" = "${withval}"],
+	  [LIBFREETYPE2_SOURCE="\$(abs_top_srcdir)/${withval}"],
+	  [LIBFREETYPE2_SOURCE="${withval}"]
+	)
+  ],
   [LIBFREETYPE2_SOURCE="\$(abs_top_srcdir)/\$(LIBFREETYPE2_SOURCE_INTERNAL)"]
 )
 AC_SUBST([LIBFREETYPE2_SOURCE])
 
 AC_ARG_WITH([jpeg-src],
   AS_HELP_STRING([--with-jpeg-src=DIR], [jpeglib source to use when linking with klibc]),
-  [LIBJPEG_SOURCE="${withval}"],
+  [
+	AS_IF(
+	  [test "`echo ${withval} | sed -e 's,^/.*,,'`" = "${withval}"],
+	  [LIBJPEG_SOURCE="\$(abs_top_srcdir)/${withval}"],
+	  [LIBJPEG_SOURCE="${withval}"]
+	)
+  ],
   [LIBJPEG_SOURCE="\$(abs_top_srcdir)/\$(LIBJPEG_SOURCE_INTERNAL)"]
 )
 AC_SUBST([LIBJPEG_SOURCE])
 
 AC_ARG_WITH([lpng-src],
   AS_HELP_STRING([--with-lpng-src=DIR], [libpng source to use when linking with klibc]),
-  [LIBPNG_SOURCE="${withval}"],
+  [
+	AS_IF(
+	  [test "`echo ${withval} | sed -e 's,^/.*,,'`" = "${withval}"],
+	  [LIBPNG_SOURCE="\$(abs_top_srcdir)/${withval}"],
+	  [LIBPNG_SOURCE="${withval}"]
+	)
+  ],
   [LIBPNG_SOURCE="\$(abs_top_srcdir)/\$(LIBPNG_SOURCE_INTERNAL)"]
 )
 AC_SUBST([LIBPNG_SOURCE])
 
 AC_ARG_WITH([zlib-src],
   AS_HELP_STRING([--with-zlib-src=DIR], [zlib source to use when linking with klibc]),
-  [LIBZ_SOURCE="${withval}"],
+  [
+	AS_IF(
+	  [test "`echo ${withval} | sed -e 's,^/.*,,'`" = "${withval}"],
+	  [LIBZ_SOURCE="\$(abs_top_srcdir)/${withval}"],
+	  [LIBZ_SOURCE="${withval}"]
+	)
+  ],
   [LIBZ_SOURCE="\$(abs_top_srcdir)/\$(LIBZ_SOURCE_INTERNAL)"]
 )
 AC_SUBST([LIBZ_SOURCE])
