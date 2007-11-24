@@ -5,20 +5,36 @@ source /devel/common/functions.sh
 TESTING=no
 [[ -z "${*/*--testing*/}" && -n "$*" ]] && TESTING=yes
 
+ver=$(grep AC_INIT ../core/configure.ac | sed -e 's/[^,]*, \[//' -e 's/\])//')
 cdir=`pwd`
 
 cd ..
 
-ver=$(grep "^PKG_VERSION" core/Makefile | grep -o '[0-9]\+\.[0-9]\+\S*')
-einfo Got version: ${ver}
+ebegin "Creating a tarball"
+cd tmp
+../core/configure
+make dist-bzip2
+mv splashutils*.tar.bz2 ${cdir}
+eend $?
+
+
+cd ${cdir}
 
 ebegin "Creating a lite tarball"
-git archive --prefix=splashutils-${ver}/ HEAD:core/ | tar --delete splashutils-${ver}/libs | bzip2 -f > "${cdir}/splashutils-lite-${ver}.tar.bz2"
+cp splashutils-${ver}.tar.bz2 splashutils-lite-${ver}.tar.bz2
+rm -f splashutils-lite-${ver}.tar
+bunzip2 splashutils-lite-${ver}.tar.bz2
+tar --delete --wildcards -f splashutils-lite-${ver}.tar 'splashutils*/libs'
+bzip2 splashutils-lite-${ver}.tar
 eend $?
 
-ebegin "Creating a tarball"
-git archive --prefix=splashutils-${ver}/ HEAD:core/ | bzip2 -f > "${cdir}/splashutils-${ver}.tar.bz2"
-eend $?
+#ebegin "Creating a lite tarball"
+#git archive --prefix=splashutils-${ver}/ HEAD:core/ | tar --delete splashutils-${ver}/libs | bzip2 -f > "${cdir}/splashutils-lite-${ver}.tar.bz2"
+#eend $?
+
+#ebegin "Creating a tarball"
+#git archive --prefix=splashutils-${ver}/ HEAD:core/ | bzip2 -f > "${cdir}/splashutils-${ver}.tar.bz2"
+#eend $?
 
 cd ${cdir}
 
