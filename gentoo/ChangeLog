@@ -1,4 +1,8 @@
+25 Nov 2007 * <spock@gentoo.org> * splashutils-gentoo-1.0.9
  - Use 'exit staysilent' if the 'xdm' service has been started.
+
+23 Sep 2007 * <spock@gentoo.org> * splashutils-gentoo-1.0.8
+ - Add explanatory comments in /etc/conf.d/splash
 
 04 Sep 2007 * <spock@gentoo.org> * splashutils-gentoo-1.0.7
  - Add support for --type and --effects in splash-functions.sh for bl-1.
