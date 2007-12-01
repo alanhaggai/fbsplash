@@ -178,7 +178,7 @@ libfbsplashrender_la_SOURCES  = \
 	fbsplash.h
 libfbsplashrender_la_CFLAGS   = $(AM_CFLAGS)
 libfbsplashrender_la_LDFLAGS  = $(AM_LDFLAGS) -version-info $(libfbsplashrender_version)
-libfbsplashrender_la_LIBADD   =
+libfbsplashrender_la_LIBADD   = -lfbsplash
 
 libfbsplashrender_la_CFLAGS  += $(JPEG_CFLAGS)
 libfbsplashrender_la_LIBADD  += $(JPEG_LIBS)
