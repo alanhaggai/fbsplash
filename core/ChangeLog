@@ -1,4 +1,9 @@
-25 Nov 2007 * <spock@gentoo.org> * splashitils-1.5.3
+05 Dec 2007 * <spock@gentoo.org> * splashutils-1.5.3.1
+
+ - Make libfbsplash a dependency of libfbsplashrender.
+ - Create tty0 in splash_geninitramfs.
+
+25 Nov 2007 * <spock@gentoo.org> * splashutils-1.5.3
 
  - Switch to an autotools-based configure system.
 
