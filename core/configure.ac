@@ -54,7 +54,7 @@ AC_ARG_ENABLE([debug],
   [
     AS_CASE(["${enableval}"],
       [yes], [config_debug="yes"],
-      [no],  [config_ebug="no"],
+      [no],  [config_debug="no"],
              [AC_MSG_ERROR([bad value '${enableval}' for --enable-debug])]
     )
   ],
