@@ -496,7 +496,7 @@ void daemon_start()
 		if (!fp_fifo) {
 			if (errno == EINTR)
 				continue;
-			iprint(MSG_ERROR, "Can't open the splash FIFO (" FBSPLASH_FIFO ") for reading: %s", strerror(errno));
+			iprint(MSG_ERROR, "Can't open the splash FIFO (" FBSPLASH_FIFO ") for reading: %s\n", strerror(errno));
 			exit(4);
 		}
 	}
