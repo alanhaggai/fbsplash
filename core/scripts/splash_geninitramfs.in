@@ -144,7 +144,7 @@ fi
 if [ "$mode" == "a" ]; then
 	printv "o Unpacking $img.."
 	cp "$img" "${imgdir}"
-	(cd "${imgdir}" ; gunzip -c $(basename $img) | cpio -idm --quiet -H newc)
+	(cd "${imgdir}"; (gunzip -c "$(basename $img)" 2>/dev/null || cat "$(basename $img)") | cpio -idm --no-absolute-filenames --quiet -H newc)
 	rm -f "${imgdir}/$(basename $img)"
 fi
 
