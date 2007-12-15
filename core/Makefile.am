@@ -298,7 +298,7 @@ noinst_PROGRAMS += test/test_parser
 endif
 
 test_test_parser_SOURCES  = test/test_parser.c
-test_test_parser_CPPFLAGS = $(AM_CPPFLAGS) -DTARGET_UTIL
+test_test_parser_CPPFLAGS = $(AM_CPPFLAGS) $(libfbsplashrender_la_CFLAGS) -DTARGET_UTIL
 test_test_parser_LDFLAGS  = $(AM_LDFLAGS) libfbsplashrender.la libfbsplash.la
 
 clean-local-test:

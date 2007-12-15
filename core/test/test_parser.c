@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <unistd.h>
-#include "../util.h"
+#include "../common.h"
 
 #undef iprint
 #define iprint(lev, args...) ;
@@ -73,6 +73,7 @@ char *box_err[] = {
 	"box 1 1 4 4 #f0f0f0 #f0f0f0",
 	"box 2 5 6 7 #f0f0f0 #f0f0f0 #deadbeef",
 	"box 7 7 8 8 #708090 #909090 #deadbeef #beefdeade",
+	"box silent       0    349  1279 450  #22222c #22222c #383849 #040454498",
 };
 
 #include "../parse.c"
