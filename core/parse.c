@@ -33,6 +33,7 @@ u16 text_size;
 color text_color;
 char *text_font;
 
+char *curr_cfgfile;
 stheme_t tmptheme;
 
 /* Note that pic256 and silentpic256 have to be located before pic and
@@ -138,7 +139,7 @@ struct cfg_opt opts[] =
 
 #define parse_error(msg, args...)											\
 do {																		\
-	iprint(MSG_ERROR, "Parse error at line %d: " msg "\n", line, ## args);	\
+	iprint(MSG_ERROR, "Parse error at '%s', line %d: " msg "\n", curr_cfgfile, line, ## args);	\
 } while (0)
 
 static char *get_filepath(char *path)
@@ -764,7 +765,7 @@ static box* parse_box(char *t)
 		cbox->re.y2 = tmptheme.yres-1;
 
 	if (cbox->re.x2 < cbox->re.x1) {
-		parse_error("x2 has to larger or equal to x1");
+		parse_error("x2 has to be larger or equal to x1");
 		goto pb_err;
 	}
 
@@ -1174,6 +1175,10 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 		return 1;
 	}
 
+	/* Save the path of the file that is currently being parsed, so that
+	 * it can be used when printing error messages. */
+	curr_cfgfile = cfgfile;
+
 	memcpy(&tmptheme, theme, sizeof(tmptheme));
 
 	while (fgets(buf, sizeof(buf), cfgfp)) {
@@ -1233,6 +1238,9 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 				case t_box:
 				{
 					box *tbox = parse_box(t);
+					if (!tbox)
+						break;
+
 					if (tbox->attr & BOX_INTER) {
 						bprev = tbox;
 						goto box_post;
