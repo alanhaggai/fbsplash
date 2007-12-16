@@ -57,9 +57,12 @@ start() {
 
 			if ! set_theme "${theme}" "${TTY}"; then
 				err=1
-				break
+				eerror "Failed to set background image on tty${TTY}"
+				if [ -z "${FBCONDECOR_TTY_MAP}" ]; then
+					break
+				fi
 			fi
 		done
-		eend "${err}" "Failed to set background image on tty${TTY}"
+		eend "${err}"
 	fi
 }
