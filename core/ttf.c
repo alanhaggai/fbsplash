@@ -405,7 +405,7 @@ static void TTF_RenderUNICODE_Shaded(stheme_t *theme, u8 *target, const unsigned
 
 	/* Get the dimensions of the text surface */
 	if ((TTF_SizeUNICODE(font, text, &width, NULL) < 0) || !width) {
-		iprint(MSG_ERROR, "Text has zero width\n");
+		iprint(MSG_ERROR, "Text has zero width.\n");
 		return;
 	}
 	height = font->height;
@@ -846,19 +846,20 @@ void text_bnd(stheme_t *theme, text *ct, rect *bnd)
 	ct->cache = (u16 *)malloc((unicode_len+1) * sizeof(*ct->cache));
 
 	if (ct->cache == NULL) {
-		iprint(MSG_ERROR, "Out of memory\n");
+		iprint(MSG_ERROR, "Out of memory.\n");
 		return;
 	}
 
 	UTF8_to_UNICODE(ct->cache, txt, unicode_len);
-	free(txt);
+	if (txt != ct->val)
+		free(txt);
 	TTF_SetFontStyle(ct->font->font, ct->style);
 
 	text_get_xy(ct, &bnd->x1, &bnd->y1);
 
 	/* Get the dimensions of the text surface */
 	if ((TTF_SizeUNICODE(ct->font->font, ct->cache, &bnd->x2, NULL) < 0) || !bnd->x2) {
-		iprint(MSG_ERROR, "Text has zero width\n");
+		iprint(MSG_ERROR, "Text has zero width.\n");
 		return;
 	}
 	bnd->x2 += bnd->x1 - 1;
