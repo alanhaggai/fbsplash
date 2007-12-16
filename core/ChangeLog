@@ -1,3 +1,4 @@
+ - Fix rendering of text objects with hot spots other than top-left.
  - Fix a spurious free() call when processing static text objects.
  - Fix a segfault in the config file parser when there's an invalid
    'box' directive in the config file.
