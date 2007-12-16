@@ -1,0 +1,179 @@
+#!/bin/bash
+# Copyright 1999-2005 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+#
+# splash - a script to handle rc_scripts events and execute appropriate
+#          fbsplash actions; loosely based on bootsplash /sbin/splash
+#
+# Author: Michal Januszewski <spock@gentoo.org>
+#
+
+spl_daemon="/sbin/fbsplashd.static"
+spl_fbcd="/sbin/fbcondecor_ctl"
+spl_cachedir="/lib/splash/cache"
+spl_tmpdir="/lib/splash/tmp"
+spl_cachesize="4096"
+spl_cachetype="tmpfs"
+spl_fifo="${spl_cachedir}/.splash"
+spl_pidfile="${spl_cachedir}/daemon.pid"
+
+# Make sure we're running in a sane environment
+[[ ! -x ${spl_daemon} ]] && exit 1
+
+[[ -z ${SPLASH_BOOT_MESSAGE}     ]] && SPLASH_BOOT_MESSAGE="Booting the system (\$progress%)... Press F2 for verbose mode"
+[[ -z ${SPLASH_SHUTDOWN_MESSAGE} ]] && SPLASH_SHUTDOWN_MESSAGE="Shutting down the system (\$progress%)... Press F2 for verbose mode"
+[[ -z ${SPLASH_REBOOT_MESSAGE}   ]] && SPLASH_REBOOT_MESSAGE="Rebooting the system (\$progress%)... Press F2 for verbose mode"
+
+[[ ${RUNLEVEL} == "6" || ${RUNLEVEL} == "0" ]] && SHUTDOWN="yes"
+
+# Sends data to the splash FIFO after making sure there's someone
+# alive on other end to receive it.
+splash_comm_send() {
+    if [[ ! -e ${spl_pidfile} ]]; then
+	return 1
+    fi
+    
+    if [[ -r /proc/$(<${spl_pidfile})/status && 
+		"$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "fbsplashd.stati" ]]; then
+	echo $* > ${spl_fifo} &		
+    fi
+}
+
+splash_setup() {
+    if [[ ${SPLASH_THEME} != "" && ${SPLASH_TTY} != "" && "$1" != "force" ]]; then
+	return 0
+    fi
+    
+    export SPLASH_MODE_REQ="off"
+    export SPLASH_THEME="default"
+    export SPLASH_TTY="16"
+    export SPLASH_KDMODE="TEXT"
+    
+    if [[ -r /etc/splash/splash ]]; then 
+	. /etc/splash/splash
+    fi
+    
+    if [[ -r /proc/cmdline ]]; then
+	options=$(egrep 'splash=[^ ]*' -o /proc/cmdline)
+	options=${options#*=}
+	
+	for i in ${options//,/ } ; do
+	    case ${i%:*} in
+		theme)		SPLASH_THEME=${i#*:} ;;
+		tty)		SPLASH_TTY=${i#*:} ;;
+		verbose) 	SPLASH_MODE_REQ="verbose" ;;
+		silent)		SPLASH_MODE_REQ="silent" ;;
+		kdgraphics)	SPLASH_KDMODE="GRAPHICS" ;;
+	    esac
+	done
+    fi
+}
+
+get_boot_message() {
+    local text
+    
+    if [[ ${RUNLEVEL} == "6" ]]; then
+	text=${SPLASH_REBOOT_MESSAGE}
+    elif [[ ${RUNLEVEL} == "0" ]]; then
+	text=${SPLASH_SHUTDOWN_MESSAGE}
+    else
+	text=${SPLASH_BOOT_MESSAGE}
+    fi	
+    
+    echo ${text}
+}
+
+# Start the splash daemon
+if [ "$1" == "start" ]; then
+
+    splash_setup
+
+    # Prepare the communications FIFO
+    rm -f ${spl_fifo} 2>/dev/null
+    
+    if [[ ${SPLASH_MODE_REQ} == "verbose" ]]; then
+	if [[ -z "$(${spl_fbcd} -c getstate 2>/dev/null| grep 'off')" ]]; then
+	    ${spl_fbcd} -c on 2>/dev/null
+	fi
+	exit 0
+    elif [[ ${SPLASH_MODE_REQ} != "silent" ]]; then
+	exit 0
+    fi
+    
+    # Display a warning if the system is not configured to display init messages
+    # to tty1. This can cause a lot of problems if it's not handled correctly, so
+    # we don't allow silent splash to run on incorrectly configured systems.
+    if [[ ${SPLASH_MODE_REQ} == "silent" ]]; then
+	if [[ -z "`egrep '(^| )CONSOLE=/dev/tty1( |$)' /proc/cmdline`" &&
+		    -z "`egrep '(^| )console=tty1( |$)' /proc/cmdline`" ]]; then
+	    clear
+	    echo "You don't appear to have a correct CONSOLE= setting on your kernel"
+	    echo "command line. Silent splash will not be enabled. Please add"
+	    echo "CONSOLE=/dev/tty1 or console=tty1 to your kernel command line"
+	    echo "to avoid this message."
+	    if [[ -n "`grep 'CONSOLE=/dev/tty1' /proc/cmdline`" ||
+			-n "`grep 'console=tty1' /proc/cmdline`" ]]; then
+		echo "Note that CONSOLE=/dev/tty1 and console=tty1 are general parameters and"
+		echo "not splash= settings."
+	    fi
+	    exit 1
+	fi
+	
+	mount --bind / ${spl_tmpdir}
+	if [[ ! -c "${spl_tmpdir}/dev/tty1" ]]; then
+	    umount ${spl_tmpdir}
+	    clear
+	    echo "The filesystem mounted on / doesn't contain the /dev/tty1 device"
+	    echo "which is required for the silent splash to function properly."
+	    echo "Silent splash will not be enabled. Please create the appropriate"
+	    echo "device file to avoid this message."
+	    exit 1
+	fi
+	umount ${spl_tmpdir}
+    fi
+    
+    # In the unlikely case that there's a splash daemon running -- kill it.
+    killall -9 ${spl_daemon##*/} 2>/dev/null
+    
+    # Prepare the communications FIFO
+    mkfifo ${spl_fifo}	
+    
+    options=""
+    [[ ${SPLASH_KDMODE} == "GRAPHICS" ]] && options="--kdgraphics"
+    
+    # Start the splash daemon
+    rm -f "${spl_pidfile}"
+    BOOT_MSG="$(get_boot_message)" ${spl_daemon} --theme="${SPLASH_THEME}" --pidfile=${spl_pidfile} "${options}"
+
+    # Set the silent TTY and boot message
+    splash_comm_send "set tty silent ${SPLASH_TTY}"
+	
+    if [[ ${SPLASH_MODE_REQ} == "silent" ]] ; then
+	splash_comm_send "set mode silent"
+	splash_comm_send "repaint"
+	${spl_fbcd} -c on 2>/dev/null
+    fi
+
+    # Save some useful variables
+    res=$(/lib/splash/bin/fbres)
+    yres=${res#*x}
+    xres=${res%x*}
+
+    cat /etc/splash/${SPLASH_THEME}/${res}.cfg | egrep "^text_[a-z]\+=" > ${spl_cachedir}/message
+    echo -e "yres=${yres}\nxres=${xres}" >> ${spl_cachedir}/message
+elif [ "$1" == "silent" ]; then
+    splash_comm_send "set mode silent"
+    ${spl_fbcd} -c on 2>/dev/null
+elif [ "$1" == "verbose" ]; then
+    if [[ "$(splash_get_mode)" == "silent" ]]; then
+	if [[ -x /usr/bin/chvt ]]; then
+	    /usr/bin/chvt 1
+	else
+	    splash_comm_send "set mode verbose"
+	fi
+    fi
+fi
+
+exit 0
+
+# vim:ts=4

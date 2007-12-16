@@ -1,0 +1,196 @@
+#!/bin/bash
+
+#
+## Wrapper usplash - fbsplash
+#
+
+splashdebug=0
+logdir=/var/log/splashutils
+logfile=log
+
+#
+## Make sure we process only PROGRESS command
+## (until /etc/init.d/rc supports more)
+## This script works has been verified only with two consecutive
+## runlevels.
+#
+echo "$1" | egrep -q '^PROGRESS*'
+[ $? -ne 0 ] && exit 0
+
+if [ "$1" != "" ]; then
+    value=`echo $1 | busybox awk '{print $NF}'`
+else
+    #
+    ## Should not happen but who knows
+    #
+    value=0
+fi
+absvalue=$value
+[ $value    -lt 0 ] && absvalue=$[$value * -1]
+
+#
+## /etc/init.d/rc, when switching from one runlevel to another,
+## will restart from 0 even if the total remain 100%, on Debian.
+## (e.g. 0,10,20,...,65 at runlevel 0, then 10,20,...,35 at runlevel 2)
+## At the beginning writing to survey will fail, but will work before
+## rcS finishes.
+#
+## survey2 is a backup for halt/shutdown sequence that will killall5 splashutils
+## daemon
+#
+stopme=0
+restartme=0
+survey="/lib/splash/cache/survey"
+survey2="/tmp/.splashsurvey"
+shutdownorhalt=0
+oldvalue=0
+absoldvalue=0
+
+splash_debug()
+{
+    if [ $splashdebug -ne 0 ]; then
+	mkdir -p $logdir
+	if [ -d $logdir ]; then
+	    touch $logdir/$logfile
+	    if [ -w $logdir/$logfile ]; then
+		echo "`date` : $*, RUNLEVEL=$RUNLEVEL PREVLEVEL=$PREVLEVEL value=$value absvalue=$absvalue oldvalue=$oldvalue absoldvalue=$absoldvalue stopme=$stopme restartme=$restartme shutdownorhalt=$shutdownorhalt" 2>/dev/null >> $logdir/$logfile
+	    fi
+	fi
+    fi
+}
+ 
+eventuallyrestore=0
+touch $survey 2>/dev/null
+if [ $? -eq 0 ]; then
+    #
+    ## I test touch command so that we can a priori execute the followings without using /dev/null
+    ## (that could hide important things)
+    #
+    if [ -s $survey ]; then
+	oldvalue=`cat $survey`
+    else
+	#
+	## Do we have a backup ?
+	#
+	if [ -s $survey2 ]; then
+	    oldvalue=`cat $survey2`
+	    eventuallyrestore=1
+	fi
+    fi
+else
+    touch $survey2 2>/dev/null
+    if [ $? -eq 0 ]; then
+	if [ -s $survey2 ]; then
+	    oldvalue=`cat $survey2`
+	    eventuallyrestore=1
+	fi
+    fi
+fi
+
+#
+## Suppose oldvalue and value are of different signs. This means
+## that the backup file do not belong to same thing. One is for
+## start, the other one for halt/shutdown.
+#
+testsign=$[$value * $oldvalue]
+if [ $testsign -lt 0 ]; then
+    splash_debug Value and oldvalue are of different sign, removing backups
+    rm -f $survey2 $survey 2>/dev/null
+    oldvalue=0
+elif [ $eventuallyrestore -eq 1 ]; then
+    splash_debug Restoring backup
+    cp -f $survey2 $survey 2>/dev/null
+fi
+
+#
+## Now process the arguments
+#
+absoldvalue=$oldvalue
+[ $oldvalue -lt 0 ] && absoldvalue=$[$oldvalue * -1]
+if [ $absoldvalue -le $absvalue ]; then
+    #
+    ## Compatible
+    #
+    touch $survey 2>/dev/null
+    if [ $? -eq 0 ]; then
+	#
+	## There is a flow here, at boot, when filesystem is not yet writable
+	#
+	rm -f $survey 2>/dev/null
+	echo "$value" > $survey 2>/dev/null
+    fi
+    #
+    ## Keep a backup
+    #
+    rm -f $survey2 2>/dev/null
+    cp -f $survey $survey2 2>/dev/null
+else
+    #
+    ## If we switched from one runlevel to another we keep in mind the gap
+    #
+    value=$((${value} + ${oldvalue}))
+    absvalue=$value
+    [ $value -lt 0 ] && absvalue=$[$value * -1]
+fi
+
+if [ $value -lt 0 ]; then
+    shutdownorhalt=1
+fi
+
+splash_debug After processing arguments
+
+#
+## If we hit 100%, this is in theory the end - say that we will have to stop
+#
+if [ $absvalue -ge 100 ]; then
+    stopme=1
+elif [ $absvalue -ge 0 ];then
+    restartme=1
+fi
+if [ $shutdownorhalt -ne 0 ]; then
+    value=$[100+$value]
+fi
+
+splash_debug After correcting stopme, restartme and value
+
+if [ $restartme -eq 1 ]; then 
+    /etc/init.d/splashutils status
+    if [ $? -ne 0 ]; then
+	#
+	## This should not happen except at halt or shutdown
+	#
+	splash_debug Starting splashutils daemon
+	/etc/init.d/splashutils restart
+    fi
+fi
+
+#
+## We show the progress if it is not greater than 100 and if daemon is alive
+## (i.e. this will work only in startup for the moment)
+#
+if [ $value -le 100 ]; then
+    /etc/init.d/splashutils status
+    if [ $? -eq 0 ]; then
+	progressvalue=$((${value} * 65535 / 100))
+	splash_debug Sending progress value $progressvalue
+	/etc/init.d/splashutils progress $progressvalue
+    fi
+fi
+
+#
+## We eventually stop the daemon
+#
+if [ $stopme -eq 1 ]; then
+    /etc/init.d/splashutils status
+    if [ $? -eq 0 ]; then
+	splash_debug Stopping splashutils daemon
+	/etc/init.d/splashutils stop
+    fi
+    /etc/init.d/splashutils status
+    if [ $? -ne 0 ]; then
+	splash_debug Removing $survey and $survey2
+	rm -f $survey $survey2 2>/dev/null
+    fi
+fi
+
+exit 0

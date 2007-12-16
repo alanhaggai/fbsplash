@@ -1,0 +1,23 @@
+#!/bin/sh -e
+
+update_initramfs() {
+    [ -x /usr/sbin/update-initramfs -a -e /etc/initramfs-tools/initramfs.conf ] || return 0
+    update-initramfs -u
+}
+
+case "$1" in
+    configure)
+        update_initramfs
+        ;;
+    
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+    
+    *)
+        echo "$0 called with unknown argument '$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
