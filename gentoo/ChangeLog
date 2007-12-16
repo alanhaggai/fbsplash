@@ -1,3 +1,6 @@
+16 Dec 2007 * <spock@gentoo.org> * splashutils-gentoo-1.0.10
+ - Add another method of detecting the keyboard event device
+   in the splash-functions.sh for baselayout-1.
  - Don't make the fbcondecor initscript fail when it can't set
    the theme on a single tty and FBCONDECOR_TTY_MAP is used.
 

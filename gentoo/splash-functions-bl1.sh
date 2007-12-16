@@ -284,10 +284,18 @@ splash_start() {
 	if [[ -z "${t}" ]]; then
 		t=$(grep -Hsi keyboard /sys/class/input/event*/device/driver/description | grep -o 'event[0-9]\+')
 		if [[ -z "${t}" ]]; then
-			# Try an alternative method of finding the event device. The idea comes
-			# from Bombadil <bombadil(at)h3c.de>. We're couting on the keyboard controller
-			# being the first device handled by kbd listed in input/devices.
-			t=$(/bin/grep -s -m 1 '^H: Handlers=kbd' /proc/bus/input/devices | grep -o 'event[0-9]*')
+			for i in /sys/class/input/input* ; do
+				if [ "$((0x$(cat $i/capabilities/ev) & 0x100002))" = "1048578" ]; then
+					t=$(echo $i | sed -e 's#.*input\\([0-9]*\\)#event\\1#')
+				fi
+			done
+
+			if [[ -z "${t}" ]]; then
+				# Try an alternative method of finding the event device. The idea comes
+				# from Bombadil <bombadil(at)h3c.de>. We're couting on the keyboard controller
+				# being the first device handled by kbd listed in input/devices.
+				t=$(/bin/grep -s -m 1 '^H: Handlers=kbd' /proc/bus/input/devices | grep -o 'event[0-9]*')
+			fi
 		fi
 	fi
 	[[ -n "${t}" ]] && splash_comm_send "set event dev /dev/input/${t}"
