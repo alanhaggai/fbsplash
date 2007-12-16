@@ -1,3 +1,11 @@
+ - Fix a spurious free() call when processing static text objects.
+ - Fix a segfault in the config file parser when there's an invalid
+   'box' directive in the config file.
+ - Make the parser error messages more informative by including the
+   name of the config file in which the error occured.
+ - Handle both gzipped and regular cpio archives in
+   splash_geninitramfs.
+
 05 Dec 2007 * <spock@gentoo.org> * splashutils-1.5.3.1
 
  - Make libfbsplash a dependency of libfbsplashrender.
