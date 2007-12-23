@@ -286,7 +286,7 @@ splash_start() {
 		if [[ -z "${t}" ]]; then
 			for i in /sys/class/input/input* ; do
 				if [ "$((0x$(cat $i/capabilities/ev) & 0x100002))" = "1048578" ]; then
-					t=$(echo $i | sed -e 's#.*input\\([0-9]*\\)#event\\1#')
+					t=$(echo $i | sed -e 's#.*input\([0-9]*\)#event\1#')
 				fi
 			done
 
