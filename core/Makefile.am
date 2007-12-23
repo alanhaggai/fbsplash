@@ -1,4 +1,4 @@
-SUBDIRS = src docs misc scripts
+SUBDIRS = libs src docs misc scripts
 
 pkgconfigdir = $(libdir)/pkgconfig
 
