@@ -616,6 +616,6 @@ AH_TOP([#ifndef __SPLASH_CONFIG_H
 AH_BOTTOM([#endif /* SPLASH_CONFIG_H */])
 
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile misc/Makefile src/test/Makefile docs/Makefile scripts/Makefile])
 
 AC_OUTPUT
