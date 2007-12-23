@@ -58,12 +58,6 @@ AM_LIBTOOLFLAGS  =
 
 BUILT_SOURCES   += fbsplash.h
 
-mostlyclean-local: \
-		mostlyclean-local-kernel
-
-clean-local: \
-		clean-local-test
-
 dist-hook: \
 		dist-hook-header
 
