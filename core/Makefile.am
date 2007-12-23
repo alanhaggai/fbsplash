@@ -444,7 +444,7 @@ libfreetype.a: klibc_compat.h
 		$(call infmsg,CONF,libfreetype.a) ; \
 		CFLAGS="$(K_CFLAGS) -include $(abs_top_srcdir)/klibc_compat.h" \
 		CC="$(KLCC)" CPPFLAGS="-I$(LIBZ_SOURCE)" \
-		$(LIBFREETYPE2_SOURCE)/configure --disable-shared $(OUTPUT) ; \
+		$(LIBFREETYPE2_SOURCE)/configure --host=$(host) --build=$(build_triplet) --disable-shared $(OUTPUT) ; \
 	fi ; \
 	if ! $(MAKE) --question $(AM_MAKEFLAGS) CFLAGS="$(K_CFLAGS)" library ; then \
 		$(call infmsg,MAKE,libfreetype.a) ; \
@@ -458,7 +458,8 @@ libjpeg.a:
 	$(Q)cd libjpeg ; \
 	if test ! -e ./Makefile ; then \
 		$(call infmsg,CONF,libjpeg.a) ; \
-		CC=$(KLCC) CFLAGS="$(K_CFLAGS) -I$(abs_top_builddir)/libjpeg" $(LIBJPEG_SOURCE)/configure $(OUTPUT) ; \
+		CC=$(KLCC) CFLAGS="$(K_CFLAGS) -I$(abs_top_builddir)/libjpeg" $(LIBJPEG_SOURCE)/configure \
+		--host=$(host) --build=$(build_triplet) $(OUTPUT) ; \
 		echo "#define NO_GETENV 1" >> jconfig.h ; \
 		$(SED) -i "s#CFLAGS=.*#CFLAGS=$(K_CFLAGS) -I$(abs_top_builddir)/libjpeg#" Makefile ; \
 		$(SED) -i "s:#define JMESSAGE.*::" $(LIBJPEG_SOURCE)/jerror.c ; \
