@@ -40,7 +40,15 @@ spl_cachetype="tmpfs"
 splash() {
 	local event="$1"
 	shift
-	splash_setup
+
+	# Reload the splash settings in rc_init.  We could have set them wrong the
+	# first time splash_setup was called (when splash-functions.sh was first
+	# sourced) if /proc wasn't mounted.
+	if [[ ${event} == "rc_init" ]]; then
+		splash_setup "force"
+	else
+		splash_setup
+	fi
 
 	[[ ${SPLASH_MODE_REQ} == "off" ]] && return
 
