@@ -530,6 +530,7 @@ splash_exit() {
 splash_update_progress() {
 	# splash_comm_send "progress ${progress}"
 	# splash_comm_send "paint"
+	return
 }
 
 # Export functions if we're running bash.
