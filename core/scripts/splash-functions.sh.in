@@ -23,8 +23,6 @@ export spl_cachedir="@libdir@/splash/cache"
 export spl_fifo="${spl_cachedir}/.splash"
 export spl_pidfile="${spl_cachedir}/daemon.pid"
 
-[ -r /etc/init.d/functions.sh ] && . /etc/init.d/functions.sh
-
 splash_setup() {
 	# If it's already set up, let's not waste time on parsing the config
 	# files again
@@ -93,7 +91,7 @@ splash_comm_send() {
 	splash_profile "comm $*"
 
 	if [ -r /proc/$(<"${spl_pidfile}")/status -a \
-		  "$( (read t;echo ${t} | sed -e 's/Name: //') </proc/$(<${spl_pidfile})/status)" = "splash_util.sta" ]; then
+		  "$( (read t;echo ${t} | sed -e 's/Name: //') </proc/$(<${spl_pidfile})/status)" = "fbsplashd.stati" ]; then
 		echo "$*" > "${spl_fifo}" &
 	else
 		echo "Splash daemon not running!"
@@ -183,7 +181,7 @@ splash_set_event_dev() {
 splash_svclist_get() {
 	if [ "$1" = "start" -a -r "${spl_cachedir}/svcs_start" ]; then
 		cat "${spl_cachedir}/svcs_start"
-	elif [ "$1" = "stop" -a -r "${spl_cachedir}/svcs_stop"]; then
+	elif [ "$1" = "stop" -a -r "${spl_cachedir}/svcs_stop" ]; then
 		cat "${spl_cachedir}/svcs_stop"
 	fi
 }
