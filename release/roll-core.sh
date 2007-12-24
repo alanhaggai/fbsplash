@@ -24,7 +24,7 @@ ebegin "Creating a lite tarball"
 cp splashutils-${ver}.tar.bz2 splashutils-lite-${ver}.tar.bz2
 rm -f splashutils-lite-${ver}.tar
 bunzip2 splashutils-lite-${ver}.tar.bz2
-tar --delete --wildcards -f splashutils-lite-${ver}.tar 'splashutils*/libs'
+tar --delete --wildcards -f splashutils-lite-${ver}.tar 'splashutils*/libs/libpng*' 'splashutils*/libs/zlib*' 'splashutils*/libs/jpeg*' 'splashutils*/libs/freetype*'
 bzip2 splashutils-lite-${ver}.tar
 eend $?
 
