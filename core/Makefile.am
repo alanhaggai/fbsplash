@@ -1,9 +1,16 @@
 SUBDIRS = libs src docs misc scripts
 
+include common.mk
+
 pkgconfigdir = $(libdir)/pkgconfig
 
 pkgconfig_DATA  = libfbsplash.pc libfbsplashrender.pc
-EXTRA_DIST      = libfbsplash.pc.in libfbsplashrender.pc.in
+EXTRA_DIST      = libfbsplash.pc.in libfbsplashrender.pc.in \
+				  $(LIBFREETYPE2_SOURCE_INTERNAL) \
+				  $(LIBJPEG_SOURCE_INTERNAL) \
+			      $(LIBPNG_SOURCE_INTERNAL) \
+				  $(LIBZ_SOURCE_INTERNAL) \
+				  Doxyfile
 
 MOSTLYCLEANFILES = libfbsplash.pc libfbsplashrender.pc
 
@@ -19,6 +26,6 @@ MOSTLYCLEANFILES = libfbsplash.pc libfbsplashrender.pc
 		-e 's|@libs_private[@]|$(strip $($(basename $(@F))_la_LIBADD))|g' \
 		> $@
 
-
-
+doc:
+	doxygen
 

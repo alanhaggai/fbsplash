@@ -6,12 +6,6 @@ MAKEOVERRIDES=
 
 EXTRA_DIST = klibc_compat.h
 
-EXTRA_DIST += \
-	$(LIBFREETYPE2_SOURCE_INTERNAL) \
-	$(LIBJPEG_SOURCE_INTERNAL) \
-	$(LIBPNG_SOURCE_INTERNAL) \
-	$(LIBZ_SOURCE_INTERNAL)
-
 PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_SUPPORTED -DPNG_NO_READ_iTXt \
 		-DPNG_LEGACY_SUPPORTED -DPNG_NO_PROGRESSIVE_READ -DPNG_NO_MNG_FEATURES -DPNG_NO_CONSOLE_IO \
 		-DPNG_NO_ERROR_NUMBERS -DPNG_READ_GRAY_TO_RGB_SUPPORTED -DPNG_READ_16_TO_8_SUPPORTED \
@@ -40,6 +34,11 @@ noinst_LIBRARIES += libfreetype.a
 endif
 endif
 
+libjpeg_a_SOURCES =
+libpng_a_SOURCES =
+libz_a_SOURCES =
+libfreetype_a_SOURCES =
+
 libfreetype.a: klibc_compat.h
 	$(Q)$(MKDIR_P) libfreetype
 	$(Q)cd libfreetype ; \
@@ -57,14 +56,14 @@ libfreetype.a: klibc_compat.h
 	$(Q)cp -f libfreetype/.libs/libfreetype.a $@
 
 libjpeg.a:
-	$(Q)$(MKDIR_P) $(abs_top_builddir)/libjpeg
+	$(Q)$(MKDIR_P) libjpeg
 	$(Q)cd libjpeg ; \
 	if test ! -e ./Makefile ; then \
 		$(call infmsg,CONF,libjpeg.a) ; \
-		CC=$(KLCC) CFLAGS="$(K_CFLAGS) -I$(abs_top_builddir)/libjpeg" $(LIBJPEG_SOURCE)/configure \
+		CC=$(KLCC) CFLAGS="$(K_CFLAGS) -I$(abs_top_builddir)/libs/libjpeg" $(LIBJPEG_SOURCE)/configure \
 		--host=$(host) --build=$(build_triplet) $(OUTPUT) ; \
 		echo "#define NO_GETENV 1" >> jconfig.h ; \
-		$(SED) -i "s#CFLAGS=.*#CFLAGS=$(K_CFLAGS) -I$(abs_top_builddir)/libjpeg#" Makefile ; \
+		$(SED) -i "s#CFLAGS=.*#CFLAGS=$(K_CFLAGS) -I$(abs_top_builddir)/libs/libjpeg#" Makefile ; \
 		$(SED) -i "s:#define JMESSAGE.*::" $(LIBJPEG_SOURCE)/jerror.c ; \
 	fi ; \
 	if ! $(MAKE) --question $(AM_MAKEFLAGS) CC="$(KLCC)" libjpeg.a ; then  \

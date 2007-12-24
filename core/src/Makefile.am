@@ -58,14 +58,7 @@ AM_LIBTOOLFLAGS  =
 
 BUILT_SOURCES   += fbsplash.h
 
-dist-hook: \
-		dist-hook-header
-
-EXTRA_DIST    += \
-	Doxyfile
-
-doc:
-	doxygen
+dist-hook: 		dist-hook-header
 
 ################################################################################
 # Header
@@ -81,7 +74,7 @@ dist-hook-header:
 	@# Removing this file from the distribution is easier than putting it
 	@# in a nodist_*_SOURCES rather than the normal _SOURCES list for all
 	@# the programs and libraries that depend on it.
-	@rm -r $(top_distdir)/fbsplash.h
+	@rm -f $(top_distdir)/fbsplash.h
 
 fbsplash.h: fbsplash.h.in $(top_builddir)/config.h
 	@$(call infmsg,CREATE,$@)
@@ -120,8 +113,8 @@ libfbsplashrender_la_SOURCES  = \
 	render.c \
 	effects.c \
 	fbcon_decor.h \
-	include/console_decor.h \
-	include/fbcondecor.h \
+	../include/console_decor.h \
+	../include/fbcondecor.h \
 	common.h \
 	render.h \
 	fbsplash.h
@@ -162,7 +155,7 @@ esbin_PROGRAMS += fbsplashd.static
 bin_PROGRAMS   += splash_util
 ebin_PROGRAMS  += splash_util.static
 
-fbcondecor_ctl_SOURCES      = fbcon_decor_ctl.c fbcon_decor.h include/console_decor.h include/fbcondecor.h common.h fbsplash.h
+fbcondecor_ctl_SOURCES      = fbcon_decor_ctl.c fbcon_decor.h ../include/console_decor.h ../include/fbcondecor.h common.h fbsplash.h
 fbcondecor_ctl_CPPFLAGS     = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplashrender_la_CFLAGS)
 fbcondecor_ctl_LDFLAGS      = $(AM_LDFLAGS)
 fbcondecor_ctl_LDADD        = libfbsplashrender.la libfbsplash.la
@@ -210,8 +203,8 @@ fbcondecor_helper_SOURCES = \
 	image.c \
 	effects.c \
 	fbcon_decor.h \
-	include/console_decor.h \
-	include/fbcondecor.h \
+	../include/console_decor.h \
+	../include/fbcondecor.h \
 	common.h \
 	render.h \
 	fbsplash.h
@@ -219,7 +212,7 @@ fbcondecor_helper_CPPFLAGS  = -DWITH_ERRLIST -DTARGET_KERNEL -DTT_CONFIG_OPTION_
 fbcondecor_helper_CFLAGS    = -Os -w -ffunction-sections -fdata-sections -I.@am__isrc@
 fbcondecor_helper_LDFLAGS   = 
 fbcondecor_helper_LDADD     = 
-fbcondecor_helper_CFLAGS   += -I$(abs_top_builddir)/libjpeg -I$(LIBJPEG_SOURCE)
+fbcondecor_helper_CFLAGS   += -I$(abs_top_builddir)/libs/libjpeg -I$(LIBJPEG_SOURCE)
 fbcondecor_helper_LDADD    += $(top_builddir)/libs/libjpeg.a
 if CONFIG_PNG
 fbcondecor_helper_CFLAGS   += -I$(LIBPNG_SOURCE)
