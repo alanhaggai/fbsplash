@@ -141,44 +141,32 @@
    and space saver for systems which already have the source code of the
    libraries used in splashutils.
 
-30 Apr 2005 * <spock@gentoo.org> * splashutils-1.1.9.5, splashutils-gentoo-0.1.9
+30 Apr 2005 * <spock@gentoo.org> * splashutils-1.1.9.5
  - Fixed issues with 16bpp modes.
  - Modified Makefile to allow a more verbose output and compilation
    with user-provided CFLAGS.
- - Added sanity checks for /dev/tty1.
- - Added sanity checks for the kernel command line. Invalid settings
-   such as: splash=silent,theme:foo,CONSOLE=/dev/tty1,quiet should now
-   be detected automatically.
  - Cleaned the code up a little bit. Moved alpha blending into
    the put_pixel() function.
  - Updated klibc to 1.0.8.
  - Merged a PPC fix by Daniel Tarbuck <tarbuck(at)futurewest(dot)ca>.
 
-24 Apr 2005 * <spock@gentoo.org> * splashutils-1.1.9.4, splashutils-gentoo-0.1.8
+24 Apr 2005 * <spock@gentoo.org> * splashutils-1.1.9.4
  - Fixed a few mistakes and typos in the docs.
  - Made the core rendering code a little faster.
  - Fixed the bootsplash2fbsplash scripts (Gentoo bug #85531).
- - Splash scripts updates:
-   - ignore 'serial' exit code (to prevent automatic switches to
-     verbose mode when there is no apparent error)
-   - fixed Gentoo bugs #88461 and #87113
 
-28 Mar 2005 * <spock@gentoo.org> * splashutils-1.1.9.3, splashutils-gentoo-0.1.7
+28 Mar 2005 * <spock@gentoo.org> * splashutils-1.1.9.3
  - Updated the documentation to reflect the changes in the 1.1.9 series.
  - Fixed the bug with F2 not working in silent mode.
  - Added support for font styles (bold, italic, underline).
  - Added support for text hotspot positioning.
  - Added support for text evaluation (only the $progress variable is supported,
    for now).
- - $progress is now a part of the main boot message by default.
 
-21 Mar 2005 * <spock@gentoo.org> * splashutils-1.1.9.2, splashutils-
-                                   gentoo-0.1.6, miscsplashutils-0.1.3
+21 Mar 2005 * <spock@gentoo.org> * splashutils-1.1.9.2, miscsplashutils-0.1.3
 
  A bugfix release of splashutils. Fixed bugs:
   - #85293 - compilation problems on amd64
-  - #85418 - cache directory not found
-  - #85565 - issues related to /usr and /var being separate partitions
   - 8bpp modes fix (thanks to Bernard Blackham <bernard(at)blackham.com.au>)
 
  Additionally, the following new features have been implemented:
@@ -196,7 +184,7 @@
  - Improved the fade-in code for truecolor modes. The fading should be much
    more smooth now.
 
-07 Mar 2005 * <spock@gentoo.org> * splashutils-1.1.9, splashutils-gentoo-0.1.5
+07 Mar 2005 * <spock@gentoo.org> * splashutils-1.1.9
  Major changes in the architecture and in the code. A list of
  more important ones:
   - The splash daemon mode - makes things a lot faster and cleaner. This
@@ -242,24 +230,18 @@
  follow. For now, let this changelog, splash_util -h, the Gentoo
  initscripts from splashutils-gentoo and The Code Itself be your guides ;)
 
-27 Jan 2005 * <spock@gentoo.org> * splashutils-0.9.1, splashutils-gentoo-0.1.4
+27 Jan 2005 * <spock@gentoo.org> * splashutils-0.9.1
  Added numerous new features and bugfixes:
   - support for devfs device names (bug #75515)
-  - fixes for consolefont problems (bug #77122)
   - a splash_geninitramfs fix (bug #68518)
-  - support for switching back to silent mode after receiving
-    user input for services such as dm-crypt
   - support for theme-defined ttf fonts
   - support for boot icons
-  - support for event-driven scripts
 
  Note that some of these are undocumented and usused at this point.
  Please wait for baselayout updates (bug #78492) and/or new themes
  to see them in action.
 
-27 Sep 2004 * <spock@gentoo.org> * splashutils-0.9-pre10, splashutils-
-                                   gentoo-0.1.2
- - Fixed Gentoo bug #64068
+27 Sep 2004 * <spock@gentoo.org> * splashutils-0.9-pre10
  - Fixed two small bugs in progress bar rendering code. Thanks to
    Christian Hesse for spotting these.
  - Updated klibc and libpng, splashutils should compile cleanly with 2.6.9-rc2

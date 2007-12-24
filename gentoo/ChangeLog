@@ -87,3 +87,36 @@
    etc.
  - Fixed a bug with the event device not being detected correctly.
 
+30 Apr 2005 * <spock@gentoo.org> * splashutils-gentoo-0.1.9
+ - Added sanity checks for /dev/tty1.
+ - Added sanity checks for the kernel command line. Invalid settings
+   such as: splash=silent,theme:foo,CONSOLE=/dev/tty1,quiet should now
+   be detected automatically.
+
+24 Apr 2005 * <spock@gentoo.org> * splashutils-gentoo-0.1.8
+ - Splash scripts updates:
+   - ignore 'serial' exit code (to prevent automatic switches to
+     verbose mode when there is no apparent error)
+   - fixed Gentoo bugs #88461 and #87113
+
+28 Mar 2005 * <spock@gentoo.org> * splashutils-gentoo-0.1.7
+ - $progress is now a part of the main boot message by default.
+
+21 Mar 2005 * <spock@gentoo.org> * splashutils-gentoo-0.1.6
+ - Fixed bugs:
+  - #85418 - cache directory not found
+  - #85565 - issues related to /usr and /var being separate partitions
+
+07 Mar 2005 * <spock@gentoo.org> * splashutils-gentoo-0.1.5
+ - Changes to support splashutils-1.1.9.
+
+27 Jan 2005 * <spock@gentoo.org> * splashutils-gentoo-0.1.4
+ - Added numerous new features and bugfixes:
+  - fixes for consolefont problems (bug #77122)
+  - support for switching back to silent mode after receiving
+    user input for services such as dm-crypt
+  - support for event-driven scripts
+
+27 Sep 2004 * <spock@gentoo.org> * splashutils-gentoo-0.1.2
+ - Fixed Gentoo bug #64068
+
