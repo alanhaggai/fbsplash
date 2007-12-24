@@ -22,14 +22,9 @@
 # is a size limit in KB, and it should probably be left with the
 # default value.
 spl_daemon="/sbin/fbsplashd.static"
-spl_fbcd="/sbin/fbcondecor_ctl"
-spl_bindir="/lib/splash/bin"
-spl_cachedir="/lib/splash/cache"
 spl_tmpdir="/lib/splash/tmp"
 spl_cachesize="4096"
 spl_cachetype="tmpfs"
-spl_fifo="${spl_cachedir}/.splash"
-spl_pidfile="${spl_cachedir}/daemon.pid"
 
 # This is the main function which handles all events.
 # Accepted parameters:
@@ -95,49 +90,6 @@ splash() {
 	fi
 
 	return 0
-}
-
-splash_setup() {
-	# If it's already set up, let's not waste time on parsing the config
-	# files again
-	if [[ ${SPLASH_THEME} != "" && ${SPLASH_TTY} != "" && "$1" != "force" ]]; then
-		return 0
-	fi
-
-	export SPLASH_EFFECTS=""
-	export SPLASH_MODE_REQ="off"
-	export SPLASH_PROFILE="off"
-	export SPLASH_THEME="default"
-	export SPLASH_TTY="16"
-	export SPLASH_KDMODE="TEXT"
-	export SPLASH_BOOT_MESSAGE="Booting the system (\$progress%)... Press F2 for verbose mode."
-	export SPLASH_SHUTDOWN_MESSAGE="Shutting down the system (\$progress%)... Press F2 for verbose mode."
-	export SPLASH_REBOOT_MESSAGE="Rebooting the system (\$progress%)... Press F2 for verbose mode."
-
-	[[ -f $(add_suffix /etc/conf.d/splash) ]] && source "$(add_suffix /etc/conf.d/splash)"
-	[[ -f $(add_suffix /etc/conf.d/fbcondecor) ]] && source "$(add_suffix /etc/conf.d/fbcondecor)"
-
-	if [[ -f /proc/cmdline ]]; then
-		options=$(grep 'splash=[^ ]*' -o /proc/cmdline)
-
-		# Execute this loop over $options so that we can process multiple
-		# splash= arguments on the kernel command line. Useful for adjusting
-		# splash parameters from ISOLINUX.
-		for opt in ${options} ; do
-			options=${opt#*=}
-
-			for i in ${options//,/ } ; do
-				case ${i%:*} in
-					theme)		SPLASH_THEME=${i#*:} ;;
-					tty)		SPLASH_TTY=${i#*:} ;;
-					verbose) 	SPLASH_MODE_REQ="verbose" ;;
-					silent)		SPLASH_MODE_REQ="silent" ;;
-					kdgraphics)	SPLASH_KDMODE="GRAPHICS" ;;
-					profile)	SPLASH_PROFILE="on" ;;
-				esac
-			done
-		done
-	fi
 }
 
 # ----------------------------------------------------------------------
@@ -211,7 +163,7 @@ splash_start() {
 	rm -f ${spl_fifo} 2>/dev/null
 
 	if [[ ${SPLASH_MODE_REQ} == "verbose" ]]; then
-		${spl_fbcd} -c on 2>/dev/null
+		${spl_decor} -c on 2>/dev/null
 		return 0
 	elif [[ ${SPLASH_MODE_REQ} != "silent" ]]; then
 		return 0
@@ -275,42 +227,12 @@ splash_start() {
 	if [[ ${SPLASH_MODE_REQ} == "silent" ]] ; then
 		splash_comm_send "set mode silent"
 		splash_comm_send "repaint"
-		${spl_fbcd} -c on 2>/dev/null
+		${spl_decor} -c on 2>/dev/null
 	fi
 
-	# Set the input device if it exists. This will make it possible to use F2 to
-	# switch from verbose to silent.
-	local t=$(grep -Hsi keyboard /sys/class/input/input*/name | sed -e 's#.*input\([0-9]*\)/name.*#event\1#')
-	if [[ -z "${t}" ]]; then
-		t=$(grep -Hsi keyboard /sys/class/input/event*/device/driver/description | grep -o 'event[0-9]\+')
-		if [[ -z "${t}" ]]; then
-			for i in /sys/class/input/input* ; do
-				if [ "$((0x$(cat $i/capabilities/ev) & 0x100002))" = "1048578" ]; then
-					t=$(echo $i | sed -e 's#.*input\([0-9]*\)#event\1#')
-				fi
-			done
-
-			if [[ -z "${t}" ]]; then
-				# Try an alternative method of finding the event device. The idea comes
-				# from Bombadil <bombadil(at)h3c.de>. We're couting on the keyboard controller
-				# being the first device handled by kbd listed in input/devices.
-				t=$(/bin/grep -s -m 1 '^H: Handlers=kbd' /proc/bus/input/devices | grep -o 'event[0-9]*')
-			fi
-		fi
-	fi
-	[[ -n "${t}" ]] && splash_comm_send "set event dev /dev/input/${t}"
+	splash_set_event_dev
 
 	return 0
-}
-
-splash_get_boot_message() {
-	if [[ ${RUNLEVEL} == "6" ]]; then
-		echo "${SPLASH_REBOOT_MESSAGE}"
-	elif [[ ${RUNLEVEL} == "0" ]]; then
-		echo "${SPLASH_SHUTDOWN_MESSAGE}"
-	else
-		echo "${SPLASH_BOOT_MESSAGE}"
-	fi
 }
 
 splash_update_progress() {
@@ -338,54 +260,6 @@ splash_update_progress() {
 # Common functions
 ###########################################################################
 
-# Sends data to the splash FIFO after making sure there's someone
-# alive on other end to receive it.
-splash_comm_send() {
-	if [[ ! -e ${spl_pidfile} ]]; then
-		return 1
-	fi
-
-	splash_profile "comm $*"
-
-	if [[ -r /proc/$(<${spl_pidfile})/status &&                                              
-		  "$((read t;echo ${t/Name:/}) </proc/$(<${spl_pidfile})/status)" == "fbsplashd.stati" ]]; then
-		echo "$*" > ${spl_fifo} &
-	else
-		echo "Splash daemon not running!"
-		rm -f "${spl_pidfile}"
-	fi
-}
-
-# Returns the current splash mode.
-splash_get_mode() {
-	local ctty="$(${spl_bindir}/fgconsole)"
-
-	if [[ ${ctty} == "${SPLASH_TTY}" ]]; then
-		echo "silent"
-	else
-		if [[ -z "$(${spl_fbcd} -c getstate --vc=$(($ctty-1)) 2>/dev/null | grep off)" ]]; then
-			echo "verbose"
-		else
-			echo "off"
-		fi
-	fi
-}
-
-# Switches to verbose mode.
-splash_verbose() {
-	if [[ -x /usr/bin/chvt ]]; then
-		/usr/bin/chvt 1
-	else
-		splash_comm_send "set mode verbose"
-	fi
-}
-
-# Switches to silent mode.
-splash_silent() {
-	splash_comm_send "set mode silent"
-	${spl_fbcd} -c on 2>/dev/null
-}
-
 splash_load_vars() {
 	[[ -e ${spl_cachedir}/progress ]] && source ${spl_cachedir}/progress
 }
@@ -400,13 +274,6 @@ splash_save_vars() {
 	t="${t}spl_scripts=${spl_scripts}\n"
 
 	(echo -e "$t" > ${spl_cachedir}/progress) 2>/dev/null
-}
-
-# Saves profiling information
-splash_profile() {
-	if [[ ${SPLASH_PROFILE} == "on" ]]; then
-		echo "`cat /proc/uptime | cut -f1 -d' '`: $*" >> ${spl_cachedir}/profile
-	fi
 }
 
 ###########################################################################
@@ -605,12 +472,6 @@ splash_svclist_init() {
 				splash_svc_update ${i} "svc_inactive_start"
 			done
 		fi
-	fi
-}
-
-splash_svclist_get() {
-	if [[ "$1" == "start" ]]; then
-		cat ${spl_cachedir}/svcs_start
 	fi
 }
 
