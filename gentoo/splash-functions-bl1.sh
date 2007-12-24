@@ -21,84 +21,8 @@
 # values for spl_cachetype are 'tmpfs' and 'ramfs'. spl_cachesize
 # is a size limit in KB, and it should probably be left with the
 # default value.
-spl_daemon="/sbin/fbsplashd.static"
-spl_tmpdir="/lib/splash/tmp"
 spl_cachesize="4096"
 spl_cachetype="tmpfs"
-
-# This is the main function which handles all events.
-# Accepted parameters:
-#  svc_start <name>
-#  svc_stop <name>
-#  svc_started <name> <errcode>
-#  svc_stopped <name> <errcode>
-#  svc_input_begin <name>
-#  svc_input_end <name>
-#  rc_init <internal_runlevel> - used to distinguish between 'boot' and 'sysinit'
-#  rc_exit
-#  critical
-splash() {
-	local event="$1"
-	shift
-
-	# Reload the splash settings in rc_init.  We could have set them wrong the
-	# first time splash_setup was called (when splash-functions.sh was first
-	# sourced) if /proc wasn't mounted.
-	if [[ ${event} == "rc_init" ]]; then
-		splash_setup "force"
-	else
-		splash_setup
-	fi
-
-	[[ ${SPLASH_MODE_REQ} == "off" ]] && return
-
-	# Prepare the cache here -- rc_init-pre might want to use it
-	if [[ ${event} == "rc_init" ]]; then
-		if [[ ${RUNLEVEL} == "S" && "$1" == "sysinit" ]]; then
-			splash_cache_prep 'start' || return
-		elif [[ ${SOFTLEVEL} == "reboot" || ${SOFTLEVEL} == "shutdown" ]]; then
-			# Check if the splash cachedir is mounted readonly. If it is,
-			# we need to mount a tmpfs over it.
-			if ! touch ${spl_cachedir}/message 2>/dev/null ; then
-				splash_cache_prep 'stop' || return
-			fi
-		fi
-	fi
-
-	local args=($@)
-
-	if [[ ${event} == "rc_init" || ${event} == "rc_exit" ]]; then
-		args[${#args[*]}]="${RUNLEVEL}"
-	fi
-
-	splash_profile "pre ${event} ${args[*]}"
-
-	# Handle -pre event hooks
-	if [[ -x "/etc/splash/${SPLASH_THEME}/scripts/${event}-pre" ]]; then
-		/etc/splash/${SPLASH_THEME}/scripts/${event}-pre "${args[@]}"
-	fi
-
-	case "$event" in
-		svc_start)			splash_svc_start "$1";;
-		svc_stop)			splash_svc_stop "$1";;
-		svc_started) 		splash_svc "$1" "$2" "start";;
-		svc_stopped)		splash_svc "$1" "$2" "stop";;
-		svc_input_begin)	splash_input_begin "$1";;
-		svc_input_end)		splash_input_end "$1";;
-		rc_init) 			splash_init "$1" "${RUNLEVEL}";;
-		rc_exit) 			splash_exit "${RUNLEVEL}";;
-		critical) 			splash_verbose;;
-	esac
-
-	splash_profile "post ${event} ${args[*]}"
-
-	# Handle -post event hooks
-	if [[ -x "/etc/splash/${SPLASH_THEME}/scripts/${event}-post" ]]; then
-		/etc/splash/${SPLASH_THEME}/scripts/${event}-post "${args[@]}"
-	fi
-
-	return 0
-}
 
 # ----------------------------------------------------------------------
 # RUNLEVEL   SOFTLEVEL         INTERNAL    SVCS
@@ -166,83 +90,6 @@ splash_exit() {
 	splash_cache_cleanup
 }
 
-splash_start() {
-	# Prepare the communications FIFO
-	rm -f ${spl_fifo} 2>/dev/null
-
-	if [[ ${SPLASH_MODE_REQ} == "verbose" ]]; then
-		${spl_decor} -c on 2>/dev/null
-		return 0
-	elif [[ ${SPLASH_MODE_REQ} != "silent" ]]; then
-		return 0
-	fi
-
-	# Display a warning if the system is not configured to display init messages
-	# on tty1. This can cause a lot of problems if it's not handled correctly, so
-	# we don't allow silent splash to run on incorrectly configured systems.
-	if [[ ${SPLASH_MODE_REQ} == "silent" ]]; then
-		if [[ -z "`grep -E '(^| )CONSOLE=/dev/tty1( |$)' /proc/cmdline`" &&
-			  -z "`grep -E '(^| )console=tty1( |$)' /proc/cmdline`" ]]; then
-			clear
-			ewarn "You don't appear to have a correct console= setting on your kernel"
-			ewarn "command line. Silent splash will not be enabled. Please add"
-			ewarn "console=tty1 or CONSOLE=/dev/tty1 to your kernel command line"
-			ewarn "to avoid this message."
-			if [[ -n "`grep 'CONSOLE=/dev/tty1' /proc/cmdline`" ||
-				  -n "`grep 'console=tty1' /proc/cmdline`" ]]; then
-				ewarn "Note that CONSOLE=/dev/tty1 and console=tty1 are general parameters and"
-				ewarn "not splash= settings."
-			fi
-			return 1
-		fi
-
-		mount -n --bind / ${spl_tmpdir}
-		if [[ ! -c "${spl_tmpdir}/dev/tty1" ]]; then
-			umount -n ${spl_tmpdir}
-			ewarn "The filesystem mounted on / doesn't contain the /dev/tty1 device"
-			ewarn "which is required for the silent splash to function properly."
-			ewarn "Silent splash will not be enabled. Please create the appropriate"
-			ewarn "device node to avoid this message."
-			return 1
-		fi
-		umount -n ${spl_tmpdir}
-	fi
-
-	# In the unlikely case that there's a splash daemon running -- kill it.
-	killall -9 ${spl_daemon##*/} 2>/dev/null
-	rm -f "${spl_pidfile}"
-
-	# Prepare the communications FIFO
-	mkfifo ${spl_fifo}
-
-	local options=""
-	[[ ${SPLASH_KDMODE} == "GRAPHICS" ]] && options="--kdgraphics"
-	[[ -n ${SPLASH_EFFECTS} ]] && options="${options} --effects=${SPLASH_EFFECTS}"
-
-	local ttype="bootup"
-	if [[ ${SOFTLEVEL} == "reboot" ]]; then
-		ttype="reboot"
-	elif [[ ${SOFTLEVEL} == "shutdown" ]]; then
-		ttype="shutdown"
-	fi
-
-	# Start the splash daemon
-	BOOT_MSG="$(splash_get_boot_message)" ${spl_daemon} --theme=${SPLASH_THEME} --pidfile=${spl_pidfile} --type=${ttype} ${options}
-
-	# Set the silent TTY and boot message
-	splash_comm_send "set tty silent ${SPLASH_TTY}"
-
-	if [[ ${SPLASH_MODE_REQ} == "silent" ]] ; then
-		splash_comm_send "set mode silent"
-		splash_comm_send "repaint"
-		${spl_decor} -c on 2>/dev/null
-	fi
-
-	splash_set_event_dev
-
-	return 0
-}
-
 splash_update_progress() {
 	local srv=$1
 
@@ -284,86 +131,10 @@ splash_save_vars() {
 	(echo -e "$t" > ${spl_cachedir}/progress) 2>/dev/null
 }
 
-###########################################################################
-# Service
-###########################################################################
-
-# args: <svc> <error-code> <action>
-splash_svc() {
-	local srv="$1"
-	local err="$2"
-	local act="$3"
-
-	# We ignore the serial initscript since it's known to return bogus error codes
-	# while not printing any error messages. This only confuses the users.
-	if [[ ${err} -ne 0 && ${SPLASH_VERBOSE_ON_ERRORS} == "yes" && "${srv}" != "serial" ]]; then
-		splash_verbose
-		return 1
-	fi
-
-	if [[ ${act} == "start" ]]; then
-		if [[ ${err} -eq 0 ]]; then
-			splash_svc_update ${srv} "svc_started"
-			if [[ ${srv} == "gpm" ]]; then
-				splash_comm_send "set gpm"
-				splash_comm_send "repaint"
-			fi
-		else
-			splash_svc_update ${srv} "svc_start_failed"
-		fi
-	else
-		if [[ ${err} -eq 0 ]]; then
-			splash_svc_update ${srv} "svc_stopped"
-		else
-			splash_svc_update ${srv} "svc_stop_failed"
-		fi
-	fi
-
-	splash_update_progress "$srv"
+splash_warn() {
+	ewarn "$*"
 }
 
-# args: <svc> <state>
-#
-# Inform the splash daemon about service status changes.
-splash_svc_update() {
-	splash_comm_send "update_svc $1 $2"
-}
-
-# args: <svc>
-splash_svc_start() {
-	local svc="$1"
-
-	splash_svc_update ${svc} "svc_start"
-	splash_comm_send "paint"
-}
-
-# args: <svc>
-splash_svc_stop() {
-	local svc="$1"
-
-	splash_svc_update ${svc} "svc_stop"
-	splash_comm_send "paint"
-}
-
-# args: <svc>
-splash_input_begin() {
-	local svc="$1"
-
-	if [[ "$(splash_get_mode)" == "silent" ]] ; then
-		splash_verbose
-		export SPL_SVC_INPUT_SILENT=${svc}
-	fi
-}
-
-# args: <svc>
-splash_input_end() {
-	local svc="$1"
-
-	if [[ ${SPL_SVC_INPUT_SILENT} == "${svc}" ]]; then
-		splash_silent
-		unset SPL_SVC_INPUT_SILENT
-	fi
-}
 
 ###########################################################################
 # Cache
