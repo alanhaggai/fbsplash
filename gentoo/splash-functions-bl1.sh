@@ -15,15 +15,6 @@
 #    Don't cry if it breaks afterwards.
 # ####################################################################
 
-# The splash scripts need a cache which can be guaranteed to be
-# both readable and writable at all times, even when the root fs
-# is mounted read-only. To that end, an in-RAM fs is used. Valid
-# values for spl_cachetype are 'tmpfs' and 'ramfs'. spl_cachesize
-# is a size limit in KB, and it should probably be left with the
-# default value.
-spl_cachesize="4096"
-spl_cachetype="tmpfs"
-
 # ----------------------------------------------------------------------
 # RUNLEVEL   SOFTLEVEL         INTERNAL    SVCS
 # ----------------------------------------------------------------------
@@ -87,7 +78,7 @@ splash_exit() {
 	else
 		splash_comm_send "exit"
 	fi
-	splash_cache_cleanup
+	splash_cache_destroy
 }
 
 splash_update_progress() {
@@ -135,6 +126,9 @@ splash_warn() {
 	ewarn "$*"
 }
 
+splash_err() {
+	eerror "$*"
+}
 
 ###########################################################################
 # Cache
@@ -195,41 +189,18 @@ splash_cache_prep() {
 	return 0
 }
 
-
-splash_cache_cleanup() {
-	rm -f "${spl_pidfile}"
-
+splash_cache_destroy() {
 	# There's no point in saving all the data if we're running off a livecd.
 	if [[ -n "${CDBOOT}" ]]; then
 		umount -l "${spl_cachedir}" 2>/dev/null
 		return
 	fi
 
-	# Don't try to clean anything up if the cachedir is not mounted.
-	[[ -z "$(grep ${spl_cachedir} /proc/mounts)" ]] && return;
-
-	# Create the temp dir if necessary.
-	if [[ ! -d "${spl_tmpdir}" ]]; then
-		mkdir -p "${spl_tmpdir}" 2>/dev/null
-		[[ "$?" != "0" ]] && return
-	fi
-
-	# If the /etc is not writable, don't update /etc/mtab. If it is
-	# writable, update it to avoid stale mtab entries (bug #121827).
-	local mntopt=""
-	[[ -w /etc/mtab ]] || mntopt="-n"
-	mount ${mntopt} --move "${spl_cachedir}" "${spl_tmpdir}" 2>/dev/null
-
-	# Don't try to copy anything if the cachedir is not writable.
-	[[ -w "${spl_cachedir}" ]] || return;
-
-	cp -a "${spl_tmpdir}"/{envcache,depcache,deptree,svcs_start,svcs_stop,profile} "${spl_cachedir}" 2>/dev/null
+	splash_cache_cleanup envcache depcache deptree svcs_start svcs_stop
 	echo "${BOOTLEVEL}/${DEFAULTLEVEL}" > "${spl_cachedir}/levels"
 	echo "$(stat -c '%y' /etc/runlevels/${BOOTLEVEL})/$(stat -c '%y' /etc/runlevels/${DEFAULTLEVEL})" \
 			 >> "${spl_cachedir}/levels"
-
-	umount -l "${spl_tmpdir}" 2>/dev/null
- }
+}
 
 ###########################################################################
 # Service list
