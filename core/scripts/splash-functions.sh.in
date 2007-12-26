@@ -271,10 +271,16 @@ splash_cache_cleanup() {
 		[ "$?" != "0" ] && return
 	fi
 
+	# Make sure the splash daemon is dead.
+	if [ -n "$(pgrep fbsplashd)" ]; then
+		sleep 1
+		killall -9 "${spl_daemon##*/}" 2>/dev/null
+	fi
+
 	# If /etc is not writable, don't update /etc/mtab. If it is
 	# writable, update it to avoid stale mtab entries (bug #121827).
 	local mntopt=""
-	[ -w /etc/mtab ]] | mntopt="-n"
+	[ -w /etc/mtab ] || mntopt="-n"
 	mount ${mntopt} --move "${spl_cachedir}" "${spl_tmpdir}" 2>/dev/null
 
 	# Don't try to copy anything if the cachedir is not writable.
