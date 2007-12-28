@@ -342,7 +342,7 @@ replay() {
 		[[ "$ctime" == "0" ]] && ctime=${utime}
 
 		delay=$((${utime} - ${ctime}))
-		${usleep} "${delay}000"
+		sleep "$(($delay/1000)).$(printf '%03d' $(($delay%1000)))"
 		ctime=${utime}
 
 		# Start the splash daemon after rc_init/pre.
@@ -898,7 +898,6 @@ theme_switch() {
 
 # Set some useful variables that we'll be using in various places
 ctty=$(${spl_dir}/bin/fgconsole)
-usleep="${spl_dir}/bin/usleep"
 
 # Default settings
 steps=100
