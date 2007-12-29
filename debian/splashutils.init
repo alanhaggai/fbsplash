@@ -160,7 +160,7 @@ case "$1" in
 	;;
     
     *)
-	echo "Usage: splashutils [start|stop|status|restart|progress {0-65535}|PROGRESS {0-100}]" >&2
+	echo "Usage: splashutils [start|stop|status|restart|progress {0...65535}|PROGRESS {-100...+100}]" >&2
 	exit 3
 	;;
 esac
