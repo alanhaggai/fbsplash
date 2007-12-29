@@ -1,6 +1,6 @@
 # ----------------------------------------------------------------------------
 # Detects whether a splash is running                                        #
-# Our usplash_write will always start it if needed                           #
+# Our /etc/init.d/splashutils will condrestart it if needed                  #
 #                                                                            #
 splash_running() { return 0; }
 

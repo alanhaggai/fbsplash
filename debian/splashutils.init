@@ -64,14 +64,6 @@ splash_update_omit()
 
 splash_setup
 
-if [ -z "${SPLASH_TTYS}" ]; then
-    if [ -n "${RC_TTY_NUMBER}" ]; then	
-	SPLASH_TTYS=$(seq 0 "${RC_TTY_NUMBER}")
-    else
-	SPLASH_TTYS="0 1 3 4 5 6"
-    fi
-fi
-
 case "$1" in
     start)
 	check_fbsupport
@@ -81,6 +73,14 @@ case "$1" in
         # only do this if the kernel supports fbsplash
 	if [ ${spl_fbsupport} -eq 1 ]; then
 	    
+            if [ -z "${SPLASH_TTYS}" ]; then
+                if [ -n "${RC_TTY_NUMBER}" ]; then	
+                    SPLASH_TTYS=$(seq 0 "${RC_TTY_NUMBER}")
+                else
+                    SPLASH_TTYS="0 1 3 4 5 6"
+                fi
+            fi
+
             # Initialize fbcondecodor
 	    for TTY in ${SPLASH_TTYS} ; do
 		theme="${SPLASH_THEME}"
@@ -129,6 +129,14 @@ case "$1" in
 	$0 start
 	;;
     
+    condrestart)
+	$0 status
+	if [ $? -ne 0 ]; then
+            splash_cache_cleanup
+            $0 start
+        fi
+	;;
+    
     reload|force-reload)
 	echo "Error: argument '$1' not supported" >&2
 	exit 3
@@ -143,12 +151,14 @@ case "$1" in
 	;;
     
     progress)
+        $0 condrestart
         splash_update_omit
 	splash_comm_send "progress ${2}"
 	splash_comm_send "paint"
 	;;
     
     PROGRESS)
+        $0 condrestart
         splash_update_omit
         value=${2}
 	if [ ${value} -lt 0 ]; then
@@ -160,7 +170,7 @@ case "$1" in
 	;;
     
     *)
-	echo "Usage: splashutils [start|stop|status|restart|progress {0...65535}|PROGRESS {-100...+100}]" >&2
+	echo "Usage: splashutils [start|stop|status|condrestart|restart|progress {0...65535}|PROGRESS {-100...+100}]" >&2
 	exit 3
 	;;
 esac
