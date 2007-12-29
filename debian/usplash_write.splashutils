@@ -10,9 +10,6 @@ logfile=log
 
 #
 ## Make sure we process only PROGRESS command
-## (until /etc/init.d/rc supports more)
-## This script works has been verified only with two consecutive
-## runlevels.
 #
 echo "$1" | egrep -q '^PROGRESS*'
 [ $? -ne 0 ] && exit 0

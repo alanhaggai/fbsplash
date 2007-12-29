@@ -20,11 +20,6 @@ set -e
 case "$1" in
     configure)
 
-    update-alternatives --install /sbin/usplash_write usplash_write /sbin/usplash_write.splashutils 50
-    update-alternatives --auto usplash_write
-    update-alternatives --install /usr/share/hibernate/scriptlets.d/fbsplash fbsplash /usr/share/splashutils/hibernate/scriptlets.d/fbsplash.splashutils 50
-    update-alternatives --auto fbsplash
-
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

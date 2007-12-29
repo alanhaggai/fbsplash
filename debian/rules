@@ -85,31 +85,24 @@ install: build
 
 # Build architecture-independent files here.
 binary-indep: build install
+	#
+	## splashutils
+	#  -----------
 	mkdir -p $(CURDIR)/debian/splashutils/etc/splash
-	(cd debian; cp -f splash.conf $(CURDIR)/debian/splashutils/etc/splash)
+	(cd debian; cp -f splash.conf $(CURDIR)/debian/splashutils/etc/splash/splash)
 	# What a !!!PAIN!!! that we cannot include non-text
 	# files in here
 	(cd debian/splashutils/etc/splash; rm -f luxisri.ttf; uudecode -o luxisri.ttf ../../../luxisri.ttf.b64)
-	mkdir -p $(CURDIR)/debian/splashutils/sbin
-	(cd debian; install -m 0755 usplash_write.splashutils $(CURDIR)/debian/splashutils/sbin)
-	(cd debian; install -m 0755 splash $(CURDIR)/debian/splashutils/sbin)
-	# splashutils-initramfs
+	#
+	## splashutils-initramfs
+	#  ---------------------
 	mkdir -p $(CURDIR)/debian/splashutils-initramfs/etc/initramfs-tools/scripts/init-top
 	(cd debian; install -m 0755 initramfs-tools/scripts/init-top/splashutils $(CURDIR)/debian/splashutils-initramfs/etc/initramfs-tools/scripts/init-top)
 	mkdir -p $(CURDIR)/debian/splashutils-initramfs/etc/initramfs-tools/hooks
 	(cd debian; install -m 0755 initramfs-tools/hooks/splashutils $(CURDIR)/debian/splashutils-initramfs/etc/initramfs-tools/hooks)
 	#
-	## Hibernate fbsplash alternative since the change of splash_util binary as of version 1.5
-	#
-	mkdir -p $(CURDIR)/debian/splashutils/usr/share/splashutils/hibernate/scriptlets.d
-	(cd debian; install -m 0644 fbsplash.splashutils $(CURDIR)/debian/splashutils/usr/share/splashutils/hibernate/scriptlets.d)
-	#
-	## Location for divertions
-	#
-	mkdir -p $(CURDIR)/debian/splashutils/usr/share/splashutils/hibernate/scriptlets.d
-	#
 	## splashutils-dev
-	#
+	#  ---------------
 	mkdir -p $(CURDIR)/debian/splashutils-dev/usr
 	mv -f $(CURDIR)/debian/splashutils/usr/include $(CURDIR)/debian/splashutils-dev/usr/include
 	mkdir -p $(CURDIR)/debian/splashutils-dev/usr/lib

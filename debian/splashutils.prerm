@@ -19,8 +19,6 @@ set -e
 
 case "$1" in
     remove)
-    update-alternatives --remove usplash_write /sbin/usplash_write.splashutils
-    update-alternatives --remove fbsplash /usr/share/splashutils/hibernate/scriptlets.d/fbsplash.splashutils
         ;;
     upgrade|deconfigure)
         ;;

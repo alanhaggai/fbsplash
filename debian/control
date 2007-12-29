@@ -7,9 +7,9 @@ Standards-Version: 3.6.2
 
 Package: splashutils
 Architecture: any
-Depends: libc6, libfreetype6, libjpeg62, libpng12-0, zlib1g, miscsplashutils, lsb-base, bash, libmng1
+Depends: libc6, libfreetype6, libjpeg62, libpng12-0, zlib1g, miscsplashutils, lsb-base, bash, libmng1, sysv-rc (>= 2.86.ds1-44)
 Provides: bootsplash, splashy, usplash, psmisc
-Recommends: console-tools, sysv-rc (>= 2.86.ds1-12)
+Recommends: console-tools
 Suggests: initramfs-tools, splashutils-initramfs, splashutils-suspend2-initramfs
 Description: Splashutils main package
  Splashutils from Gentoo package
@@ -26,16 +26,3 @@ Depends: splashutils, initramfs-tools
 Suggests: console-tools
 Description: Splashutils initramfs hook and script
  Splashutils initramfs hook and script
-
-Package: debian-suspend2-theme
-Architecture: all
-Depends: suspend2-theme
-Description: Transition package
- Forces install of suspend2-theme and can then be removed
-
-Package: splashutils-suspend2-initramfs
-Architecture: all
-Depends: suspend2-initramfs
-Description: Transition package
- Forces install of suspend2-theme and can then be removed
-

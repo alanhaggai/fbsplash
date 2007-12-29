@@ -21,11 +21,6 @@ set -e
 case "$1" in
        remove)
 
-       #
-       ## Remove diversion of usplash's binary file if any
-       #
-       dpkg-divert --package splashutils --remove --rename --divert /sbin/usplash_write.diverted_by_splashutils /sbin/usplash_write
-       dpkg-divert --package splashutils --remove --rename --divert /usr/share/hibernate/scriptlets.d.fbsplash.diverted_by_splashutils /usr/share/hibernate/scriptlets.d/fbsplash
         ;;
 
        purge|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)

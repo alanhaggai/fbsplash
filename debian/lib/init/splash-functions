@@ -1,0 +1,54 @@
+# ----------------------------------------------------------------------------
+# Detects whether a splash is running                                        #
+# Our usplash_write will always start it if needed                           #
+#                                                                            #
+splash_running() { return 0; }
+
+# ----------------------------------------------------------------------------
+# Tells the splash to quit                                                   #
+#                                                                            #
+splash_stop () {
+	/etc/init.d/splashutils status
+	if [ $? -eq 0 ]; then
+		/etc/init.d/splashutils stop
+		return ${?}
+	fi
+	return 0
+}
+
+# ----------------------------------------------------------------------------
+# Tells the splash to start if not already running                           #
+#                                                                            #
+splash_start () { /etc/init.d/splashutils start; return ${?};}
+
+# ----------------------------------------------------------------------------
+# Customizations should replace this function                                #
+#                                                                            #
+custom_splash_progress () { /etc/init.d/splashutils PROGRESS ${1}; return ${?};}
+
+# ----------------------------------------------------------------------------
+# Tells the splash that a task which may take an unknown amount of           #
+# time has started (such as a fsck). This is useful to make sure the         #
+# splash doesn't time out and to give visual feedback to the user.           #
+#                                                                            #
+splash_start_indefinite () { return 0; }
+
+# ----------------------------------------------------------------------------
+# Tells the splash that an indefinite task is done                           #
+#                                                                            #
+splash_stop_indefinite () { return 0; }
+
+# ----------------------------------------------------------------------------
+# Gets user input from a splash                                              #
+# $1 contains the text for the user prompt                                   #
+# $2 describes the type of input:                                            #
+#     regular  = regular input, e.g. a user name                             #
+#     password = input which should not be echoed to screen, e.g. a password #
+#     enter    = A "press enter to continue" type of prompt                  #
+#                                                                            #
+# Returns 1 if no user input is possible                                     #
+# Should be called with an alternative non-splash input fallback:            #
+#   INPUT="$(splash_user_input "Enter password:" password)" || \             #
+#   INPUT="$(manual_method)"                                                 #
+#                                                                            #
+splash_user_input () { return 1; }

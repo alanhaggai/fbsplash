@@ -18,17 +18,23 @@ set -e
 case "$1" in
     install|upgrade)
        #
-       ## Divert usplash's binary file if any
+       ## Remove alternatives if any
        #
-       dpkg-divert --package splashutils --add --rename --divert /sbin/usplash_write.diverted_by_splashutils /sbin/usplash_write
+       update-alternatives --remove usplash_write /sbin/usplash_write.splashutils
+       update-alternatives --remove fbsplash /usr/share/splashutils/hibernate/scriptlets.d/fbsplash.splashutils
        #
-       ## Plain ful I know but I could not do diversion into the scriptlets.d directory because hibernate would then
-       ## automatically load the diverted file as well as my version...
+       ## Remove diversion of usplash's binary file if any
        #
-       dpkg-divert --package splashutils --add --rename --divert /usr/share/hibernate/scriptlets.d.fbsplash.diverted_by_splashutils /usr/share/hibernate/scriptlets.d/fbsplash
+       dpkg-divert --package splashutils --remove --rename --divert /sbin/usplash_write.diverted_by_splashutils /sbin/usplash_write
+       dpkg-divert --package splashutils --remove --rename --divert /usr/share/hibernate/scriptlets.d.fbsplash.diverted_by_splashutils /usr/share/hibernate/scriptlets.d/fbsplash
        #
-       # From now on /etc/splash/luxisri.ttf is not a symlink
+       ## From now on /etc/splash/luxisri.ttf is not a symlink
+       #
        [ -L /etc/splash/luxisri.ttf ] && rm -f /etc/splash/luxisri.ttf
+       #
+       ## /etc/splash/splash.conf is now /etc/splash/splash
+       #
+       [ -e /etc/splash/splash.conf ] && mv -f /etc/splash/splash.conf /etc/splash/splash
     ;;
 
     abort-upgrade)

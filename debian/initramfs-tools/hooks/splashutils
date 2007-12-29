@@ -44,11 +44,11 @@ if [ -x /sbin/fbcondecor_helper -a -d /etc/splash ]; then
         echo "$0: /etc/splash/luxisri.ttf not copied"
     fi
 
-    if [ -r /etc/splash/splash.conf ]; then
-        echo "$0: Copying /etc/splash/splash.conf"
-        cp /etc/splash/splash.conf ${DESTDIR}/etc/splash/splash.conf
+    if [ -r /etc/splash/splash ]; then
+        echo "$0: Copying /etc/splash/splash"
+        cp /etc/splash/splash ${DESTDIR}/etc/splash/splash
     else
-        echo "$0: No /etc/splash/splash.conf copied"
+        echo "$0: No /etc/splash/splash copied"
     fi
     #
     ## We copy all themes
