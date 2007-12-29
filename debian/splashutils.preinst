@@ -34,7 +34,7 @@ case "$1" in
        #
        ## /etc/splash/splash.conf is now /etc/splash/splash
        #
-       [ -e /etc/splash/splash.conf ] && mv -f /etc/splash/splash.conf /etc/splash/splash
+       [ -e /etc/splash/splash.conf -a ! -e /etc/splash/splash ] && mv -f /etc/splash/splash.conf /etc/splash/splash
     ;;
 
     abort-upgrade)
