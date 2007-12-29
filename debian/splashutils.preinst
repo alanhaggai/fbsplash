@@ -28,6 +28,10 @@ case "$1" in
        dpkg-divert --package splashutils --remove --rename --divert /sbin/usplash_write.diverted_by_splashutils /sbin/usplash_write
        dpkg-divert --package splashutils --remove --rename --divert /usr/share/hibernate/scriptlets.d.fbsplash.diverted_by_splashutils /usr/share/hibernate/scriptlets.d/fbsplash
        #
+       ## Divert splash API use if any
+       #
+       dpkg-divert --package splashutils --add --rename --divert /lib/init/splash-functions.diverted_by_splashutils /lib/init/splash-functions
+       #
        ## From now on /etc/splash/luxisri.ttf is not a symlink
        #
        [ -L /etc/splash/luxisri.ttf ] && rm -f /etc/splash/luxisri.ttf

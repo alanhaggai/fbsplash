@@ -20,6 +20,9 @@ set -e
 case "$1" in
     configure)
 
+    update-alternatives --install /lib/init/splash-functions splash-functions /lib/init/splash-functions.splashutils 50
+    update-alternatives --auto splash-functions
+
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

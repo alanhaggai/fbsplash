@@ -19,6 +19,7 @@ set -e
 
 case "$1" in
     remove)
+    update-alternatives --remove splash-functions /lib/init/splash-functions.splashutils
         ;;
     upgrade|deconfigure)
         ;;

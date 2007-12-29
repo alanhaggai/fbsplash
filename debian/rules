@@ -89,17 +89,19 @@ binary-indep: build install
 	## splashutils
 	#  -----------
 	mkdir -p $(CURDIR)/debian/splashutils/etc/splash
-	(cd debian; cp -f splash.conf $(CURDIR)/debian/splashutils/etc/splash/splash)
+	(cd $(CURDIR)/debian; cp -f splash.conf splashutils/etc/splash/splash)
+	mkdir -p $(CURDIR)/debian/splashutils/lib/init
+	(cd $(CURDIR)/debian; cp -f lib/init/splash-functions splashutils/lib/init/splash-functions.splashutils)
 	# What a !!!PAIN!!! that we cannot include non-text
 	# files in here
-	(cd debian/splashutils/etc/splash; rm -f luxisri.ttf; uudecode -o luxisri.ttf ../../../luxisri.ttf.b64)
+	(cd $(CURDIR)/debian/splashutils/etc/splash; rm -f luxisri.ttf; uudecode -o luxisri.ttf ../../../luxisri.ttf.b64)
 	#
 	## splashutils-initramfs
 	#  ---------------------
 	mkdir -p $(CURDIR)/debian/splashutils-initramfs/etc/initramfs-tools/scripts/init-top
-	(cd debian; install -m 0755 initramfs-tools/scripts/init-top/splashutils $(CURDIR)/debian/splashutils-initramfs/etc/initramfs-tools/scripts/init-top)
+	(cd $(CURDIR)/debian; install -m 0755 initramfs-tools/scripts/init-top/splashutils splashutils-initramfs/etc/initramfs-tools/scripts/init-top)
 	mkdir -p $(CURDIR)/debian/splashutils-initramfs/etc/initramfs-tools/hooks
-	(cd debian; install -m 0755 initramfs-tools/hooks/splashutils $(CURDIR)/debian/splashutils-initramfs/etc/initramfs-tools/hooks)
+	(cd $(CURDIR)/debian; install -m 0755 initramfs-tools/hooks/splashutils splashutils-initramfs/etc/initramfs-tools/hooks)
 	#
 	## splashutils-dev
 	#  ---------------
