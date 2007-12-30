@@ -27,7 +27,7 @@ endif
 config.status: patch configure
 	dh_testdir
 	# Add here commands to configure the package.
-	./configure --enable-debug --disable-klibc-shared --enable-deprecated --enable-fbcondecor --enable-helper --enable-misc --with-gpm --with-mng --with-png --with-ttf --with-ttf-kernel --with-essential-prefix=/
+	./configure --enable-debug --disable-klibc-shared --enable-deprecated --enable-fbcondecor --enable-helper --with-gpm --with-mng --with-png --with-ttf --with-ttf-kernel --with-essential-prefix=/ --sysconfdir=/etc
 
 
 build: build-stamp
