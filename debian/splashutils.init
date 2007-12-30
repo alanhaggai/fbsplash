@@ -162,7 +162,7 @@ case "$1" in
         splash_update_omit
         value=${2}
 	if [ ${value} -lt 0 ]; then
-	    value=$[100+${value}]
+	    value=$[-${value}]
 	fi
 	value=$((${value} * 65535 / 100))
 	splash_comm_send "progress ${value}"
