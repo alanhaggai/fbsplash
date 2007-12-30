@@ -16,7 +16,8 @@ Description: Splashutils main package
 
 Package: splashutils-dev
 Architecture: any
-Depends: splashutils
+Section: libdevel
+Depends: splashutils (= ${Source-Version})
 Description: Splashutils dev package
  Splashutils from Gentoo development package
 
