@@ -185,7 +185,7 @@ splash_start() {
 			splash_warn "command line. Silent splash will not be enabled. Please add"
 			splash_warn "console=tty1 or CONSOLE=/dev/tty1 to your kernel command line"
 			splash_warn "to avoid this message."
-			if [ -n "$(grep 'CONSOLE=/dev/tty1' /proc/cmdline)" -o
+			if [ -n "$(grep 'CONSOLE=/dev/tty1' /proc/cmdline)" -o \
 				  -n "$(grep 'console=tty1' /proc/cmdline)" ]; then
 				splash_warn "Note that CONSOLE=/dev/tty1 and console=tty1 are general parameters and"
 				splash_warn "not splash= settings."

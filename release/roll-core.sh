@@ -17,8 +17,13 @@ make dist-bzip2
 mv splashutils*.tar.bz2 ${cdir}
 eend $?
 
-
+ebegin "Adding Debian data"
 cd ${cdir}
+tar jxf splashutils-${ver}.tar.bz2
+cp -r ../debian splashutils-${ver}
+tar cf - "splashutils-${ver}" | bzip2 -9 -f > splashutils-${ver}.tar.bz2
+rm -rf splashutils-${ver}
+eend $?
 
 ebegin "Creating a lite tarball"
 cp splashutils-${ver}.tar.bz2 splashutils-lite-${ver}.tar.bz2
