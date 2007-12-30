@@ -80,47 +80,40 @@ install: build
 	dh_installdirs
 
 	# Add here commands to install the package into debian/splashutils.
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/splashutils
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
 
 
 # Build architecture-independent files here.
 binary-indep: build install
 	#
-	## splashutils
-	#  -----------
-	mkdir -p $(CURDIR)/debian/splashutils/etc/splash
-	(cd $(CURDIR)/debian; cp -f splash.conf splashutils/etc/splash/splash)
-	mkdir -p $(CURDIR)/debian/splashutils/lib/init
-	(cd $(CURDIR)/debian; cp -f lib/init/splash-functions splashutils/lib/init/splash-functions.splashutils)
+	## Configuration template
+	#  ----------------------
+	install -m 0644 $(CURDIR)/debian/splash.conf                                  -D $(CURDIR)/debian/tmp/etc/splash/splash
+	#
+	## Debian's rc splash API
+	#  ----------------------
+	install -m 0644 $(CURDIR)/debian/lib/init/splash-functions                    -D $(CURDIR)/debian/tmp/lib/init/splash-functions.splashutils
+	#
+	## Font file
+	#  ---------
 	# What a !!!PAIN!!! that we cannot include non-text
 	# files in here
-	(cd $(CURDIR)/debian/splashutils/etc/splash; rm -f luxisri.ttf; uudecode -o luxisri.ttf ../../../luxisri.ttf.b64)
+	install -m 0755                                                               -d $(CURDIR)/debian/tmp/etc/splash
+	(cd $(CURDIR)/debian/tmp/etc/splash; rm -f luxisri.ttf; uudecode -o luxisri.ttf ../../../luxisri.ttf.b64)
 	#
-	## splashutils-initramfs
-	#  ---------------------
-	mkdir -p $(CURDIR)/debian/splashutils-initramfs/etc/initramfs-tools/scripts/init-top
-	(cd $(CURDIR)/debian; install -m 0755 initramfs-tools/scripts/init-top/splashutils splashutils-initramfs/etc/initramfs-tools/scripts/init-top)
-	mkdir -p $(CURDIR)/debian/splashutils-initramfs/etc/initramfs-tools/hooks
-	(cd $(CURDIR)/debian; install -m 0755 initramfs-tools/hooks/splashutils splashutils-initramfs/etc/initramfs-tools/hooks)
-	#
-	## splashutils-dev
-	#  ---------------
-	mkdir -p $(CURDIR)/debian/splashutils-dev/usr
-	mv -f $(CURDIR)/debian/splashutils/usr/include $(CURDIR)/debian/splashutils-dev/usr/include
-	mkdir -p $(CURDIR)/debian/splashutils-dev/usr/lib
-	mv -f $(CURDIR)/debian/splashutils/usr/lib/lib*.a $(CURDIR)/debian/splashutils-dev/usr/lib
-	mv -f $(CURDIR)/debian/splashutils/usr/lib/lib*.la $(CURDIR)/debian/splashutils-dev/usr/lib
-	mv -f $(CURDIR)/debian/splashutils/usr/lib/lib*.so $(CURDIR)/debian/splashutils-dev/usr/lib
-	mv -f $(CURDIR)/debian/splashutils/usr/lib/pkgconfig $(CURDIR)/debian/splashutils-dev/usr/lib
+	## Initramfs script and hook
+	#  -------------------------
+	install -m 0755 $(CURDIR)/debian/initramfs-tools/scripts/init-top/splashutils -D $(CURDIR)/debian/tmp/etc/initramfs-tools/scripts/init-top/splashutils
+	install -m 0755 $(CURDIR)/debian/initramfs-tools/hooks/splashutils            -D $(CURDIR)/debian/tmp/etc/initramfs-tools/hooks/splashutils
 
 # Build architecture-dependent files here.
 binary-arch: build install
 	dh_testdir
 	dh_testroot
-	dh_installchangelogs 
+	dh_installchangelogs -s ChangeLog
 	dh_installdocs
 	dh_installexamples
-#	dh_install
+	dh_install --fail-missing --sourcedir=debian/tmp
 #	dh_installmenu
 #	dh_installdebconf	
 #	dh_installlogrotate

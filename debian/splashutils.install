@@ -1,0 +1,7 @@
+etc/splash
+bin
+lib
+sbin
+usr/bin
+usr/lib/lib*.so.*
+usr/share
