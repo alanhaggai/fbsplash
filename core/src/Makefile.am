@@ -148,7 +148,7 @@ AM_MAKEFLAGS += "libfbsplashrender_la_CFLAGS=$(libfbsplashrender_la_CFLAGS)"
 ################################################################################
 
 if CONFIG_FBCON_DECOR
-esbin_PROGRAMS += fbcondecor_ctl
+esbin_PROGRAMS += fbcondecor_ctl fbcondecor_ctl.static
 endif
 esbin_PROGRAMS += fbsplashd
 esbin_PROGRAMS += fbsplashd.static
@@ -159,6 +159,11 @@ fbcondecor_ctl_SOURCES      = fbcon_decor_ctl.c fbcon_decor.h ../include/console
 fbcondecor_ctl_CPPFLAGS     = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplashrender_la_CFLAGS)
 fbcondecor_ctl_LDFLAGS      = $(AM_LDFLAGS)
 fbcondecor_ctl_LDADD        = libfbsplashrender.la libfbsplash.la
+
+fbcondecor_ctl_static_SOURCES = ${fbcondecor_ctl_SOURCES}
+fbcondecor_ctl_static_CPPFLAGS = ${fbcondecor_ctl_CPPFLAGS}
+fbcondecor_ctl_static_LDFLAGS = $(AM_LDFLAGS) -all-static
+fbcondecor_ctl_static_LDADD = ${fbcondecor_ctl_LDADD}
 
 fbsplashd_SOURCES           = daemon_cmd.c daemon.c daemon.h common.h render.h fbsplash.h
 fbsplashd_CPPFLAGS          = $(AM_CPPFLAGS) -DTARGET_UTIL
