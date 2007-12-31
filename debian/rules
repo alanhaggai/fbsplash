@@ -122,6 +122,9 @@ binary-arch: build install
 #	dh_installmime
 #	dh_python
 	dh_installinit --no-start --no-restart-on-upgrade -- start 4 S .
+#	I know, I know, but for the moment it fails if I uncomment this
+#	dh_clean -k
+	dh_installinit --no-start --no-restart-on-upgrade --name=splashutilsend -- start 98 2 3 4 5 . stop 01 0 1 6 .
 #	dh_installcron
 #	dh_installinfo
 	dh_installman
