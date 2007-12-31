@@ -1,20 +1,12 @@
 # ----------------------------------------------------------------------------
 # Detects whether a splash is running                                        #
-# Our /etc/init.d/splashutils will condrestart it if needed                  #
 #                                                                            #
-splash_running() { return 0; }
+splash_running() { /etc/init.d/splashutils condrestart; return ${?};}
 
 # ----------------------------------------------------------------------------
 # Tells the splash to quit                                                   #
 #                                                                            #
-splash_stop () {
-	/etc/init.d/splashutils status
-	if [ $? -eq 0 ]; then
-		/etc/init.d/splashutils stop
-		return ${?}
-	fi
-	return 0
-}
+splash_stop () { /etc/init.d/splashutils stop; return ${?};}
 
 # ----------------------------------------------------------------------------
 # Tells the splash to start if not already running                           #
