@@ -6,17 +6,17 @@ splash_running() { SPLASH_SILENT=1 /etc/init.d/splashutils condrestart; return $
 # ----------------------------------------------------------------------------
 # Tells the splash to quit                                                   #
 #                                                                            #
-splash_stop () { /etc/init.d/splashutils stop; return ${?};}
+splash_stop () { SPLASH_SILENT=1 /etc/init.d/splashutils stop; return ${?};}
 
 # ----------------------------------------------------------------------------
 # Tells the splash to start if not already running                           #
 #                                                                            #
-splash_start () { /etc/init.d/splashutils start; return ${?};}
+splash_start () { SPLASH_SILENT=1 /etc/init.d/splashutils condrestart; return ${?};}
 
 # ----------------------------------------------------------------------------
 # Customizations should replace this function                                #
 #                                                                            #
-custom_splash_progress () { /etc/init.d/splashutils PROGRESS ${1}; return ${?};}
+custom_splash_progress () { SPLASH_SILENT=1 /etc/init.d/splashutils PROGRESS ${1}; return ${?};}
 
 # ----------------------------------------------------------------------------
 # Tells the splash that a task which may take an unknown amount of           #
