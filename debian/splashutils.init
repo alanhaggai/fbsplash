@@ -109,6 +109,8 @@ case "$1" in
                     fi
                 fi
 
+                rm -f ${spl_lasterror}
+
 	    done
 	else
             # echo "Your kernel does not support fbcondecor"
@@ -140,6 +142,8 @@ case "$1" in
 	    ## Prevent killall5 of fbsplashd.static
 	    #
 	    splash_add_omit
+
+            rm -f ${spl_lasterror}
 
             log_end_msg 0
 	else
@@ -186,6 +190,7 @@ case "$1" in
     
     stop)
 	$0 status
+        rm -f ${spl_lasterror}
 	if [ $? -eq 0 ]; then
 	    #
 	    ## Remove prevention against killall5
@@ -205,6 +210,7 @@ case "$1" in
             splash_update_omit
             splash_comm_send "progress ${2}"
             splash_comm_send "paint"
+            rm -f ${spl_lasterror}
         fi
 	;;
     
@@ -219,6 +225,7 @@ case "$1" in
             value=$((${value} * 65535 / 100))
             splash_comm_send "progress ${value}"
             splash_comm_send "paint"
+            rm -f ${spl_lasterror}
         fi
 	;;
     
