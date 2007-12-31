@@ -1,18 +1,7 @@
 #!/bin/sh
-# Copyright 1999-2005 Gentoo Foundation
-# Distributed under the terms of the GNU General Public License v2
-#
-# Author: Michal Januszewski <spock@gentoo.org>
-# Maintainer: Michal Januszewski <spock@gentoo.org>
-#
-# This file is a part of splashutils.
-#
-# NOTE: The code here has to be compatible with ash and with the busybox
-#       versions of all the standard system utilities. That means: no 
-#       extended regular expressions, no pattern substitution in variables,
-#       and no fancy GNU command line options.
 
-PREREQ=""
+PREREQ="framebuffer console_setup brltty"
+
 prereqs()
 {
     echo "$PREREQ"
