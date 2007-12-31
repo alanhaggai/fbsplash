@@ -463,6 +463,28 @@ splash_input_end() {
 }
 
 ###########################################################################
+# Framebuffer Console Decorations functions
+###########################################################################
+
+fbcondecor_supported()
+{
+	[ -e /dev/fbsplash -o -e /dev/fbcondecor ]
+}
+
+# args: <theme> <tty>
+fbcondecor_set_theme()
+{
+	local theme=$1
+	local tty=$2
+
+	[ -x ${spl_decor} ] || return 1
+
+	${spl_decor} --tty="${tty}" -t "${theme}" -c setcfg || return 1
+	${spl_decor} --tty="${tty}" -t "${theme}" -c setpic -q
+	${spl_decor} --tty="${tty}" -c on
+}
+
+###########################################################################
 # Service list
 ###########################################################################
 
