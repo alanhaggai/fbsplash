@@ -1,5 +1,5 @@
 #!/bin/sh
-PREREQ=""
+PREREQ="kernelextras"
 
 prereqs()
 {
@@ -18,8 +18,6 @@ esac
 
 if [ -x /sbin/fbcondecor_helper -a -d /etc/splash ]; then
     echo "$0: fbsplash initramfs setup is starting"
-#   mkdir --parents ${DESTDIR}/{dev,dev/fb,dev/misc,dev/vc,etc/splash,proc,root,sbin,sys}
-#   mkdir --parents ${DESTDIR}/{sbin,usr/bin,etc/splash}
     mkdir -p ${DESTDIR}/sbin
     mkdir -p ${DESTDIR}/usr/bin
     mkdir -p ${DESTDIR}/etc/splash
