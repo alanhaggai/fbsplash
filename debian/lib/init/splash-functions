@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 # Detects whether a splash is running                                        #
 #                                                                            #
-splash_running() { /etc/init.d/splashutils condrestart; return ${?};}
+splash_running() { SPLASH_SILENT=1 /etc/init.d/splashutils condrestart; return ${?};}
 
 # ----------------------------------------------------------------------------
 # Tells the splash to quit                                                   #
