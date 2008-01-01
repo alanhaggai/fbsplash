@@ -62,6 +62,11 @@ set_theme()
     return 0
 }
 
+#
+## Force SPLASH_SILENT if SPLASH_SILENT_UNLESS_OK is on
+#
+[ -n "${SPLASH_SILENT_UNLESS_OK}" ] && SPLASH_SILENT=1
+
 case "$1" in
 
     bgsetup)
@@ -145,7 +150,12 @@ case "$1" in
 
             rm -f ${spl_lasterror}
 
-            [ -z "${SPLASH_SILENT}" ] && log_end_msg 0
+            if [ -z "${SPLASH_SILENT}" ]; then
+                log_end_msg 0
+            elif [ -n "${SPLASH_SILENT_UNLESS_OK}" ]; then
+                log_daemon_msg "Starting splashutils daemon" "fbsplashd.static"
+                log_end_msg 0
+            fi
 	else
             [ -z "${SPLASH_SILENT}" ] && log_failure_msg "Your kernel does not support fbcondecor"
             [ -z "${SPLASH_SILENT}" ] && log_end_msg 1
