@@ -121,7 +121,8 @@ binary-arch: build install
 #	dh_installpam
 #	dh_installmime
 #	dh_python
-	dh_installinit --no-start --no-restart-on-upgrade -- start 4 S .
+	# Make sure that there is NO /etc/rc*.d/*splashutils
+	dh_installinit --noscripts --no-start --no-restart-on-upgrade
 #	I know, I know, but for the moment it fails if I uncomment this
 #	dh_clean -k
 	dh_installinit --no-start --no-restart-on-upgrade --name=splashutilsend -- start 98 2 3 4 5 . stop 01 0 1 6 .
