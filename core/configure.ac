@@ -316,7 +316,7 @@ AC_SUBST([LIBZ_SOURCE])
 
 AC_ARG_WITH([essential-prefix],
   AS_HELP_STRING([--with-essential-prefix=ESPREFIX], [install essential files in ESPREFIX @<:@/@:>@]),
-  [essential_prefix="${withval}"],
+  [essential_prefix="$(echo ${withval} | sed -e 's#/$##')"],
   [essential_prefix="/"]
 )
 AC_SUBST([essential_prefix])
