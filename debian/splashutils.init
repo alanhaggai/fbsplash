@@ -126,41 +126,33 @@ case "$1" in
     start)
         [ -z "${SPLASH_SILENT}" ] && log_daemon_msg "Starting splashutils daemon" "fbsplashd.static"
 
-        # only do this if the kernel supports fbsplash
-	if fbcondecor_supported ; then
-	    
-            splash_setup
-            splash rc_init sysinit
+        splash_setup
+        splash rc_init sysinit
 
-            $0 status
-            spl_status=$?
-            if [ $spl_status -ne 0 ]; then
-                [ -z "${SPLASH_SILENT}" ] && log_end_msg 1
-                exit $spl_status
-            fi
-            #
-            ## Initialize backgrounds
-            #
-            $0 bgsetup
-
-	    #
-	    ## Prevent killall5 of fbsplashd.static
-	    #
-	    splash_add_omit
-
-            rm -f ${spl_lasterror}
-
-            if [ -z "${SPLASH_SILENT}" ]; then
-                log_end_msg 0
-            elif [ -n "${SPLASH_SILENT_UNLESS_OK}" ]; then
-                log_daemon_msg "Starting splashutils daemon" "fbsplashd.static"
-                log_end_msg 0
-            fi
-	else
-            [ -z "${SPLASH_SILENT}" ] && log_failure_msg "Your kernel does not support fbcondecor"
+        $0 status
+        spl_status=$?
+        if [ $spl_status -ne 0 ]; then
             [ -z "${SPLASH_SILENT}" ] && log_end_msg 1
-	    exit 1
-	fi
+            exit $spl_status
+        fi
+        #
+        ## Initialize backgrounds
+        #
+        $0 bgsetup
+
+	#
+	## Prevent killall5 of fbsplashd.static
+	#
+        splash_add_omit
+
+        rm -f ${spl_lasterror}
+
+        if [ -z "${SPLASH_SILENT}" ]; then
+            log_end_msg 0
+        elif [ -n "${SPLASH_SILENT_UNLESS_OK}" ]; then
+            log_daemon_msg "Starting splashutils daemon" "fbsplashd.static"
+            log_end_msg 0
+        fi
 	;;
     
     status)
