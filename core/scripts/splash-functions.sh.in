@@ -164,9 +164,6 @@ splash_get_boot_message() {
 }
 
 splash_start() {
-	# Prepare the communications FIFO
-	rm -f "${spl_fifo}" 2>/dev/null
-
 	if [ "${SPLASH_MODE_REQ}" = "verbose" ]; then
 		${spl_decor} -c on 2>/dev/null
 		return 0
@@ -205,11 +202,10 @@ splash_start() {
 		umount -n ${spl_tmpdir}
 	fi
 
-	# In the unlikely case that there's a splash daemon running -- kill it.
-	killall -9 "${spl_daemon##*/}" 2>/dev/null
 	rm -f "${spl_pidfile}"
 
 	# Prepare the communications FIFO
+	rm -f "${spl_fifo}" 2>/dev/null
 	mkfifo "${spl_fifo}"
 
 	local options=""
