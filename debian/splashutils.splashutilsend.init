@@ -1,0 +1,44 @@
+#!/bin/bash
+
+. /lib/lsb/init-functions
+. /sbin/splash-functions.sh
+
+spl_lasterror="${spl_cachedir}/lasterror"
+
+case "$1" in
+    start)
+        /etc/init.d/splashutils stop
+        /etc/init.d/splashutils status
+        if [ $? -eq 0 ]; then
+            # kill it the hard way if it is still up in two seconds
+            sleep 2
+            /etc/init.d/splashutils status
+            if [ $? -eq 0 ]; then
+                pidof=`pidofproc fbsplashd.static`
+                if [ "x${pidof}" != "x" ]; then
+                    log_warning_msg "Sending KILL signal to fbsplashd.static"
+                    kill -KILL ${pidof}
+                fi
+            fi
+        fi
+        #
+        ## Say to /etc/init.d/splashutils condrestart to NOT retry in that runlevel
+        #
+        touch ${spl_lasterror} && echo $RUNLEVEL >> ${spl_lasterror}
+        #
+        ## Make sure we restore, if needed, the tty 2
+        #
+        SPLASH_TTYS=2 /etc/init.d/splashutils bgsetup
+	;;
+    
+    stop)
+        # No-op
+	;;
+    
+    *)
+	echo "Usage: splashutilsend [start|stop]" >&2
+	exit 3
+	;;
+esac
+
+exit 0
