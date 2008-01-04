@@ -7,6 +7,13 @@ spl_lasterror="${spl_cachedir}/lasterror"
 
 case "$1" in
     start)
+        #
+        ## Make sure we reached 100% fron the eye-candy point of view
+        SPLASH_SILENT=1 /etc/init.d/splashutils PROGRESS 100
+        #
+        #
+        ## And then stop it, fadin/fadeout if any will make it smooth
+        #
         /etc/init.d/splashutils stop
         /etc/init.d/splashutils status
         if [ $? -eq 0 ]; then
