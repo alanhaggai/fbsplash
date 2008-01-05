@@ -78,7 +78,7 @@ void usage(void)
 "  -q, --quiet         don't display any messages\n"
 "  -h, --help          show this help message\n"
 "  -t, --theme=THEME   use theme THEME\n"
-"  -m, --mode=(v|s)    set silent (s) or verbsose (v) mode\n"
+"  -m, --mode=(v|s)    set silent (s) or verbose (v) mode\n"
 #ifdef CONFIG_DEPRECATED
 "  -p, --progress=NUM  set progress to NUM/65535 * 100%%\n"
 #ifdef CONFIG_TTF
