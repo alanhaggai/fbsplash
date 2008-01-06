@@ -1,3 +1,11 @@
+06 Jan 2008 * <spock@gentoo.org> * splashutils-1.5.3.3
+ - Add fbcondecor-related functions to splash-functions.sh
+ - Build and install fbcondecor_ctl.static.
+ - Use sleep instead of usleep in splash_manager.
+ - Fix a number of typos.
+ - Extend the functionality provided by splash-functions.sh
+ - Allow cross compilation of the bundled libraries.
+
 16 Dec 2007 * <spock@gentoo.org> * splashutils-1.5.3.2
  - Fix rendering of text objects with hot spots other than top-left.
  - Fix a spurious free() call when processing static text objects.
