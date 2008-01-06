@@ -1,3 +1,8 @@
+06 Jan 2008 * <spock@gentoo.org> * splashutils-gentoo-1.0.11
+ - Fix the 3rd method of event device detection.
+ - Use the fbcondecor_* functions from splashutils-functions.sh in the
+   initscript.
+
 16 Dec 2007 * <spock@gentoo.org> * splashutils-gentoo-1.0.10
  - Add another method of detecting the keyboard event device
    in the splash-functions.sh for baselayout-1.
