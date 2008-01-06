@@ -16,79 +16,111 @@ esac
 
 . /usr/share/initramfs-tools/hook-functions
 
-if [ -x /sbin/fbcondecor_helper -a -d /etc/splash ]; then
-    echo "$0: fbsplash initramfs setup is starting"
+check_theme() {
+    #
+    ## Determine current theme, unless given by environment variable
+    #
+    [ -n "${SPLASH_THEME}" ] && return
+    SPLASH_THEME="default"
+
+    #
+    ## Values from config files if any
+    #
+    [ -r /etc/splash/splash ]     && . /etc/splash/splash
+    [ -r /etc/conf.d/splash ]     && . /etc/conf.d/splash
+    [ -r /etc/conf.d/fbcondecor ] && . /etc/conf.d/fbcondecor
+
+    #
+    ## Values from command-line
+    #
+    if [ -r /proc/cmdline ]; then
+        options=$(sed -n 's/.*\(splash=[^ ]*\).*/\1/gp' /proc/cmdline)
+        for opt in ${options} ; do
+            options=${opt#*=}
+            
+            for i in $(echo "${options}" | sed -e 's/,/ /g') ; do
+                case ${i%:*} in
+                    theme) SPLASH_THEME=${i#*:} ;;
+                esac
+            done
+        done
+    fi
+}
+
+check_theme
+
+echo "$0: splashutils initramfs setup is starting"
+
+if [ -x /sbin/fbcondecor_helper -a -d /etc/splash/${SPLASH_THEME} ]; then
+
+    #  -----------
+    ## Directories
+    #  -----------
     mkdir -p ${DESTDIR}/sbin
     mkdir -p ${DESTDIR}/usr/bin
     mkdir -p ${DESTDIR}/etc/splash
+    mkdir -p ${DESTDIR}/etc/conf.d
     if [ -x /usr/bin/chvt ]; then
         mkdir --parents ${DESTDIR}/usr/bin
         echo "$0: Copying /usr/bin/chvt"
         copy_exec /usr/bin/chvt usr/bin
-    else
-        echo "$0: /usr/bin/chvt not copied"
     fi
 
-    echo "$0: Copying /sbin/fbcondecor_helper"
+    #  --------
+    ## Binaries
+    #  --------
+    echo "$0: Copying binary /sbin/fbcondecor_helper"
     copy_exec /sbin/fbcondecor_helper sbin
     echo "$0: Linking /sbin/splash_helper to /sbin/fbcondecor_helper"
     cd ${DESTDIR}/sbin
     ln -s fbcondecor_helper splash_helper
 
+    #  ----
+    ## Font
+    #  ----
     if [ -r /etc/splash/luxisri.ttf ]; then
-        echo "$0: Copying /etc/splash/luxisri.ttf"
-        cp /etc/splash/luxisri.ttf ${DESTDIR}/etc/splash
-    else
-        echo "$0: /etc/splash/luxisri.ttf not copied"
+        echo "$0: Copying font /etc/splash/luxisri.ttf"
+        cp /etc/splash/luxisri.ttf ${DESTDIR}/etc/splash/luxisri.ttf
     fi
 
+    #  ------
+    ## Config
+    #  ------
     if [ -r /etc/splash/splash ]; then
-        echo "$0: Copying /etc/splash/splash"
+        echo "$0: Copying config /etc/splash/splash"
         cp /etc/splash/splash ${DESTDIR}/etc/splash/splash
+    fi
+    if [ -r /etc/conf.d/splash ]; then
+        echo "$0: Copying config /etc/conf.d/splash"
+        cp /etc/conf.d/splash ${DESTDIR}/etc/conf.d/splash
+    fi
+    if [ -r /etc/conf.d/fbcondecor ]; then
+        echo "$0: Copying config /etc/conf.d/fbcondecor"
+        cp /etc/conf.d/fbcondecor ${DESTDIR}/etc/conf.d/fbcondecor
+    fi
+
+    #  -----
+    ## Theme
+    #  -----
+    if [ ! -d ${DESTDIR}/etc/splash/${SPLASH_THEME} ]; then
+        echo "$0: Copying theme '${SPLASH_THEME}'"
+        rm -rf ${DESTDIR}/etc/splash/${SPLASH_THEME}
+        cp -pRH /etc/splash/${SPLASH_THEME} ${DESTDIR}/etc/splash/${SPLASH_THEME}
     else
-        echo "$0: No /etc/splash/splash copied"
+        echo "$0: Theme '${SPLASH_THEME}' already in"
     fi
-    #
-    ## We copy all themes
-    #
-    for i in /etc/splash/* ; do
-        if [ -h "$i" -o ! -d "$i" ]; then
-            if [ -h "$i" ]; then
-                #
-                ## Copy symlinks as plain entries
-                #
-                if [ ! -d ${DESTDIR}${i} ]; then
-                    echo "$0: Copying symlink theme '$i'"
-                    rm -rf ${DESTDIR}${i}
-                    cp -pRH $i ${DESTDIR}${i}
-                else
-                    echo "$0: Symlink theme '$i' already in"
-                fi
-            fi
-            continue
-        fi
 
-        if [ "x$i" != "x" ]; then
-            if [ ! -d ${DESTDIR}${i} ]; then
-                echo "$0: Copying theme '$i'"
-                rm -rf ${DESTDIR}${i}
-                cp -pRH $i ${DESTDIR}${i}
-            else
-                echo "$0: theme '$i' already in"
-            fi
-        fi
-    done
-
-    #
-    ## Create /dev/fbsplash device
-    #
-    if [ ! -e ${DESTDIR}/dev/fbsplash ]; then
-        echo "$0: Creating /dev/fbsplash device"
+    #  -----------------------------
+    ## Create /dev/fbcondecor device
+    #  -----------------------------
+    if [ ! -e ${DESTDIR}/dev/fbcondecor ]; then
+        echo "$0: Creating device /dev/fbcondecor"
         mkdir -p ${DESTDIR}/dev
-        mknod ${DESTDIR}/dev/fbsplash c 10 63
+        mknod ${DESTDIR}/dev/fbcondecor c 10 63
     fi
-    echo "$0: fbsplash initramfs setup is finished"
 else
-    [ ! -x /sbin/splash_helper ] && echo "$0: No /sbin/splash_helper binary ?"
-    [ ! -d /etc/splash         ] && echo "$0: No /etc/splash directory ?"
+    [ ! -x /sbin/fbcondecor_helper     ] && echo "$0: No /sbin/fbcondecor_helper binary ?"
+    [ ! -d /etc/splash/${SPLASH_THEME} ] && echo "$0: No /etc/splash/${SPLASH_THEME} directory ?"
 fi
+
+echo "$0: splashutils initramfs setup is finished"
