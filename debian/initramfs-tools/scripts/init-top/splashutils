@@ -20,7 +20,7 @@ splash() {
     [ ! -x /sbin/fbcondecor_helper     ] && return
 
     check_if_will_resume
-    [ "x$willresume" = "x1"            ] && return
+    [ "x${willresume}" = "x1"            ] && return
 
     splash_setup
     [ "${SPLASH_MODE_REQ}" != 'silent' ] && return
@@ -58,16 +58,16 @@ check_if_will_resume() {
     #
     willresume=0
     if [ -d /proc/suspend2 -a -r /proc/suspend2/image_exists ]; then
-        willresume=`cat /proc/suspend2/image_exists 2>/dev/null`
+        willresume=`cat /proc/suspend2/image_exists | head -1 2>/dev/null`
     elif [ -d /sys/power/suspend2 -a -r /sys/power/suspend2/image_exists ]; then
-        willresume=`cat /sys/power/suspend2/image_exists 2>/dev/null`
+        willresume=`cat /sys/power/suspend2/image_exists | head -1 2>/dev/null`
     elif [ -d /sys/power/tuxonice -a -r /sys/power/tuxonice/image_exists ]; then
-        willresume=`cat /sys/power/tuxonice/image_exists 2>/dev/null`
+        willresume=`cat /sys/power/tuxonice/image_exists | head -1 2>/dev/null`
     elif [ -d /proc/software_suspend -a -r /proc/software_suspend/image_exists ]; then
         #
         ## Hmmm... suspend2 stuff or not in here ?
         #
-        willresume=`cat /proc/software_suspend/image_exists 2>/dev/null`
+        willresume=`cat /proc/software_suspend/image_exists | head -1 2>/dev/null`
     fi
 
 }
