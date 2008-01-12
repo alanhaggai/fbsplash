@@ -19,14 +19,14 @@ NOTE: Unless otherwise stated, all coordinates are specified in the screen
 coordinate system (ie. the top left pixel is at (0,0)) and are given in
 pixels.
 
-Verbose mode settings
----------------------
+Verbose mode settings (for fbcondecor)
+--------------------------------------
 
 * pic=<path>
-  Full path to the JPG/PNG background image for verbose mode.
+  Relative path to the JPG/PNG background image for verbose mode.
 
 * pic256=<path>
-  Full path to the PNG background image for verbose splash mode and 8 bpp
+  Relative path to the PNG background image for verbose splash mode and 8 bpp
   video modes.
 
   NOTES:
@@ -81,10 +81,10 @@ Silent mode directives
 ----------------------
 
 * silentpic=<path>
-  Full path to the JPG/PNG background image for silent mode.
+  Relative path to the JPG/PNG background image for silent mode.
 
 * silentpic256=<path>
-  Full path to the PNG background image for silent splash mode and 8 bpp
+  Relative path to the PNG background image for silent splash mode and 8 bpp
   video modes.
 
   NOTES:
@@ -266,11 +266,11 @@ Silent mode directives
 Deprecated settings
 -------------------
 * jpeg=<path>
-  Full path to the JPG background image for verbose mode.
+  Relative path to the JPG background image for verbose mode.
   (Use pic=<path> instead.)
 
 * silentjpeg=<path>
-  Full path to the JPG background image for silent mode.
+  Relative path to the JPG background image for silent mode.
   (Use silentpic=<path> instead.)
 
 
