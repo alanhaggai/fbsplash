@@ -16,17 +16,23 @@ esac
 
 splash() {
     local cmd="$1"
+
+    [ ! -x /sbin/fbcondecor_helper     ] && return
+
+    check_if_will_resume
+    [ "x${willresume}" = "x1"            ] && return
+
     splash_setup
-    
-    [ ! -x /sbin/fbcondecor_helper ] && return
     [ "${SPLASH_MODE_REQ}" != 'silent' ] && return
+
     
     case "${cmd}" in
         set_msg)
             export BOOT_MSG="$2" 
-            /sbin/fbcondecor_helper 2 'repaint'
+            /sbin/fbcondecor_helper 2 repaint 0 0 ${SPLASH_THEME}
             ;;
-        init)	
+        init)
+
             if [ -n "$2" ]; then
                 export BOOT_MSG="$2"
             elif [ "${CDROOT}" = "1" ]; then
@@ -34,7 +40,7 @@ splash() {
             else
                 export BOOT_MSG="Preparing the system for boot... Press Alt+F1 for verbose mode."
             fi
-            /sbin/fbcondecor_helper 2 'repaint'
+            /sbin/fbcondecor_helper 2 repaint 0 0 ${SPLASH_THEME}
             ;;
         verbose)
             if [ -x /usr/bin/chvt ]; then
@@ -46,15 +52,27 @@ splash() {
     esac
 }
 
-splash_setup() {
+check_if_will_resume() {
     #
-    ## If it's already set up, let's not waste time on parsing the config 
-    ## files again
+    ## We do nothing if we are doing to resume - only for suspend2
     #
-    if [ "${SPLASH_THEME}" != '' -a "${SPLASH_TTY}" != '' -a "$1" != 'force' ]; then
-        return 0
+    willresume=0
+    if [ -d /proc/suspend2 -a -r /proc/suspend2/image_exists ]; then
+        willresume=`cat /proc/suspend2/image_exists | head -1 2>/dev/null`
+    elif [ -d /sys/power/suspend2 -a -r /sys/power/suspend2/image_exists ]; then
+        willresume=`cat /sys/power/suspend2/image_exists | head -1 2>/dev/null`
+    elif [ -d /sys/power/tuxonice -a -r /sys/power/tuxonice/image_exists ]; then
+        willresume=`cat /sys/power/tuxonice/image_exists | head -1 2>/dev/null`
+    elif [ -d /proc/software_suspend -a -r /proc/software_suspend/image_exists ]; then
+        #
+        ## Hmmm... suspend2 stuff or not in here ?
+        #
+        willresume=`cat /proc/software_suspend/image_exists | head -1 2>/dev/null`
     fi
-    
+
+}
+
+splash_setup() {
     #
     ## default values
     #
@@ -64,56 +82,42 @@ splash_setup() {
     export SPLASH_KDMODE="TEXT"
     
     #
-    ## Values from config file if any
+    ## Values from config files if any
     #
-    if [ -r /etc/splash/splash ]; then 
-	. /etc/splash/splash
-    fi
+    [ -r /etc/splash/splash ]     && . /etc/splash/splash
+    [ -r /etc/conf.d/splash ]     && . /etc/conf.d/splash
+    [ -r /etc/conf.d/fbcondecor ] && . /etc/conf.d/fbcondecor
+
+    grep -q -w single /proc/cmdline 2>/dev/null
 
     #
-    ## We do nothing if we are doing to resume - only for suspend2
+    ## In single user mode, this is a maintenance level and all messages
+    ## are expected to show - what about it you want to see a message and
+    ## do not have time to hit Alt-F1 ?
+    ## To be discussed - a priori I would prefer to not have to worry with
+    ## fbsplash - if you disagree no pb - just tell me!
     #
-    willresume=0
-    if [ -d /proc/suspend2 -a -r /proc/suspend2/image_exists ]; then
-        willresume=`cat /proc/suspend2/image_exists 2>/dev/null`
-    elif [ -d /sys/power/suspend2 -a -r /sys/power/suspend2/image_exists ]; then
-        willresume=`cat /sys/power/suspend2/image_exists 2>/dev/null`
-    elif [ -d /sys/power/tuxonice -a -r /sys/power/tuxonice/image_exists ]; then
-        willresume=`cat /sys/power/tuxonice/image_exists 2>/dev/null`
-    elif [ -d /proc/software_suspend -a -r /proc/software_suspend/image_exists ]; then
-        #
-        ## Hmmm... suspend2 stuff or not in here ?
-        #
-        willresume=`cat /proc/software_suspend/image_exists 2>/dev/null`
-    fi
 
-    if [ "x$willresume" = "x0" -a -r /proc/cmdline ]; then
-        
-        grep -q -w single /proc/cmdline 2>/dev/null
+    if [ $? -ne 0 ]; then
 
-        #
-        ## In single user mode, this is a maintenance level and all messages
-        ## are expected to show - what about it you want to see a message and
-        ## do not have time to hit Alt-F1 ?
-        ## To be discussed - a priori I would prefer to not have to worry with
-        ## fbsplash - if you disagree no pb - just tell me!
-        #
-
-        if [ $? -ne 0 ]; then
-
-            options=$(sed -e 's/.*splash=\([^ ]*\).*/\1/' -e 's/,/ /g' /proc/cmdline)
+        options=$(sed -e 's/.*splash=\([^ ]*\).*/\1/' -e 's/,/ /g' /proc/cmdline)
 	
-            for i in ${options} ; do
-                case ${i%:*} in
-                    theme)		SPLASH_THEME=${i#*:} ;;
-                    tty)		SPLASH_TTY=${i#*:} ;;
-                    verbose) 	SPLASH_MODE_REQ="verbose" ;;
-                    silent)		SPLASH_MODE_REQ="silent" ;;
-                    kdgraphics)	SPLASH_KDMODE="GRAPHICS" ;;
-                esac
-            done
-            
-        fi
+        for i in ${options} ; do
+            case ${i%:*} in
+                theme)	    SPLASH_THEME=${i#*:} ;;
+                tty)	    SPLASH_TTY=${i#*:} ;;
+                verbose)    SLASH_MODE_REQ="verbose" ;;
+                silent)	    SPLASH_MODE_REQ="silent" ;;
+                kdgraphics) SPLASH_KDMODE="GRAPHICS" ;;
+            esac
+        done
+        
+    else
+        #
+        ## Single mode is mapped to verbose splash mode
+        #
+        SPLASH_MODE_REQ="verbose"
+
     fi
 }
 
