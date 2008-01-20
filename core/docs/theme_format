@@ -52,17 +52,17 @@ Silent mode settings
 --------------------
 
 You put any number of the following directives inside the <type>..</type>
-section to make them effective only during bootup, reboot or shutdown.
+section to make them effective e.g. only during bootup, reboot or shutdown.
 This way you can effectively have completely different configs for each
-of the three supported processes.  If a directive is not inside a
-<type>..</type> section, it is effective regardless of whether the system
-is booting or rebooting.
+of the five supported processes.  If a directive is not inside a
+<type>..</type> section, it is effective regardless of which process
+is taking place.
 
 The format for the <type> tag is:
   <type type-spec [type-spec]>
 
-where type-spec is any of the following: 'bootup', 'reboot', 'shutdown'
-and 'other'.
+where type-spec is any of the following: 'bootup', 'reboot', 'shutdown',
+'suspend', 'resume' and 'other'.
 
 Example:
  # Progress bar for boot-up.

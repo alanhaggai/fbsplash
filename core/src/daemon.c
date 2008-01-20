@@ -605,7 +605,7 @@ void usage(void)
 "      --minstances    allow multiple instances of the splash daemon\n"
 "      --effects=LIST  a comma-separated list of effects to use;\n"
 "                      supported effects: fadein, fadeout\n"
-"      --type=TYPE     TYPE can be: bootup, reboot, shutdown\n"
+"      --type=TYPE     TYPE can be: bootup, reboot, shutdown, suspend, resume\n"
 );
 }
 
@@ -674,6 +674,10 @@ int main(int argc, char **argv)
 				config.type = fbspl_reboot;
 			else if (!strcmp(optarg, "shutdown"))
 				config.type = fbspl_shutdown;
+			else if (!strcmp(optarg, "suspend"))
+				config.type = fbspl_suspend;
+			else if (!strcmp(optarg, "resume"))
+				config.type = fbspl_resume;
 			else
 				config.type = fbspl_bootup;
 			break;

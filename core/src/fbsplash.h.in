@@ -34,7 +34,7 @@
 
 struct fbspl_theme;
 
-typedef enum { fbspl_undef, fbspl_bootup, fbspl_reboot, fbspl_shutdown } fbspl_type_t;
+typedef enum { fbspl_undef, fbspl_bootup, fbspl_reboot, fbspl_shutdown, fbspl_suspend, fbspl_resume } fbspl_type_t;
 
 typedef struct
 {

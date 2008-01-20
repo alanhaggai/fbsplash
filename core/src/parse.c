@@ -1310,6 +1310,14 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 							if (config.type == fbspl_shutdown)
 								ignore = false;
 							t += 8;
+						} else if (!strncmp(t, "suspend", 7)) {
+							if (config.type == fbspl_suspend)
+								ignore = false;
+							t += 7;
+						} else if (!strncmp(t, "resume", 6)) {
+							if (config.type == fbspl_resume)
+								ignore = false;
+							t += 6;
 						} else if (!strncmp(t, "other", 5)) {
 							if (config.type == fbspl_undef)
 								ignore = false;
