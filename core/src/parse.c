@@ -623,7 +623,7 @@ static bool parse_anim(char *t)
 	 * we have just replaced with 0. */
 	skip_whitespace(&t, false);
 
-	canim->x = strtol(t,&p,0);
+	canim->x = strtol(t, &p, 0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pa_err;
@@ -633,7 +633,7 @@ static bool parse_anim(char *t)
 	if (!skip_whitespace(&t, true))
 		goto pa_err;
 
-	canim->y = strtol(t,&p,0);
+	canim->y = strtol(t, &p, 0);
 	if (t == p) {
 		parse_error("expected a number instead of '%s'", t);
 		goto pa_err;
@@ -643,7 +643,7 @@ static bool parse_anim(char *t)
 	if (!skip_whitespace(&t, true))
 		goto pa_err;
 
-	/* sanity checks */
+	/* Sanity checks */
 	if (canim->x >= tmptheme.xres)
 		canim->x = tmptheme.xres-1;
 	if (canim->y >= tmptheme.yres)
@@ -754,7 +754,7 @@ static box* parse_box(char *t)
 	if (!skip_whitespace(&t, true))
 		goto pb_err;
 
-	/* sanity checks */
+	/* Sanity checks */
 	if (cbox->re.x1 >= tmptheme.xres)
 		cbox->re.x1 = tmptheme.xres-1;
 	if (cbox->re.x2 >= tmptheme.xres)

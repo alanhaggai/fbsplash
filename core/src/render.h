@@ -261,6 +261,7 @@ void invalidate_service(stheme_t *theme, char *svc, enum ESVC state);
 void invalidate_progress(stheme_t *theme);
 void rect_interpolate(rect *a, rect *b, rect *c);
 bool rect_intersect(rect *a, rect *b);
+void rect_sanitize(stheme_t *theme, rect *re);
 void box_interpolate(box *a, box *b, box *c);
 void render_objs(stheme_t *theme, u8 *target, u8 mode, bool force);
 void bnd_init(stheme_t *theme);

@@ -876,6 +876,8 @@ void text_bnd(stheme_t *theme, text *ct, rect *bnd)
 		bnd->y1 = ct->y;
 		bnd->y2 = ct->y - 1 + ct->font->font->height * lines;
 	}
+
+	rect_sanitize(theme, bnd);
 }
 
 void text_prerender(stheme_t *theme, text *ct, bool force)

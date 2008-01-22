@@ -1,7 +1,7 @@
 /*
  * render.c - Functions for rendering boxes and icons
  *
- * Copyright (C) 2004-2007, Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2004-2008, Michal Januszewski <spock@gentoo.org>
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
@@ -146,7 +146,24 @@ void blit(u8 *src, rect *bnd, int src_w, u8 *dst, int x, int y, int dst_w)
 }
 
 /*
- *  Rectangle-related functions
+ * Rectangle-related functions
+ * ---------------------------
+ *
+ * The following assumptions are made about the rects as used withing the
+ * fbsplash rendering subsystem:
+ *
+ * - coordinates span the ranges: 0..xres-1, 0..yres-1
+ * - a rect is valid if the coordinates fall within the specified ranges
+ *   and y1 >= x2, y2 >= y1
+ * - if x1 = x2 or y1 = y2, then the rect has width/height equal to 1 pixel
+ */
+
+/**
+ * Interpolate between two rects based on the current value of the progress variable.
+ *
+ * @param a A rect to interpolate from.
+ * @param b A rect to interpolate to.
+ * @param c A rect where the result of the interpolation is saved.
  */
 void rect_interpolate(rect *a, rect *b, rect *c)
 {
@@ -158,7 +175,7 @@ void rect_interpolate(rect *a, rect *b, rect *c)
 	c->y2 = (a->y2 * h + b->y2 * config.progress) / FBSPL_PROGRESS_MAX;
 }
 
-/*
+/**
  * Set 'c' to a rectangle encompassing both 'a' and 'b'.
  */
 void rect_bnd(rect *a, rect *b, rect *c)
@@ -169,6 +186,9 @@ void rect_bnd(rect *a, rect *b, rect *c)
 	c->y2 = max(a->y2, b->y2);
 }
 
+/**
+ * Set 'c' to the intersection of 'a' and 'b'.
+ */
 void rect_min(rect *a, rect *b, rect *c)
 {
 	c->x1 = max(a->x1, b->x1);
@@ -185,8 +205,8 @@ bool rect_intersect(rect *a, rect *b)
 		return true;
 }
 
-/*
- * Returns true if rect a contains rect b.
+/**
+ * Check if rect a contains rect b.
  */
 bool rect_contains(rect *a, rect *b)
 {
@@ -196,14 +216,14 @@ bool rect_contains(rect *a, rect *b)
 		return false;
 }
 
-void blit_add(stheme_t *theme, rect *a)
+/**
+ * Sanitize a rectangle.
+ *
+ * @param theme The theme to which the rect belongs.
+ * @param re The rectangle to be sanitized.
+ */
+void rect_sanitize(stheme_t *theme, rect *re)
 {
-	rect *re = malloc(sizeof(rect));
-	if (!re)
-		return;
-
-	memcpy(re, a, sizeof(rect));
-
 	if (re->x1 < 0)
 		re->x1 = 0;
 	else if (re->x1 >= theme->xres)
@@ -223,11 +243,39 @@ void blit_add(stheme_t *theme, rect *a)
 		re->y2 = 0;
 	else if (re->y2 >= theme->yres)
 		re->y2 = theme->yres - 1;
+}
 
+/**
+ * Add a rect to the re-blit list.
+ *
+ * @param theme The theme for which the rect is to be added.
+ * @param a The rect to be added.
+ */
+void blit_add(stheme_t *theme, rect *a)
+{
+	rect *re = malloc(sizeof(rect));
+	if (!re)
+		return;
+
+	memcpy(re, a, sizeof(rect));
+
+	/*
+	 * TODO: Possibly remove this call when the whole module
+	 * is properly unittested and we're sure no pathological situations
+	 * can arise.
+	 */
+	rect_sanitize(theme, re);
 
 	list_add(&theme->blit, re);
 }
 
+/**
+ * Normalize the re-blit list.
+ *
+ * Collapse rects that contain each other into single items.
+ *
+ * TODO: normalize partially overlapping rects.
+ */
 void blit_normalize(stheme_t *theme)
 {
 	item *i, *j, *prev;
@@ -271,10 +319,11 @@ void obj_visibility_set(stheme_t *theme, obj *o, bool visible)
 	o->visible = visible;
 }
 
-/*
- * Interpolates two boxes, based on the value of the config->progress variable.
- * This is a strange implementation of a progress bar, introduced by the
- * authors of Bootsplash.
+/**
+ * Interpolate two boxes, based on the value of the config->progress variable.
+ *
+ * This is a somewhat strange implementation of a progress bar, introduced
+ * by the authors of Bootsplash.
  */
 void box_interpolate(box *a, box *b, box *c)
 {
@@ -308,11 +357,17 @@ void box_prerender(stheme_t *theme, box *b, bool force)
 
 		box_interpolate(b, b->inter, tb);
 
+		/* No change since last time? */
 		if (!memcmp(tb, b->curr, sizeof(box)) && !force) {
 			free(tb);
 			return;
 		}
 
+		/*
+		 * In the case of horizontal and vertical gradients, or solid boxes,
+		 * optimize the rendering process by only rendering the new part of
+		 * the box.
+		 */
 		if (b->attr & (BOX_VGRAD | BOX_SOLID) && b->curr->re.y1 == tb->re.y1 && b->curr->re.y2 == tb->re.y2 && !force) {
 			rect re;
 
@@ -360,6 +415,7 @@ void box_prerender(stheme_t *theme, box *b, bool force)
 			if (memcmp(&tb->re, &o->bnd, sizeof(rect))) {
 				memcpy(&o->bnd, &tb->re, sizeof(rect));
 			}
+		/* Render the whole box without any optimizations. */
 		} else {
 			if (memcmp(&tb->re, &o->bnd, sizeof(rect))) {
 				blit_add(theme, &o->bnd);
@@ -399,7 +455,6 @@ void box_render(stheme_t *theme, box *box, rect *re, u8 *target)
 		h = 1;
 
 	for (y = re->y1; y <= re->y2; y++) {
-
 		bool opt = false;
 		pic = target + (re->x1 + y * theme->xres) * fbd.bytespp;
 
@@ -510,7 +565,7 @@ void icon_prerender(stheme_t *theme, icon *c, bool force)
 	if (c->crop) {
 		rect crn;
 
-		/* If the cropping rectangle is unchanged, don't render anything */
+		/* If the cropping rectangle is unchanged, don't render anything. */
 		rect_interpolate(&c->crop_from, &c->crop_to, &crn);
 		if (!memcmp(&crn, &c->crop_curr, sizeof(rect)) && !force)
 			return;
@@ -536,6 +591,14 @@ void icon_prerender(stheme_t *theme, icon *c, bool force)
 	}
 }
 
+/**
+ * Render (a part of) an object into a screen buffer.
+ *
+ * @param theme Theme to which the object belongs.
+ * @param o Object to be rendered.
+ * @param re The rect defining the part of the screen to be rendered.
+ * @param tg The target screen buffer.
+ */
 void obj_render(stheme_t *theme, obj *o, rect *re, u8 *tg)
 {
 	switch (o->type) {
@@ -569,6 +632,13 @@ void obj_render(stheme_t *theme, obj *o, rect *re, u8 *tg)
 	}
 }
 
+/**
+ * Prepare an object for rendering.
+ *
+ * @param theme Theme to which the object belongs.
+ * @param o Object to be rendered.
+ * @param force Force redrawing of the whole object?
+ */
 void obj_prerender(stheme_t *theme, obj *o, bool force)
 {
 	switch (o->type) {
@@ -603,13 +673,17 @@ void render_objs(stheme_t *theme, u8 *target, u8 mode, bool force)
 
 	/*
 	 * First pass: mark rectangles for reblitting and rerendering
-	 * via object specific rendering routines.
+	 * via object specific rendering routines.  At this stage no
+	 * objects are actually rendered, but parts of the screen that
+	 * have to be updated are marked for processing in the second
+	 * pass.
 	 */
 	for (i = theme->objs.head; i != NULL; i = i->next) {
 		obj *o = i->p;
 		if (!(o->modes & mode))
 			continue;
 
+		/* Only invalidated objects are updated. */
 		if (o->invalid) {
 			obj_prerender(theme, o, force);
 			o->invalid = false;
@@ -624,9 +698,11 @@ void render_objs(stheme_t *theme, u8 *target, u8 mode, bool force)
 		bg = (u8*)theme->silent_img.data;
 	}
 
+	/* Second pass: actually render the objects. */
 	for (i = theme->blit.head; i != NULL; i = i->next) {
 		rect *re = i->p;
 
+		/* Blit the background image. */
 		blit(bg, re, theme->xres, target, re->x1, re->y1, theme->xres);
 
 		for (j = theme->objs.head; j != NULL; j = j->next) {
@@ -638,6 +714,8 @@ void render_objs(stheme_t *theme, u8 *target, u8 mode, bool force)
 
 			rect_min(&o->bnd, re, &tmp);
 
+			/* Skip this object if its bouding box does not intersect
+			 * the target area. */
 			if (tmp.x2 < tmp.x1 || tmp.y2 < tmp.y1)
 				continue;
 
@@ -646,6 +724,9 @@ void render_objs(stheme_t *theme, u8 *target, u8 mode, bool force)
 	}
 }
 
+/**
+ * Invalidate all objects in a given theme.
+ */
 void invalidate_all(stheme_t *theme)
 {
 	item *i;
@@ -656,6 +737,9 @@ void invalidate_all(stheme_t *theme)
 	}
 }
 
+/**
+ * Invalidate all objects that depend on a specific service.
+ */
 void invalidate_service(stheme_t *theme, char *svc, enum ESVC state)
 {
 	item *i;
@@ -694,6 +778,9 @@ void invalidate_service(stheme_t *theme, char *svc, enum ESVC state)
 	}
 }
 
+/**
+ * Invalidate all objects that depend on the progress variable.
+ */
 void invalidate_progress(stheme_t *theme)
 {
 	item *i;
@@ -763,7 +850,7 @@ void bnd_init(stheme_t *theme)
 			} else {
 				memcpy(&a->bnd, &t->re, sizeof(rect));
 			}
-
+			rect_sanitize(theme, &a->bnd);
 			break;
 		}
 
@@ -783,6 +870,7 @@ void bnd_init(stheme_t *theme)
 				a->bnd.x2 = a->bnd.x1 + t->img->w - 1;
 				a->bnd.y2 = a->bnd.y1 + t->img->h - 1;
 			}
+			rect_sanitize(theme, &a->bnd);
 			break;
 		}
 #if WANT_TTF
@@ -798,6 +886,7 @@ void bnd_init(stheme_t *theme)
 			a->bnd.y1 = t->y;
 			a->bnd.x2 = t->x + t->w - 1;
 			a->bnd.y2 = t->y + t->h - 1;
+			rect_sanitize(theme, &a->bnd);
 			break;
 		}
 #endif
