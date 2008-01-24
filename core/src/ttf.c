@@ -890,14 +890,15 @@ void text_prerender(stheme_t *theme, text *ct, bool force)
 
 	text_bnd(theme, ct, &bnd);
 
+	/* New bounding rectangle. */
 	blit_add(theme, &bnd);
 	render_add(theme, o, &bnd);
 
+	/* Old bounding rectangle. */
 	blit_add(theme, &o->bnd);
 	render_add(theme, o, &o->bnd);
 
 	/* TODO: compare w/ the old bounding rectangle here, reallocate
 	 * the background buffer if necessary */
-
 	memcpy(&o->bnd, &bnd, sizeof(rect));
 }
