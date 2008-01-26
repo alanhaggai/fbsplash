@@ -142,6 +142,22 @@ endif
 
 AM_MAKEFLAGS += "libfbsplashrender_la_CFLAGS=$(libfbsplashrender_la_CFLAGS)"
 
+pkgconfigdir 		= $(libdir)/pkgconfig
+pkgconfig_DATA  	= libfbsplash.pc libfbsplashrender.pc
+EXTRA_DIST       	+= libfbsplash.pc.in libfbsplashrender.pc.in \
+MOSTLYCLEANFILES 	+= libfbsplash.pc libfbsplashrender.pc
+
+%.pc: %.pc.in
+	@$(call infmsg,CREATE,$@)
+	$(Q)$(MKDIR_P) $(@D)
+	$(Q)rm -f $@
+	$(Q)cat $< | $(SED) \
+		-e 's|@prefix[@]|$(prefix)|g' \
+		-e 's|@exec_prefix[@]|$(exec_prefix)|g' \
+		-e 's|@libdir[@]|$(libdir)|g' \
+		-e 's|@includedir[@]|$(includedir)|g' \
+		-e 's|@libs_private[@]|$(strip $($(basename $(@F))_la_LIBADD))|g' \
+		> $@
 
 ################################################################################
 # User
@@ -186,6 +202,8 @@ splash_util_static_SOURCES  = util.c common.h fbsplash.h
 splash_util_static_CPPFLAGS = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplashrender_la_CFLAGS)
 splash_util_static_LDFLAGS  = $(AM_LDFLAGS) -all-static
 splash_util_static_LDADD    = libfbsplashrender.la libfbsplash.la
+
+
 
 
 ################################################################################
