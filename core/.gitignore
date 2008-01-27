@@ -15,9 +15,11 @@ autom4te.cache
 misc/benchmark
 misc/splashtest
 misc/blittest
+misc/inputtest
 
 libs/*/*.o
 libs/*/*.a
-libs/libpng-1.2.8/Makefile
-libs/zlib-1.2.3/Makefile
-libs/zlib-1.2.3/zconf.h
+libs/freetype-*/objs
+libs/libpng-*/Makefile
+libs/zlib-*/Makefile
+libs/zlib-*/zconf.h
