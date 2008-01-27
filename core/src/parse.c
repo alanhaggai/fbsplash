@@ -1064,6 +1064,8 @@ void add_main_msg()
 	ct->flags = F_TXT_EVAL;
 
 	fpath = text_font;
+	if (!fpath)
+		return NULL;
 
 	for (ti = tmptheme.fonts.head ; ti != NULL; ti = ti->next) {
 		fe = (font_e*) ti->p;
