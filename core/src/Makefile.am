@@ -144,7 +144,7 @@ AM_MAKEFLAGS += "libfbsplashrender_la_CFLAGS=$(libfbsplashrender_la_CFLAGS)"
 
 pkgconfigdir 		= $(libdir)/pkgconfig
 pkgconfig_DATA  	= libfbsplash.pc libfbsplashrender.pc
-EXTRA_DIST       	+= libfbsplash.pc.in libfbsplashrender.pc.in \
+EXTRA_DIST       	+= libfbsplash.pc.in libfbsplashrender.pc.in
 MOSTLYCLEANFILES 	+= libfbsplash.pc libfbsplashrender.pc
 
 %.pc: %.pc.in
