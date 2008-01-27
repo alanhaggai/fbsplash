@@ -401,14 +401,18 @@ splash_svc() {
 				splash_comm_send "set gpm"
 				splash_comm_send "repaint"
 			fi
+			splash_comm_send "log Service '${srv}' started."
 		else
 			splash_svc_update "${srv}" "svc_start_failed"
+			splash_comm_send "log Service '${srv}' failed to start."
 		fi
 	else
 		if [ ${err} -eq 0 ]; then
 			splash_svc_update "${srv}" "svc_stopped"
+			splash_comm_send "log Service '${srv}' stopped."
 		else
 			splash_svc_update "${srv}" "svc_stop_failed"
+			splash_comm_send "log Service '${srv}' failed to stop."
 		fi
 	fi
 
