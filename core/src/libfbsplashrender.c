@@ -434,7 +434,6 @@ struct fbspl_theme *fbsplashr_theme_load()
 	st->yres = fbd.var.yres;
 	st->log_lines = 5;
 	st->log_cols = 80;
-	st->log_last = -1;
 	st->log_cnt = 0;
 
 	fbsplash_get_res(config.theme, &st->xres, &st->yres);
