@@ -9,10 +9,14 @@ ver=$(grep AC_INIT ../core/configure.ac | sed -e 's/[^,]*, \[//' -e 's/\])//')
 cdir=`pwd`
 
 cd ..
+rm -rf tmp/*
+cd core
+git archive --format=tar --prefix=splashutils/ HEAD | (cd ../tmp && tar xf -)
 
 ebegin "Creating a tarball"
-cd tmp
-../core/configure
+cd ../tmp/splashutils
+autoreconf -i
+./configure
 make dist-bzip2
 mv splashutils*.tar.bz2 ${cdir}
 eend $?
