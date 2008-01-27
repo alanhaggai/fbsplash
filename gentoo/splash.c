@@ -1,7 +1,7 @@
 /*
  * splash.c - Splash plugin for the Gentoo RC system.
  *
- * Copyright (c) 2007, Michal Januszewski <spock@gentoo.org>
+ * Copyright (c) 2007-2008, Michal Januszewski <spock@gentoo.org>
  *
  * Original splash plugin compatible with baselayout-1's splash-functions.sh
  * written by Roy Marples <uberlord@gentoo.org>.
@@ -292,6 +292,17 @@ static int splash_svc_state(const char *name, const char *state, bool paint)
 {
 	if (paint)
 		splash_theme_hook(state, "pre", name);
+
+
+	if (!strcmp(state, "svc_started")) {
+		fbsplash_send("log Service '%s' started.\n", name);
+	} else if (!strcmp(state, "svc_start_failed")) {
+		fbsplash_send("log Service '%s' failed to start.\n", name);
+	} else if (!strcmp(state, "svc_stopped")) {
+		fbsplash_send("log Service '%s' stopped.\n", name);
+	} else if (!strcmp(state, "svc_stop_failed")) {
+		fbsplash_send("log Service '%s' failed to stop.\n", name);
+	}
 
 	fbsplash_send("update_svc %s %s\n", name, state);
 
