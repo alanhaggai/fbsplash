@@ -27,7 +27,6 @@ struct cfg_opt {
 };
 
 int line = 0;
-
 u16 text_x, text_y;
 u16 text_size;
 color text_color;
@@ -110,6 +109,14 @@ struct cfg_opt opts[] =
 		.val = NULL		},
 #endif
 #if WANT_TTF
+	{	.name = "log_lines",
+		.type = t_int,
+		.val  = &tmptheme.log_lines	},
+
+	{	.name = "log_cols",
+		.type = t_int,
+		.val  = &tmptheme.log_cols	},
+
 	{	.name = "text_x",
 		.type = t_int,
 		.val = &text_x	},
@@ -834,6 +841,7 @@ static bool parse_text(char *t)
 	if (!skip_whitespace(&t, true))
 		goto pt_err;
 
+	ct->log_last = -1;
 	ct->flags = 0;
 	ct->hotspot = 0;
 	ct->style = TTF_STYLE_NORMAL;
@@ -962,9 +970,11 @@ static bool parse_text(char *t)
 		goto pt_err;
 	}
 
+	ct->curr_progress = -1;
 again:
 	if (!skip_whitespace(&t, true))
 		goto pt_err;
+
 
 	if (!strncmp(t, "exec", 4)) {
 		ct->flags |= F_TXT_EXEC;
@@ -974,6 +984,11 @@ again:
 		ct->flags |= F_TXT_EVAL;
 		t += 4;
 		goto again;
+	} else if (!strncmp(t, "msglog", 6)) {
+		ct->flags |= F_TXT_MSGLOG;
+		ct->val = NULL;
+		t += 6;
+		goto endparse;
 	}
 
 	skip_whitespace(&t, false);
@@ -986,10 +1001,9 @@ again:
 
 	if (strstr(ct->val, "$progress")) {
 		ct->curr_progress = config.progress;
-	} else {
-		ct->curr_progress = -1;
 	}
 
+endparse:
 	if (!fontname)
 		fontname = DEFAULT_FONT;
 

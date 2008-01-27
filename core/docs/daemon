@@ -83,6 +83,10 @@ FIFO. Currently, the following commands are recognized:
       svc_start_failed
       svc_stop_failed
 
+ - log <text>
+   Add a line of text to the fbsplash message log. If 'text' is longer than
+   log_cols, it is automatically truncated.
+
  - exit [staysilent]
    Causes the splash daemon to exit.
 

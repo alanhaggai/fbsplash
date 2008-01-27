@@ -26,6 +26,20 @@ void list_add(list *l, void *obj)
 	}
 }
 
+/**
+ * Append an element to the end of the list while simultaneously discarding
+ * the list head.
+ */
+void list_ringadd(list *l, void *obj)
+{
+	item *i = l->head;
+
+	l->head = i->next;
+	free(i->p);
+	free(i);
+	list_add(l, obj);
+}
+
 void list_free(list l, bool free_item)
 {
 	item *i, *j;

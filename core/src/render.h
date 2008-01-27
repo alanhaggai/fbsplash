@@ -76,6 +76,7 @@ struct colorf {
 #if WANT_TTF
 #define F_TXT_EXEC		1
 #define F_TXT_EVAL		2
+#define F_TXT_MSGLOG	4
 
 #define F_HS_HORIZ_MASK	7
 #define F_HS_VERT_MASK	56
@@ -108,6 +109,7 @@ typedef struct text {
 							 * curr_progress holds its currently used value
 							 * (i.e. the value for which the text has been
 							 * rendered), otherwise = -1 */
+	int log_last;
 } text;
 
 #endif /* TTF */
@@ -155,6 +157,10 @@ typedef struct fbspl_theme {
 					 * designed for a different resolution than the one
 					 * currently in use. */
 	int ymarg;
+
+	int log_cnt;
+	int log_lines, log_cols;
+	list msglog;
 
 	list blit;		/* List of rectangular regions (rect's) that need to be re-blit to the
 					   screen. */

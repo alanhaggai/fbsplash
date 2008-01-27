@@ -420,6 +420,7 @@ struct fbspl_theme *fbsplashr_theme_load()
 	char buf[512];
 	stheme_t *st;
 	item *i;
+	int j;
 
 	if (!config.theme)
 		return NULL;
@@ -431,6 +432,10 @@ struct fbspl_theme *fbsplashr_theme_load()
 	st->modes = FBSPL_MODE_SILENT | FBSPL_MODE_VERBOSE;
 	st->xres = fbd.var.xres;
 	st->yres = fbd.var.yres;
+	st->log_lines = 5;
+	st->log_cols = 80;
+	st->log_last = -1;
+	st->log_cnt = 0;
 
 	fbsplash_get_res(config.theme, &st->xres, &st->yres);
 	if (st->xres == 0 || st->yres == 0)
@@ -494,6 +499,9 @@ struct fbspl_theme *fbsplashr_theme_load()
 	/* Initialize the bouding rectangles. */
 	bnd_init(st);
 
+	/* Initialize the message log. */
+	list_init(st->msglog);
+
 	return st;
 }
 
@@ -505,6 +513,7 @@ struct fbspl_theme *fbsplashr_theme_load()
 void fbsplashr_theme_free(struct fbspl_theme *theme)
 {
 	item *i, *j;
+	int k;
 
 	if (!theme)
 		return;
@@ -561,6 +570,9 @@ void fbsplashr_theme_free(struct fbspl_theme *theme)
 #if WANT_TTF
 	free_fonts(theme);
 #endif
+
+	/* Free the message log. */
+	list_free(theme->msglog, true);
 
 	free(theme);
 }

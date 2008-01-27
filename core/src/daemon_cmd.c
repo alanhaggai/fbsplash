@@ -332,6 +332,25 @@ int cmd_set_mesg(void **args)
 }
 
 /*
+ * 'log' command handler.
+ *
+ * Appends a line of text to the fbsplash message log.
+ */
+int cmd_log(void **args)
+{
+	/* TODO: possibly move this to libfbsplashrender */
+	theme->log_cnt++;
+
+	if (theme->log_cnt <= theme->log_lines) {
+		list_add(&theme->msglog, strndup(args[0], theme->log_cols));
+	} else {
+		list_ringadd(&theme->msglog, strndup(args[0], theme->log_cols));
+	}
+
+	return 0;
+}
+
+/*
  * 'paint rect' command handler.
  *
  * Paints a rectangular part of the background buffer on thre
@@ -547,10 +566,17 @@ cmdhandler known_cmds[] =
 		.specs = "ss",
 	},
 
+/*
 	{	.cmd = "dump_svc_timings",
 		.handler = cmd_dump_svc_timings,
 		.args = 0,
 		.specs = NULL,
+	},
+*/
+	{	.cmd = "log",
+		.handler = cmd_log,
+		.args = 1,
+		.specs = "s",
 	},
 
 	{	.cmd = "exit",

@@ -90,6 +90,12 @@ Silent mode directives
   NOTES:
   - The image can have a maximum of 256 colors.
 
+* log_lines=<n>
+  Number of lines to display from the fbsplash message log.
+
+* log_cols=<n>
+  Number of columns to display from the fbsplash message log.
+
 * text_x=<n>
   The x coordinate of the main system message.
 
@@ -111,7 +117,7 @@ Silent mode directives
    - a path relative to THEME_DIR/<theme_name> (eg. /etc/splash/default),
 
 * text [flags] <font> [style] <size> <x> [left|middle|right]
-  <y> [top|middle|bottom] <color> [exec] [eval] "text"
+  <y> [top|middle|bottom] <color> ([exec] [eval] "text" | msglog)
 
   Draws an UTF8-encoded text string somewhere on the screen.
 
@@ -169,6 +175,9 @@ Silent mode directives
   argument. Variables of the form $variablename are replaced by their
   values. Recognized variables:
    - $progress - progress indicator (in percents)
+
+  If the 'msglog' flag is set, the text object will display the
+  contents of the fbsplash message log.
 
   The 'text' argument has to be enclosed in double quotes.
 

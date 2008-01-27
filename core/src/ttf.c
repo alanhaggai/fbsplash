@@ -819,6 +819,35 @@ void text_bnd(stheme_t *theme, text *ct, rect *bnd)
 		}
 	}
 
+	if (ct->flags & F_TXT_MSGLOG) {
+		item *i;
+		int len = 1;
+
+		ct->log_last = theme->log_cnt;
+
+		for (i = theme->msglog.head; i; i = i->next) {
+			len += strlen(i->p) + 1;
+		}
+
+		/* Return an invalid bounding box if there is not
+		 * data in the fbsplash log. */
+		if (len == 1) {
+			bnd->x1 = ct->x;
+			bnd->y1 = ct->y;
+			bnd->x2 = ct->x - 1;
+			bnd->y2 = ct->y - 1;
+			return;
+		}
+
+		txt = malloc(sizeof(char) * len);
+		txt[0] = 0;
+
+		for (i = theme->msglog.head; i; i = i->next) {
+			strcat(txt, i->p);
+			strcat(txt, "\n");
+		}
+	}
+
 	if (!txt)
 		txt = ct->val;
 
@@ -888,7 +917,14 @@ void text_prerender(stheme_t *theme, text *ct, bool force)
 	if (ct->curr_progress == config.progress && !force)
 		return;
 
+	/* Don't do anything if the message log hasn't been updated since
+	 * the last time we were called. */
+	if (ct->flags & F_TXT_MSGLOG && theme->log_cnt == ct->log_last && !force)
+		return;
+
 	text_bnd(theme, ct, &bnd);
+	if (bnd.x1 > bnd.x2)
+		return;
 
 	/* New bounding rectangle. */
 	blit_add(theme, &bnd);
