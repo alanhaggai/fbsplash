@@ -1065,7 +1065,7 @@ void add_main_msg()
 
 	fpath = text_font;
 	if (!fpath)
-		return NULL;
+		return;
 
 	for (ti = tmptheme.fonts.head ; ti != NULL; ti = ti->next) {
 		fe = (font_e*) ti->p;
@@ -1152,10 +1152,12 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 				switch (opts[i].type) {
 
 				case t_path:
+					skip_whitespace(&t, false);
 					parse_path(t, opts[i]);
 					break;
 
 				case t_fontpath:
+					skip_whitespace(&t, false);
 					parse_fontpath(t, opts[i]);
 					break;
 
@@ -1173,6 +1175,7 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 				}
 
 				case t_int:
+					skip_whitespace(&t, false);
 					parse_int(t, opts[i]);
 					break;
 
