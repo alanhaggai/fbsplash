@@ -1,3 +1,9 @@
+splashutils (1.5.3.4-1) unstable; urgency=low
+
+  * New upstream version
+
+ -- Jean-Damien Durand <JeanDamienDurand@free.fr>  Sat, 09 Feb 2008 09:18:17 +0100
+
 splashutils (1.5.3.2-2) unstable; urgency=low
 
   * Added a TODO in the Debian section
