@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include "../common.h"
+#include "../render.h"
+#include "parse.h"
 
 #undef iprint
 #define iprint(lev, args...) ;
@@ -76,22 +78,21 @@ char *box_err[] = {
 	"box silent       0    349  1279 450  #22222c #22222c #383849 #040454498",
 };
 
-#include "../parse.c"
-
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof(*a))
 
 int tests_failed = 0;
 int tests_run = 0;
 
+bool parse_box_wrapper(char *t)
+{
+	void *p = parse_box(t);
+	return (p == NULL) ? false : true;
+}
+
 void test_parse(bool (*parsef)(char*), bool expect, char *stuff, int offset)
 {
 	char *p = strdup(stuff);
 	bool out = parsef(p + offset);
-
-	/* Necessary to get it working for parse_box, which returns a pointer
-	 * instead of a bool. */
-	if (out != false && out > 0)
-		out = true;
 
 	tests_run++;
 
@@ -110,10 +111,13 @@ int main(int argc, char **argv)
 {
 	int i;
 	char *p;
+	fbspl_cfg_t *config;
 
-	fbsplash_lib_init(fbspl_bootup);
+	config = fbsplash_lib_init(fbspl_bootup);
 	fbsplash_acc_theme_set("test");
 	fbsplashr_init(false);
+
+	config->verbosity = FBSPL_VERB_QUIET;
 
 	tmptheme.xres = 1000;
 	tmptheme.yres = 1000;
@@ -147,11 +151,11 @@ int main(int argc, char **argv)
 #endif
 
 	for (i = 0; i < ARRAY_SIZE(box_ok); i++) {
-		test_parse(parse_box, true, box_ok[i], 3);
+		test_parse(parse_box_wrapper, true, box_ok[i], 3);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(box_err); i++) {
-		test_parse(parse_box, false, box_err[i], 3);
+		test_parse(parse_box_wrapper, false, box_err[i], 3);
 	}
 
 	printf("Ran %d tests, %d failed.\n", tests_run, tests_failed);
@@ -159,5 +163,5 @@ int main(int argc, char **argv)
 	fbsplashr_cleanup();
 	fbsplash_lib_cleanup();
 
-	return 0;
+	return tests_failed;
 }

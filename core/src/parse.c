@@ -516,7 +516,7 @@ pi_outm:
 	goto pi_out;
 }
 
-static void parse_rect(char *t)
+void parse_rect(char *t)
 {
 	char *p;
 	rect *crect = malloc(sizeof(rect));
@@ -562,7 +562,7 @@ pr_err:
 }
 
 #if WANT_MNG
-static bool parse_anim(char *t)
+bool parse_anim(char *t)
 {
 	char *p;
 	char *filename;
@@ -660,7 +660,7 @@ pa_err:
 }
 #endif /* WANT_MNG */
 
-static box* parse_box(char *t)
+box* parse_box(char *t)
 {
 	char *p;
 	int ret;
@@ -824,7 +824,7 @@ static char *parse_quoted_string(char *t, u8 keepvar)
 }
 
 #if WANT_TTF
-static bool parse_text(char *t)
+bool parse_text(char *t)
 {
 	char *p, *fontname = NULL, *fpath = NULL;
 	int ret, fontsize;

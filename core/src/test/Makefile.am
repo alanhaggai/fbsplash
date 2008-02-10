@@ -1,14 +1,8 @@
-if CONFIG_TEST
-noinst_PROGRAMS 	= test_parser
-endif
+check_PROGRAMS = test_parser
 
-test_parser_SOURCES  = test_parser.c
+TESTS = test_parser
+
+test_parser_SOURCES  = test_parser.c ../parse.c
 test_parser_CPPFLAGS = $(AM_CPPFLAGS) $(libfbsplashrender_la_CFLAGS) -DTARGET_UTIL
 test_parser_LDFLAGS  = $(AM_LDFLAGS) ../libfbsplashrender.la ../libfbsplash.la
-
-clean-local:
-	@# For some reason automake is not removing this directory
-	@# even though it created it by calling libtool for linking.
-	@# Therefore, perform normal clean-libtool steps.
-	@rm -fr .libs _libs
 

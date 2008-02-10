@@ -143,23 +143,6 @@ AS_IF(
   [AC_DEFINE([CONFIG_MISC], [1], [Define to 1 to build misc programs.])]
 )
 
-AC_ARG_ENABLE([test],
-  AC_HELP_STRING([--enable-test], [build test programs]),
-  [
-    AS_CASE(["${enableval}"],
-       [yes], [config_test="yes"],
-       [no],  [config_test="no"],
-              [AC_MSG_ERROR([bad value '${enableval}' for --enable-test])]
-    )
-  ],
-  [config_test="no"]
-)
-AM_CONDITIONAL([CONFIG_TEST], [test "x${config_test}" = "xyes"])
-AS_IF(
-  [test "x${config_test}" = "xyes"],
-  [AC_DEFINE([CONFIG_TEST], [1], [Define to 1 to build test programs.])]
-)
-
 AC_ARG_WITH([gpm],
   AC_HELP_STRING([--without-gpm], [exclude support for GPM]),
   [

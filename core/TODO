@@ -5,7 +5,6 @@ Documentation
 Fixes
 =====
 - optimize rect-based rendering
-- sanitize the parser unit tests
 - add unit tests for the rendering framework
 
 New features
