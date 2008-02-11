@@ -586,11 +586,18 @@ struct option options[] = {
 	{ "quiet",  no_argument, NULL, 'q'},
 };
 
-void usage(void)
+void fbsplashd_usage(bool unified)
 {
-	printf(
+	if (!unified) {
+		printf(
 "fbsplashd/splashutils-" PACKAGE_VERSION "\n"
 "Usage: fbsplashd [options]\n\n"
+		);
+	} else {
+		printf("fbsplashd options\n");
+	}
+
+	printf(
 "Options:\n"
 "  -h, --help          show this help message\n"
 "  -t, --theme=THEME   use theme THEME\n"
@@ -609,14 +616,11 @@ void usage(void)
 );
 }
 
-int main(int argc, char **argv)
+int fbsplashd_main(int argc, char **argv)
 {
 	unsigned int c, i;
 	int err = 0;
 	int arg_vc = -1;
-
-	fbsplash_lib_init(fbspl_undef);
-	fbsplashr_init(false);
 
 	arg_vc = -1;
 
@@ -625,10 +629,11 @@ int main(int argc, char **argv)
 	while ((c = getopt_long(argc, argv, "t:p:hvq", options, NULL)) != EOF) {
 
 		switch (c) {
-
+#ifndef UNIFIED_BUILD
 		case 'h':
-			usage();
+			fbsplashd_usage(false);
 			return 0;
+#endif
 
 		case 0x100:
 		case 't':
@@ -705,4 +710,13 @@ int main(int argc, char **argv)
 	daemon_start();
 }
 
+#ifndef UNIFIED_BUILD
+int main(int argc, char **argv)
+{
 
+	fbsplash_lib_init(fbspl_undef);
+	fbsplashr_init(false);
+
+	fbsplashd_main(argc, argv);
+}
+#endif

@@ -53,11 +53,18 @@ struct cmd cmds[] = {
 	{ "getstate",	getstate },
 };
 
-void usage(void)
+void fbcondecor_usage(bool unified)
 {
-	printf(
+	if (!unified) {
+		printf(
 "fbcondecor_ctl/splashutils-" PACKAGE_VERSION "\n"
 "Usage: fbcondecor_ctl [options] -c <cmd>\n\n"
+		);
+	} else {
+		printf("fbcondecor_ctl options\n");
+	}
+
+	printf(
 "Commands:\n"
 "  on       enable fbcondecor on a virtual console\n"
 "  off      disable fbcondecor on a virtual console\n"
@@ -78,21 +85,12 @@ void usage(void)
 );
 }
 
-int main(int argc, char **argv)
+int fbcondecor_main(int argc, char **argv)
 {
 	unsigned int c, i;
 	int err = 0;
 	int arg_vc = -1;
 	stheme_t *theme = NULL;
-
-	fbsplash_lib_init(fbspl_bootup);
-	fbsplashr_init(false);
-
-	fd_fbcondecor = fbcon_decor_open(false);
-	if (fd_fbcondecor == -1) {
-		iprint(MSG_ERROR, "Failed to open the fbcon_decor control device.\n");
-		exit(1);
-	}
 
 	arg_task = none;
 	arg_vc = -1;
@@ -100,10 +98,11 @@ int main(int argc, char **argv)
 	while ((c = getopt_long(argc, argv, "c:t:hvq", options, NULL)) != EOF) {
 
 		switch (c) {
-
+#ifndef UNIFIED_BUILD
 		case 'h':
-			usage();
+			fbcondecor_usage(false);
 			return 0;
+#endif
 
 		case 0x100:
 			arg_vc = atoi(optarg);
@@ -142,7 +141,7 @@ int main(int argc, char **argv)
 	}
 
 	if (arg_task == none) {
-		usage();
+		fbcondecor_usage(false);
 		return 0;
 	}
 
@@ -199,10 +198,30 @@ setpic_out:	break;
 		break;
 	}
 
-	close(fd_fbcondecor);
 	fbsplashr_theme_free(theme);
+	return 0;
+}
+
+#ifndef UNIFIED_BUILD
+int main(int argc, char **argv)
+{
+	int err;
+
+	fbsplash_lib_init(fbspl_bootup);
+	fbsplashr_init(false);
+
+	fd_fbcondecor = fbcon_decor_open(false);
+	if (fd_fbcondecor == -1) {
+		iprint(MSG_ERROR, "Failed to open the fbcon_decor control device.\n");
+		exit(1);
+	}
+
+	err = fbcondecor_main(argc, argv);
+
+	close(fd_fbcondecor);
 	fbsplashr_cleanup();
 	fbsplash_lib_cleanup();
 
 	return err;
 }
+#endif /* UNIFIED_BUILD */

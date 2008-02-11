@@ -59,11 +59,18 @@ struct cmd cmds[] = {
 	{ "getres",		getres },
 };
 
-void usage(void)
+void util_usage(bool unified)
 {
-	printf(
+	if (!unified) {
+		printf(
 "splash_util/splashutils-" PACKAGE_VERSION "\n"
 "Usage: splash_util [options] -c <cmd>\n\n"
+		);
+	} else {
+		printf("splash_util options\n");
+	}
+
+	printf(
 "Commands:\n"
 #ifdef CONFIG_DEPRECATED
 "  paint    paint the background picture\n"
@@ -89,15 +96,11 @@ void usage(void)
 );
 }
 
-int main(int argc, char **argv)
+int util_main(int argc, char **argv)
 {
 	unsigned int c, i;
-	int err = 0;
 	int arg_vc = -1;
 	stheme_t *theme = NULL;
-
-	fbsplash_lib_init(fbspl_bootup);
-	fbsplashr_init(false);
 
 	arg_task = none;
 	arg_vc = -1;
@@ -107,10 +110,11 @@ int main(int argc, char **argv)
 	while ((c = getopt_long(argc, argv, "c:t:m:p:hvq", options, NULL)) != EOF) {
 
 		switch (c) {
-
+#ifndef UNIFIED_BUILD
 		case 'h':
-			usage();
+			util_usage(false);
 			return 0;
+#endif
 
 		case 0x100:
 		case 'm':
@@ -166,7 +170,7 @@ int main(int argc, char **argv)
 	}
 
 	if (arg_task == none) {
-		usage();
+		util_usage(false);
 		return 0;
 	}
 
@@ -227,8 +231,20 @@ int main(int argc, char **argv)
 	}
 
 	fbsplashr_theme_free(theme);
+	return 0;
+}
+
+#ifndef UNIFIED_BUILD
+int main(int argc, char **argv)
+{
+	fbsplash_lib_init(fbspl_bootup);
+	fbsplashr_init(false);
+
+	util_main(argc, argv);
+
 	fbsplashr_cleanup();
 	fbsplash_lib_cleanup();
 
-	return err;
+	return 0;
 }
+#endif
