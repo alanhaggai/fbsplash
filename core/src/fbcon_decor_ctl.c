@@ -27,7 +27,7 @@
 #include "render.h"
 #include "fbcon_decor.h"
 
-struct option options[] = {
+static struct option options[] = {
 	{ "vc",		required_argument, NULL, 0x100 },
 	{ "cmd",	required_argument, NULL, 0x101 },
 	{ "theme",	required_argument, NULL, 0x102 },
@@ -44,7 +44,7 @@ struct cmd {
 	int value;
 };
 
-struct cmd cmds[] = {
+static struct cmd cmds[] = {
 	{ "on",			on },
 	{ "off",		off },
 	{ "setcfg",		setcfg },
@@ -53,18 +53,11 @@ struct cmd cmds[] = {
 	{ "getstate",	getstate },
 };
 
-void fbcondecor_usage(bool unified)
+static void usage()
 {
-	if (!unified) {
-		printf(
+	printf(
 "fbcondecor_ctl/splashutils-" PACKAGE_VERSION "\n"
 "Usage: fbcondecor_ctl [options] -c <cmd>\n\n"
-		);
-	} else {
-		printf("fbcondecor_ctl options\n");
-	}
-
-	printf(
 "Commands:\n"
 "  on       enable fbcondecor on a virtual console\n"
 "  off      disable fbcondecor on a virtual console\n"
@@ -92,17 +85,24 @@ int fbcondecor_main(int argc, char **argv)
 	int arg_vc = -1;
 	stheme_t *theme = NULL;
 
+	fbsplash_lib_init(fbspl_bootup);
+	fbsplashr_init(false);
+
+	fd_fbcondecor = fbcon_decor_open(false);
+	if (fd_fbcondecor == -1) {
+		iprint(MSG_ERROR, "Failed to open the fbcon_decor control device.\n");
+		exit(1);
+	}
+
 	arg_task = none;
 	arg_vc = -1;
 
 	while ((c = getopt_long(argc, argv, "c:t:hvq", options, NULL)) != EOF) {
 
 		switch (c) {
-#ifndef UNIFIED_BUILD
 		case 'h':
-			fbcondecor_usage(false);
+			usage();
 			return 0;
-#endif
 
 		case 0x100:
 			arg_vc = atoi(optarg);
@@ -141,7 +141,7 @@ int fbcondecor_main(int argc, char **argv)
 	}
 
 	if (arg_task == none) {
-		fbcondecor_usage(false);
+		usage();
 		return 0;
 	}
 
@@ -199,29 +199,17 @@ setpic_out:	break;
 	}
 
 	fbsplashr_theme_free(theme);
+
+	close(fd_fbcondecor);
+	fbsplashr_cleanup();
+	fbsplash_lib_cleanup();
+
 	return 0;
 }
 
 #ifndef UNIFIED_BUILD
 int main(int argc, char **argv)
 {
-	int err;
-
-	fbsplash_lib_init(fbspl_bootup);
-	fbsplashr_init(false);
-
-	fd_fbcondecor = fbcon_decor_open(false);
-	if (fd_fbcondecor == -1) {
-		iprint(MSG_ERROR, "Failed to open the fbcon_decor control device.\n");
-		exit(1);
-	}
-
-	err = fbcondecor_main(argc, argv);
-
-	close(fd_fbcondecor);
-	fbsplashr_cleanup();
-	fbsplash_lib_cleanup();
-
-	return err;
+	return fbcondecor_main(argc, argv);
 }
 #endif /* UNIFIED_BUILD */

@@ -26,7 +26,7 @@
 #include "common.h"
 #include "render.h"
 
-struct option options[] = {
+static struct option options[] = {
 	{ "cmd",	required_argument, NULL, 0x102 },
 	{ "mode",	required_argument, NULL, 0x100 },
 #ifdef CONFIG_DEPRECATED
@@ -49,7 +49,7 @@ struct cmd {
 	int value;
 };
 
-struct cmd cmds[] = {
+static struct cmd cmds[] = {
 #ifdef CONFIG_DEPRECATED
 	{ "paint",		paint },
 	{ "repaint",	repaint },
@@ -59,18 +59,11 @@ struct cmd cmds[] = {
 	{ "getres",		getres },
 };
 
-void util_usage(bool unified)
+static void usage()
 {
-	if (!unified) {
-		printf(
+	printf(
 "splash_util/splashutils-" PACKAGE_VERSION "\n"
 "Usage: splash_util [options] -c <cmd>\n\n"
-		);
-	} else {
-		printf("splash_util options\n");
-	}
-
-	printf(
 "Commands:\n"
 #ifdef CONFIG_DEPRECATED
 "  paint    paint the background picture\n"
@@ -102,6 +95,9 @@ int util_main(int argc, char **argv)
 	int arg_vc = -1;
 	stheme_t *theme = NULL;
 
+	fbsplash_lib_init(fbspl_bootup);
+	fbsplashr_init(false);
+
 	arg_task = none;
 	arg_vc = -1;
 
@@ -110,11 +106,9 @@ int util_main(int argc, char **argv)
 	while ((c = getopt_long(argc, argv, "c:t:m:p:hvq", options, NULL)) != EOF) {
 
 		switch (c) {
-#ifndef UNIFIED_BUILD
 		case 'h':
-			util_usage(false);
+			usage();
 			return 0;
-#endif
 
 		case 0x100:
 		case 'm':
@@ -170,7 +164,7 @@ int util_main(int argc, char **argv)
 	}
 
 	if (arg_task == none) {
-		util_usage(false);
+		usage();
 		return 0;
 	}
 
@@ -231,20 +225,14 @@ int util_main(int argc, char **argv)
 	}
 
 	fbsplashr_theme_free(theme);
+	fbsplashr_cleanup();
+	fbsplash_lib_cleanup();
 	return 0;
 }
 
 #ifndef UNIFIED_BUILD
 int main(int argc, char **argv)
 {
-	fbsplash_lib_init(fbspl_bootup);
-	fbsplashr_init(false);
-
-	util_main(argc, argv);
-
-	fbsplashr_cleanup();
-	fbsplash_lib_cleanup();
-
-	return 0;
+	return util_main(argc, argv);
 }
 #endif

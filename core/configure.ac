@@ -306,24 +306,24 @@ AC_SUBST([essential_prefix])
 
 AC_ARG_WITH([essential-bindir],
   AS_HELP_STRING([--with-essential-bindir=DIR], [essential user apps directory @<:@ESPREFIX/bin@:>@]),
-  [ebindir="${withval}"],
-  [ebindir="\$(essential_prefix)/bin"]
+  [eexecbindir="${withval}"],
+  [eexecbindir="\$(essential_prefix)/bin"]
 )
-AC_SUBST([ebindir])
+AC_SUBST([eexecbindir])
 
 AC_ARG_WITH([essential-sbindir],
   AS_HELP_STRING([--with-eseential-sbindir=DIR], [essential admin apps directory @<:@ESPREFIX/sbin@:>@]),
-  [esbindir="${withval}"],
-  [esbindir="\$(essential_prefix)/sbin"]
+  [eexecsbindir="${withval}"],
+  [eexecsbindir="\$(essential_prefix)/sbin"]
 )
-AC_SUBST([esbindir])
+AC_SUBST([eexecsbindir])
 
 AC_ARG_WITH([essential-libdir],
   AS_HELP_STRING([--with-essential-libdir=DIR], [essential libraries directory @<:@ESPREFIX/lib@:>@]),
-  [elibdir="${withval}"],
-  [elibdir="\$(essential_prefix)/lib"]
+  [eexeclibdir="${withval}"],
+  [eexeclibdir="\$(essential_prefix)/lib"]
 )
-AC_SUBST([elibdir])
+AC_SUBST([eexeclibdir])
 
 AC_ARG_WITH([themedir],
   AS_HELP_STRING([--with-themedir=DIR], [splash theme directory @<:@ESPREFIX/etc/splash@:>@]),

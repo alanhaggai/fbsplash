@@ -29,12 +29,11 @@ noinst_HEADERS         =
 nodist_include_HEADERS =
 
 noinst_LTLIBRARIES     =
-elib_LTLIBRARIES       =
 lib_LTLIBRARIES        =
 
 noinst_PROGRAMS        =
-esbin_PROGRAMS         =
-ebin_PROGRAMS          =
+eexecsbin_PROGRAMS     =
+eexecbin_PROGRAMS      =
 sbin_PROGRAMS          =
 bin_PROGRAMS           =
 
@@ -81,11 +80,11 @@ fbsplash.h: fbsplash.h.in $(top_builddir)/config.h
 	$(Q)$(MKDIR_P) $(@D)
 	$(Q)rm -f $@
 	$(Q)cat $< | $(SED) \
-		-e 's|@bindir[@]|$(ebindir)|g' \
-		-e 's|@sbindir[@]|$(esbindir)|g' \
+		-e 's|@bindir[@]|$(eexecbindir)|g' \
+		-e 's|@sbindir[@]|$(eexecsbindir)|g' \
 		-e 's|@sysconfdir[@]|$(sysconfdir)|g' \
 		-e 's|@themedir[@]|$(themedir)|g' \
-		-e 's|@libdir[@]|$(elibdir)|g' \
+		-e 's|@libdir[@]|$(eexeclibdir)|g' \
 		> $@
 
 $(top_builddir)/config.h:
@@ -164,22 +163,16 @@ MOSTLYCLEANFILES 	+= libfbsplash.pc libfbsplashrender.pc
 ################################################################################
 
 if CONFIG_FBCON_DECOR
-esbin_PROGRAMS += fbcondecor_ctl fbcondecor_ctl.static
+sbin_PROGRAMS += fbcondecor_ctl
 endif
-esbin_PROGRAMS += fbsplashd
-esbin_PROGRAMS += fbsplashd.static
-bin_PROGRAMS   += splash_util
-ebin_PROGRAMS  += splash_util.static
+sbin_PROGRAMS += fbsplashd
+bin_PROGRAMS  += splash_util
+eexecsbin_PROGRAMS += fbsplashctl
 
 fbcondecor_ctl_SOURCES      = fbcon_decor_ctl.c fbcon_decor.h ../include/console_decor.h ../include/fbcondecor.h common.h fbsplash.h
 fbcondecor_ctl_CPPFLAGS     = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplashrender_la_CFLAGS)
 fbcondecor_ctl_LDFLAGS      = $(AM_LDFLAGS)
 fbcondecor_ctl_LDADD        = libfbsplashrender.la libfbsplash.la
-
-fbcondecor_ctl_static_SOURCES = ${fbcondecor_ctl_SOURCES}
-fbcondecor_ctl_static_CPPFLAGS = ${fbcondecor_ctl_CPPFLAGS}
-fbcondecor_ctl_static_LDFLAGS = $(AM_LDFLAGS) -all-static
-fbcondecor_ctl_static_LDADD = ${fbcondecor_ctl_LDADD}
 
 fbsplashd_SOURCES           = daemon_cmd.c daemon.c daemon.h common.h render.h fbsplash.h
 fbsplashd_CPPFLAGS          = $(AM_CPPFLAGS) -DTARGET_UTIL
@@ -187,31 +180,35 @@ fbsplashd_CFLAGS            = $(AM_CFLAGS) $(PTHREAD_CFLAGS) $(RT_CFLAGS) $(libf
 fbsplashd_LDFLAGS           = $(AM_LDFLAGS)
 fbsplashd_LDADD             = libfbsplashrender.la libfbsplash.la $(PTHREAD_LIBS) $(RT_LIBS) $(GPM_LIBS)
 
-fbsplashd_static_SOURCES    = daemon_cmd.c daemon.c daemon.h common.h render.h fbsplash.h
-fbsplashd_static_CPPFLAGS   = $(AM_CPPFLAGS) -DTARGET_UTIL
-fbsplashd_static_CFLAGS     = $(AM_CFLAGS) $(PTHREAD_STATIC_CFLAGS) $(RT_CFLAGS) $(libfbsplashrender_la_CFLAGS)
-fbsplashd_static_LDFLAGS    = $(AM_LDFLAGS) -all-static
-fbsplashd_static_LDADD      = libfbsplashrender.la libfbsplash.la $(PTHREAD_STATIC_LIBS) $(RT_LIBS) $(GPM_LIBS)
-
 splash_util_SOURCES         = util.c common.h fbsplash.h
 splash_util_CPPFLAGS        = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplashrender_la_CFLAGS)
 splash_util_LDFLAGS         = $(AM_LDFLAGS)
 splash_util_LDADD           = libfbsplashrender.la libfbsplash.la
 
-splash_util_static_SOURCES  = util.c common.h fbsplash.h
-splash_util_static_CPPFLAGS = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplashrender_la_CFLAGS)
-splash_util_static_LDFLAGS  = $(AM_LDFLAGS) -all-static
-splash_util_static_LDADD    = libfbsplashrender.la libfbsplash.la
+fbsplashctl_SOURCES         = $(fbsplashd_SOURCES) $(splash_util_SOURCES) fbsplashctl.c
+fbsplashctl_CFLAGS          = $(AM_CFLAGS) $(PTHREAD_STATIC_CFLAGS) $(RT_CFLAGS) $(libfbsplashrender_la_CFLAGS) -DUNIFIED_BUILD
+fbsplashctl_CPPFLAGS        = $(fbsplashd_CPPFLAGS) $(splash_util_CPPFLAGS)
+fbsplashctl_LDFLAGS         = $(AM_LDFLAGS) -all-static
+fbsplashctl_LDADD           = libfbsplashrender.la libfbsplash.la $(PTHREAD_STATIC_LIBS) $(RT_LIBS) $(GPM_LIBS)
 
+if CONFIG_FBCON_DECOR
+fbsplashctl_SOURCES += $(fbcondecor_ctl_SOURCES)
+fbsplashctl_CPPFLAGS += $(fbcondecor_ctl_CPPFLAGS)
+endif
 
-
+install-exec-hook:
+	$(LN_S) $(DESTDIR)$(eexecsbindir)/fbsplashctl$(EXEEXT) $(DESTDIR)$(eexecsbindir)/fbsplashd.static$(EXEEXT)
+	$(LN_S) $(DESTDIR)$(eexecsbindir)/fbsplashctl$(EXEEXT) $(DESTDIR)$(eexecbindir)/splash_util.static$(EXEEXT)
+if CONFIG_FBCON_DECOR
+	$(LN_S) $(DESTDIR)$(eexecsbindir)/fbsplashctl$(EXEEXT) $(DESTDIR)$(eexecsbindir)/fbcondecor_ctl.static$(EXEEXT)
+endif
 
 ################################################################################
 # Kernel
 ################################################################################
 
 if CONFIG_HELPER
-esbin_PROGRAMS  += fbcondecor_helper
+eexecsbin_PROGRAMS  += fbcondecor_helper
 endif
 
 fbcondecor_helper_SOURCES = \

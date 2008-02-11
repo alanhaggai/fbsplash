@@ -11,6 +11,5 @@ New features
 ============
 - automatic theme resizing
 - add effects (fadein/fadeout/blendin) for icon/anim
-- provide a single static binary for fbsplashd/fbcondecor_ctl to save space
 - usplash2fbsplash theme converter
 
