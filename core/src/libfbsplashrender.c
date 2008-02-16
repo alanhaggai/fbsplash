@@ -447,6 +447,7 @@ struct fbspl_theme *fbsplashr_theme_load()
 
 	list_init(st->blit);
 	list_init(st->objs);
+	list_init(st->textbox);
 	list_init(st->anims);
 	list_init(st->icons);
 	list_init(st->fonts);
@@ -551,6 +552,7 @@ void fbsplashr_theme_free(struct fbspl_theme *theme)
 		i = j;
 	}
 
+	list_free(theme->textbox, false);
 	list_free(theme->anims, false);
 	list_free(theme->rects, true);
 	list_free(theme->blit, true);

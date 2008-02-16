@@ -137,6 +137,10 @@ typedef struct fbspl_theme {
 	/* A list of all objects used in the theme config file. */
 	list objs;
 
+	/* A list of objects forming a textbox.  Objects from this list
+	 * are also memebers of the objs list. */
+	list textbox;
+
 	/* A list of anims used in the theme config file.  Anims from this
 	 * list are also members of the objs list. */
 	list anims;
@@ -265,6 +269,7 @@ void put_pixel(u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add);
 void invalidate_all(stheme_t *theme);
 void invalidate_service(stheme_t *theme, char *svc, enum ESVC state);
 void invalidate_progress(stheme_t *theme);
+void invalidate_textbox(stheme_t *theme, bool active);
 void rect_interpolate(rect *a, rect *b, rect *c);
 bool rect_intersect(rect *a, rect *b);
 void rect_sanitize(stheme_t *theme, rect *re);

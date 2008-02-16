@@ -311,6 +311,11 @@ void render_add(stheme_t *theme, obj *o, rect *a)
 
 void obj_visibility_set(stheme_t *theme, obj *o, bool visible)
 {
+	/*
+	 * If an object is being made invisible, it won't be processed by
+	 * any prerender routines and we have to make sure its area will be
+	 * repainted.
+	 */
 	if (!visible && o->visible) {
 		blit_add(theme, &o->bnd);
 		render_add(theme, o, &o->bnd);
@@ -537,9 +542,6 @@ void icon_render(stheme_t *theme, icon *ticon, rect *re, u8 *target)
 	u8 *out = NULL;
 	u8 *in = NULL;
 
-	if (!o->visible)
-		return;
-
 	xi = re->x1 - ticon->x;
 	yi = re->y1 - ticon->y;
 	wi = re->x2 - re->x1 + 1;
@@ -555,9 +557,6 @@ void icon_render(stheme_t *theme, icon *ticon, rect *re, u8 *target)
 void icon_prerender(stheme_t *theme, icon *c, bool force)
 {
 	obj *o = container_of(c);
-
-	if (!o->visible)
-		return;
 
 	if (!c->img || !c->img->picbuf)
 		return;
@@ -601,6 +600,9 @@ void icon_prerender(stheme_t *theme, icon *c, bool force)
  */
 void obj_render(stheme_t *theme, obj *o, rect *re, u8 *tg)
 {
+	if (!o->visible)
+		return;
+
 	switch (o->type) {
 
 	case o_icon:
@@ -641,6 +643,9 @@ void obj_render(stheme_t *theme, obj *o, rect *re, u8 *tg)
  */
 void obj_prerender(stheme_t *theme, obj *o, bool force)
 {
+	if (!o->visible)
+		return;
+
 	switch (o->type) {
 
 	case o_icon:
@@ -734,6 +739,20 @@ void invalidate_all(stheme_t *theme)
 	for (i = theme->objs.head; i != NULL; i = i->next) {
 		obj *o = i->p;
 		o->invalid = true;
+	}
+}
+
+/**
+ * Invalidate and set visibility of all objects comprising a textbox.
+ */
+void invalidate_textbox(stheme_t *theme, bool active)
+{
+	item *i;
+
+	for (i = theme->textbox.head; i != NULL; i = i->next) {
+		obj *o = i->p;
+		o->invalid = true;
+		obj_visibility_set(theme, o, active);
 	}
 }
 

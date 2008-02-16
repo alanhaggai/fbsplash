@@ -299,29 +299,40 @@ void* thf_switch_evdev(void *unused)
 			continue;
 
 		for (i = 0; i < (int) (rb / sizeof(struct input_event)); i++) {
-			if (ev[i].type != EV_KEY || ev[i].value != 0 || ev[i].code != KEY_F2)
+			if (ev[i].type != EV_KEY || ev[i].value != 0)
 				continue;
 
-			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
-			pthread_mutex_lock(&mtx_paint);
-			if (ctty == CTTY_SILENT) {
-				h = config.tty_v;
-			} else {
-				h = config.tty_s;
-			}
-			pthread_mutex_unlock(&mtx_paint);
-			pthread_setcancelstate(oldstate, NULL);
+			switch (ev[i].code) {
+			case KEY_F2:
+				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
+				pthread_mutex_lock(&mtx_paint);
+				if (ctty == CTTY_SILENT) {
+					h = config.tty_v;
+				} else {
+					h = config.tty_s;
+				}
+				pthread_mutex_unlock(&mtx_paint);
+				pthread_setcancelstate(oldstate, NULL);
 
-			/* Switch to the new tty. This ioctl has to be done on
-			 * the silent tty. Sometimes init will mess with the
-			 * settings of the verbose console which will prevent
-			 * console switching from working properly.
-			 *
-			 * Don't worry about fd_tty[config.tty_s] not being protected by a
-			 * mutex -- this thread is always killed before any changes
-			 * are made to fd_tty[config.tty_s].
-			 */
-			ioctl(fd_tty[config.tty_s], VT_ACTIVATE, h);
+				/* Switch to the new tty. This ioctl has to be done on
+				 * the silent tty. Sometimes init will mess with the
+				 * settings of the verbose console which will prevent
+				 * console switching from working properly.
+				 *
+				 * Don't worry about fd_tty[config.tty_s] not being protected by a
+				 * mutex -- this thread is always killed before any changes
+				 * are made to fd_tty[config.tty_s].
+				 */
+				ioctl(fd_tty[config.tty_s], VT_ACTIVATE, h);
+				break;
+
+			case KEY_F3:
+				config.textbox_visible = !config.textbox_visible;
+				printf("textbox is now %x\n", config.textbox_visible);
+				invalidate_textbox(theme, config.textbox_visible);
+				cmd_paint(NULL);
+				break;
+			}
 		}
 	}
 
@@ -353,14 +364,20 @@ void* thf_switch_ttymon(void *unused)
 			fcntl(fd_tty[config.tty_s], F_SETFL, flags | O_NDELAY);
 
 			/* FIXME: is <F2> always 1b5b5b42? */
-			if (read(fd_tty[config.tty_s], &t, 3) == 3 &&
-			    ((endianess == little && t == 0x425b5b) ||
-			     (endianess == big && 0x5b5b4200))) {
-				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
-				pthread_mutex_lock(&mtx_tty);
-				ioctl(fd_tty0, VT_ACTIVATE, config.tty_v);
-				pthread_mutex_unlock(&mtx_tty);
-				pthread_setcancelstate(oldstate, NULL);
+			if (read(fd_tty[config.tty_s], &t, 3) == 3) {
+				if ((endianess == little && t == 0x425b5b) ||
+					(endianess == big && (t & 0xffffff00) == 0x5b5b4200)) {
+					pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
+					pthread_mutex_lock(&mtx_tty);
+					ioctl(fd_tty0, VT_ACTIVATE, config.tty_v);
+					pthread_mutex_unlock(&mtx_tty);
+					pthread_setcancelstate(oldstate, NULL);
+				} else if ((endianess == little && t == 0x435b5b) ||
+						   (endianess == big && (t & 0xffffff00) == 0x5b5b4300)) {
+					config.textbox_visible = !config.textbox_visible;
+					invalidate_textbox(theme, config.textbox_visible);
+					cmd_paint(NULL);
+				}
 			}
 		}
 	}
@@ -581,6 +598,7 @@ static struct option options[] = {
 	{ "minstances", no_argument, NULL, 0x105 },
 	{ "effects", required_argument, NULL, 0x106 },
 	{ "type", required_argument, NULL, 0x107 },
+	{ "textbox", no_argument, NULL, 0x108 },
 	{ "help",	no_argument, NULL, 'h'},
 	{ "verbose", no_argument, NULL, 'v'},
 	{ "quiet",  no_argument, NULL, 'q'},
@@ -603,6 +621,7 @@ static void usage()
 #endif
 "      --pidfile=FILE  save the PID of the daemon to FILE\n"
 "      --minstances    allow multiple instances of the splash daemon\n"
+"	   --textbox       show the textbox by default\n"
 "      --effects=LIST  a comma-separated list of effects to use;\n"
 "                      supported effects: fadein, fadeout\n"
 "      --type=TYPE     TYPE can be: bootup, reboot, shutdown, suspend, resume\n"
@@ -681,6 +700,10 @@ int fbsplashd_main(int argc, char **argv)
 				config.type = fbspl_bootup;
 			break;
 
+		case 0x108:
+			config.textbox_visible = true;
+			break;
+
 		/* Verbosity level adjustment. */
 		case 'q':
 			config.verbosity = FBSPL_VERB_QUIET;
@@ -701,6 +724,7 @@ int fbsplashd_main(int argc, char **argv)
 		exit(1);
 	}
 
+	invalidate_textbox(theme, config.textbox_visible);
 	daemon_start();
 }
 

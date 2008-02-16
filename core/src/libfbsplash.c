@@ -58,6 +58,7 @@ static int init_config(fbspl_type_t type)
 	config.effects = FBSPL_EFF_NONE;
 	config.verbosity = FBSPL_VERB_NORMAL;
 	config.type = type;
+	config.textbox_visible = false;
 	fbsplash_acc_theme_set(FBSPL_DEFAULT_THEME);
 
 	s = getenv("PROGRESS");

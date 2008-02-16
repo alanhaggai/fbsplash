@@ -47,6 +47,7 @@ typedef struct
 	int tty_v;		/* verbose tty */
 	char *pidfile;	/* pidfile */
 	fbspl_type_t type;	/* bootup/reboot/shutdown? */
+	bool textbox_visible;	/* show the textbox? */
 
 	/* rc system data */
 	bool profile;	/* enable profiling? */

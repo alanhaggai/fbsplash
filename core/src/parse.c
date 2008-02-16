@@ -1,7 +1,7 @@
 /*
- * parse.c - Functions for parsing splashutils cfg files
+ * parse.c -- Functions for parsing splashutils cfg files
  *
- * Copyright (C) 2004-2007, Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2004-2008, Michal Januszewski <spock@gentoo.org>
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
@@ -21,7 +21,7 @@ struct cfg_opt {
 	char *name;
 	enum {
 		t_int, t_path, t_box, t_icon, t_rect, t_color, t_fontpath,
-		t_type_open, t_type_close, t_anim, t_text,
+		t_type_open, t_type_close, t_anim, t_text, t_textbox_open, t_textbox_close,
 	} type;
 	void *val;
 };
@@ -34,6 +34,8 @@ char *text_font;
 
 char *curr_cfgfile;
 stheme_t tmptheme;
+
+static bool is_textbox = false;
 
 /* Note that pic256 and silentpic256 have to be located before pic and
  * silentpic or we are gonna get a parse error @ pic256/silentpic256. */
@@ -97,11 +99,19 @@ struct cfg_opt opts[] =
 
 	{	.name = "<type",
 		.type = t_type_open,
-		.val = NULL		},
+		.val  = NULL	},
 
 	{	.name = "</type>",
 		.type = t_type_close,
-		.val = NULL		},
+		.val  = NULL	},
+
+	{	.name = "<textbox>",
+		.type = t_textbox_open,
+		.val  = NULL	},
+
+	{	.name = "</textbox>",
+		.type = t_textbox_close,
+		.val  = NULL	},
 
 #if WANT_MNG
 	{	.name = "anim",
@@ -386,9 +396,12 @@ void obj_add(void *x) {
 	if (tmptheme.objs.tail)
 		o->id = ((obj*)(tmptheme.objs.tail->p))->id + 1;
 	else
-		o->id =0;
+		o->id = 0;
 
 	list_add(&tmptheme.objs, o);
+
+	if (is_textbox)
+		list_add(&tmptheme.textbox, o);
 }
 
 bool parse_icon(char *t)
@@ -1277,6 +1290,14 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 					ignore = false;
 					break;
 
+				case t_textbox_open:
+					is_textbox = true;
+					break;
+
+				case t_textbox_close:
+					is_textbox = false;
+					break;
+
 #if WANT_MNG
 				case t_anim:
 					parse_anim(t);
@@ -1300,6 +1321,9 @@ int parse_cfg(char *cfgfile, stheme_t *theme)
 box_post:
 		;
 	}
+
+	if (is_textbox)
+		parse_error("unclosed <textbox> section");
 
 #if WANT_TTF
 	add_main_msg();

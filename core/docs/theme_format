@@ -1,84 +1,73 @@
-Theme metadata
---------------
+1. Theme metadata
+-----------------
 
-It is advised that all fbsplash themes are shipped with a metadata.xml
+It is advised that all fbsplash themes be shipped with a metadata.xml
 file providing additional information about the author, license and origin
 of the theme.  The XML schema for this file is available in
 thememeta.xsd.  A sample metadata file is provided in metadata_sample.xml.
 The metadata.xml file should be located in the main directory of the
-fbsplash theme (e.g. it should be /etc/splash/<themename>/metadata.xml).
+fbsplash theme (e.g. /etc/splash/<themename>/metadata.xml).
 
 
-Config file directives
-----------------------
 
-fbsplash recognizes the following directives in the config files in
-/etc/splash:
+2. Config file directives
+-------------------------
 
 NOTE: Unless otherwise stated, all coordinates are specified in the screen
-coordinate system (ie. the top left pixel is at (0,0)) and are given in
-pixels.
+coordinate system (i.e. the top left pixel is at (0,0)).
 
-Verbose mode settings (for fbcondecor)
---------------------------------------
+There are two types of directives that can be used in fbsplash config
+files: object/setting and grouping directives.  The first kind is used
+to specify that an object is to be displayed on the screen or that
+a setting should take a specific value.  The grouping directives on the
+other hand are used add a context to the set of object/setting directives
+that they enclose.
 
-* pic=<path>
-  Relative path to the JPG/PNG background image for verbose mode.
 
-* pic256=<path>
-  Relative path to the PNG background image for verbose splash mode and 8 bpp
-  video modes.
+2.1. Grouping directives
+------------------------
 
-  NOTES:
-  - The image can have a maximum of 240 colors. 16 colors are taken by fbcon
-    and cannot be used in the picture.
+* <type type-spec [type-spec]>..</type>
+  type-spec can be any of the following: 'bootup', 'reboot', 'shutdown',
+  'suspend', 'resume' and 'other'.
 
-* bgcolor=<n>
-  Background color which is to be treated as transparent by fbcon. Usually 0.
+  All directives enclosed in a <type> section will be effective only if
+  one of the processes specified in 'type-spec' is taking place.  If a
+  directive is not contained in a <type> section, it is effective regardless
+  of which process is taking place.
 
-* tx=<n>
-  The x coordinate of the upper left corner of the text window.
+  Example:
 
-* ty=<n>
-  The y coordinate of the upper left corner of the text window.
-
-* tw=<n>
-  The width of the text window. n cannot be greater than horizontal resolution.
-
-* th=<n>
-  The height of the text window. n cannot be greater than vertical resolution.
-
-Silent mode settings
---------------------
-
-You put any number of the following directives inside the <type>..</type>
-section to make them effective e.g. only during bootup, reboot or shutdown.
-This way you can effectively have completely different configs for each
-of the five supported processes.  If a directive is not inside a
-<type>..</type> section, it is effective regardless of which process
-is taking place.
-
-The format for the <type> tag is:
-  <type type-spec [type-spec]>
-
-where type-spec is any of the following: 'bootup', 'reboot', 'shutdown',
-'suspend', 'resume' and 'other'.
-
-Example:
- # Progress bar for boot-up.
- <type bootup>
- 	 box silent inter 0    262  0    337  #22222c #191920 #383849 #2e2e3d
+  # Progress bar for boot-up.
+  <type bootup>
+     box silent inter 0    262  0    337  #22222c #191920 #383849 #2e2e3d
   	 box silent       0    262  799  337  #22222c #191920 #383849 #2e2e3d
- </type>
+  </type>
 
- # Progress bar for reboot/shutdown.
- <type reboot shutdown>
-	 box silent inter 0    262  799  337  #22222c #191920 #383849 #2e2e3d
-	 box silent       0    262  0    337  #22222c #191920 #383849 #2e2e3d
- </type>
+  # Progress bar for reboot/shutdown.
+  <type reboot shutdown>
+     box silent inter 0    262  799  337  #22222c #191920 #383849 #2e2e3d
+     box silent       0    262  0    337  #22222c #191920 #383849 #2e2e3d
+  </type>
 
-Silent mode directives
-----------------------
+* <textbox>..</textbox>
+
+  Directives enclosed in this section will be assumed to form an integral
+  part of a textbox that is only to be displayed on an explicit request
+  by the user (by a config file setting or by pressing F3 when fbsplash is
+  active).
+
+  The textbox usually contains the fbsplash message log.
+
+  Example:
+  <textbox>
+     text silent dejavu.ttf 12 100 100 #ffffff "System messages:"
+	 text silent courier.ttf 10 100 120 #eeeeee msglog
+  </textbox>
+
+
+2.2 Silent mode directives
+--------------------------
 
 * silentpic=<path>
   Relative path to the JPG/PNG background image for silent mode.
@@ -272,8 +261,39 @@ Silent mode directives
   splash daemon, they won't work with the kernel helper (i.e. the animations
   won't work from an initrd).
 
-Deprecated settings
--------------------
+
+2.3 Verbose mode settings (for fbcondecor)
+------------------------------------------
+
+* pic=<path>
+  Relative path to the JPG/PNG background image for verbose mode.
+
+* pic256=<path>
+  Relative path to the PNG background image for verbose splash mode and 8 bpp
+  video modes.
+
+  NOTES:
+  - The image can have a maximum of 240 colors. 16 colors are taken by fbcon
+    and cannot be used in the picture.
+
+* bgcolor=<n>
+  Background color which is to be treated as transparent by fbcon. Usually 0.
+
+* tx=<n>
+  The x coordinate of the upper left corner of the text window.
+
+* ty=<n>
+  The y coordinate of the upper left corner of the text window.
+
+* tw=<n>
+  The width of the text window. n cannot be greater than horizontal resolution.
+
+* th=<n>
+  The height of the text window. n cannot be greater than vertical resolution.
+
+
+2.4. Deprecated settings
+------------------------
 * jpeg=<path>
   Relative path to the JPG background image for verbose mode.
   (Use pic=<path> instead.)

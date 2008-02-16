@@ -1,3 +1,9 @@
+ - Provide a single static binary that perfoms the functions of
+   fbsplashd, splash_util and, optionally, fbcondecor_ctl.
+ - Add support for the <textbox> section in config files.
+ - Add support for the fbsplash message log.
+ - Add the splashy2fbsplash theme converter.
+
 27 Jan 2008 * <spock@gentoo.org> * splashutils-1.5.3.4
  - Fix installation of pkgconfig files for libfbsplash(render).
  - Add support for 'suspend' and 'resume' types in themes.
