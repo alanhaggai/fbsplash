@@ -208,6 +208,12 @@ static int splash_config_gentoo(fbspl_cfg_t *cfg, fbspl_type_t type)
 		break;
 	}
 
+	t = rc_config_value(confd, "SPLASH_TEXTBOX");
+	if (t) {
+		if (!strcasecmp(t, "on") || !strcasecmp(t, "yes"))
+			cfg->textbox_visible = true;
+	}
+
 	t = rc_config_value(confd, "SPLASH_EFFECTS");
 	if (t) {
 		char *opt;
@@ -561,10 +567,11 @@ static int splash_start(const char *runlevel)
 		return -1;
 
 	/* Start the splash daemon */
-	snprintf(buf, 2048, "BOOT_MSG='%s' " FBSPLASH_DAEMON " --theme=\"%s\" --pidfile=" FBSPLASH_PIDFILE " --type=%s %s %s",
+	snprintf(buf, 2048, "BOOT_MSG='%s' " FBSPLASH_DAEMON " --theme=\"%s\" --pidfile=" FBSPLASH_PIDFILE " --type=%s %s %s %s",
 			 config->message, config->theme,
 			 (config->type == fbspl_reboot) ? "reboot" : ((config->type == fbspl_shutdown) ? "shutdown" : "bootup"),
 			 (config->kdmode == KD_GRAPHICS) ? "--kdgraphics" : "",
+			 (config->textbox_visible) ? "--textbox" : "",
 			 (config->effects & (FBSPL_EFF_FADEOUT | FBSPL_EFF_FADEIN)) ? "--effects=fadeout,fadein" :
 				 ((config->effects & FBSPL_EFF_FADEOUT) ? "--effects=fadeout" :
 					 ((config->effects & FBSPL_EFF_FADEIN) ? "--effects=fadein" : "")));
