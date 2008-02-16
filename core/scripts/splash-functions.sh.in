@@ -116,6 +116,7 @@ splash_setup() {
 
 	export SPLASH_EFFECTS=""
 	export SPLASH_SANITY=""
+	export SPLASH_TEXTBOX="no"
 	export SPLASH_MODE_REQ="off"
 	export SPLASH_PROFILE="off"
 	export SPLASH_THEME="default"
@@ -211,6 +212,7 @@ splash_start() {
 	local options=""
 	[ "${SPLASH_KDMODE}" = "GRAPHICS" ] && options="--kdgraphics"
 	[ -n "${SPLASH_EFFECTS}" ] && options="${options} --effects=${SPLASH_EFFECTS}"
+	[ "${SPLASH_TEXTBOX}" = "yes" ] && options="${options} --textbox"
 
 	local ttype="bootup"
 	if [ "${RUNLEVEL}" = "6" ]; then
