@@ -159,14 +159,14 @@ do {																		\
 	iprint(MSG_ERROR, "Parse error at '%s', line %d: " msg "\n", curr_cfgfile, line, ## args);	\
 } while (0)
 
-#define checknskip(label, msg, args...)											\
+#define checknskip(label, req, msg, args...)									\
 do {																			\
 	if (t == p) {																\
 		iprint(MSG_ERROR, "Parse error at '%s', line %d: " msg "\n", curr_cfgfile, line, ## args);	\
 		goto label;																\
 	}																			\
 	t = p;																		\
-	if (!skip_whitespace(&t, true))												\
+	if (!skip_whitespace(&t, req))												\
 		goto label;																\
 } while (0)
 
@@ -404,6 +404,42 @@ void obj_add(void *x) {
 		list_add(&tmptheme.textbox, o);
 }
 
+bool parse_effects(char *t, obj *o)
+{
+	char *p;
+	skip_whitespace(&t, false);
+
+	while (isalpha(*t)) {
+		if (!strncmp(t, "blendin(", 8)) {
+			t += 8;
+			o->blendin = strtol(t, &p, 0);
+			checknskip(pe_err, false, "expected a number instead of '%s'", t);
+			if (*t != ')') {
+				parse_error("expected ')' instead of '%s'", t);
+				goto pe_err;
+			}
+			t++;
+		} else if (!strncmp(t, "blendout(", 9)) {
+			t += 9;
+			o->blendout = strtol(t, &p, 0);
+			checknskip(pe_err, false, "expected a number instead of '%s'", t);
+			if (*t != ')') {
+				parse_error("expected ')' instead of '%s'", t);
+				goto pe_err;
+			}
+			t++;
+		} else {
+			parse_error("expected 'blendin(..)' or 'blendout(..)' instead of '%s'", t);
+pe_err:
+			return false;
+		}
+
+		skip_whitespace(&t, false);
+	}
+
+	return true;
+}
+
 bool parse_icon(char *t)
 {
 	char *filename = NULL;
@@ -433,10 +469,10 @@ bool parse_icon(char *t)
 
 	skip_whitespace(&t, false);
 	cic->x = strtol(t, &p, 0);
-	checknskip(pi_err, "expected a number instead of '%s'", t);
+	checknskip(pi_err, true, "expected a number instead of '%s'", t);
 
 	cic->y = strtol(t,&p,0);
-	checknskip(pi_err, "expected a number instead of '%s'", t);
+	checknskip(pi_err, true, "expected a number instead of '%s'", t);
 
 	/* Do we need to crop this icon? */
 	if (!strncmp(t, "crop", 4)) {
@@ -479,7 +515,6 @@ bool parse_icon(char *t)
 			goto pi_err;
 		for (i = 0; t[i] != ' ' && t[i] != '\t' && t[i] != '\0'; i++);
 		t[i] = 0;
-		i = 0;
 
 		o->visible = false;
 
@@ -489,9 +524,11 @@ bool parse_icon(char *t)
 		}
 
 		cic->svc = strdup(t);
-		if (!skip_nonwhitespace(&t, true))
-			goto pi_err;
+		t += (i+1);
 	}
+
+	if (!parse_effects(t, o))
+		goto pi_err;
 
 	for (ti = tmptheme.icons.head ; ti != NULL; ti = ti->next) {
 		icon_img *ii = (icon_img*) ti->p;
@@ -546,16 +583,16 @@ void parse_rect(char *t)
 	}
 
 	crect->x1 = strtol(t, &p, 0);
-	checknskip(pr_err, "expected a number instead of '%s'", t);
+	checknskip(pr_err, true, "expected a number instead of '%s'", t);
 
 	crect->y1 = strtol(t, &p, 0);
-	checknskip(pr_err, "expected a number instead of '%s'", t);
+	checknskip(pr_err, true, "expected a number instead of '%s'", t);
 
 	crect->x2 = strtol(t,&p,0);
-	checknskip(pr_err, "expected a number instead of '%s'", t);
+	checknskip(pr_err, true, "expected a number instead of '%s'", t);
 
 	crect->y2 = strtol(t,&p,0);
-	checknskip(pr_err, "expected a number instead of '%s'", t);
+	checknskip(pr_err, true, "expected a number instead of '%s'", t);
 
 	/* sanity checks */
 	if (crect->x1 >= tmptheme.xres)
@@ -626,10 +663,10 @@ bool parse_anim(char *t)
 	skip_whitespace(&t, false);
 
 	canim->x = strtol(t, &p, 0);
-	checknskip(pa_err, "expected a number instead of '%s'", t);
+	checknskip(pa_err, true, "expected a number instead of '%s'", t);
 
 	canim->y = strtol(t, &p, 0);
-	checknskip(pa_err, "expected a number instead of '%s'", t);
+	checknskip(pa_err, true, "expected a number instead of '%s'", t);
 
 	/* Sanity checks */
 	if (canim->x >= tmptheme.xres)
@@ -662,6 +699,9 @@ bool parse_anim(char *t)
 		if (!skip_nonwhitespace(&t, true))
 			goto pa_err;
 	}
+
+	if (!parse_effects(t, o))
+		goto pa_err;
 
 	canim->filename = get_filepath(filename);
 	list_add(&tmptheme.anims, canim);
@@ -707,16 +747,16 @@ box* parse_box(char *t)
 	}
 
 	cbox->re.x1 = strtol(t, &p, 0);
-	checknskip(pb_err, "expected a number instead of '%s'", t);
+	checknskip(pb_err, true, "expected a number instead of '%s'", t);
 
 	cbox->re.y1 = strtol(t, &p, 0);
-	checknskip(pb_err, "expected a number instead of '%s'", t);
+	checknskip(pb_err, true, "expected a number instead of '%s'", t);
 
 	cbox->re.x2 = strtol(t, &p, 0);
-	checknskip(pb_err, "expected a number instead of '%s'", t);
+	checknskip(pb_err, true, "expected a number instead of '%s'", t);
 
 	cbox->re.y2 = strtol(t, &p, 0);
-	checknskip(pb_err, "expected a number instead of '%s'", t);
+	checknskip(pb_err, true, "expected a number instead of '%s'", t);
 
 	/* Sanity checks */
 	if (cbox->re.x1 >= tmptheme.xres)
@@ -781,7 +821,11 @@ box* parse_box(char *t)
 		parse_error("expected a color instead of '%s'", t);
 		goto pb_err;
 	}
+
 pb_end:
+	if (!parse_effects(t, container_of(cbox)))
+		goto pb_err;
+
 	return cbox;
 
 pb_err:
@@ -913,11 +957,11 @@ bool parse_text(char *t)
 
 	/* Parse font size */
 	fontsize = strtol(t, &p, 0);
-	checknskip(pt_err, "expected font size (a number) instead of '%s'", t);
+	checknskip(pt_err, true, "expected font size (a number) instead of '%s'", t);
 
 	/* Parse x position */
 	ct->x = strtol(t,&p,0);
-	checknskip(pt_err, "expected x position (a number) instead of '%s'", t);
+	checknskip(pt_err, true, "expected x position (a number) instead of '%s'", t);
 
 	if (!isdigit(*t)) {
 		if (!strncmp(t, "left", 4)) {
@@ -942,7 +986,7 @@ bool parse_text(char *t)
 
 	/* Parse y position */
 	ct->y = strtol(t,&p,0);
-	checknskip(pt_err, "expected y position (a number) instead of '%s'", t);
+	checknskip(pt_err, true, "expected y position (a number) instead of '%s'", t);
 
 	if (!strncmp(t, "top", 3)) {
 		ct->hotspot |= F_HS_TOP;
@@ -1017,6 +1061,9 @@ again:
 	}
 
 endparse:
+	if (!parse_effects(t, container_of(ct)))
+		goto pt_err;
+
 	if (!fontname)
 		fontname = DEFAULT_FONT;
 

@@ -500,7 +500,7 @@ static void TTF_RenderUNICODE_Shaded(stheme_t *theme, u8 *target, const unsigned
 					val = NUM_GRAYS-1;
 				}
 
-				put_pixel(fcol.a*val/255, fcol.r, fcol.g, fcol.b, dst, dst, add);
+				put_pixel(fcol.a * val / 255, fcol.r, fcol.g, fcol.b, dst, dst, add);
 				dst += fbd.bytespp;
 				add ^= 3;
 			}
@@ -762,6 +762,7 @@ void text_render(stheme_t *theme, text *ct, rect *re, u8 *target)
 {
 	u16 *t, *p;
 	obj *o = container_of(ct);
+	color col;
 	int x, y;
 
 	if (!target || !ct || !ct->font || !ct->font->font)
@@ -772,12 +773,15 @@ void text_render(stheme_t *theme, text *ct, rect *re, u8 *target)
 
 	TTF_SetFontStyle(ct->font->font, ct->style);
 
+	memcpy(&col, &ct->col, sizeof(col));
+	col.a *= o->opacity / 255;
+
 	/* Render the unicode text line by line. */
 	for (t = p = ct->cache; *p != 0; p++) {
 		if (*p == '\n') {
 			*p = 0;
 			if (p > t)
-				TTF_RenderUNICODE_Shaded(theme, target, t, ct->font->font, x, y, ct->col, re);
+				TTF_RenderUNICODE_Shaded(theme, target, t, ct->font->font, x, y, col, re);
 			y += ct->font->font->height;
 			*p = '\n';
 			t = p+1;
@@ -785,7 +789,7 @@ void text_render(stheme_t *theme, text *ct, rect *re, u8 *target)
 	}
 
 	if (*t != 0) {
-		TTF_RenderUNICODE_Shaded(theme, target, t, ct->font->font, x, y, ct->col, re);
+		TTF_RenderUNICODE_Shaded(theme, target, t, ct->font->font, x, y, col, re);
 	}
 }
 

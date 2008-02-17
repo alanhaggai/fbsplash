@@ -462,11 +462,9 @@ cus_update:
 
 	pthread_mutex_lock(&mtx_paint);
 	invalidate_service(theme, args[0], state);
-#if WANT_MNG
 	pthread_mutex_lock(&mtx_anim);
 	pthread_cond_signal(&cnd_anim);
 	pthread_mutex_unlock(&mtx_anim);
-#endif
 	pthread_mutex_unlock(&mtx_paint);
 
 	return 0;

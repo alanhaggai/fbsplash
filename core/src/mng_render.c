@@ -237,7 +237,7 @@ void anim_render(stheme_t *theme, anim *a, rect *re, u8* tg)
 	tg += ((theme->xres * re->y1) + re->x1) * fbd.bytespp;
 
 	for (line = re->y1; line <= re->y2; line++) {
-		rgba2fb(src, tg, tg,  re->x2 - re->x1 + 1, line, 1);
+		rgba2fb(src, tg, tg,  re->x2 - re->x1 + 1, line, 1, o->opacity);
 		tg   += theme->xres * fbd.bytespp;
 		src  += mng->canvas_w;
 	}

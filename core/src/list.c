@@ -57,10 +57,14 @@ void list_free(list l, bool free_item)
 
 void list_del(list *l, item *prev, item *curr)
 {
-	prev->next = curr->next;
+	if (prev)
+		prev->next = curr->next;
 
 	if (l->tail == curr)
 		l->tail = prev;
+
+	if (l->head == curr)
+		l->head = curr->next;
 
 	free(curr);
 }

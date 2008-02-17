@@ -140,7 +140,7 @@ static int load_png(stheme_t *theme, char *filename, u8 **data, struct fb_cmap *
 		/* We only need to convert the image if the alpha channel is not required */
 		} else if (!want_alpha) {
 			u8 *tmp = *data + info_ptr->width * bytespp * i;
-			rgba2fb((rgbacolor*)buf, tmp, tmp, info_ptr->width, i, 0);
+			rgba2fb((rgbacolor*)buf, tmp, tmp, info_ptr->width, i, 0, 0xff);
 		}
 	}
 
@@ -220,7 +220,7 @@ static int load_jpeg(char *filename, u8 **data, unsigned int *width, unsigned in
 		u8 *tmp;
 		jpeg_read_scanlines(&cinfo, (JSAMPARRAY) &buf, 1);
 		tmp = *data + cinfo.output_width * fbd.bytespp * i;
-		rgba2fb((rgbacolor*)buf, tmp, tmp, cinfo.output_width, i, 0);
+		rgba2fb((rgbacolor*)buf, tmp, tmp, cinfo.output_width, i, 0, 0xff);
 	}
 
 	jpeg_finish_decompress(&cinfo);

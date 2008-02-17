@@ -58,6 +58,12 @@ typedef struct {
 	u8 modes;
 	bool invalid;			/* indicates whether this object has to be repainted */
 	bool visible;			/* is this object to be rendered? */
+	u8 opacity;				/* global object opacity */
+	u16 op_tstep;			/* opacity time step in ms */
+	short op_step;			/* opacity step */
+	short wait_msecs;		/* time to wait till the next step */
+	u16 blendin;			/* blend-in time in ms, 0 if disabled */
+	u16 blendout;			/* blend-out time in ms, 0 if disabled */
 } obj;
 
 typedef struct {
@@ -140,6 +146,9 @@ typedef struct fbspl_theme {
 	/* A list of objects forming a textbox.  Objects from this list
 	 * are also memebers of the objs list. */
 	list textbox;
+
+	/* A list of objects with currently active special effects. */
+	list fxobjs;
 
 	/* A list of anims used in the theme config file.  Anims from this
 	 * list are also members of the objs list. */
@@ -251,6 +260,7 @@ int tty_open(int tty);
 		((obj*)__mptr)->p = __mptr + sizeof(obj);		\
 		((obj*)__mptr)->modes = __mode;					\
 		((obj*)__mptr)->visible = true;					\
+		((obj*)__mptr)->opacity = 0xff;					\
 		((obj*)__mptr)->invalid = true;					\
 		((obj*)__mptr)->type = o_##__type;				\
 		(__type*)(__mptr + sizeof(obj));				\
@@ -264,7 +274,7 @@ int parse_svc_state(char *t, enum ESVC *state);
 int parse_cfg(char *cfgfile, stheme_t *st);
 
 /* render.c */
-void rgba2fb(rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha);
+void rgba2fb(rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha, u8 opacity);
 void put_pixel(u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add);
 void invalidate_all(stheme_t *theme);
 void invalidate_service(stheme_t *theme, char *svc, enum ESVC state);

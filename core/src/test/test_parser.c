@@ -14,6 +14,7 @@ char *icons_ok[] = {
 	"icon dummy.png 100 23 svc_start dummysvc",
 	"icon dummy.png 340 40 crop <0,0,0,0> <30,30,10,10>",
 	"icon dummy.png 45 65 crop <1,1,1,1> <23,4,5,6> svc_stop dummysvc ",
+	"icon dummy.png 67 40 svc_start dummysvc blendout(45)",
 };
 
 char *icons_err[] = {
@@ -31,6 +32,7 @@ char *anims_ok[] = {
 	"anim once dummy.mng 0 0",
 	"anim loop dummy.mng 30 40 svc_started dummysvc",
 	"anim proportional dummy.mng 30 40 svc_start_failed dummysvc",
+	"anim once dummy.mng 0 0 svc_started dummysvc blendin(450)",
 };
 
 char *anims_err[] = {
@@ -47,6 +49,7 @@ char *text_ok[] = {
 	"text silent dummy.ttf biu 12 5 left 5 top #deadbeef exec eval \"$progress test\"",
 	"text verbose dummy.ttf ubi 3 100 middle 347 middle #ffffff exec \"dummy\"",
 	"text verbose dummy.ttf b 1 100 right 100 bottom #123456 eval \"just a test\"",
+	"text dummy.ttf 12 0 0 #000000 \"foo\" blendin(24345)",
 };
 
 char *text_err[] = {
@@ -64,6 +67,7 @@ char *box_ok[] = {
 	"box silent 0 0 1 1 #001122",
 	"box 0 0 0 0 #12345678",
 	"box silent 0 1 2 3 #000000 #111111 #222222 #333333",
+	"box silent 0 1 2 3 #000000 blendin(134)",
 };
 
 char *box_err[] = {
@@ -76,6 +80,8 @@ char *box_err[] = {
 	"box 2 5 6 7 #f0f0f0 #f0f0f0 #deadbeef",
 	"box 7 7 8 8 #708090 #909090 #deadbeef #beefdeade",
 	"box silent       0    349  1279 450  #22222c #22222c #383849 #040454498",
+	"box silent 0 1 2 3 #000000 blendout(34",
+	"box silent 0 1 2 3 #134342 blendout(45) blendin(345",
 };
 
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof(*a))

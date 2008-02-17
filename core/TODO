@@ -5,11 +5,11 @@ Documentation
 Fixes
 =====
 - optimize rect-based rendering
+- perform extensive profiling to make sure the code is optimized
 - add unit tests for the rendering framework
 
 New features
 ============
 - automatic theme resizing
-- add effects (fadein/fadeout/blendin) for icon/anim
 - usplash2fbsplash theme converter
 

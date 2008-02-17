@@ -378,7 +378,7 @@ int fbsplashr_render_buf(struct fbspl_theme *theme, void *buffer, bool repaint)
  *             Effects such as fadein/fadeout take some time to be fully displayed. If this
  *             parameter is set to true, they will be rendered from a separate, forked process.
  * @param effects Indicates which effects are to be used to display the image.  Valid values
- *                constants named prefixed with SPL_EFF_.
+ *                are constants prefixed with SPL_EFF_.
  *
  * @return 0 on success, a negative value otherwise.
  */
@@ -447,6 +447,7 @@ struct fbspl_theme *fbsplashr_theme_load()
 
 	list_init(st->blit);
 	list_init(st->objs);
+	list_init(st->fxobjs);
 	list_init(st->textbox);
 	list_init(st->anims);
 	list_init(st->icons);
@@ -502,6 +503,14 @@ struct fbspl_theme *fbsplashr_theme_load()
 	/* Initialize the message log. */
 	list_init(st->msglog);
 
+	for (i = st->objs.head; i != NULL; i = i->next) {
+		obj *co = i->p;
+		if (co->visible && co->blendin > 0) {
+			co->visible = false;
+			obj_visibility_set(st, co, true);
+		}
+	}
+
 	return st;
 }
 
@@ -552,6 +561,7 @@ void fbsplashr_theme_free(struct fbspl_theme *theme)
 		i = j;
 	}
 
+	list_free(theme->fxobjs, false);
 	list_free(theme->textbox, false);
 	list_free(theme->anims, false);
 	list_free(theme->rects, true);

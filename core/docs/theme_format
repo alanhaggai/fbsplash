@@ -24,7 +24,7 @@ other hand are used add a context to the set of object/setting directives
 that they enclose.
 
 
-2.1. Grouping directives
+2.1 Grouping directives
 ------------------------
 
 * <type type-spec [type-spec]>..</type>
@@ -262,7 +262,30 @@ that they enclose.
   won't work from an initrd).
 
 
-2.3 Verbose mode settings (for fbcondecor)
+2.3 Special effects modifiers
+-----------------------------
+
+Each of the following object directives: box, text, icon, anim can be
+directly followed by a whitespace-separated set of special effect
+modifiers:
+
+* blendin(time)
+  When the object becomes visible, its alpha is smoothly changed from
+  0% (transparent) to 100% (full opacity).  Time is specified in
+  miliseconds.
+
+* blendout(time)
+  When the object becomes invisible, its alpha is smoothly changed from
+  100% (full opacity) to 0% (invisible).  Time is specified in
+  miliseconds.
+
+The notion of changing the visibility of an object refers to one of the
+following:
+- the first time the object is displayed,
+- a change of the status of a service causing the object to be shown/hidden.
+
+
+2.4 Verbose mode settings (for fbcondecor)
 ------------------------------------------
 
 * pic=<path>
@@ -292,7 +315,7 @@ that they enclose.
   The height of the text window. n cannot be greater than vertical resolution.
 
 
-2.4. Deprecated settings
+2.5 Deprecated settings
 ------------------------
 * jpeg=<path>
   Relative path to the JPG background image for verbose mode.

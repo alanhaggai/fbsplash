@@ -109,7 +109,7 @@ inline void put_pixel(u8 a, u8 r, u8 g, u8 b, u8 *src, u8 *dst, u8 add)
 }
 
 /* Converts a RGBA/RGB image to whatever format the framebuffer uses */
-void rgba2fb(rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha)
+void rgba2fb(rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha, u8 opacity)
 {
 	int i, add = 0;
 	rgbcolor* rgb = (rgbcolor*)data;
@@ -118,10 +118,13 @@ void rgba2fb(rgbacolor* data, u8 *bg, u8* out, int len, int y, u8 alpha)
 
 	for (i = 0; i < len; i++) {
 		if (alpha) {
-			put_pixel(data->a, data->r, data->g, data->b, bg, out, add);
+			if (opacity == 0xff)
+				put_pixel(data->a, data->r, data->g, data->b, bg, out, add);
+			else
+				put_pixel(opacity * data->a / 255, data->r, data->g, data->b, bg, out, add);
 			data++;
 		} else {
-			put_pixel(255, rgb->r, rgb->g, rgb->b, bg, out, add);
+			put_pixel(opacity, rgb->r, rgb->g, rgb->b, bg, out, add);
 			rgb++;
 		}
 
@@ -309,8 +312,24 @@ void render_add(stheme_t *theme, obj *o, rect *a)
 	return;
 }
 
+int obj_opacity_steps(int time) {
+	int t;
+
+	if (time < 500)
+		return 10;
+
+	t = 20 * time / 1000;
+
+	if (t > 255)
+		return 255;
+	else
+		return t;
+}
+
 void obj_visibility_set(stheme_t *theme, obj *o, bool visible)
 {
+	int n;
+
 	/*
 	 * If an object is being made invisible, it won't be processed by
 	 * any prerender routines and we have to make sure its area will be
@@ -319,9 +338,30 @@ void obj_visibility_set(stheme_t *theme, obj *o, bool visible)
 	if (!visible && o->visible) {
 		blit_add(theme, &o->bnd);
 		render_add(theme, o, &o->bnd);
+
+		if (o->blendout) {
+			n = obj_opacity_steps(o->blendout);
+			o->op_tstep = o->blendout / n;
+			o->wait_msecs = o->op_tstep;
+			o->op_step = -255 / n;
+			list_add(&theme->fxobjs, o);
+		} else {
+			o->visible = visible;
+		}
+
+	} else if (visible && !o->visible) {
+		if (o->blendin) {
+			o->opacity = 0;
+			n = obj_opacity_steps(o->blendin);
+			o->op_tstep = o->blendin / n;
+			o->wait_msecs = o->op_tstep;
+			o->op_step = 255 / n;
+			list_add(&theme->fxobjs, o);
+		}
+
+		o->visible = visible;
 	}
 
-	o->visible = visible;
 }
 
 /**
@@ -442,7 +482,7 @@ void box_prerender(stheme_t *theme, box *b, bool force)
 	}
 }
 
-void box_render(stheme_t *theme, box *box, rect *re, u8 *target)
+void box_render(stheme_t *theme, box *box, rect *re, u8 *target, u8 opacity)
 {
 	int x, y, a, r, g, b, h;
 	int add;
@@ -528,7 +568,11 @@ void box_render(stheme_t *theme, box *box, rect *re, u8 *target)
 				r = (u8)fr;
 			}
 
-			put_pixel(a, r, g, b, pic, pic, add);
+			if (opacity == 0xff, 1) {
+				put_pixel(a, r, g, b, pic, pic, add);
+			} else {
+				put_pixel(a * opacity / 255, r, g, b, pic, pic, add);
+			}
 			pic += fbd.bytespp;
 			add ^= 3;
 		}
@@ -550,7 +594,7 @@ void icon_render(stheme_t *theme, icon *ticon, rect *re, u8 *target)
 	for (y = ticon->y + yi; yi < hi; yi++, y++) {
 		out = target + (ticon->x + xi + y * theme->xres) * fbd.bytespp;
 		in = ticon->img->picbuf + (xi + yi * ticon->img->w) * 4;
-		rgba2fb((rgbacolor*)in, out, out, wi, y, 1);
+		rgba2fb((rgbacolor*)in, out, out, wi, y, 1, o->opacity);
 	}
 }
 
@@ -613,9 +657,9 @@ void obj_render(stheme_t *theme, obj *o, rect *re, u8 *tg)
 	{
 		box *t = o->p;
 		if (t->curr)
-			box_render(theme, t->curr, re, tg);
+			box_render(theme, t->curr, re, tg, o->opacity);
 		else
-			box_render(theme, t, re, tg);
+			box_render(theme, t, re, tg, o->opacity);
 		break;
 	}
 

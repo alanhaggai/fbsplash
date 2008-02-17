@@ -1,7 +1,7 @@
 /*
  * daemon.c - The splash daemon
  *
- * Copyright (C) 2005-2006 Michal Januszewski <spock@gentoo.org>
+ * Copyright (C) 2005-2008 Michal Januszewski <spock@gentoo.org>
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License v2.  See the file COPYING in the main directory of this archive for
@@ -58,22 +58,26 @@ list svcs = { NULL, NULL };
 /* A container for the original settings of the silent TTY. */
 struct termios tios;
 
-#if WANT_MNG
 /*
- * Display all animations of the type 'once' or 'loop'.
+ * Handle displaying of special effects and animations of the type 'once'
+ * or 'loop'.
  */
 void *thf_anim(void *unused)
 {
-	anim *ca;
-	obj *co;
-	item *i;
+#if WANT_MNG
 	mng_anim *mng;
+	anim *ca;
+#endif
+	obj *co;
+	item *i, *iprev, *itmp;
 	int delay = 10000, rdelay, oldstate;
 	struct timespec ts, tsc;
 
 	while(1) {
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 		pthread_mutex_lock(&mtx_paint);
+
+#if WANT_MNG
 		/* Find the shortest delay. */
 		for (i = theme->anims.head; i != NULL; i = i->next) {
 			ca = i->p;
@@ -99,6 +103,15 @@ void *thf_anim(void *unused)
 				delay = mng->wait_msecs;
 			}
 		}
+#endif /* WANT_MNG */
+
+		for (i = theme->fxobjs.head; i != NULL; i = i->next) {
+			co = i->p;
+			if (co->wait_msecs < delay && co->wait_msecs > 0) {
+				delay = co->wait_msecs;
+			}
+		}
+
 		pthread_mutex_unlock(&mtx_paint);
 		pthread_setcancelstate(oldstate, NULL);
 
@@ -119,17 +132,64 @@ void *thf_anim(void *unused)
 
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
 		pthread_mutex_lock(&mtx_paint);
-		/* Don't paint anything if we aren't in silent mode. */
-		if (ctty != CTTY_SILENT)
-			goto next;
 
 		/* Calculate the real delay. We might have been signalled by
 		 * the splash daemon before 'delay' msecs passed. */
 		clock_gettime(CLOCK_REALTIME, &tsc);
 		rdelay = delay + (tsc.tv_sec - ts.tv_sec)*1000 + (tsc.tv_nsec - ts.tv_nsec)/1000000;
 
+		/* Handle special effects */
+		iprev = NULL;
+		for (i = theme->fxobjs.head; i != NULL; i = i->next) {
+loop:		itmp = NULL;
+			co = i->p;
+
+			if (co->wait_msecs > 0) {
+				co->wait_msecs -= rdelay;
+				if (co->wait_msecs <= 0) {
+					u8 prevo = co->opacity;
+					co->opacity += co->op_step;
+
+					if (co->op_step > 0) {
+						if (prevo > co->opacity) {
+							co->opacity = 0xff;
+							itmp = i->next;
+							list_del(&theme->fxobjs, iprev, i);
+						}
+					} else {
+						if (prevo < co->opacity) {
+							co->opacity = 0x0;
+							co->visible = false;
+							itmp = i->next;
+							list_del(&theme->fxobjs, iprev, i);
+						}
+					}
+
+					co->invalid = true;
+					co->wait_msecs = co->op_tstep;
+
+					if (itmp) {
+						i = itmp;
+						goto loop;
+					}
+				}
+			}
+			iprev = i;
+		}
+
+		/* Don't paint anything if we aren't in silent mode. */
+		if (ctty != CTTY_SILENT)
+			goto next;
+
+		/*
+		 * TODO: Currently, we don't update the anims if the silent
+		 * splash screen is not visible.  Investigate the performance
+		 * impact of changing this.
+		 */
+
+#if WANT_MNG
 		/* Update the wait time for all relevant animation objects. */
-		for (i = theme->anims.head ; i != NULL; i = i->next) {
+		for (i = theme->anims.head; i != NULL; i = i->next) {
 			ca = i->p;
 			co = container_of(ca);
 
@@ -144,6 +204,8 @@ void *thf_anim(void *unused)
 					anim_render_canvas(ca);
 			}
 		}
+#endif /* WANT_MNG */
+
 		fbsplashr_render_screen(theme, true, false, FBSPL_EFF_NONE);
 
 next:	pthread_mutex_unlock(&mtx_paint);
@@ -153,7 +215,6 @@ next:	pthread_mutex_unlock(&mtx_paint);
 		delay = 10000;
 	}
 }
-#endif /* CONFIG_MNG */
 
 /*
  * The following two functions are called with
@@ -328,7 +389,6 @@ void* thf_switch_evdev(void *unused)
 
 			case KEY_F3:
 				config.textbox_visible = !config.textbox_visible;
-				printf("textbox is now %x\n", config.textbox_visible);
 				invalidate_textbox(theme, config.textbox_visible);
 				cmd_paint(NULL);
 				break;
@@ -574,10 +634,8 @@ void daemon_start()
 	}
 	pthread_mutex_unlock(&mtx_paint);
 
-#ifdef CONFIG_MNG
 	/* Start the animation thread */
 	pthread_create(&th_anim, NULL, &thf_anim, NULL);
-#endif
 
 	pthread_mutex_lock(&mtx_tty);
 	switchmon_start(UPD_ALL, config.tty_s);
