@@ -1,4 +1,4 @@
-17 Feb 2008 * <spock@gentoo.org> * splashutils-1.5.4
+?? Feb 2008 * <spock@gentoo.org> * splashutils-1.5.4
  - Provide a single static binary that perfoms the functions of
    fbsplashd, splash_util and, optionally, fbcondecor_ctl.
  - Add support for the blendin() and blendout() special effect modifiers.
