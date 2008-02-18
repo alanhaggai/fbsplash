@@ -73,7 +73,7 @@ dist-hook-header:
 	@# Removing this file from the distribution is easier than putting it
 	@# in a nodist_*_SOURCES rather than the normal _SOURCES list for all
 	@# the programs and libraries that depend on it.
-	@rm -f $(top_distdir)/fbsplash.h
+	@rm -f $(top_distdir)/src/fbsplash.h
 
 fbsplash.h: fbsplash.h.in $(top_builddir)/config.h
 	@$(call infmsg,CREATE,$@)
