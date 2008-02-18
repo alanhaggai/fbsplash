@@ -26,9 +26,12 @@ int main(int argc, char **argv)
 		return fbsplashd_main(argc, argv);
 	} else if (strstr(argv[0], "splash_util.static")) {
 		return util_main(argc, argv);
-	} else if (strstr(argv[0], "fbcondecor_ctl.static")) {
+	}
+#ifdef CONFIG_FBCON_DECOR_
+	else if (strstr(argv[0], "fbcondecor_ctl.static")) {
 		return fbcondecor_main(argc, argv);
 	}
+#endif
 
 	return 0;
 }
