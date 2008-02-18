@@ -197,10 +197,11 @@ fbsplashctl_CPPFLAGS += $(fbcondecor_ctl_CPPFLAGS)
 endif
 
 install-exec-hook:
-	$(LN_S) $(DESTDIR)$(eexecsbindir)/fbsplashctl$(EXEEXT) $(DESTDIR)$(eexecsbindir)/fbsplashd.static$(EXEEXT)
-	$(LN_S) $(DESTDIR)$(eexecsbindir)/fbsplashctl$(EXEEXT) $(DESTDIR)$(eexecbindir)/splash_util.static$(EXEEXT)
+	cd $(DESTDIR)$(eexecsbindir) && \
+		$(LN_S) fbsplashctl$(EXEEXT) fbsplashd.static$(EXEEXT) && \
+		$(LN_S) fbsplashctl$(EXEEXT) splash_util.static$(EXEEXT)
 if CONFIG_FBCON_DECOR
-	$(LN_S) $(DESTDIR)$(eexecsbindir)/fbsplashctl$(EXEEXT) $(DESTDIR)$(eexecsbindir)/fbcondecor_ctl.static$(EXEEXT)
+	cd $(DESTDIR)$(eexecsbindir) && $(LN_S) fbsplashctl$(EXEEXT) fbcondecor_ctl.static$(EXEEXT)
 endif
 
 ################################################################################
