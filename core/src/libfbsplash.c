@@ -40,7 +40,8 @@ fbspl_cfg_t config;
 /**
  * Initialize the config structure with default values.
  *
- * @param type One of spl_reboot, spl_shutdown, spl_bootup, spl_undef.
+ * @param type One of spl_reboot, spl_shutdown, spl_bootup, spl_suspend,
+ *             spl_resume, spl_undef.
  */
 static int init_config(fbspl_type_t type)
 {
@@ -55,6 +56,7 @@ static int init_config(fbspl_type_t type)
 	config.reqmode = FBSPL_MODE_SILENT;
 	config.minstances = false;
 	config.progress = 0;
+	config.autoverbose = 0;
 	config.effects = FBSPL_EFF_NONE;
 	config.verbosity = FBSPL_VERB_NORMAL;
 	config.type = type;

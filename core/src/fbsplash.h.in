@@ -58,6 +58,7 @@ typedef struct
 	bool minstances;	/* allow multiple instances of the splash daemon? */
 	int progress;		/* current value of progress */
 	char verbosity;		/* verbosity level */
+	int autoverbose;	/* autoverbose delay in seconds; 0 if disabled */
 } fbspl_cfg_t;
 
 fbspl_cfg_t* fbsplash_lib_init(fbspl_type_t type);

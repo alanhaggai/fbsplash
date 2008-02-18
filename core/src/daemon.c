@@ -58,6 +58,9 @@ list svcs = { NULL, NULL };
 /* A container for the original settings of the silent TTY. */
 struct termios tios;
 
+/* Specifies what to do when SIGALRM is raised. */
+int alarm_type;
+
 /*
  * Handle displaying of special effects and animations of the type 'once'
  * or 'loop'.
@@ -286,10 +289,14 @@ static void do_cleanup(void)
 }
 
 /*
- * A dummy handler for SIGALRM.
+ * SIGALRM handler.
  */
 void handler_alarm(int unused)
 {
+	if (alarm_type == ALRM_AUTOVERBOSE) {
+		fbsplash_set_verbose(0);
+	}
+
 	return;
 }
 
