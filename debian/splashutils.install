@@ -3,5 +3,6 @@ bin
 lib
 sbin
 usr/bin
+usr/sbin
 usr/lib/lib*.so.*
 usr/share
