@@ -214,6 +214,11 @@ static int splash_config_gentoo(fbspl_cfg_t *cfg, fbspl_type_t type)
 			cfg->textbox_visible = true;
 	}
 
+	t = rc_config_value(confd, "SPLASH_AUTOVERBOSE");
+	if (t) {
+		cfg->autoverbose = atoi(t);
+	}
+
 	t = rc_config_value(confd, "SPLASH_EFFECTS");
 	if (t) {
 		char *opt;
@@ -592,6 +597,7 @@ static int splash_start(const char *runlevel)
 	}
 
 	fbsplash_set_evdev();
+	fbsplash_send("set autoverbose %d\n", config->autoverbose);
 	fbsplash_send("set tty silent %d\n", config->tty_s);
 	fbsplash_send("set mode silent\n");
 	fbsplash_send("repaint\n");
