@@ -122,6 +122,7 @@ splash_setup() {
 	export SPLASH_THEME="default"
 	export SPLASH_TTY="16"
 	export SPLASH_KDMODE="TEXT"
+	export SPLASH_AUTOVERBOSE="0"
 	export SPLASH_BOOT_MESSAGE="Booting the system (\$progress%)... Press F2 for verbose mode."
 	export SPLASH_SHUTDOWN_MESSAGE="Shutting down the system (\$progress%)... Press F2 for verbose mode."
 	export SPLASH_REBOOT_MESSAGE="Rebooting the system (\$progress%)... Press F2 for verbose mode."
@@ -232,6 +233,8 @@ splash_start() {
 		splash_comm_send "repaint"
 		${spl_decor} -c on 2>/dev/null
 	fi
+
+	splash_comm_send "set autoverbose ${SPLASH_AUTOVERBOSE}"
 
 	splash_set_event_dev
 

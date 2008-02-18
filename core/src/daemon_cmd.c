@@ -119,6 +119,7 @@ vtswitch:
 	 * rebooting directly from X.
 	 */
 	i++;
+	alarm_type = ALRM_INTERRUPT;
 	setitimer(ITIMER_REAL, &itv, NULL);
 
 	if (ioctl(fd_tty0, VT_WAITACTIVE, n) == -1) {
@@ -351,6 +352,15 @@ int cmd_log(void **args)
 }
 
 /*
+ * 'set autoverbose' command handler.
+ */
+int cmd_set_autoverbose(void **args)
+{
+	config.autoverbose = *(int*)args[0];
+	return 0;
+}
+
+/*
  * 'paint rect' command handler.
  *
  * Paints a rectangular part of the background buffer on thre
@@ -522,6 +532,12 @@ cmdhandler known_cmds[] =
 		.specs = "s"
 	},
 
+	{	.cmd = "set autoverbose",
+		.handler = cmd_set_autoverbose,
+		.args = 1,
+		.specs = "d"
+	},
+
 	{	.cmd = "set gpm",
 		.handler = cmd_set_gpm,
 		.args = 0,
@@ -634,6 +650,19 @@ inner:
 				}
 
 				known_cmds[i].handler(args);
+
+				/* Activate the autoverbose timer. */
+				if (config.autoverbose > 0) {
+					struct itimerval itv;
+
+					itv.it_interval.tv_sec = 0;
+					itv.it_interval.tv_usec = 0;
+					itv.it_value.tv_sec = config.autoverbose;
+					itv.it_value.tv_usec = 0;
+
+					alarm_type = ALRM_AUTOVERBOSE;
+					setitimer(ITIMER_REAL, &itv, NULL);
+				}
 			}
 		}
 	}

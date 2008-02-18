@@ -19,6 +19,10 @@ extern stheme_t *theme;
 extern u8 *fb_mem;
 extern int fd_fb;
 
+#define ALRM_INTERRUPT   0
+#define ALRM_AUTOVERBOSE 1
+extern int alarm_type;
+
 /*
  * Current TTY. This effectively identifies the current splash
  * mode.

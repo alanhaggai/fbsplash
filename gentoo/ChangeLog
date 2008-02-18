@@ -1,5 +1,6 @@
 ?? Feb 2008 * <spock@gentoo.org> * splashutils-gentoo-1.0.12
  - Add support for SPLASH_TEXTBOX.
+ - Add support for SPLASH_AUTOVERBOSE.
 
 06 Jan 2008 * <spock@gentoo.org> * splashutils-gentoo-1.0.11
  - Fix the 3rd method of event device detection.

@@ -58,6 +58,9 @@ list svcs = { NULL, NULL };
 /* A container for the original settings of the silent TTY. */
 struct termios tios;
 
+/* Specifies what to do when SIGALRM is raised. */
+int alarm_type;
+
 /*
  * Handle displaying of special effects and animations of the type 'once'
  * or 'loop'.
@@ -286,10 +289,17 @@ static void do_cleanup(void)
 }
 
 /*
- * A dummy handler for SIGALRM.
+ * SIGALRM handler.
  */
 void handler_alarm(int unused)
 {
+	if (alarm_type == ALRM_AUTOVERBOSE) {
+		pthread_mutex_lock(&mtx_paint);
+		if (ctty == CTTY_SILENT)
+			fbsplash_set_verbose(0);
+		pthread_mutex_unlock(&mtx_paint);
+	}
+
 	return;
 }
 
@@ -304,6 +314,11 @@ void* thf_sighandler(void *unusued)
 {
 	sigset_t sigset;
 	int sig;
+
+	/* We don't handle SIGALRM. */
+	sigemptyset(&sigset);
+	sigaddset(&sigset, SIGALRM);
+	pthread_sigmask(SIG_BLOCK, &sigset, NULL);
 
 	sigemptyset(&sigset);
 	sigaddset(&sigset, SIGUSR1);
