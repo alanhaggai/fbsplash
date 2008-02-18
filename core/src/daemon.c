@@ -294,7 +294,10 @@ static void do_cleanup(void)
 void handler_alarm(int unused)
 {
 	if (alarm_type == ALRM_AUTOVERBOSE) {
-		fbsplash_set_verbose(0);
+		pthread_mutex_lock(&mtx_paint);
+		if (ctty == CTTY_SILENT)
+			fbsplash_set_verbose(0);
+		pthread_mutex_unlock(&mtx_paint);
 	}
 
 	return;
@@ -311,6 +314,11 @@ void* thf_sighandler(void *unusued)
 {
 	sigset_t sigset;
 	int sig;
+
+	/* We don't handle SIGALRM. */
+	sigemptyset(&sigset);
+	sigaddset(&sigset, SIGALRM);
+	pthread_sigmask(SIG_BLOCK, &sigset, NULL);
 
 	sigemptyset(&sigset);
 	sigaddset(&sigset, SIGUSR1);
