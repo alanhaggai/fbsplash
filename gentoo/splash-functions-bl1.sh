@@ -158,7 +158,7 @@ splash_cache_prep() {
 	# Now that the data from the old cache is copied, move tmpdir to cachedir.
 	mount -n --move "${spl_tmpdir}" "${spl_cachedir}"
 
-	h=$(ls -ld --full-time ${spl_cachedir}/deptree | cut -f6,7,8 -d' ' 2>/dev/null)
+	h=$(ls -ld --full-time ${spl_cachedir}/deptree 2>/dev/null | cut -f6,7,8 -d' ')
 
 	# Point depscan.sh to our cachedir
 	/sbin/depscan.sh --svcdir "${spl_cachedir}"
@@ -178,7 +178,7 @@ splash_cache_prep() {
 			{ read lastlev; read timestamp; } < ${spl_cachedir}/levels
 			if [[ "${lastlev}" != "${BOOTLEVEL}/${DEFAULTLEVEL}" || \
 				  "${timestamp}" != "$(ls -ld --full-time /etc/runlevels/${BOOTLEVEL} | cut -f6,7,8 -d' ')/$(ls -ld --full-time /etc/runlevels/${DEFAULTLEVEL} | cut -f6,7,8 -d' ')" || \
-				  "$(ls -ld --full-time ${spl_cachedir}/deptree | cut -f6,7,8 -d' ')" != "${h}" ]]; then
+				  "$(ls -ld --full-time ${spl_cachedir}/deptree 2>/dev/null | cut -f6,7,8 -d' ')" != "${h}" ]]; then
 				echo $(splash_svclist_update "start") > ${spl_cachedir}/svcs_start
 			fi
 		fi
