@@ -654,11 +654,16 @@ int rc_plugin_hook (rc_hook_t hook, const char *name)
 	else if (!strcmp(runlev, RC_LEVEL_SHUTDOWN))
 		type = fbspl_shutdown;
 
+	/* Get boot and default levels from env variables exported by RC.
+	 * If unavailable, use the default ones. */
+	bootlevel = getenv("RC_BOOTLEVEL");
+	defaultlevel = getenv("RC_DEFAULTLEVEL");
+
 	/* We generally do nothing if we're in sysinit. Except if the
 	 * autoconfig service is present, when we get a list of services
 	 * that will be started by it and mark them as coldplugged. */
 	if (name && !strcmp(name, RC_LEVEL_SYSINIT)) {
-		if (hook == RC_HOOK_RUNLEVEL_START_OUT) {
+		if (hook == RC_HOOK_RUNLEVEL_START_OUT && rc_service_in_runlevel("autoconfig", defaultlevel)) {
 			FILE *fp;
 			char **list = NULL;
 			int i;
@@ -675,11 +680,6 @@ int rc_plugin_hook (rc_hook_t hook, const char *name)
 		}
 		goto exit;
 	}
-
-	/* Get boot and default levels from env variables exported by RC.
-	 * If unavailable, use the default ones. */
-	bootlevel = getenv("RC_BOOTLEVEL");
-	defaultlevel = getenv("RC_DEFAULTLEVEL");
 
 	/* Don't do anything if we're starting/stopping a service, but
 	 * we aren't in the middle of a runlevel switch. */
