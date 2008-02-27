@@ -28,7 +28,7 @@ start() {
 		for TTY in ${FBCONDECOR_TTYS} ; do
 			theme="${SPLASH_THEME}"
 
-			[ ${TTY} = "1" -a -z "$(/sbin/fbcondecor_ctl -c getstate --tty=${TTY}| grep 'off')" ] && continue
+			[ ${TTY} = "1" -a -z "$(/usr/sbin/fbcondecor_ctl -c getstate --tty=${TTY}| grep 'off')" ] && continue
 			[ ${TTY} = "0" ] && continue
 
 			if [ -n "${FBCONDECOR_TTY_MAP}" ]; then
