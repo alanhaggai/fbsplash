@@ -26,6 +26,18 @@
 #include <rc.h>
 #include <fbsplash.h>
 
+/* Some queue.h implenetations don't have this macro */
+#ifndef TAILQ_CONCAT
+#define TAILQ_CONCAT(head1, head2, field) do {                          \
+	if (!TAILQ_EMPTY(head2)) {                                      \
+		*(head1)->tqh_last = (head2)->tqh_first;                \
+		(head2)->tqh_first->field.tqe_prev = (head1)->tqh_last; \
+		(head1)->tqh_last = (head2)->tqh_last;                  \
+		TAILQ_INIT((head2));                                    \
+	}                                                               \
+} while (0)
+#endif
+
 #define SPLASH_CMD "export SPLASH_XRES='%d'; export SPLASH_YRES='%d';" \
 				   "export SOFTLEVEL='%s'; export BOOTLEVEL='%s';" \
 				   "export DEFAULTLEVEL='%s'; export svcdir=${RC_SVCDIR};" \
@@ -33,8 +45,8 @@
 
 static char		*bootlevel = NULL;
 static char		*defaultlevel = NULL;
-static char		**svcs = NULL;
-static char		**svcs_done = NULL;
+static RC_STRINGLIST	*svcs = NULL;
+static RC_STRINGLIST	*svcs_done = NULL;
 static int		svcs_cnt = 0;
 static int		svcs_done_cnt = 0;
 static pid_t	pid_daemon = 0;
@@ -46,37 +58,29 @@ static int		yres = 0;
 /*
  * Check whether a strlist contains a specific item.
  */
-static bool list_has(char **list, const char *item)
+static bool list_has(RC_STRINGLIST *list, const char *item)
 {
-	for (; list && *list; list++) {
-		if (strcmp(*list, item) == 0)
-			return true;
+	RC_STRING *s;
+
+	if (list) {
+		TAILQ_FOREACH(s, list, entries)
+			if (strcmp(s->value, item) == 0)
+				return true;
 	}
 	return false;
 }
 
 /*
- * Merge two strlists keeping them sorted.
- */
-static char** strlist_merge_sort(char **dest, char **src)
-{
-	int i;
-
-	for (i = 0; src && src[i]; i++) {
-		rc_strlist_addsort(&dest, src[i]);
-	}
-	return dest;
-}
-
-/*
  * Count the number of items in a strlist.
  */
-static int strlist_count(char **list)
+static int strlist_count(RC_STRINGLIST *list)
 {
-	int c;
+	RC_STRING *s;
+	int c = 0;
 
-	for (c = 0; list && *list; list++)
-		c++;
+	if (list)
+		TAILQ_FOREACH(s, list, entries)
+			c++;
 
 	return c;
 }
@@ -85,7 +89,7 @@ static int strlist_count(char **list)
  * Create a strlist from a file pointer. Can be used
  * to get a list of words printed by an app/script.
  */
-static char **get_list_fp(char **list, FILE *fp)
+static void get_list_fp(RC_STRINGLIST *list, FILE *fp)
 {
 	char buffer[512];
 	char *p;
@@ -109,30 +113,25 @@ static char **get_list_fp(char **list, FILE *fp)
 
 		while ((p = strsep(&token, " ")) != NULL) {
 			if (strlen(p) > 1) {
-				rc_strlist_add(&list, p);
+				rc_stringlist_add(list, p);
 			}
 		}
 	}
-
-	return list;
 }
 
 /*
  * Create a strlist from a file. Used for svcs_start/svcs_stop.
  */
-static char **get_list(char **list, const char *file)
+static void get_list(RC_STRINGLIST *list, const char *file)
 {
 	FILE *fp;
 
 	if (!(fp = fopen(file, "r"))) {
 		ewarn("%s: `%s': %s", __func__, file, strerror(errno));
-		return list;
+	} else {
+		get_list_fp(list, fp);
+		fclose(fp);
 	}
-
-	list = get_list_fp(list, fp);
-	fclose(fp);
-
-	return list;
 }
 
 /*
@@ -140,7 +139,7 @@ static char **get_list(char **list, const char *file)
  */
 static int splash_config_gentoo(fbspl_cfg_t *cfg, fbspl_type_t type)
 {
-	char **confd;
+	RC_STRINGLIST *confd;
 	char *t;
 
 	confd = rc_config_load("/etc/conf.d/splash");
@@ -232,7 +231,7 @@ static int splash_config_gentoo(fbspl_cfg_t *cfg, fbspl_type_t type)
 		}
 	}
 
-	rc_strlist_free(confd);
+	rc_stringlist_free(confd);
 	return 0;
 }
 
@@ -244,7 +243,7 @@ static int splash_call(const char *cmd, const char *arg1, const char *arg2)
 {
 	char *c;
 	int l;
-	char *soft = getenv("RC_SOFTLEVEL");
+	char *soft = getenv("RC_RUNLEVEL");
 
 	if (!cmd || !soft)
 		return -1;
@@ -353,7 +352,7 @@ static void splash_init_res()
  */
 static int splash_init(bool start)
 {
-	char **tmp;
+	RC_STRINGLIST *tmp;
 
 	config->verbosity = FBSPL_VERB_QUIET;
 	if (fbsplash_check_daemon(&pid_daemon)) {
@@ -363,43 +362,61 @@ static int splash_init(bool start)
 
 	config->verbosity = FBSPL_VERB_NORMAL;
 
-	if (svcs)
+	if (svcs) {
 		ewarn("%s: We already have a svcs list!", __func__);
+		rc_stringlist_free(svcs);
+	}
+	svcs = rc_stringlist_new();
 
 	/* Booting.. */
 	if (start) {
-		svcs = get_list(NULL, FBSPLASH_CACHEDIR"/svcs_start");
+		get_list(svcs, FBSPLASH_CACHEDIR"/svcs_start");
 		svcs_cnt = strlist_count(svcs);
 
 		svcs_done = rc_services_in_state(RC_SERVICE_STARTED);
 
 		tmp = rc_services_in_state(RC_SERVICE_INACTIVE);
-		svcs_done = strlist_merge_sort(svcs_done, tmp);
-		rc_strlist_free(tmp);
+		if (svcs_done && tmp) {
+			TAILQ_CONCAT(svcs_done, tmp, entries);
+			free(tmp);
+		} else if (tmp)
+			svcs_done = tmp;
 
 		tmp = rc_services_in_state(RC_SERVICE_FAILED);
-		svcs_done = strlist_merge_sort(svcs_done, tmp);
-		rc_strlist_free(tmp);
+		if (svcs_done && tmp) {
+			TAILQ_CONCAT(svcs_done, tmp, entries);
+			free(tmp);
+		} else if (tmp)
+			svcs_done = tmp;
 
 		tmp = rc_services_in_state(RC_SERVICE_SCHEDULED);
-		svcs_done = strlist_merge_sort(svcs_done, tmp);
-		rc_strlist_free(tmp);
+		if (svcs_done && tmp) {
+			TAILQ_CONCAT(svcs_done, tmp, entries);
+			free(tmp);
+		} else if (tmp)
+			svcs_done = tmp;
 
 		svcs_done_cnt = strlist_count(svcs_done);
 	/* .. or rebooting? */
 	} else {
-		svcs = get_list(NULL, FBSPLASH_CACHEDIR"/svcs_stop");
+		get_list(svcs, FBSPLASH_CACHEDIR"/svcs_stop");
 		svcs_cnt = strlist_count(svcs);
 
 		svcs_done = rc_services_in_state(RC_SERVICE_STARTED);
 
 		tmp = rc_services_in_state(RC_SERVICE_STARTING);
-		svcs_done = strlist_merge_sort(svcs_done, tmp);
-		rc_strlist_free(tmp);
+		if (svcs_done && tmp) {
+			TAILQ_CONCAT(svcs_done, tmp, entries);
+			free(tmp);
+		} else if (tmp)
+			svcs_done = tmp;
 
 		tmp = rc_services_in_state(RC_SERVICE_INACTIVE);
-		svcs_done = strlist_merge_sort(svcs_done, tmp);
-		rc_strlist_free(tmp);
+		if (svcs_done && tmp) {
+			TAILQ_CONCAT(svcs_done, tmp, entries);
+			free(tmp);
+		} else if (tmp)
+			svcs_done = tmp;
 
 		svcs_done_cnt = svcs_cnt - strlist_count(svcs_done);
 	}
@@ -424,7 +441,7 @@ static int splash_svc_handle(const char *name, const char *state, bool skip)
 		if (list_has(svcs_done, name))
 			return 0;
 
-		rc_strlist_add(&svcs_done, name);
+		rc_stringlist_add(svcs_done, name);
 		svcs_done_cnt++;
 	}
 
@@ -445,10 +462,11 @@ static int splash_svc_handle(const char *name, const char *state, bool skip)
  */
 int splash_svcs_start()
 {
-	rc_depinfo_t *deptree;
+	RC_DEPTREE *deptree;
 	FILE *fp;
-	char **t, **deporder, *s, *r;
-	int i, j, err = 0;
+	RC_STRINGLIST *t, *deporder;
+	RC_STRING *s, *r;
+	int i, err = 0;
 
 	fp = fopen(FBSPLASH_CACHEDIR"/svcs_start", "w");
 	if (!fp) {
@@ -465,12 +483,13 @@ int splash_svcs_start()
 	deporder = rc_deptree_order(deptree, bootlevel, RC_DEP_START);
 
 	/* Save what we've got so far to the svcs_start. */
-	i = 0;
-	if (deporder && deporder[0]) {
-		while ((s = deporder[i++])) {
-			if (i > 1)
+	if (deporder) {
+		i = 0;
+		TAILQ_FOREACH(s, deporder, entries) {
+			if (i > 0)
 				fprintf(fp, " ");
-			fprintf(fp, "%s", s);
+			fprintf(fp, "%s", s->value);
+			i++;
 		}
 	}
 
@@ -479,21 +498,18 @@ int splash_svcs_start()
 
 	/* Print the new services and skip ones that have already been started
 	 * in the 'boot' runlevel. */
-	i = 0;
-	if (deporder && deporder[0]) {
-		while ((s = deporder[i])) {
-			j = 0;
-			while ((r = t[j++])) {
-				if (!strcmp(deporder[i], r))
-					 goto next;
+	if (deporder) {
+		TAILQ_FOREACH(s, deporder, entries) {
+			TAILQ_FOREACH(r, t, entries) {
+				if (!strcmp(s->value, r->value))
+					break;
 			}
-			fprintf(fp, " %s", s);
-next:		i++;
+			fprintf(fp, " %s", s->value);
 		}
 	}
 
-	rc_strlist_free(deporder);
-	rc_strlist_free(t);
+	rc_stringlist_free(deporder);
+	rc_stringlist_free(t);
 	rc_deptree_free(deptree);
 
 out:
@@ -506,8 +522,9 @@ out:
  */
 int splash_svcs_stop(const char *runlevel)
 {
-	rc_depinfo_t *deptree;
-	char **deporder, *s;
+	RC_DEPTREE *deptree;
+	RC_STRINGLIST *deporder;
+	RC_STRING *s;
 	FILE *fp;
 	int i, err = 0;
 
@@ -524,17 +541,18 @@ int splash_svcs_stop(const char *runlevel)
 	}
 
 	deporder = rc_deptree_order(deptree, runlevel, RC_DEP_STOP);
-
-	i = 0;
-	if (deporder && deporder[0]) {
-		while ((s = deporder[i++])) {
-			if (i > 1)
+	
+	if (deporder) {
+		i = 0;
+		TAILQ_FOREACH(s, deporder, entries) {
+			if (i > 0)
 				fprintf(fp, " ");
-			fprintf(fp, "%s", s);
+			fprintf(fp, "%s", s->value);
+			i++;
 		}
 	}
 
-	rc_strlist_free(deporder);
+	rc_stringlist_free(deporder);
 	rc_deptree_free(deptree);
 out:
 	fclose(fp);
@@ -547,8 +565,9 @@ out:
 static int splash_start(const char *runlevel)
 {
 	bool start;
-	int i, err = 0;
+	int err = 0;
 	char buf[2048];
+	RC_STRING *s;
 
 	/* Get a list of services that we'll have to handle. */
 	/* We're rebooting/shutting down. */
@@ -592,9 +611,9 @@ static int splash_start(const char *runlevel)
 		return err;
 
 	/* Set the initial state of all services. */
-	for (i = 0; svcs && svcs[i]; i++) {
-		splash_svc_state(svcs[i], start ? "svc_inactive_start" : "svc_inactive_stop", 0);
-	}
+	if (svcs)
+		TAILQ_FOREACH(s, svcs, entries)
+			splash_svc_state(s->value, start ? "svc_inactive_start" : "svc_inactive_stop", 0);
 
 	fbsplash_set_evdev();
 	fbsplash_send("set autoverbose %d\n", config->autoverbose);
@@ -640,7 +659,7 @@ static int splash_stop(const char *runlevel)
 	}
 }
 
-int rc_plugin_hook (rc_hook_t hook, const char *name)
+int rc_plugin_hook(RC_HOOK hook, const char *name)
 {
 	int i = 0;
 	fbspl_type_t type = fbspl_bootup;
@@ -665,18 +684,19 @@ int rc_plugin_hook (rc_hook_t hook, const char *name)
 	if (name && !strcmp(name, RC_LEVEL_SYSINIT)) {
 		if (hook == RC_HOOK_RUNLEVEL_START_OUT && rc_service_in_runlevel("autoconfig", defaultlevel)) {
 			FILE *fp;
-			char **list = NULL;
-			int i;
+			RC_STRINGLIST *list;
+			RC_STRING *s;
 
 			fp = popen("if [ -e /etc/init.d/autoconfig ]; then . /etc/init.d/autoconfig ; list_services ; fi", "r");
 			if (!fp)
 				goto exit;
 
-			list = get_list_fp(NULL, fp);
-			for (i = 0; list && list[i]; i++) {
-				rc_service_mark(list[i], RC_SERVICE_COLDPLUGGED);
-			}
+			list = rc_stringlist_new();
+			get_list_fp(list, fp);
+			TAILQ_FOREACH(s, list, entries)
+				rc_service_mark(s->value, RC_SERVICE_COLDPLUGGED);
 			pclose(fp);
+			rc_stringlist_free(list);
 		}
 		goto exit;
 	}
@@ -920,12 +940,8 @@ do_start:
 		break;
 	}
 
-	if (svcs) {
-		rc_strlist_free(svcs);
-		svcs = NULL;
-	}
-
-exit:
+exit:	
+	rc_stringlist_free(svcs);
 	free (runlev);
 	return i;
 }
