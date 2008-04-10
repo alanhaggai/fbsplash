@@ -441,6 +441,8 @@ static int splash_svc_handle(const char *name, const char *state, bool skip)
 		if (list_has(svcs_done, name))
 			return 0;
 
+		if (!svcs_done)
+			svcs_done = rc_stringlist_new();
 		rc_stringlist_add(svcs_done, name);
 		svcs_done_cnt++;
 	}
