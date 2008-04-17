@@ -13,7 +13,7 @@ PNGDEFS = -DPNG_NO_WRITE_TIME -DPNG_NO_FLOATING_POINT_SUPPORTED -DPNG_NO_WRITE_S
 		-DPNG_NO_MMX_CODE
 
 # Flags for the kernel utilities
-K_CFLAGS = -Os -w -ffunction-sections -fdata-sections \
+K_CFLAGS = -O2 -w -ffunction-sections -fdata-sections \
 			-DWITH_ERRLIST -DTARGET_KERNEL -DTT_CONFIG_OPTION_BYTECODE_INTERPRETER
 
 mostlyclean-local: \
