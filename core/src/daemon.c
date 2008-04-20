@@ -33,7 +33,8 @@
 pthread_mutex_t mtx_tty = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mtx_paint = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mtx_anim = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t  cnd_anim  = PTHREAD_COND_INITIALIZER;
+pthread_cond_t  cnd_anim;
+pthread_condattr_t cnd_attr;
 
 pthread_t th_switchmon, th_sighandler, th_anim;
 
@@ -75,6 +76,8 @@ void *thf_anim(void *unused)
 	item *i, *iprev, *itmp;
 	int delay = 10000, rdelay, oldstate;
 	struct timespec ts, tsc;
+
+
 
 	while(1) {
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
@@ -119,7 +122,7 @@ void *thf_anim(void *unused)
 		pthread_setcancelstate(oldstate, NULL);
 
 		pthread_mutex_lock(&mtx_anim);
-		clock_gettime(CLOCK_REALTIME, &ts);
+		clock_gettime(CLOCK_MONOTONIC, &ts);
 
 		ts.tv_sec  += (int)(delay / 1000);
 		ts.tv_nsec += (delay % 1000) * 1000000;
@@ -138,7 +141,7 @@ void *thf_anim(void *unused)
 
 		/* Calculate the real delay. We might have been signalled by
 		 * the splash daemon before 'delay' msecs passed. */
-		clock_gettime(CLOCK_REALTIME, &tsc);
+		clock_gettime(CLOCK_MONOTONIC, &tsc);
 		rdelay = delay + (tsc.tv_sec - ts.tv_sec)*1000 + (tsc.tv_nsec - ts.tv_nsec)/1000000;
 
 		/* Handle special effects */
@@ -617,6 +620,10 @@ void daemon_start()
 	i = open("/dev/console", O_RDWR);
 	dup2(i, 1);
 	dup2(i, 2);
+
+	pthread_condattr_init(&cnd_attr);
+	pthread_condattr_setclock(&cnd_attr, CLOCK_MONOTONIC);
+	pthread_cond_init(&cnd_anim, &cnd_attr);
 
 	/* Make all our threads ignore these signals. SIGUSR1, SIGUSR2,
 	 * SIGTERM and SIGINT will be handled in the sighandler thread.
