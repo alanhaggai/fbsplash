@@ -1,3 +1,10 @@
+20 Apr 2008 * <spock@gentoo.org> * splashutils-1.5.4.1
+- Use a monotonic clock for animation timing calculations (this is
+  fixes the problem of animations freezing when the system clock is
+  updated).
+- Compile the bundled libraries with -O2 instead of -Os (fixes a
+  segfault in freetype when compiled with GCC 4.3.0).
+
 25 Feb 2008 * <spock@gentoo.org> * splashutils-1.5.4
  - Provide a single static binary that perfoms the functions of
    fbsplashd, splash_util and, optionally, fbcondecor_ctl.
