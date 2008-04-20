@@ -1,4 +1,7 @@
-01 Mar 2007 * <spock@gentoo.org> * splashutils-gentoo-1.0.13
+20 Apr 2008 * <spock@gentoo.org> * splashutils-gentoo-1.0.14
+ - Compatibility fixes for the latest versions of OpenRC.
+
+01 Mar 2008 * <spock@gentoo.org> * splashutils-gentoo-1.0.13
  - Only coldplug services started by autoconfig if autoconfig is in the
    default runlevel
  - Fix fbcondecor_ctl's path.
