@@ -15,7 +15,7 @@
 # General Public License for more details.
 ################################################################################
 
-AC_INIT([splashutils], [1.5.4])
+AC_INIT([splashutils], [1.5.4.1])
 
 AC_SUBST([libfbsplash_version], [1:0:0])
 AC_SUBST([libfbsplashrender_version], [1:0:0])
