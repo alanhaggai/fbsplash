@@ -243,6 +243,7 @@ static char *get_fontpath(char *t)
 	char buf[512];
 	char buf2[512];
 	struct stat st1, st2;
+	int r1, r2;
 
 	if (t[0] == '/') {
 		return strdup(t);
@@ -251,12 +252,12 @@ static char *get_fontpath(char *t)
 	snprintf(buf, 512, "%s/%s/%s", FBSPL_THEME_DIR, config.theme, t);
 	snprintf(buf2, 512, "%s/%s", FBSPL_THEME_DIR, t);
 
-	stat(buf, &st1);
-	stat(buf2, &st2);
+	r1 = stat(buf, &st1);
+	r2 = stat(buf2, &st2);
 
-	if (S_ISREG(st1.st_mode) || S_ISLNK(st1.st_mode)) {
+	if (!r1 && (S_ISREG(st1.st_mode) || S_ISLNK(st1.st_mode))) {
 		return strdup(buf);
-	} else if (S_ISREG(st2.st_mode) || S_ISLNK(st2.st_mode)) {
+	} else if (!r2 && (S_ISREG(st2.st_mode) || S_ISLNK(st2.st_mode))) {
 		return strdup(buf2);
 	} else {
 		return strdup(buf);

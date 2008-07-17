@@ -733,6 +733,9 @@ void fbsplashr_message_set(struct fbspl_theme *theme, const char *msg)
 	o = theme->objs.tail->p;
 	t = o->p;
 
+	if (o->type != o_text)
+		return;
+
 	if (t->val)
 		free(t->val);
 
