@@ -150,6 +150,10 @@ int fbcondecor_main(int argc, char **argv)
 	case setpic:
 	case setcfg:
 		theme = fbsplashr_theme_load();
+		if (!theme) {
+			iprint(MSG_ERROR, "Requested theme does not exist.\n");
+			exit(1);
+		}
 	default:
 		break;
 	}
