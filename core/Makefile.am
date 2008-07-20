@@ -1,4 +1,5 @@
 SUBDIRS = libs src docs misc scripts
+ACLOCAL_AMFLAGS = -I m4
 
 include common.mk
 

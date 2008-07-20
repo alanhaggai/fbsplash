@@ -21,6 +21,7 @@ AC_SUBST([libfbsplash_version], [1:0:0])
 AC_SUBST([libfbsplashrender_version], [1:0:0])
 
 AM_INIT_AUTOMAKE([1.10 -Wno-portability])
+AC_CONFIG_MACRO_DIR([m4])
 
 AC_PREREQ(2.59)
 AC_PROG_CC
