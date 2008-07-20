@@ -502,7 +502,6 @@ AS_IF(
           [
             MNG_LIBS="${MNG_LIBS} -lmng"
             MNG_LIBS="${MNG_LIBS} ${JPEG_LIBS}"
-            MNG_LIBS="${MNG_LIBS} ${LT_LIBS}"
             AC_CHECK_LIB([z],    [zlibVersion],    [MNG_LIBS="${MNG_LIBS} -lz"   ])
             AC_CHECK_LIB([lcms], [cmsCloseProfile],[MNG_LIBS="${MNG_LIBS} -llcms"])
           ],
