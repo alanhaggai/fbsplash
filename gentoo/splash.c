@@ -502,11 +502,16 @@ int splash_svcs_start()
 	 * in the 'boot' runlevel. */
 	if (deporder) {
 		TAILQ_FOREACH(s, deporder, entries) {
+			char duplicate = 0;
 			TAILQ_FOREACH(r, t, entries) {
-				if (!strcmp(s->value, r->value))
+				if (!strcmp(s->value, r->value)) {
+					duplicate = 1;
 					break;
+				}
 			}
-			fprintf(fp, " %s", s->value);
+			if (!duplicate) {
+				fprintf(fp, " %s", s->value);
+			}
 		}
 	}
 
@@ -543,7 +548,7 @@ int splash_svcs_stop(const char *runlevel)
 	}
 
 	deporder = rc_deptree_order(deptree, runlevel, RC_DEP_STOP);
-	
+
 	if (deporder) {
 		i = 0;
 		TAILQ_FOREACH(s, deporder, entries) {
