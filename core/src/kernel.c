@@ -212,6 +212,7 @@ int main(int argc, char **argv)
 
 		theme = fbsplashr_theme_load();
 		if (!theme) {
+			fprintf(stderr, "Failed to load theme '%s'.\n", config.theme);
 			err = -1;
 			goto out;
 		}
