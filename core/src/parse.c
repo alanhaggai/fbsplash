@@ -1125,8 +1125,13 @@ void add_main_msg()
 	ct->flags = F_TXT_EVAL;
 
 	fpath = text_font;
-	if (!fpath)
-		return;
+	if (!fpath) {
+		fpath = get_fontpath(DEFAULT_FONT);
+		if (!fpath) {
+			iprint(MSG_ERROR, "%s: could not find a font for the main splash message\n", __func__);
+			return;
+		}
+	}
 
 	for (ti = tmptheme.fonts.head ; ti != NULL; ti = ti->next) {
 		fe = (font_e*) ti->p;
