@@ -1,3 +1,7 @@
+22 Jul 2008 * <spock@gentoo.org> * splashutils-gentoo-1.0.15
+ - Properly remove duplicates from the list of services to be
+   started during boot (fixes a problem introduced in 1.0.14).
+
 20 Apr 2008 * <spock@gentoo.org> * splashutils-gentoo-1.0.14
  - Compatibility fixes for the latest versions of OpenRC.
 
