@@ -7,7 +7,7 @@ Standards-Version: 3.6.2
 
 Package: splashutils
 Architecture: any
-Depends: libc6, libfreetype6, libjpeg62, libpng12-0, zlib1g, miscsplashutils, lsb-base, bash, libmng1, sysv-rc (>= 2.86.ds1-44), sed, grep, mount
+Depends: libc6, libfreetype6, libjpeg62, libpng12-0, zlib1g, miscsplashutils, lsb-base, bash, libmng1, sysv-rc, sed, grep, mount
 Provides: bootsplash, splashy, usplash, psmisc
 Recommends: console-tools
 Suggests: initramfs-tools, splashutils-initramfs, splashutils-suspend2-initramfs
