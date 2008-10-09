@@ -290,7 +290,11 @@ static int splash_theme_hook(const char *name, const char *type, const char *arg
 		return 0;
 	}
 
-	l = splash_call(buf, arg1, NULL);
+	/*
+	 * Set the 2nd parameter to 0 so that we don't break themes using the
+	 * legacy interface in which events could have up to two parameters.
+	 */
+	l = splash_call(buf, arg1, "0");
 	free(buf);
 	return l;
 }
@@ -302,7 +306,6 @@ static int splash_svc_state(const char *name, const char *state, bool paint)
 {
 	if (paint)
 		splash_theme_hook(state, "pre", name);
-
 
 	if (!strcmp(state, "svc_started")) {
 		fbsplash_send("log Service '%s' started.\n", name);

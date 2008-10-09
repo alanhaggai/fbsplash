@@ -35,8 +35,10 @@ export spl_bindir="@libdir@/splash/bin"
 # Accepted parameters:
 #  svc_start <name>
 #  svc_stop <name>
-#  svc_started <name> <errcode>
-#  svc_stopped <name> <errcode>
+#  svc_started <name>
+#  svc_stopped <name>
+#  svc_start_failed <name>
+#  svc_stop_failed <name>
 #  svc_input_begin <name>
 #  svc_input_end <name>
 #  rc_init <internal_runlevel> - used to distinguish between 'boot' and 'sysinit'
@@ -88,8 +90,10 @@ splash() {
 	case "$event" in
 		svc_start)			splash_svc_start "$1";;
 		svc_stop)			splash_svc_stop "$1";;
-		svc_started) 		splash_svc "$1" "$2" "start";;
-		svc_stopped)		splash_svc "$1" "$2" "stop";;
+		svc_started) 		splash_svc "$1" 0 "start";;
+		svc_stopped)		splash_svc "$1" 0 "stop";;
+		svc_start_failed)	splash_svc "$1" 1 "start";;
+		svc_stop_failed)	splash_svc "$1" 1 "stop";;
 		svc_input_begin)	splash_input_begin "$1";;
 		svc_input_end)		splash_input_end "$1";;
 		rc_init) 			splash_init "$1" "${RUNLEVEL}";;
@@ -391,6 +395,7 @@ splash_set_event_dev() {
 ###########################################################################
 
 # args: <svc> <error-code> <action>
+# Non-zero error codes indicate failure conditions.
 splash_svc() {
 	local srv="$1"
 	local err="$2"
@@ -579,7 +584,7 @@ if [ -n "${BASH}" ]; then
 	export -f splash_svclist_get
 fi
 
-# Load any supplemental splash functions.
+# Load any supplementary splash functions.
 for i in /sbin/splash-functions-*.sh ; do
 	[ -r "${i}" ] && . "${i}"
 done
