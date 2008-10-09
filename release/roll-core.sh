@@ -15,6 +15,7 @@ git archive --format=tar --prefix=splashutils/ HEAD | (cd ../tmp && tar xf -)
 
 ebegin "Creating a tarball"
 cd ../tmp/splashutils
+mkdir -p m4
 autoreconf -i
 ./configure
 make dist-bzip2
