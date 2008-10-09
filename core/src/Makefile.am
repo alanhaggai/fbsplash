@@ -198,10 +198,17 @@ endif
 
 install-exec-hook:
 	cd $(DESTDIR)$(eexecsbindir) && \
-		$(LN_S) fbsplashctl$(EXEEXT) fbsplashd.static$(EXEEXT) && \
-		$(LN_S) fbsplashctl$(EXEEXT) splash_util.static$(EXEEXT)
+		$(LN_S) -f fbsplashctl$(EXEEXT) fbsplashd.static$(EXEEXT) && \
+		$(LN_S) -f fbsplashctl$(EXEEXT) splash_util.static$(EXEEXT)
 if CONFIG_FBCON_DECOR
-	cd $(DESTDIR)$(eexecsbindir) && $(LN_S) fbsplashctl$(EXEEXT) fbcondecor_ctl.static$(EXEEXT)
+	cd $(DESTDIR)$(eexecsbindir) && $(LN_S) -f fbsplashctl$(EXEEXT) fbcondecor_ctl.static$(EXEEXT)
+endif
+
+uninstall-hook:
+	rm -f $(DESTDIR)$(eexecsbindir)/fbsplashd.static$(EXEEXT)
+	rm -f $(DESTDIR)$(eexecsbindir)/splash_util.static$(EXEEXT)
+if CONFIG_FBCON_DECOR
+	rm -f $(DESTDIR)$(eexecsbindir)/fbcondecor_ctl.static$(EXEEXT)
 endif
 
 ################################################################################
