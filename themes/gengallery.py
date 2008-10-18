@@ -51,7 +51,11 @@ for theme in sorted(os.listdir('unpacked')):
 	else:
 		print '%s v. %s,' % (name, ver)
 
-	print '<b><a href="../themes/repo/%s.tar.bz2">download</a></b>' % theme
+	f1 = open(os.path.join('unpacked', theme, '.origin'), 'r')
+	filename = f1.readlines()[0][:-1]
+	f1.close()
+
+	print '<b><a href="../themes/%s">download</a></b>' % filename
 
 	print '</span><br /><span class="desc">%s</span><br /><br />' % desc
 
