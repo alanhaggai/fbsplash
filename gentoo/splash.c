@@ -657,7 +657,7 @@ static int splash_stop(const char *runlevel)
 	}
 
 	/* Just to be sure we aren't stuck in a black ex-silent tty.. */
-	if (fbsplash_is_silent())
+	if (fbsplash_is_silent() && !(rc_service_state("xdm") & RC_SERVICE_STARTED))
 		fbsplash_set_verbose(0);
 
 	/* If we don't get a runlevel argument, then we're being executed
