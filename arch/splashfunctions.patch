@@ -1,0 +1,29 @@
+--- splash-functions.sh.in	2008-10-05 12:08:04.000000000 +0200
++++ splash-functions.sh.in	2008-10-05 12:12:41.000000000 +0200
+@@ -192,16 +192,18 @@
+ 			return 1
+ 		fi
+ 
+-		mount -n --bind / ${spl_tmpdir}
+-		if [ ! -c "${spl_tmpdir}/dev/tty1" ]; then
++		if [ -n "$(grep -E '(^| )CONSOLE=/dev/tty1( |$)' /proc/cmdline)" ]; then
++			mount -n --bind / ${spl_tmpdir}
++			if [ ! -c "${spl_tmpdir}/dev/tty1" ]; then
++				umount -n ${spl_tmpdir}
++				splash_warn "The filesystem mounted on / doesn't contain the /dev/tty1 device"
++				splash_warn "which is required for the silent splash to function properly."
++				splash_warn "Silent splash will not be enabled. Please create the appropriate"
++				splash_warn "device node to avoid this message."
++				return 1
++			fi
+ 			umount -n ${spl_tmpdir}
+-			splash_warn "The filesystem mounted on / doesn't contain the /dev/tty1 device"
+-			splash_warn "which is required for the silent splash to function properly."
+-			splash_warn "Silent splash will not be enabled. Please create the appropriate"
+-			splash_warn "device node to avoid this message."
+-			return 1
+ 		fi
+-		umount -n ${spl_tmpdir}
+ 	fi
+ 
+ 	rm -f "${spl_pidfile}"
