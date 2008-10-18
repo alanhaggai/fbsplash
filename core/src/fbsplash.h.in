@@ -53,6 +53,7 @@ typedef struct
 	bool profile;	/* enable profiling? */
 	bool insane;	/* skip sanity checks? */
 	bool vonerr;	/* switch to verbose on errors? */
+	char *xservice;	/* name of the service that starts X */
 
 	/* daemon data */
 	bool minstances;	/* allow multiple instances of the splash daemon? */
@@ -71,6 +72,7 @@ int fbsplash_set_verbose(int old_tty);
 int fbsplash_set_silent(void);
 void fbsplash_acc_theme_set(const char *theme);
 void fbsplash_acc_message_set(const char *msg);
+void fbsplash_acc_xservice_set(const char *service);
 int fbsplash_set_evdev(void);
 int fbsplash_check_daemon(int *pid_daemon);
 int fbsplash_check_sanity(void);
