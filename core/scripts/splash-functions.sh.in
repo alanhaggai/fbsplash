@@ -130,6 +130,7 @@ splash_setup() {
 	export SPLASH_BOOT_MESSAGE="Booting the system (\$progress%)... Press F2 for verbose mode."
 	export SPLASH_SHUTDOWN_MESSAGE="Shutting down the system (\$progress%)... Press F2 for verbose mode."
 	export SPLASH_REBOOT_MESSAGE="Rebooting the system (\$progress%)... Press F2 for verbose mode."
+	export SPLASH_XSERVICE="xdm"
 
 	[ -f @sysconfdir@/splash/splash ] && . @sysconfdir@/splash/splash
 	[ -f @sysconfdir@/conf.d/splash ] && . @sysconfdir@/conf.d/splash
