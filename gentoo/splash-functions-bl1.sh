@@ -73,7 +73,7 @@ splash_exit() {
 		return 0
 	fi
 
-	if service_started "xdm"; then
+	if service_started "${SPLASH_XSERVICE}"; then
 		splash_comm_send "exit staysilent"
 	else
 		splash_comm_send "exit"

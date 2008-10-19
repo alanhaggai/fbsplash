@@ -231,6 +231,12 @@ static int splash_config_gentoo(fbspl_cfg_t *cfg, fbspl_type_t type)
 		}
 	}
 
+	t = rc_config_value(confd, "SPLASH_XSERVICE");
+	if (t)
+		fbsplash_acc_xservice_set(t);
+	else
+		fbsplash_acc_xservice_set("xdm");
+
 	rc_stringlist_free(confd);
 	return 0;
 }
@@ -643,7 +649,7 @@ static int splash_stop(const char *runlevel)
 	struct stat st;
 	int cnt = 0;
 
-	if (rc_service_state("xdm") & RC_SERVICE_STARTED) {
+	if (rc_service_state(config->xservice) & RC_SERVICE_STARTED) {
 		fbsplash_send("exit staysilent\n");
 	} else {
 		fbsplash_send("exit\n");
@@ -657,7 +663,7 @@ static int splash_stop(const char *runlevel)
 	}
 
 	/* Just to be sure we aren't stuck in a black ex-silent tty.. */
-	if (fbsplash_is_silent())
+	if (fbsplash_is_silent() && !(rc_service_state(config->xservice) & RC_SERVICE_STARTED))
 		fbsplash_set_verbose(0);
 
 	/* If we don't get a runlevel argument, then we're being executed

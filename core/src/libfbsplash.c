@@ -61,6 +61,7 @@ static int init_config(fbspl_type_t type)
 	config.verbosity = FBSPL_VERB_NORMAL;
 	config.type = type;
 	config.textbox_visible = false;
+	config.xservice = NULL;
 	fbsplash_acc_theme_set(FBSPL_DEFAULT_THEME);
 
 	s = getenv("PROGRESS");
@@ -130,6 +131,11 @@ int fbsplash_lib_cleanup(void)
 	if (config.message) {
 		free(config.message);
 		config.message = NULL;
+	}
+
+	if (config.xservice) {
+		free(config.xservice);
+		config.xservice = NULL;
 	}
 
 	if (fp_fifo) {
@@ -381,6 +387,19 @@ void fbsplash_acc_message_set(const char *msg)
 		free(config.message);
 
 	config.message = strdup(msg);
+}
+
+/**
+ * Accessor function for config.xservice
+ *
+ * @param service The name of the new X service.
+ */
+void fbsplash_acc_xservice_set(const char *service)
+{
+	if (config.xservice)
+		free(config.xservice);
+
+	config.xservice = strdup(service);
 }
 
 /**
