@@ -1,0 +1,56 @@
+#!/bin/bash
+
+source /etc/rc.conf
+source /etc/rc.d/functions
+
+source /sbin/splash-functions.sh
+source /etc/conf.d/fbsplash.conf
+
+case "$1" in
+	start)
+		if [ "$(fbcondecor_supported)" = "true" ]
+		then
+			THEME="darch"
+			if [ -f /proc/cmdline ]; then
+				OPTIONS=$(grep -o 'splash=[^ ]*' /proc/cmdline)
+				for i in $(echo "${OPTIONS#*=}" | sed -e 's/,/ /g')
+				do
+					case ${i%:*} in
+						theme)		THEME=${i#*:} ;;
+					esac
+				done
+			fi
+			stat_busy "Setting fbcondecor console images"
+			for TTY in ${SPLASH_TTYS}; do
+				fbcondecor_set_theme ${TTY} ${THEME}
+			done
+			stat_done
+		fi
+		save_boot_steps
+		splash_exit
+	;;
+
+	kill)
+		if [ "$(fbcondecor_supported)" = "true" ]
+		then
+			stat_busy "Disabling fbcondecor console images"
+			for TTY in ${SPLASH_TTYS}; do
+				fbcondecor_remove_theme ${TTY}
+			done
+			stat_done
+		fi
+	;;
+
+	restart)
+		$0 kill
+		sleep 1
+		$1 start
+	;;
+
+	*)
+		echo "usage: $0 {start|restart|kill}"
+esac
+exit 0
+
+#EOF
+
