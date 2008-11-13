@@ -1,3 +1,8 @@
+13 Nov 2008 * <spock@gentoo.org> * splashutils-gentoo-1.0.16
+ - Add support for the SPLASH_XSERVICE config setting.
+ - Only switch to verbose at the end of the boot if xdm is not started.
+ - Add the svc_start_failed and svc_stop_failed events.
+
 22 Jul 2008 * <spock@gentoo.org> * splashutils-gentoo-1.0.15
  - Properly remove duplicates from the list of services to be
    started during boot (fixes a problem introduced in 1.0.14).
