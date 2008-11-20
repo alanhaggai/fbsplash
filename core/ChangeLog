@@ -1,3 +1,9 @@
+13 Nov 2008 * <spock@gentoo.org> * splashutils-1.5.4.3
+ - Add support for the SPLASH_XSERVICE setting.
+ - Add the svc_start_failed and svc_stop_failed events.
+ - Fix the uninstall target in the main Makefile.
+ - Only check for /dev/tty1's presence if using CONSOLE=/dev/tty1.
+
 22 Jul 2008 * <spock@gentoo.org> * splashutils-1.5.4.2
 - Avoid a segfault in fbcondecor_ctl by checking that the theme
   is correctly loaded.

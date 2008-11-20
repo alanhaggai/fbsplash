@@ -76,6 +76,24 @@ splash() {
 
 	if [ "${event}" = "rc_init" -o "${event}" = "rc_exit" ]; then
 		args="$* ${RUNLEVEL}"
+	elif [ "${event}" = "svc_started" -o "${event}" = "svc_stopped" ]; then
+		if [ -z "$2" ]; then
+			# Backwards compatibility hack.  Add a 0 to the arguments to simulate
+			# an error code.
+			args="$* 0"
+		else
+			args="$*"
+
+			# Backwards compatibility: translate an error condition (non-zero
+			# error code) into an appropriate event.
+			if [ "$2" != "0" ]; then
+				if [ "${event}" = "svc_started" ]; then
+					event="svc_start_failed"
+				else
+					event="svc_stop_failed"
+				fi
+			fi
+		fi
 	else
 		args="$*"
 	fi
@@ -90,10 +108,10 @@ splash() {
 	case "$event" in
 		svc_start)			splash_svc_start "$1";;
 		svc_stop)			splash_svc_stop "$1";;
-		svc_started) 		splash_svc "$1" 0 "start";;
-		svc_stopped)		splash_svc "$1" 0 "stop";;
-		svc_start_failed)	splash_svc "$1" 1 "start";;
-		svc_stop_failed)	splash_svc "$1" 1 "stop";;
+		svc_started) 		splash_svc "$1" "start";;
+		svc_stopped)		splash_svc "$1" "stop";;
+		svc_start_failed)	splash_svc_fail "$1" "start";;
+		svc_stop_failed)	splash_svc_fail "$1" "stop";;
 		svc_input_begin)	splash_input_begin "$1";;
 		svc_input_end)		splash_input_end "$1";;
 		rc_init) 			splash_init "$1" "${RUNLEVEL}";;
@@ -395,38 +413,42 @@ splash_set_event_dev() {
 # Service
 ###########################################################################
 
-# args: <svc> <error-code> <action>
-# Non-zero error codes indicate failure conditions.
+# args: <svc> <action>
 splash_svc() {
 	local srv="$1"
-	local err="$2"
-	local act="$3"
+	local act="$2"
 
-	if [ ${err} -ne 0 -a "${SPLASH_VERBOSE_ON_ERRORS}" = "yes"  ]; then
+	if [ "${act}" = "start" ]; then
+		splash_svc_update "${srv}" "svc_started"
+		if [ "${srv}" = "gpm" ]; then
+			splash_comm_send "set gpm"
+			splash_comm_send "repaint"
+		fi
+		splash_comm_send "log Service '${srv}' started."
+	else
+		splash_svc_update "${srv}" "svc_stopped"
+		splash_comm_send "log Service '${srv}' stopped."
+	fi
+
+	splash_update_progress "${srv}"
+}
+
+# args: <svc> <action>
+splash_svc_fail() {
+	local srv="$1"
+	local act="$2"
+
+	if [ "${SPLASH_VERBOSE_ON_ERRORS}" = "yes"  ]; then
 		splash_verbose
 		return 1
 	fi
 
 	if [ "${act}" = "start" ]; then
-		if [ ${err} -eq 0 ]; then
-			splash_svc_update "${srv}" "svc_started"
-			if [ "${srv}" = "gpm" ]; then
-				splash_comm_send "set gpm"
-				splash_comm_send "repaint"
-			fi
-			splash_comm_send "log Service '${srv}' started."
-		else
-			splash_svc_update "${srv}" "svc_start_failed"
-			splash_comm_send "log Service '${srv}' failed to start."
-		fi
+		splash_svc_update "${srv}" "svc_start_failed"
+		splash_comm_send "log Service '${srv}' failed to start."
 	else
-		if [ ${err} -eq 0 ]; then
-			splash_svc_update "${srv}" "svc_stopped"
-			splash_comm_send "log Service '${srv}' stopped."
-		else
-			splash_svc_update "${srv}" "svc_stop_failed"
-			splash_comm_send "log Service '${srv}' failed to stop."
-		fi
+		splash_svc_update "${srv}" "svc_stop_failed"
+		splash_comm_send "log Service '${srv}' failed to stop."
 	fi
 
 	splash_update_progress "${srv}"

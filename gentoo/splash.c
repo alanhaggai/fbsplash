@@ -296,11 +296,17 @@ static int splash_theme_hook(const char *name, const char *type, const char *arg
 		return 0;
 	}
 
-	/*
-	 * Set the 2nd parameter to 0 so that we don't break themes using the
-	 * legacy interface in which events could have up to two parameters.
-	 */
-	l = splash_call(buf, arg1, "0");
+	if (!strcmp(name, "rc_init") || !strcmp(name, "rc_exit")) {
+		l = splash_call(buf, arg1, getenv("RUNLEVEL"));
+	} else if (!strcmp(name, "svc_started") || !strcmp(name, "svc_stopped")) {
+		/*
+		 * Set the 2nd parameter to 0 so that we don't break themes using the
+		 * legacy interface in which these events contained an error code.
+		 */
+		l = splash_call(buf, arg1, "0");
+	} else {
+		l = splash_call(buf, arg1, NULL);
+	}
 	free(buf);
 	return l;
 }
