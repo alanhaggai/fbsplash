@@ -41,7 +41,7 @@
 #define SPLASH_CMD "export SPLASH_XRES='%d'; export SPLASH_YRES='%d';" \
 				   "export SOFTLEVEL='%s'; export BOOTLEVEL='%s';" \
 				   "export DEFAULTLEVEL='%s'; export svcdir=${RC_SVCDIR};" \
-				   ". /sbin/splash-functions.sh; %s %s %s"
+				   "export RUNLEVEL='%s'; . /sbin/splash-functions.sh; %s %s %s"
 
 static char		*bootlevel = NULL;
 static char		*defaultlevel = NULL;
@@ -260,11 +260,32 @@ static int splash_config_gentoo(fbspl_cfg_t *cfg, fbspl_type_t type)
 	return 0;
 }
 
+static const char *splash_sysvinit_runlevel(const char *runlevel)
+{
+	const char *runlev = runlevel ? runlevel : rc_runlevel_get();
+
+	if (!strcmp(runlev, RC_LEVEL_SHUTDOWN)) {
+		char *t = getenv("RC_REBOOT");
+		if (t && !strcmp(t, "YES")) {
+			return "6";
+		} else {
+			return "0";
+		}
+	} else if (!strcmp(runlev, RC_LEVEL_SYSINIT)) {
+		return "S";
+	} else if (!strcmp(runlev, RC_LEVEL_SINGLE)) {
+		return "1";
+	} else {
+		return "3";
+	}
+}
+
+
 /*
  * Call a function from /sbin/splash-functions.sh.
  * This is rather slow, so use it only when really necessary.
  */
-static int splash_call(const char *cmd, const char *arg1, const char *arg2)
+static int splash_call(const char *cmd, const char *arg1, const char *arg2, const char *runlevel)
 {
 	char *c;
 	int l;
@@ -285,7 +306,8 @@ static int splash_call(const char *cmd, const char *arg1, const char *arg2)
 
 	snprintf(c, l, SPLASH_CMD, xres, yres,
 			arg1 ? (strcmp(arg1, RC_LEVEL_SYSINIT) == 0 ? bootlevel : soft) : soft,
-			bootlevel, defaultlevel, cmd, arg1 ? arg1 : "", arg2 ? arg2 : "");
+			bootlevel, defaultlevel, runlevel,
+			cmd, arg1 ? arg1 : "", arg2 ? arg2 : "");
 	l = system(c);
 	free(c);
 	return l;
@@ -316,15 +338,16 @@ static int splash_theme_hook(const char *name, const char *type, const char *arg
 	}
 
 	if (!strcmp(name, "rc_init") || !strcmp(name, "rc_exit")) {
-		l = splash_call(buf, arg1, getenv("RUNLEVEL"));
+		const char *t = splash_sysvinit_runlevel(arg1);
+		l = splash_call(buf, arg1, t, t);
 	} else if (!strcmp(name, "svc_started") || !strcmp(name, "svc_stopped")) {
 		/*
 		 * Set the 2nd parameter to 0 so that we don't break themes using the
 		 * legacy interface in which these events contained an error code.
 		 */
-		l = splash_call(buf, arg1, "0");
+		l = splash_call(buf, arg1, "0", splash_sysvinit_runlevel(NULL));
 	} else {
-		l = splash_call(buf, arg1, NULL);
+		l = splash_call(buf, arg1, NULL, splash_sysvinit_runlevel(NULL));
 	}
 	free(buf);
 	return l;
@@ -710,8 +733,7 @@ int rc_plugin_hook(RC_HOOK hook, const char *name)
 
 	runlev = rc_runlevel_get();
 	if (!strcmp(runlev, RC_LEVEL_SHUTDOWN)) {
-		char *t = getenv("RUNLEVEL");
-		if (t && !strcmp(t, "6")) {
+		if (!strcmp(splash_sysvinit_runlevel(NULL), "6")) {
 			type = fbspl_reboot;
 		} else {
 			type = fbspl_shutdown;
