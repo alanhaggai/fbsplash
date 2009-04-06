@@ -968,10 +968,10 @@ do_start:
 		if (name && !strcmp(name, "localmount")) {
 			char *umounts = getenv("RC_NO_UMOUNTS");
 
-            if (umounts)
-                fprintf(rc_environ_fd, "RC_NO_UMOUNTS=%s:%s", umounts, FBSPLASH_CACHEDIR);
-            else
-                fprintf(rc_environ_fd, "RC_NO_UMOUNTS=%s", FBSPLASH_CACHEDIR);
+			if (umounts)
+				fprintf(rc_environ_fd, "RC_NO_UMOUNTS=%s:" FBSPLASH_CACHEDIR ":/etc/splash/%s", umounts, config->theme);
+			else
+				fprintf(rc_environ_fd, "RC_NO_UMOUNTS=" FBSPLASH_CACHEDIR ":/etc/splash/%s", config->theme);
 		}
 		i = splash_svc_handle(name, "svc_stop", false);
 		break;
