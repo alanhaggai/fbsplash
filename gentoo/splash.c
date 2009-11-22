@@ -777,10 +777,12 @@ int rc_plugin_hook(RC_HOOK hook, const char *name)
 			hook != RC_HOOK_RUNLEVEL_START_OUT)
 			goto exit;
 	} else {
+		int pid;
+
 		/* We're starting/stopping a runlevel. Check whether we're
 		 * actually booting/rebooting. */
 		if (rc_runlevel_starting() && strcmp(runlev, bootlevel) &&
-			strcmp(runlev, defaultlevel) && strcmp(runlev, RC_LEVEL_SYSINIT))
+			strcmp(runlev, RC_LEVEL_SYSINIT) && fbsplash_check_daemon(&pid))
 			goto exit;
 
 		if (rc_runlevel_stopping() && strcmp(runlev, bootlevel) &&
