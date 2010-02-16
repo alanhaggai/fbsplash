@@ -76,6 +76,23 @@ AC_ARG_ENABLE([klibc-shared],
 )
 AM_CONDITIONAL([CONFIG_KLIBC_SHARED], [test "x${config_klibc_shared}" = "xyes"])
 
+AC_ARG_ENABLE([static-binaries],
+  AC_HELP_STRING([--disable-static-binaries], [do not build any statically linked binaries]),
+  [
+    AS_CASE(["${enableval}"],
+      [yes], [config_static_binaries="yes"],
+      [no],  [config_static_binaries="no"],
+             [AC_MSG_ERROR([bad value '${enableval}' for --disable-static-binaries])]
+    )
+  ],
+  [config_static_binaries="yes"]
+)
+AM_CONDITIONAL([CONFIG_STATIC_BINARIES], [test "x${config_static_binaries}" = "xyes"])
+AS_IF(
+  [test "x${config_static_binaries}" = "xyes"],
+  [AC_DEFINE([CONFIG_STATIC_BINARIES], [1], [Define to 1 to disable building of statically linked binaries.])]
+)
+
 AC_ARG_ENABLE([deprecated],
   AC_HELP_STRING([--enable-deprecated], [include support for deprecated features]),
   [
@@ -332,6 +349,23 @@ AC_ARG_WITH([themedir],
   [themedir="\$(essential_prefix)/etc/splash"]
 )
 AC_SUBST([themedir])
+
+AC_ARG_WITH([klibc],
+  AC_HELP_STRING([--without-klibc], [link the kernel helper against glibc instead of klibc]),
+  [
+    AS_CASE(["${withval}"],
+      [yes], [config_klibc="yes"],
+      [no],  [config_klibc="no"],
+             [AC_MSG_ERROR([bad value ${withval} for --with-klibc])]
+    )
+  ],
+  [config_klibc="yes"]
+)
+AM_CONDITIONAL([CONFIG_KLIBC], [test "x${config_klibc}" = "xyes"])
+AS_IF(
+  [test "x${config_klibc}" = "xyes"],
+  [AC_DEFINE([CONFIG_KLIBC], [1], [use klibc])]
+)
 
 M_CFLFAGS=
 M_LIBS=

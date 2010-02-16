@@ -167,7 +167,6 @@ sbin_PROGRAMS += fbcondecor_ctl
 endif
 sbin_PROGRAMS += fbsplashd
 bin_PROGRAMS  += splash_util
-eexecsbin_PROGRAMS += fbsplashctl
 
 fbcondecor_ctl_SOURCES      = fbcon_decor_ctl.c fbcon_decor.h ../include/console_decor.h ../include/fbcondecor.h common.h fbsplash.h
 fbcondecor_ctl_CPPFLAGS     = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplashrender_la_CFLAGS)
@@ -184,6 +183,9 @@ splash_util_SOURCES         = util.c common.h fbsplash.h
 splash_util_CPPFLAGS        = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplashrender_la_CFLAGS)
 splash_util_LDFLAGS         = $(AM_LDFLAGS)
 splash_util_LDADD           = libfbsplashrender.la libfbsplash.la
+
+if CONFIG_STATIC_BINARIES
+eexecsbin_PROGRAMS += fbsplashctl
 
 fbsplashctl_SOURCES         = $(fbsplashd_SOURCES) $(splash_util_SOURCES) fbsplashctl.c
 fbsplashctl_CFLAGS          = $(AM_CFLAGS) $(PTHREAD_STATIC_CFLAGS) $(RT_CFLAGS) $(libfbsplashrender_la_CFLAGS) -DUNIFIED_BUILD
@@ -210,6 +212,7 @@ uninstall-hook:
 if CONFIG_FBCON_DECOR
 	rm -f $(DESTDIR)$(eexecsbindir)/fbcondecor_ctl.static$(EXEEXT)
 endif
+endif
 
 ################################################################################
 # Kernel
@@ -219,6 +222,7 @@ if CONFIG_HELPER
 eexecsbin_PROGRAMS  += fbcondecor_helper
 endif
 
+if CONFIG_KLIBC
 fbcondecor_helper_SOURCES = \
 	kernel.c \
 	libfbsplash.c \
@@ -236,10 +240,12 @@ fbcondecor_helper_SOURCES = \
 	common.h \
 	render.h \
 	fbsplash.h
+
 fbcondecor_helper_CPPFLAGS  = -DWITH_ERRLIST -DTARGET_KERNEL -DTT_CONFIG_OPTION_BYTECODE_INTERPRETER
 fbcondecor_helper_CFLAGS    = -Os -w -ffunction-sections -fdata-sections -I.@am__isrc@
 fbcondecor_helper_LDFLAGS   = 
 fbcondecor_helper_LDADD     = 
+
 fbcondecor_helper_CFLAGS   += -I$(abs_top_builddir)/libs/libjpeg -I$(LIBJPEG_SOURCE)
 fbcondecor_helper_LDADD    += $(top_builddir)/libs/libjpeg.a
 if CONFIG_PNG
@@ -280,3 +286,29 @@ fbcondecor_helper-%.o: %.c
 	@$(call infmsg,CC,$@)
 	$(Q)$(MKDIR_P) $(@D)
 	$(Q)$(KLCC) $(fbcondecor_helper_CPPFLAGS) $(fbcondecor_helper_CFLAGS) $(INCLUDES) -c $< -o $@
+else
+fbcondecor_helper_SOURCES = \
+	kernel.c \
+	libfbsplash.c \
+	libfbsplashrender.c \
+	fbcon_decor.c \
+	common.c \
+	parse.c \
+	list.c \
+	render.c \
+	image.c \
+	effects.c \
+	fbcon_decor.h \
+	../include/console_decor.h \
+	../include/fbcondecor.h \
+	common.h \
+	render.h \
+	fbsplash.h
+if CONFIG_TTF_KERNEL
+fbcondecor_helper_SOURCES  += ttf.c ttf.h
+endif
+fbcondecor_helper_CPPFLAGS = $(AM_CPPFLAGS) -DTARGET_KERNEL
+fbcondecor_helper_CFLAGS   = $(AM_CFLAGS) $(libfbsplashrender_la_CFLAGS)
+fbcondecor_helper_LDFLAGS  = $(AM_LDFLAGS)
+fbcondecor_helper_LDADD    = $(libfbsplashrender_la_LIBADD)
+endif

@@ -24,6 +24,7 @@ mostlyclean-local: \
 
 noinst_LIBRARIES =
 
+if CONFIG_KLIBC
 if CONFIG_HELPER
 noinst_LIBRARIES += libjpeg.a
 if CONFIG_PNG
@@ -31,6 +32,7 @@ noinst_LIBRARIES += libpng.a libz.a
 endif
 if CONFIG_TTF_KERNEL
 noinst_LIBRARIES += libfreetype.a
+endif
 endif
 endif
 
