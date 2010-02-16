@@ -3,8 +3,6 @@
 . /lib/lsb/init-functions
 . /sbin/splash-functions.sh
 
-spl_lasterror="${spl_cachedir}/lasterror"
-
 case "$1" in
     start)
         #
@@ -28,10 +26,6 @@ case "$1" in
                 fi
             fi
         fi
-        #
-        ## Say to /etc/init.d/splashutils condrestart to NOT retry in that runlevel
-        #
-        touch ${spl_lasterror} && echo $RUNLEVEL >> ${spl_lasterror}
         #
         ## Make sure we restore, if needed, the tty 2
         #

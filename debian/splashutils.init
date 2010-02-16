@@ -3,8 +3,6 @@
 . /lib/lsb/init-functions
 . /sbin/splash-functions.sh
 
-spl_lasterror="${spl_cachedir}/lasterror"
-
 #
 ## Prevent killall5 of fbsplashd.static
 #
@@ -114,8 +112,6 @@ case "$1" in
                     fi
                 fi
 
-                rm -f ${spl_lasterror}
-
 	    done
 	else
             # echo "Your kernel does not support fbcondecor"
@@ -145,8 +141,6 @@ case "$1" in
 	#
         splash_add_omit
 
-        rm -f ${spl_lasterror}
-
         if [ -z "${SPLASH_SILENT}" ]; then
             log_end_msg 0
         elif [ -n "${SPLASH_SILENT_UNLESS_OK}" ]; then
@@ -167,17 +161,9 @@ case "$1" in
 	;;
     
     condrestart)
-        #
-        ## If last unsuccessful condrestart was from another runlevel
-        ## give it a try again
-        #
-        if [ -s ${spl_lasterror} ]; then
-            lastrunlevel=`tail -1 ${spl_lasterror}`
-            [ "$lastrunlevel" != "$RUNLEVEL" ] && rm -f ${spl_lasterror}
-        fi
 	$0 status
 	spl_status=$?
-	if [ $spl_status -ne 0 -a ! -s ${spl_lasterror} ]; then
+	if [ $spl_status -ne 0 ]; then
             #
             ## Make sure the cache is clean in any case
             #
@@ -185,10 +171,7 @@ case "$1" in
             $0 start
             $0 status
             spl_status=$?
-            if [ $spl_status -ne 0 ]; then
-                touch ${spl_lasterror} && echo $RUNLEVEL >> ${spl_lasterror}
-		exit 1
-	    fi
+            exit $spl_status
         elif [ $spl_status -ne 0 ]; then
             exit 1
         fi
@@ -201,7 +184,6 @@ case "$1" in
     
     stop)
         [ -z "${SPLASH_SILENT}" ] && log_daemon_msg "Stopping splashutils daemon" "fbsplashd.static"
-        rm -f ${spl_lasterror}
 	$0 status
 	spl_status=$?
 	if [ $spl_status -eq 0 ]; then
@@ -224,7 +206,6 @@ case "$1" in
             splash_update_omit
             splash_comm_send "progress ${2}"
             splash_comm_send "paint"
-            rm -f ${spl_lasterror}
         fi
 	;;
     
@@ -239,7 +220,6 @@ case "$1" in
             value=$((${value} * 65535 / 100))
             splash_comm_send "progress ${value}"
             splash_comm_send "paint"
-            rm -f ${spl_lasterror}
         fi
 	;;
     

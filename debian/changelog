@@ -1,3 +1,9 @@
+splashutils (1.5.4.3-1) unstable; urgency=low
+
+  * Fix error output on read-only filesystem
+
+ -- Jean-Damien Durand <JeanDamienDurand@free.fr>  Tue, 28 Apr 2009 22:01:40 +0200
+
 splashutils (1.5.4.2-1) unstable; urgency=low
 
   * Upstream version 1.5.4.2
