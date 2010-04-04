@@ -660,7 +660,7 @@ static int splash_start(const char *runlevel)
 			 (config->type == fbspl_reboot) ? "reboot" : ((config->type == fbspl_shutdown) ? "shutdown" : "bootup"),
 			 (config->kdmode == KD_GRAPHICS) ? "--kdgraphics" : "",
 			 (config->textbox_visible) ? "--textbox" : "",
-			 (config->effects & (FBSPL_EFF_FADEOUT | FBSPL_EFF_FADEIN)) ? "--effects=fadeout,fadein" :
+			 ((config->effects & (FBSPL_EFF_FADEOUT | FBSPL_EFF_FADEIN)) == (FBSPL_EFF_FADEOUT | FBSPL_EFF_FADEIN)) ? "--effects=fadeout,fadein" :
 				 ((config->effects & FBSPL_EFF_FADEOUT) ? "--effects=fadeout" :
 					 ((config->effects & FBSPL_EFF_FADEIN) ? "--effects=fadein" : "")));
 
@@ -716,11 +716,7 @@ static int splash_stop(const char *runlevel)
 
 	/* If we don't get a runlevel argument, then we're being executed
 	 * because of a rc-abort event and we don't save any data. */
-	if (runlevel == NULL) {
-		return fbsplash_cache_cleanup(NULL);
-	} else {
-		return fbsplash_cache_cleanup(save);
-	}
+	return fbsplash_cache_cleanup(save);
 }
 
 int rc_plugin_hook(RC_HOOK hook, const char *name)
