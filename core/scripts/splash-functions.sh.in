@@ -341,7 +341,7 @@ splash_comm_send() {
 
 # Returns the current splash mode.
 splash_get_mode() {
-	local ctty="${spl_bindir}/fgconsole"
+	local ctty="$({spl_bindir}/fgconsole)"
 	local mode="$(${spl_util})"
 
 	if [ "${mode}" = "silent" ]; then
