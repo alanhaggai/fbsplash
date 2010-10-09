@@ -165,8 +165,7 @@ MOSTLYCLEANFILES 	+= libfbsplash.pc libfbsplashrender.pc
 if CONFIG_FBCON_DECOR
 sbin_PROGRAMS += fbcondecor_ctl
 endif
-sbin_PROGRAMS += fbsplashd
-bin_PROGRAMS  += splash_util
+sbin_PROGRAMS += fbsplashd splash_util
 
 fbcondecor_ctl_SOURCES      = fbcon_decor_ctl.c fbcon_decor.h ../include/console_decor.h ../include/fbcondecor.h common.h fbsplash.h
 fbcondecor_ctl_CPPFLAGS     = $(AM_CPPFLAGS) -DTARGET_UTIL $(libfbsplashrender_la_CFLAGS)
