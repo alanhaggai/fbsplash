@@ -441,7 +441,7 @@ int fbsplash_set_silent()
  */
 int fbsplash_cache_prep(void)
 {
-	if (mount("cachedir", FBSPLASH_CACHEDIR, "tmpfs", MS_MGC_VAL, "mode=0644,size=4096k")) {
+	if (mount("cachedir", FBSPLASH_CACHEDIR, "tmpfs", MS_MGC_VAL, "mode=0755,size=4096k,noexec,nosuid,nodev")) {
 		iprint(MSG_ERROR, "Unable to create splash cache: %s\n", strerror(errno));
 		return -1;
 	}

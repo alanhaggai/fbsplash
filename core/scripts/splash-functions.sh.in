@@ -273,7 +273,7 @@ splash_start() {
 splash_cache_prep() {
 	# Mount an in-RAM filesystem at spl_cachedir
 	mount -ns -t "${spl_cachetype}" cachedir "${spl_cachedir}" \
-		-o rw,mode=0644,size="${spl_cachesize}"k
+		-o rw,mode=0755,noexec,nosuid,nodev,size="${spl_cachesize}"k
 
 	retval="$?"
 
