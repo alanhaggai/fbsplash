@@ -28,7 +28,7 @@ start() {
 			[ ${TTY} = "0" ] && continue
 
 			if [ -n "${FBCONDECOR_TTY_MAP}" ]; then
-				for i in ${FBCONDECOR_TTY_MAP} ; do
+				for i in ${FBCONDECOR_TTY_MAP//,/ } ; do
 					if [ "${i%:*}" = "${TTY}" ]; then
 						theme="${i#*:}"
 					fi
