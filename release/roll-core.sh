@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /devel/common/functions.sh
+source ~/devel/common/functions.sh
 
 TESTING=no
 [[ -z "${*/*--testing*/}" && -n "$*" ]] && TESTING=yes

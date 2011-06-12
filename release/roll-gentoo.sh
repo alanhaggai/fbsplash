@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /devel/common/functions.sh
+source ~/devel/common/functions.sh
 . ver-gentoo
 
 TESTING=no
