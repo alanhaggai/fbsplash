@@ -12,7 +12,7 @@ start() {
 	splash_setup
 
 	if [ -z "${FBCONDECOR_TTYS}" ]; then
-		FBCONDECOR_TTYS=$(seq 1 "${rc_tty_number:-${RC_TTY_NUMBER}:-12}")
+		FBCONDECOR_TTYS=$(seq 1 "${rc_tty_number:-${RC_TTY_NUMBER:-12}}")
 	fi
 
 	local err=0
